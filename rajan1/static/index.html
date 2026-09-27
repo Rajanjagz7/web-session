@@ -273,6 +273,11 @@
     cursor: pointer; font-family: inherit; transition: all .15s;
   }
   .tutorial-btn:hover { background: var(--accent); color: #fff; }
+  .tutorial-btn.pulse { animation: tutorialPulse 1.8s ease-in-out infinite; }
+  @keyframes tutorialPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.55); }
+    50% { box-shadow: 0 0 0 9px rgba(59,130,246,0); }
+  }
   .tutorial-overlay {
     display: none; position: fixed; inset: 0; background: rgba(4,6,10,0.75);
     z-index: 200; align-items: center; justify-content: center; padding: 18px;
@@ -1755,12 +1760,24 @@ document.getElementById('updateLaterBtn').addEventListener('click', () => {
   document.getElementById('updateBanner').classList.remove('show');
 });
 
-// Tutorial modal
+// Tutorial modal — the button pulses to catch a first-time visitor's eye,
+// then stops for good (remembered per-browser) the moment they actually open
+// it, so it doesn't keep nagging on every later visit.
 function openTutorial() {
   document.getElementById('tutorialOverlay').classList.add('show');
+  const btn = document.getElementById('tutorialBtn');
+  btn.classList.remove('pulse');
+  try { localStorage.setItem('tutorialSeen_v1', '1'); } catch (e) {}
 }
 function closeTutorial() {
   document.getElementById('tutorialOverlay').classList.remove('show');
+}
+try {
+  if (!localStorage.getItem('tutorialSeen_v1')) {
+    document.getElementById('tutorialBtn').classList.add('pulse');
+  }
+} catch (e) {
+  document.getElementById('tutorialBtn').classList.add('pulse');
 }
 document.getElementById('tutorialBtn').addEventListener('click', openTutorial);
 document.getElementById('tutorialCloseBtn').addEventListener('click', closeTutorial);
