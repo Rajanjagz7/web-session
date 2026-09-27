@@ -266,6 +266,66 @@
   .chart-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
   #tvChartContainer { height: 560px; }
 
+  /* Tutorial button + modal */
+  .tutorial-btn {
+    background: var(--panel-2); border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .tutorial-btn:hover { background: var(--accent); color: #fff; }
+  .tutorial-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(4,6,10,0.75);
+    z-index: 200; align-items: center; justify-content: center; padding: 18px;
+    backdrop-filter: blur(2px);
+  }
+  .tutorial-overlay.show { display: flex; }
+  .tutorial-modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    width: 100%; max-width: 1000px; height: 88vh; display: flex; flex-direction: column;
+    overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  }
+  .tutorial-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); flex: none;
+  }
+  .tutorial-modal-title { font-weight: 700; font-size: 15px; }
+  .tutorial-close-btn {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 14px;
+    line-height: 1; font-family: inherit;
+  }
+  .tutorial-close-btn:hover { color: var(--text); border-color: var(--pe); }
+  .tutorial-modal-body { display: flex; flex: 1; overflow: hidden; }
+  .tutorial-toc { flex: none; width: 230px; overflow-y: auto; border-right: 1px solid var(--line); padding: 12px 8px; }
+  .tutorial-toc a {
+    display: block; padding: 7px 10px; border-radius: 6px; font-size: 12.5px;
+    color: var(--muted); text-decoration: none; margin-bottom: 1px; line-height: 1.35;
+  }
+  .tutorial-toc a:hover { background: var(--panel-2); color: var(--text); }
+  .tutorial-toc .toc-group { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 12px 10px 4px; }
+  .tutorial-toc .toc-group:first-child { padding-top: 4px; }
+  .tutorial-content { flex: 1; overflow-y: auto; padding: 20px 26px 40px; }
+  .tutorial-content section { margin-bottom: 30px; scroll-margin-top: 8px; }
+  .tutorial-content h3 { font-size: 16px; margin: 0 0 4px; color: var(--accent); }
+  .tutorial-content .tut-sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .tutorial-content h4 { font-size: 13px; margin: 16px 0 6px; color: var(--text); }
+  .tutorial-content p, .tutorial-content li { font-size: 13px; line-height: 1.65; color: var(--text); }
+  .tutorial-content ol, .tutorial-content ul { padding-left: 20px; margin: 6px 0; }
+  .tutorial-content code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .tutorial-content .tut-card {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin: 10px 0;
+  }
+  .tutorial-content hr { border: none; border-top: 1px solid var(--line); margin: 26px 0; }
+  @media (max-width: 640px) {
+    .tutorial-modal { height: 94vh; }
+    .tutorial-modal-body { flex-direction: column; }
+    .tutorial-toc { width: 100%; display: flex; flex-wrap: nowrap; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line); white-space: nowrap; padding: 8px; }
+    .tutorial-toc .toc-group { display: none; }
+    .tutorial-toc a { display: inline-block; margin-right: 4px; }
+    .tutorial-content { padding: 14px; }
+  }
+
   /* Live news ticker */
   .news-ticker {
     display: flex; align-items: center; gap: 10px;
@@ -359,6 +419,208 @@
       <button class="update-later-btn" id="updateLaterBtn">Later</button>
     </div>
   </div>
+  <div class="tutorial-overlay" id="tutorialOverlay">
+    <div class="tutorial-modal">
+      <div class="tutorial-modal-header">
+        <div class="tutorial-modal-title">📘 How to use this scanner</div>
+        <button class="tutorial-close-btn" id="tutorialCloseBtn">✕</button>
+      </div>
+      <div class="tutorial-modal-body">
+        <nav class="tutorial-toc">
+          <div class="toc-group">Getting started</div>
+          <a href="#tut-overview">Overview &amp; the 5 tabs</a>
+          <a href="#tut-filters">Main scanner filters</a>
+          <a href="#tut-scan-steps">Running your first scan</a>
+          <a href="#tut-live">Live Market Scanner</a>
+          <a href="#tut-upload">Manual CSV Upload</a>
+          <div class="toc-group">Indicators</div>
+          <a href="#tut-indicators-overview">Indicators — how they work</a>
+          <a href="#tut-ohol">OH / OL + VIX Setup</a>
+          <a href="#tut-alphascan">AlphaScan Option Matrix</a>
+          <a href="#tut-utbot">UT Bot Buy/Sell</a>
+          <a href="#tut-donchian">Donchian Channels</a>
+          <a href="#tut-heikin">3M Heikin Ashi Dancing Channel</a>
+          <a href="#tut-hatrend">HA Dancing Trend Channel</a>
+          <a href="#tut-tradepred">Trade Predictor</a>
+          <a href="#tut-quantum">Quantum Matrix Strategy</a>
+          <a href="#tut-optiontarget">Option Target Projection</a>
+          <a href="#tut-rajanpavan">Rajan/Pavan 15-indicator pack</a>
+          <div class="toc-group">Beyond the scan</div>
+          <a href="#tut-chain">Live Option Chain &amp; Alerts</a>
+          <a href="#tut-charts">Charts &amp; opening a stock</a>
+          <a href="#tut-tips">Tips &amp; FAQ</a>
+        </nav>
+        <div class="tutorial-content">
+
+          <section id="tut-overview">
+            <h3>Overview &amp; the 5 tabs</h3>
+            <p class="tut-sub">What this app does and how it's laid out</p>
+            <p>This app scans the whole NSE F&amp;O options market — either from the last auto-synced end-of-day snapshot or straight from NSE's live option chain — and layers 10 TradingView-ported indicator strategies (one of which is itself a pack of 15) on top, plus a live news ticker and TradingView-style charts.</p>
+            <p>Everything is organized into 5 tabs along the top:</p>
+            <ul>
+              <li><b>⚡ Daily Sync (Auto)</b> — scans the whole market from the most recently auto-fetched end-of-day bhavcopy file. This is the default view and refreshes itself every trading morning.</li>
+              <li><b>🔴 Live Market Scanner</b> — pulls one symbol's live option chain straight from NSE, right now.</li>
+              <li><b>📁 Manual CSV Upload</b> — load your own bhavcopy CSV (today's and/or the previous day's) if you want to scan a specific file instead of the auto-synced one.</li>
+              <li><b>📐 Indicators</b> — the 10 strategy panels described below, each with its own settings.</li>
+              <li><b>📈 Charts</b> — a candlestick chart for any supported symbol, with optional indicator overlays and a one-click link out to full TradingView.</li>
+            </ul>
+          </section>
+
+          <section id="tut-filters">
+            <h3>Main scanner filters</h3>
+            <p class="tut-sub">The sidebar on Daily Sync and Live Market Scanner</p>
+            <p>Nothing is filtered by default — every checkbox starts unchecked so you see a clean, honest view of the market before narrowing it down yourself.</p>
+            <ul>
+              <li><b>Underlying</b> — type to search, then pick a specific symbol, or leave it on "All symbols."</li>
+              <li><b>Instrument type</b> — Index options / Stock options (Daily Sync only; Live Scanner always uses whichever one symbol you picked).</li>
+              <li><b>Expiry</b> — nearest expiry per symbol, or all expiries (Daily Sync only).</li>
+              <li><b>Option type</b> — Both / CE / PE.</li>
+              <li><b>Day low in range (₹)</b> — tick it and set a ₹ range to only keep contracts whose day's low fell inside it.</li>
+              <li><b>Previous close in range (₹)</b> — same idea, using the previous trading day's close.</li>
+              <li><b>Cheap option range (₹) — LTP or Day Low</b> — unchecked (the default) automatically hides near-worthless junk contracts, where either LTP or Day Low is at or below the upper value (₹1.50 by default). Tick it to flip the meaning: show <b>only</b> contracts priced inside that range on either field.</li>
+              <li><b>Open = Low / Open = High tolerance (₹)</b> — how close counts as "equal" for the Open=Low/Open=High signal. It only affects results when <b>Show</b> below is set to Open=Low, Open=High, or Any signal — otherwise it's not in play.</li>
+              <li><b>Minimum open interest</b> + <b>Include untraded (0-volume)</b> — filter out illiquid contracts, or opt back into seeing them.</li>
+              <li><b>Show</b> — All strikes / Matches only (needs a range filter above) / Open=Low / Open=High / Any signal.</li>
+            </ul>
+            <div class="tut-card">Turning on any checkbox above always narrows the results, no matter what <b>Show</b> is set to — so if you tick a range filter and nothing changes, double-check the numbers you typed rather than the Show dropdown.</div>
+          </section>
+
+          <section id="tut-scan-steps">
+            <h3>Running your first scan</h3>
+            <ol>
+              <li>Open the app — it loads on Daily Sync with nothing filtered.</li>
+              <li>(Optional) narrow by symbol, instrument type, a price range, or the cheap-option guard.</li>
+              <li>Click <b>Scan Market</b>.</li>
+              <li>Click any column header in the results table to sort by it; click again to reverse the order.</li>
+              <li>Use <b>Download results as CSV</b> to export what you're looking at.</li>
+              <li>Click <b>✕ Clear Filters</b> any time to reset everything back to the no-filter default and re-scan.</li>
+            </ol>
+          </section>
+
+          <section id="tut-live">
+            <h3>Live Market Scanner</h3>
+            <ol>
+              <li>Switch to the <b>🔴 Live Market Scanner</b> tab.</li>
+              <li>Pick a symbol from the dropdown — a curated list of indices (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY) plus a few large-cap stocks. For the full market, use Daily Sync instead.</li>
+              <li>Click <b>⚡ Fetch Live Chain</b> to pull that symbol's live option chain from NSE right now.</li>
+              <li>Tick <b>Auto-refresh (15s)</b> to keep it updating on its own — it automatically stops if you leave this tab, so it never polls silently in the background.</li>
+              <li>All the same range/cheap-option/tolerance/Show filters from the main sidebar apply here too.</li>
+            </ol>
+          </section>
+
+          <section id="tut-upload">
+            <h3>Manual CSV Upload</h3>
+            <ol>
+              <li>Switch to <b>📁 Manual CSV Upload</b>.</li>
+              <li>Drag or click to upload today's NSE bhavcopy CSV into the first box.</li>
+              <li>Optionally upload the previous trading day's CSV into the second box — this is what powers the "Previous close in range" filter.</li>
+              <li>The scan runs automatically as soon as a file finishes loading.</li>
+            </ol>
+          </section>
+
+          <section id="tut-indicators-overview">
+            <h3>Indicators — how they work</h3>
+            <ol>
+              <li>Switch to <b>📐 Indicators</b>.</li>
+              <li>Pick one of the cards at the top — the panel below switches to that indicator's own settings.</li>
+              <li>Change any setting and it re-scans automatically — no separate Scan click needed, though you can still press the <b>Scan</b> button in that panel any time.</li>
+              <li>Every indicator shows a <b>Live Option Chain</b> panel underneath, scoped to whichever symbol it's currently scanning, with a <b>🔔 Alerts</b> button (see below).</li>
+              <li>Click <b>✕ Clear</b> in any indicator panel to reset just that indicator back to its defaults.</li>
+            </ol>
+            <p>What each one does and how to read its result:</p>
+          </section>
+
+          <section id="tut-ohol">
+            <h4 style="margin-top:0;">🎯 OH / OL + VIX Setup</h4>
+            <p>Flags when an index (NIFTY, BANKNIFTY, FINNIFTY or MIDCPNIFTY) opened exactly at its day's high or low, then scans that side's options — calls if Open=Low (bullish), puts if Open=High (bearish) — for contracts whose own low sits close to the index's open or previous close. Suggested targets and stop-losses scale with today's India VIX. <b>Which options</b> lets you override the auto side-pick with Puts only / Calls only / Both. <b>Only qualifying</b> hides anything that didn't pass the "near open/prev close" rule.</p>
+          </section>
+
+          <section id="tut-alphascan">
+            <h4 style="margin-top:0;">📊 AlphaScan Option Matrix</h4>
+            <p>NIFTY-only. Scans the weekly and/or monthly expiry for options whose premium (previous close or open) sits in one target band, and whose day-low sits in a second band — a fixed ₹ range, the ÷8/÷6.5 formula band, or either/both together. <b>Only matches</b> hides everything that doesn't satisfy both bands.</p>
+          </section>
+
+          <section id="tut-utbot">
+            <h4 style="margin-top:0;">🤖 UT Bot Buy/Sell</h4>
+            <p>The classic ATR trailing-stop trend-flip signal, run on the index's own daily closing price (not the options themselves). <b>Key Value</b> controls sensitivity, <b>ATR period</b> the smoothing window, and <b>Lookback</b> how many days of history to show.</p>
+          </section>
+
+          <section id="tut-donchian">
+            <h4 style="margin-top:0;">📏 Donchian Channels</h4>
+            <p>Highest-high / lowest-low channel breakout on the index's daily price. <b>Length</b> sets the channel window, <b>Lookback</b> how many days of history to show.</p>
+          </section>
+
+          <section id="tut-heikin">
+            <h4 style="margin-top:0;">🕯️ 3M Heikin Ashi Dancing Channel</h4>
+            <p>Runs on intraday 3-minute Heikin Ashi candles with a Bollinger- or Donchian-style channel. BUY triggers on the first green candle after a red one (target = upper band), SELL mirrors it on the downside. Shows a live entry/target/stop-loss card plus a running BUY/SELL/exit event log.</p>
+          </section>
+
+          <section id="tut-hatrend">
+            <h4 style="margin-top:0;">🌀 HA Dancing Trend Channel</h4>
+            <p>A fuller version of the Dancing Channel above: needs a Fast/Slow EMA trend agreement and an ADX filter to skip choppy periods before triggering, then trades a fixed ATR stop-loss with your own Risk:Reward ratio as the target, instead of using the channel band itself.</p>
+          </section>
+
+          <section id="tut-tradepred">
+            <h4 style="margin-top:0;">🔮 Trade Predictor</h4>
+            <p>An ATR trailing-stop trend flip on daily closes, gated by a long EMA trend filter, with a fixed Stop Loss / Take Profit locked in at entry and held for the life of the trade.</p>
+          </section>
+
+          <section id="tut-quantum">
+            <h4 style="margin-top:0;">⚛️ Quantum Matrix Strategy</h4>
+            <p>A one-screen dashboard: key support/resistance levels, the same UT Bot signal, an 8/13/21/34 EMA ribbon, Open=Low / Open=High / Open=PrevClose flags, and — where intraday data exists — today's opening-candle fractional levels.</p>
+          </section>
+
+          <section id="tut-optiontarget">
+            <h4 style="margin-top:0;">🧮 Option Target Projection</h4>
+            <p>A pure calculator — no live data lookup. Type any option's premium and instantly get the ÷8 (lower) and ÷6.5 (upper) target band.</p>
+          </section>
+
+          <section id="tut-rajanpavan">
+            <h4 style="margin-top:0;">🧩 Rajan/Pavan Indicators (15-in-one)</h4>
+            <p>A separate pack of 15 daily-bar chart-pattern and momentum strategies, each with its own tunable settings, run against NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, Bitcoin, Crude Oil and Gold. Pick one from the pill row, adjust its settings, and the result — a bar table plus a color-coded BUY/SELL signal column — appears below. The 15: Uptrend Hammer Support Entry, W Pattern Support Entry, 9/15 EMA Intraday Setup, Tight Range + EMA Compression, 15-Min Breakout, 15-Min Breakdown, 15-Min Volume Buzzer, Daily Volume Buzzer, RSI Divergence, NR7 Breakout Setup, Potential Breakout (200D + 30D), Darvas + Supertrend Momentum, Bottom Reversal Confluence, India VIX Next-Day Range, and 9/15 + Hammer + W Confluence.</p>
+          </section>
+
+          <hr>
+
+          <section id="tut-chain">
+            <h3>Live Option Chain &amp; Alerts</h3>
+            <p>Every indicator panel shows a live CE/PE option chain for its current symbol: OI, Volume, Day Low, Day High and LTP on both sides of each strike, centered on the at-the-money row.</p>
+            <h4>Setting a price alert</h4>
+            <ol>
+              <li>Click <b>🔔 Alerts</b> above the chain to open the alerts panel.</li>
+              <li>Pick a strike, CE or PE, "Goes above" or "Goes below," and a target price.</li>
+              <li>Click <b>Add Alert</b>.</li>
+            </ol>
+            <p>Armed alerts are checked automatically every 20 seconds while this tab stays open. When one triggers you'll get a browser notification (if you allowed it) plus an on-page toast. Alerts are stored only in your own browser — they aren't synced across devices and won't fire if the tab is fully closed.</p>
+          </section>
+
+          <section id="tut-charts">
+            <h3>Charts &amp; opening a stock</h3>
+            <ol>
+              <li>Switch to <b>📈 Charts</b>.</li>
+              <li>Pick a symbol — indices plus SENSEX, Bitcoin, Crude Oil and Gold.</li>
+              <li>Pick an overlay: none, UT Bot signals, or any of the 15 Rajan/Pavan indicators plotted directly on the candles.</li>
+              <li>Click <b>Load Chart</b>.</li>
+              <li>Click <b>Open in TradingView ↗</b> to jump straight to the full TradingView chart for that exact symbol in a new tab — this is how to "open" a symbol outside the scanner for deeper analysis, drawing tools, or placing a trade through a TradingView-linked broker.</li>
+            </ol>
+          </section>
+
+          <section id="tut-tips">
+            <h3>Tips &amp; FAQ</h3>
+            <ul>
+              <li><b>Nothing is pre-filtered.</b> Show defaults to "All strikes," and only the Cheap Option guard quietly hides sub-₹1.50 junk by default — everything else needs a deliberate tick.</li>
+              <li>The <b>🔄 update banner</b> at the very top means a newer version has been deployed — click <b>Refresh now</b> to get it.</li>
+              <li>The <b>🌐 live news</b> ticker scrolls real market headlines; hover to pause it, click any headline to open the source article in a new tab.</li>
+              <li><b>SENSEX, Bitcoin, Crude Oil and Gold have no options-chain data</b> — BSE blocks external access to its data, and the other three aren't NSE-listed at all. They're available as price-only symbols in UT Bot, Donchian, both Heikin Ashi indicators, Trade Predictor, Quantum Matrix, Rajan/Pavan, and Charts.</li>
+              <li>You can reopen this walkthrough any time from the <b>📘 Tutorial</b> button in the top-right corner.</li>
+            </ul>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
   <header>
     <div class="brand">
       <svg class="brand-logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -376,6 +638,7 @@
       </div>
     </div>
     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <button class="tutorial-btn" id="tutorialBtn">📘 Tutorial</button>
       <div class="status-badge" id="marketBadge">
         <span class="status-dot" id="statusDot"></span>
         <span id="marketStatusText">Checking market status…</span>
@@ -1490,6 +1753,29 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 document.getElementById('updateRefreshBtn').addEventListener('click', () => window.location.reload());
 document.getElementById('updateLaterBtn').addEventListener('click', () => {
   document.getElementById('updateBanner').classList.remove('show');
+});
+
+// Tutorial modal
+function openTutorial() {
+  document.getElementById('tutorialOverlay').classList.add('show');
+}
+function closeTutorial() {
+  document.getElementById('tutorialOverlay').classList.remove('show');
+}
+document.getElementById('tutorialBtn').addEventListener('click', openTutorial);
+document.getElementById('tutorialCloseBtn').addEventListener('click', closeTutorial);
+document.getElementById('tutorialOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'tutorialOverlay') closeTutorial();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('tutorialOverlay').classList.contains('show')) closeTutorial();
+});
+document.querySelectorAll('.tutorial-toc a').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 });
 
 // Live news ticker — backend caches the aggregated RSS pull for ~10 minutes,
