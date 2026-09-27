@@ -322,6 +322,8 @@
     padding: 12px 14px; margin: 10px 0;
   }
   .tutorial-content hr { border: none; border-top: 1px solid var(--line); margin: 26px 0; }
+  .tut-gif { display: block; width: 100%; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; background: var(--bg); }
+  .tut-gif-caption { font-size: 11px; color: var(--muted); margin-top: -6px; margin-bottom: 14px; }
   @media (max-width: 640px) {
     .tutorial-modal { height: 94vh; }
     .tutorial-modal-body { flex-direction: column; }
@@ -492,6 +494,8 @@
 
           <section id="tut-scan-steps">
             <h3>Running your first scan</h3>
+            <img class="tut-gif" src="/static/tutorial/scan-flow.gif" alt="Searching for RELIANCE and clicking Scan Market to get results">
+            <div class="tut-gif-caption">Searching for a symbol auto-selects it, then Scan Market pulls the results.</div>
             <ol>
               <li>Open the app — it loads on Daily Sync with nothing filtered.</li>
               <li>(Optional) narrow by symbol, instrument type, a price range, or the cheap-option guard.</li>
@@ -504,6 +508,8 @@
 
           <section id="tut-live">
             <h3>Live Market Scanner</h3>
+            <img class="tut-gif" src="/static/tutorial/live-flow.gif" alt="Picking NIFTY and clicking Fetch Live Chain to pull its live option chain">
+            <div class="tut-gif-caption">Pick a symbol, click Fetch Live Chain, and its live option chain loads straight from NSE.</div>
             <ol>
               <li>Switch to the <b>🔴 Live Market Scanner</b> tab.</li>
               <li>Pick a symbol from the dropdown — a curated list of indices (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY) plus a few large-cap stocks. For the full market, use Daily Sync instead.</li>
@@ -532,6 +538,8 @@
               <li>Every indicator shows a <b>Live Option Chain</b> panel underneath, scoped to whichever symbol it's currently scanning, with a <b>🔔 Alerts</b> button (see below).</li>
               <li>Click <b>✕ Clear</b> in any indicator panel to reset just that indicator back to its defaults.</li>
             </ol>
+            <img class="tut-gif" src="/static/tutorial/utbot-flow.gif" alt="Picking UT Bot, switching its symbol to BANKNIFTY, and seeing the signal table update">
+            <div class="tut-gif-caption">Example: UT Bot — switching the symbol re-scans automatically and the signal table updates. Every indicator below follows this same pattern.</div>
             <p>What each one does and how to read its result:</p>
           </section>
 
@@ -601,6 +609,8 @@
 
           <section id="tut-charts">
             <h3>Charts &amp; opening a stock</h3>
+            <img class="tut-gif" src="/static/tutorial/charts-flow.gif" alt="Loading a chart and scrolling to the Open in TradingView link">
+            <div class="tut-gif-caption">Load Chart renders the candles here; Open in TradingView ↗ is how you take the symbol outside the scanner.</div>
             <ol>
               <li>Switch to <b>📈 Charts</b>.</li>
               <li>Pick a symbol — indices plus SENSEX, Bitcoin, Crude Oil and Gold.</li>
