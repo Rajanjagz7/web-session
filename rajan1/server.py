@@ -28,7 +28,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 # Bumped on every deploy so the frontend's update-check banner can detect a
 # newer build is live and prompt the user to refresh instead of silently
 # running stale cached JS.
-APP_VERSION = "2026.09.27-11"
+APP_VERSION = "2026.09.27-12"
 
 app = FastAPI(title="Bhavcopy & Live Option Scanner")
 
