@@ -1,0 +1,3596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NSE Options Scanner</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #12161f;
+    --panel-2: #161b26;
+    --line: #242a3a;
+    --text: #e8eaf0;
+    --muted: #8891a5;
+    --ce: #35d07f;
+    --pe: #ff6b81;
+    --match: #f5c344;
+    --ol: #4fc3f7;
+    --oh: #ffb74d;
+    --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    background-image: radial-gradient(circle at 15% 0%, rgba(59,130,246,0.07), transparent 32%),
+                       radial-gradient(circle at 85% 8%, rgba(53,208,127,0.06), transparent 30%);
+    background-attachment: fixed;
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .app { max-width: 1450px; margin: 0 auto; padding: 20px 20px 60px; }
+
+  header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    flex-wrap: wrap; gap: 16px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--line); padding-bottom: 16px;
+  }
+  .brand { display: flex; align-items: flex-start; gap: 12px; }
+  .brand-logo { flex: none; width: 38px; height: 38px; border-radius: 9px; box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
+  .brand-logo rect { transform-box: fill-box; transform-origin: center; animation: barPulse 2.4s ease-in-out infinite; }
+  .brand-logo rect:nth-of-type(2) { animation-delay: .3s; }
+  .brand-logo rect:nth-of-type(3) { animation-delay: .6s; }
+  @keyframes barPulse {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.8); }
+  }
+  header h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
+  header p { color: var(--muted); margin: 0; max-width: 680px; line-height: 1.5; font-size: 13px; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 20px; font-size: 12px;
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; }
+  .status-dot.live { background: var(--ce); box-shadow: 0 0 8px rgba(53,208,127,0.6); animation: pulseDot 1.6s ease-in-out infinite; }
+  .status-dot.closed { background: #f59e0b; }
+
+  @keyframes pulseDot {
+    0%, 100% { box-shadow: 0 0 6px rgba(53,208,127,0.55); }
+    50% { box-shadow: 0 0 14px rgba(53,208,127,0.95); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeInUp .28s ease both; }
+  @keyframes btnPulse {
+    0%, 100% { opacity: 1; } 50% { opacity: .72; }
+  }
+
+  /* Mode Switcher Tabs */
+  .mode-tabs {
+    display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: transparent; border: none; color: var(--muted);
+    font-family: inherit; font-size: 13.5px; font-weight: 600;
+    padding: 8px 16px; cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); animation: tabPop .25s ease; }
+  @keyframes tabPop {
+    0% { transform: translateY(0); }
+    40% { transform: translateY(-2px); }
+    100% { transform: translateY(0); }
+  }
+
+  /* Notification Bar */
+  .banner {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 16px; display: flex;
+    justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  .banner-text { font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .action-btn {
+    background: #1e293b; color: #93c5fd; border: 1px solid #3b82f6;
+    padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .action-btn:hover { background: #2563eb; color: #fff; }
+
+  /* Manual Drop Area */
+  .upload-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .drop {
+    flex: 1 1 260px; border: 1px dashed var(--line); border-radius: 8px;
+    background: var(--panel); padding: 14px; cursor: pointer; text-align: left;
+    transition: border-color .15s;
+  }
+  .drop:hover { border-color: #3a4256; }
+  .drop.filled { border-style: solid; border-color: var(--ce); }
+  .drop .tag { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .drop .title { font-weight: 600; margin: 4px 0 2px; }
+  .drop .detail { font-size: 12px; color: var(--muted); }
+  .drop input { display: none; }
+
+  .workspace { display: grid; grid-template-columns: 290px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 920px) { .workspace { grid-template-columns: 1fr; } }
+  /* Grid items default to a content-based min-width, so a wide table inside
+     main can stretch the whole track past the viewport on phones even though
+     .table-wrap itself scrolls. min-width:0 lets the track shrink to fit. */
+  .workspace > .panel.filters, .workspace > main { min-width: 0; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 6px 18px rgba(0,0,0,0.18); }
+  .filters .group { margin-bottom: 15px; }
+  .filters .group:last-child { margin-bottom: 0; }
+  .filters .group.inactive-filter input { opacity: .55; }
+  .filters .group.inactive-filter label { color: var(--muted); }
+  .filters label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+  .filters .row2 { display: flex; gap: 8px; }
+  select, input[type=text], input[type=number] {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    padding: 7px 8px; border-radius: 6px; font-size: 13px; font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  select:focus, input:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
+  }
+  .checkline { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; color: var(--text); }
+  .checkline input { width: auto; cursor: pointer; }
+  .segbtns { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .segbtns button {
+    flex: 1; background: var(--panel-2); color: var(--muted); border: none; padding: 7px 4px;
+    font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .segbtns button.active { background: #232a3d; color: var(--text); font-weight: 600; }
+
+  /* Option type toggle (Both / CE / PE) — separated, color-coded, not a joined pill */
+  #optTypeSeg { border: none; overflow: visible; gap: 6px; }
+  #optTypeSeg button {
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 4px;
+    transition: transform .15s, border-color .15s, background .15s, color .15s;
+  }
+  #optTypeSeg button:hover { border-color: #3a4256; color: var(--text); transform: translateY(-1px); }
+  #optTypeSeg button.active { border-color: var(--accent); background: rgba(59,130,246,0.15); color: var(--accent); box-shadow: 0 2px 10px rgba(59,130,246,0.2); }
+  #optTypeSeg button[data-v="CE"].active { border-color: var(--ce); background: rgba(53,208,127,0.15); color: var(--ce); box-shadow: 0 2px 10px rgba(53,208,127,0.2); }
+  #optTypeSeg button[data-v="PE"].active { border-color: var(--pe); background: rgba(255,107,129,0.15); color: var(--pe); box-shadow: 0 2px 10px rgba(255,107,129,0.2); }
+
+  /* Indicator picker cards */
+  .indicator-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px;
+  }
+  .indicator-chip {
+    position: relative; display: flex; flex-direction: column; gap: 4px; text-align: left;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 13px 11px 16px; cursor: pointer; font-family: inherit;
+    transition: transform .15s, border-color .15s, background .15s, box-shadow .15s;
+  }
+  .indicator-chip:hover { border-color: #3a4256; transform: translateY(-2px); }
+  .indicator-chip .chip-top { display: flex; align-items: center; gap: 7px; }
+  .indicator-chip .chip-icon { font-size: 15px; line-height: 1; }
+  .indicator-chip .chip-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .indicator-chip .chip-sub { font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .indicator-chip.active {
+    background: linear-gradient(135deg, rgba(59,130,246,0.16), rgba(59,130,246,0.05));
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(59,130,246,0.22);
+  }
+  .indicator-chip.active::before {
+    content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
+    background: var(--accent); border-radius: 3px;
+  }
+  .indicator-chip.active .chip-title { color: var(--accent); }
+
+  /* Rajan / Pavan sub-picker — 15 small pills that switch which indicator's
+     config form + results are shown, all inside one section. */
+  .rp-pill {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2);
+    border: 1px solid var(--line); color: var(--text); border-radius: 20px;
+    padding: 7px 13px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+    transition: transform .15s, border-color .15s, background .15s;
+  }
+  .rp-pill:hover { border-color: #3a4256; transform: translateY(-1px); }
+  .rp-pill.active {
+    background: rgba(59,130,246,0.16); border-color: var(--accent); color: var(--accent); font-weight: 600;
+  }
+
+  .scan-btn {
+    width: 100%; margin-top: 6px; background: var(--ce); color: #06210f; font-weight: 700;
+    border: none; border-radius: 6px; padding: 10px; font-size: 13.5px; cursor: pointer;
+    transition: opacity .15s, transform .15s;
+  }
+  .scan-btn:hover { opacity: .9; transform: translateY(-1px); }
+  .scan-btn:disabled { background: #2a3040; color: var(--muted); cursor: not-allowed; transform: none; animation: btnPulse 1.1s ease-in-out infinite; }
+  .action-btn:disabled { animation: btnPulse 1.1s ease-in-out infinite; cursor: not-allowed; }
+
+  .clear-btn {
+    width: 100%; margin-top: 8px; background: transparent; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 12.5px;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .clear-btn:hover { color: var(--pe); border-color: var(--pe); background: rgba(255,107,129,0.08); }
+
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 110px; transition: transform .15s, border-color .15s; }
+  .stat:hover { transform: translateY(-2px); border-color: #3a4256; }
+  .stat .n { font-size: 19px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .stat .l { font-size: 11.5px; color: var(--muted); }
+  .stat.ol .n { color: var(--ol); } .stat.oh .n { color: var(--oh); } .stat.match .n { color: var(--match); }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap; }
+  .toolbar .msg { font-size: 12.5px; color: var(--muted); }
+  .dl-btn { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 12.5px; cursor: pointer; }
+  .dl-btn:hover { border-color: #3a4256; }
+
+  .table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; max-height: 680px; }
+  table { border-collapse: collapse; width: 100%; min-width: 980px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+  th, td { padding: 7px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); transition: background .15s; }
+  th { position: sticky; top: 0; background: var(--panel-2); color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; font-family: 'IBM Plex Sans', sans-serif; font-size: 11.5px; z-index: 2; }
+  th:hover { color: var(--text); }
+  td.sym, td.exp, th.sym, th.exp { text-align: left; }
+  tr:hover td { background: #161c29; }
+  .ce-cell { color: var(--ce); }
+  .pe-cell { color: var(--pe); }
+  .sig { font-weight: 700; }
+  .sig.ol { color: var(--ol); } .sig.oh { color: var(--oh); }
+  /* Signal pill badges — scoped to .sig combined with a color class, so plain
+     .ce-cell/.pe-cell text elsewhere (type columns etc.) is unaffected */
+  td .sig, span.sig {
+    display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 10.5px;
+    letter-spacing: .02em;
+  }
+  td .sig.ce-cell, span.sig.ce-cell { background: rgba(53,208,127,0.16); }
+  td .sig.pe-cell, span.sig.pe-cell { background: rgba(255,107,129,0.16); }
+  td .sig.ol, span.sig.ol { background: rgba(79,195,247,0.16); }
+  td .sig.oh, span.sig.oh { background: rgba(255,183,77,0.16); }
+  .yellow { color: var(--match); font-weight: 600; animation: matchGlow 2.2s ease-in-out infinite; }
+  @keyframes matchGlow {
+    0%, 100% { text-shadow: 0 0 0 rgba(245,195,68,0); }
+    50% { text-shadow: 0 0 6px rgba(245,195,68,0.6); }
+  }
+  .row-in { animation: fadeInUp .32s ease both; }
+  .empty { padding: 50px 20px; text-align: center; color: var(--muted); font-size: 13.5px; }
+  .empty b { color: var(--text); }
+  
+  footer { margin-top: 24px; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+  footer .key { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
+  footer .dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  /* Chart tab */
+  .chart-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+  #tvChartContainer { height: 560px; }
+
+  /* Live news ticker */
+  .news-ticker {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 0 0 0 14px; margin-bottom: 14px; overflow: hidden; height: 34px;
+  }
+  .news-ticker-label {
+    flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    color: var(--accent); display: flex; align-items: center; gap: 6px;
+    padding-right: 12px; border-right: 1px solid var(--line); white-space: nowrap;
+  }
+  .news-ticker-label .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--ce);
+    box-shadow: 0 0 6px rgba(53,208,127,0.7); animation: pulseDot 1.6s ease-in-out infinite;
+  }
+  .news-ticker-viewport { flex: 1 1 auto; overflow: hidden; min-width: 0; height: 100%; }
+  .news-ticker-track {
+    display: inline-flex; align-items: center; height: 100%; white-space: nowrap;
+    will-change: transform; animation: newsTickerScroll 260s linear infinite;
+  }
+  .news-ticker:hover .news-ticker-track { animation-play-state: paused; }
+  .news-ticker-track.no-scroll { animation: none; }
+  .news-ticker-item {
+    display: inline-flex; align-items: center; gap: 8px; padding: 0 22px;
+    font-size: 12.5px; color: var(--text); text-decoration: none; white-space: nowrap; flex: none;
+  }
+  .news-ticker-item:hover { color: var(--accent); }
+  .news-ticker-item .src { color: var(--muted); font-size: 11px; }
+  .news-ticker-item .sep { color: var(--line); }
+  .news-ticker-empty { padding: 0 14px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  @keyframes newsTickerScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* Update-available banner */
+  .update-banner {
+    display: none; position: sticky; top: 0; z-index: 50;
+    background: linear-gradient(180deg, #17243d, #12161f); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+    align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    box-shadow: 0 4px 18px rgba(59,130,246,0.18);
+    animation: fadeInUp .25s ease both;
+  }
+  .update-banner.show { display: flex; }
+  .update-banner .banner-text { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .update-banner .update-actions { display: flex; gap: 8px; align-items: center; }
+  .update-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: opacity .15s;
+  }
+  .update-btn:hover { opacity: .88; }
+  .update-later-btn {
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+  }
+  .update-later-btn:hover { color: var(--text); }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .app { padding: 12px 12px 40px; }
+    header h1 { font-size: 18px; }
+    header p { font-size: 12px; }
+    .brand-logo { width: 32px; height: 32px; }
+    .tab-btn { padding: 8px 11px; font-size: 12.5px; }
+    .segbtns { flex-wrap: wrap; max-width: none !important; }
+    .segbtns button { flex: 1 1 auto; min-width: 90px; }
+    .group { min-width: 100% !important; }
+    table { min-width: 720px; }
+    #tvChartContainer { height: 400px; }
+    .stat { min-width: 46%; flex: 1 1 46%; }
+    .news-ticker-label { padding-right: 8px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="news-ticker" id="newsTicker">
+    <div class="news-ticker-label"><span class="dot"></span><span>LIVE NEWS</span></div>
+    <div class="news-ticker-viewport">
+      <div class="news-ticker-track no-scroll" id="newsTickerTrack">
+        <span class="news-ticker-empty">Loading market news…</span>
+      </div>
+    </div>
+  </div>
+  <div class="update-banner" id="updateBanner">
+    <div class="banner-text"><span>🔄</span><span>A new version of the scanner has been pushed — refresh to get the latest fixes and features.</span></div>
+    <div class="update-actions">
+      <button class="update-btn" id="updateRefreshBtn">Refresh now</button>
+      <button class="update-later-btn" id="updateLaterBtn">Later</button>
+    </div>
+  </div>
+  <header>
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="7" fill="#0b0e14"/>
+        <line x1="8" y1="5" x2="8" y2="27" stroke="#35d07f" stroke-width="2.2" stroke-linecap="round"/>
+        <rect x="5.2" y="13" width="5.6" height="9" rx="1" fill="#35d07f"/>
+        <line x1="16" y1="4" x2="16" y2="23" stroke="#ff6b81" stroke-width="2.2" stroke-linecap="round"/>
+        <rect x="13.2" y="8" width="5.6" height="8" rx="1" fill="#ff6b81"/>
+        <line x1="24" y1="3" x2="24" y2="28" stroke="#35d07f" stroke-width="2.2" stroke-linecap="round"/>
+        <rect x="21.2" y="13" width="5.6" height="11" rx="1" fill="#35d07f"/>
+      </svg>
+      <div>
+        <h1>NSE Options Scanner</h1>
+        <p>Scan the whole NSE F&amp;O market for Day Low range, Previous Close range, and Open=Low / Open=High setups — with automated daily sync, live market data, and TradingView-ported indicators.</p>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <div class="status-badge" id="marketBadge">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="marketStatusText">Checking market status…</span>
+      </div>
+      <div id="loadedInfo" style="font-size:12px; color:var(--muted);"></div>
+    </div>
+  </header>
+
+  <!-- Mode Selector Tabs -->
+  <div class="mode-tabs">
+    <button class="tab-btn active" data-tab="auto">⚡ Daily Sync (Auto)</button>
+    <button class="tab-btn" data-tab="live">🔴 Live Market Scanner</button>
+    <button class="tab-btn" data-tab="manual">📁 Manual CSV Upload</button>
+    <button class="tab-btn" data-tab="indicators">📐 Indicators</button>
+    <button class="tab-btn" data-tab="charts">📈 Charts</button>
+  </div>
+
+  <!-- Auto Fetch Banner -->
+  <div class="banner" id="autoBanner">
+    <div class="banner-text">
+      <span>📥</span>
+      <span id="autoBannerMsg">Daily market data automatically synced from NSE.</span>
+    </div>
+    <button class="action-btn" id="refreshBhavBtn">🔄 Force Re-Fetch Latest from NSE</button>
+  </div>
+
+  <!-- Manual Upload Section (visible only in manual tab) -->
+  <div class="upload-row" id="manualUploadRow" style="display:none;">
+    <label class="drop" id="dropToday">
+      <div class="tag">Required</div>
+      <div class="title" id="todayTitle">Today's EOD data file</div>
+      <div class="detail" id="todayDetail">Click to choose a BhavCopy_NSE_FO CSV file</div>
+      <input type="file" id="fileToday" accept=".csv">
+    </label>
+    <label class="drop" id="dropPrev">
+      <div class="tag">Optional — cross-check</div>
+      <div class="title" id="prevTitle">Previous day's EOD data file</div>
+      <div class="detail" id="prevDetail">Adds a real yesterday-vs-today OI &amp; close comparison</div>
+      <input type="file" id="filePrev" accept=".csv">
+    </label>
+  </div>
+
+  <!-- Live Market Bar (visible only in live tab) -->
+  <div class="banner" id="liveBar" style="display:none;">
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <label style="font-size:13px; font-weight:600; color:var(--muted);">Live Symbol:</label>
+      <select id="liveSymbolSelect" style="width:160px; padding:5px 8px;">
+        <option value="NIFTY" selected>NIFTY</option>
+        <option value="BANKNIFTY">BANKNIFTY</option>
+        <option value="FINNIFTY">FINNIFTY</option>
+        <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+        <option value="RELIANCE">RELIANCE</option>
+        <option value="HDFCBANK">HDFCBANK</option>
+        <option value="ICICIBANK">ICICIBANK</option>
+        <option value="INFY">INFY</option>
+        <option value="TCS">TCS</option>
+      </select>
+      <label class="checkline" style="margin:0;"><input type="checkbox" id="liveAutoRefresh"> <span>Auto-refresh (15s)</span></label>
+      <span id="liveLastTime" style="font-size:12px; color:var(--muted);"></span>
+    </div>
+    <button class="action-btn" id="liveScanBtn">⚡ Fetch Live Chain</button>
+  </div>
+
+  <div class="workspace" id="workspace">
+    <div class="panel filters">
+      <div class="group" id="symbolFilterGroup">
+        <label>Underlying</label>
+        <input type="text" id="symSearch" placeholder="Type to filter symbols…" style="margin-bottom:6px;">
+        <select id="symSelect"><option value="__ALL__">All symbols</option></select>
+      </div>
+
+      <div class="group" id="instrGroup">
+        <label>Instrument type</label>
+        <div class="checkline"><input type="checkbox" id="instIdx" checked><span>Index options</span></div>
+        <div class="checkline"><input type="checkbox" id="instStk" checked><span>Stock options</span></div>
+      </div>
+
+      <div class="group" id="expiryGroup">
+        <label>Expiry</label>
+        <select id="expSelect">
+          <option value="nearest">Nearest expiry (per symbol)</option>
+          <option value="all">All expiries</option>
+        </select>
+      </div>
+
+      <div class="group">
+        <label>Option type</label>
+        <div class="segbtns" id="optTypeSeg">
+          <button data-v="BOTH" class="active">Both</button>
+          <button data-v="CE">CE</button>
+          <button data-v="PE">PE</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="checkline"><input type="checkbox" id="lowOn"><label style="margin:0;">Day low in range (₹)</label></div>
+        <div class="row2">
+          <input type="number" id="lowFrom" step="0.05" placeholder="e.g. 5.80">
+          <input type="number" id="lowTo" step="0.05" placeholder="e.g. 8.45">
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="checkline"><input type="checkbox" id="prevOn"><label style="margin:0;">Previous close in range (₹)</label></div>
+        <div class="row2">
+          <input type="number" id="prevFrom" step="0.05" placeholder="e.g. 38">
+          <input type="number" id="prevTo" step="0.05" placeholder="e.g. 48">
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="checkline"><input type="checkbox" id="cheapOn"><label style="margin:0;">Cheap option range (₹) — LTP &amp; Day Low</label></div>
+        <div class="row2">
+          <input type="number" id="cheapFrom" step="0.05" placeholder="0.80">
+          <input type="number" id="cheapTo" step="0.05" placeholder="1.50">
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:5px; line-height:1.4;">Unchecked (default): options priced at or below the upper value on both LTP and Day Low are hidden automatically. Checked: shows <b>only</b> options priced in this range on both.</div>
+      </div>
+
+      <div class="group" id="tolGroup">
+        <label>Open = Low / Open = High tolerance (₹)</label>
+        <input type="number" id="tol" step="0.05" placeholder="0" min="0">
+        <div id="tolHint" style="font-size:11px; color:var(--muted); margin-top:5px; line-height:1.4;"></div>
+      </div>
+
+      <div class="group">
+        <label>Minimum open interest</label>
+        <input type="number" id="minOi" step="1" placeholder="0" min="0">
+        <div class="checkline" style="margin-top:8px;"><input type="checkbox" id="includeUntraded"><span>Include untraded (0-volume)</span></div>
+      </div>
+
+      <div class="group">
+        <label>Show</label>
+        <select id="showMode">
+          <option value="all" selected>All strikes</option>
+          <option value="matches">Matches only (needs a range filter above)</option>
+          <option value="ol">Open = Low (uses tolerance above)</option>
+          <option value="oh">Open = High (uses tolerance above)</option>
+          <option value="any">Any signal (range filters + tolerance)</option>
+        </select>
+      </div>
+
+      <button class="scan-btn" id="scanBtn">Scan Market</button>
+      <button class="clear-btn" id="clearFiltersBtn">✕ Clear Filters</button>
+    </div>
+
+    <main>
+      <div class="summary" id="summary" style="display:none;">
+        <div class="stat"><div class="n" id="statTotal">0</div><div class="l">contracts loaded</div></div>
+        <div class="stat match"><div class="n" id="statMatch">0</div><div class="l">matches</div></div>
+        <div class="stat ol"><div class="n" id="statOL">0</div><div class="l">open = low</div></div>
+        <div class="stat oh"><div class="n" id="statOH">0</div><div class="l">open = high</div></div>
+      </div>
+
+      <div class="toolbar" id="toolbar" style="display:none;">
+        <div class="msg" id="rowMsg"></div>
+        <button class="dl-btn" id="dlBtn">Download results as CSV</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="resultsTable" style="display:none;">
+          <thead>
+            <tr>
+              <th class="sym" data-k="symbol">Symbol</th>
+              <th class="exp" data-k="expiry">Expiry</th>
+              <th data-k="strike">Strike</th>
+              <th data-k="type">Type</th>
+              <th data-k="signal">Signal</th>
+              <th data-k="oi">OI</th>
+              <th data-k="oiPct">OI%</th>
+              <th data-k="prevCloseUsed">Prev Cl</th>
+              <th data-k="open">Open</th>
+              <th data-k="high">High</th>
+              <th data-k="low">Low</th>
+              <th data-k="close">LTP</th>
+              <th data-k="spot">Spot</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+        <div class="empty" id="emptyMsg">Ready to scan. Click <b>Scan Market</b> or select a filter.</div>
+      </div>
+
+      <footer>
+        <span class="key"><span class="dot" style="background:var(--match)"></span>Price-range match</span>
+        <span class="key"><span class="dot" style="background:var(--ol)"></span>Open = Low</span>
+        <span class="key"><span class="dot" style="background:var(--oh)"></span>Open = High</span>
+        <span class="key"><span class="dot" style="background:var(--ce)"></span>Call (CE)</span>
+        <span class="key"><span class="dot" style="background:var(--pe)"></span>Put (PE)</span>
+      </footer>
+    </main>
+  </div>
+
+  <div id="indicatorsPanel" style="display:none;">
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="indicator-grid" id="indicatorToolSeg">
+        <button class="indicator-chip active" data-v="ohol">
+          <span class="chip-top"><span class="chip-icon">🎯</span><span class="chip-title">OH / OL + VIX Setup</span></span>
+          <span class="chip-sub">Index open signal, VIX-scaled targets</span>
+        </button>
+        <button class="indicator-chip" data-v="premium">
+          <span class="chip-top"><span class="chip-icon">📊</span><span class="chip-title">AlphaScan Option Matrix</span></span>
+          <span class="chip-sub">Premium + day-low range scanner (NIFTY)</span>
+        </button>
+        <button class="indicator-chip" data-v="utbot">
+          <span class="chip-top"><span class="chip-icon">🤖</span><span class="chip-title">UT Bot Buy/Sell</span></span>
+          <span class="chip-sub">ATR trailing-stop trend flips</span>
+        </button>
+        <button class="indicator-chip" data-v="donchian">
+          <span class="chip-top"><span class="chip-icon">📏</span><span class="chip-title">Donchian Channels</span></span>
+          <span class="chip-sub">Highest-high / lowest-low breakouts</span>
+        </button>
+        <button class="indicator-chip" data-v="heikin">
+          <span class="chip-top"><span class="chip-icon">🕯️</span><span class="chip-title">3M Heikin Ashi Dancing Channel</span></span>
+          <span class="chip-sub">Intraday BUY/SELL with SL &amp; target</span>
+        </button>
+        <button class="indicator-chip" data-v="hatrend">
+          <span class="chip-top"><span class="chip-icon">🌀</span><span class="chip-title">HA Dancing Trend Channel</span></span>
+          <span class="chip-sub">EMA + ADX filtered BUY/SELL, fixed R:R</span>
+        </button>
+        <button class="indicator-chip" data-v="tradepred">
+          <span class="chip-top"><span class="chip-icon">🔮</span><span class="chip-title">Trade Predictor</span></span>
+          <span class="chip-sub">EMA-filtered trend flips, fixed SL/TP</span>
+        </button>
+        <button class="indicator-chip" data-v="quantum">
+          <span class="chip-top"><span class="chip-icon">⚛️</span><span class="chip-title">Quantum Matrix Strategy</span></span>
+          <span class="chip-sub">Key levels, UT signal, EMA ribbon</span>
+        </button>
+        <button class="indicator-chip" data-v="optiontarget">
+          <span class="chip-top"><span class="chip-icon">🧮</span><span class="chip-title">Option Target Projection</span></span>
+          <span class="chip-sub">÷8 / ÷6.5 premium calculator</span>
+        </button>
+        <button class="indicator-chip" data-v="rajanpavan">
+          <span class="chip-top"><span class="chip-icon">🧩</span><span class="chip-title">Rajan / Pavan Indicators</span></span>
+          <span class="chip-sub">15 chart-pattern &amp; momentum setups</span>
+        </button>
+      </div>
+      <div style="font-size:11.5px; color:var(--muted); margin-top:12px;">
+        Ported from Rajan's TradingView indicators, driven by live NSE data (SENSEX, Bitcoin, Crude Oil and Gold prices come from Yahoo Finance instead, since there's no options-chain data for them here). OH/OL Setup and AlphaScan Option Matrix need actual NSE option-chain data, so they stay NSE-index-only — SENSEX/Bitcoin/Crude/Gold are available as price-only symbols in UT Bot, Donchian, 3M Heikin Ashi, HA Dancing Trend Channel, Trade Predictor, Quantum Matrix and Charts.
+      </div>
+    </div>
+
+    <div class="panel" id="indChainPanel" style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <div style="font-weight:700; font-size:14px;">🔗 Live Option Chain — <span id="indChainSymbol" style="color:var(--accent);">NIFTY</span></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span id="indChainMeta" class="mono" style="font-size:12px; color:var(--muted);"></span>
+          <button class="dl-btn" id="indAlertsToggleBtn">🔔 Alerts (<span id="indAlertsCount">0</span>)</button>
+          <button class="dl-btn" id="indChainRefreshBtn">🔄 Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table id="indChainTable" style="min-width:900px;">
+          <thead>
+            <tr>
+              <th>CE OI</th><th>CE Vol</th><th>CE Day L</th><th>CE Day H</th><th>CE LTP</th><th class="exp">CE Signal</th>
+              <th style="text-align:center;">Strike</th>
+              <th class="exp">PE Signal</th><th>PE LTP</th><th>PE Day L</th><th>PE Day H</th><th>PE Vol</th><th>PE OI</th>
+            </tr>
+          </thead>
+          <tbody id="indChainBody"></tbody>
+        </table>
+        <div class="empty" id="indChainEmpty">Pick an index above to load its live option chain.</div>
+      </div>
+
+      <div id="indAlertsPanel" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
+        <div style="font-size:11.5px; color:var(--muted); margin-bottom:10px;">
+          Get notified when a strike's LTP crosses a price you set. Checked automatically every 20s while any alert is armed — keep this tab open (works even if it's in the background, but not if the browser is fully closed). Alerts are stored only in this browser.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;">
+          <div class="group" style="min-width:110px;">
+            <label>Strike</label>
+            <input type="number" id="alertStrike" step="any" placeholder="e.g. 23150">
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>Type</label>
+            <select id="alertType">
+              <option value="CE" selected>CE</option>
+              <option value="PE">PE</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Trigger when</label>
+            <select id="alertDirection">
+              <option value="above" selected>Goes above</option>
+              <option value="below">Goes below</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Price (₹)</label>
+            <input type="number" id="alertThreshold" step="0.05" placeholder="e.g. 120">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="alertAddBtn" style="width:auto; padding:9px 18px; margin-top:0;">🔔 Add Alert</button>
+          </div>
+        </div>
+        <div id="alertsListWrap">
+          <div class="empty" id="alertsEmpty" style="padding:20px;">No alerts set yet for this symbol.</div>
+          <table id="alertsTable" style="display:none; min-width:0;">
+            <thead>
+              <tr><th class="exp">Symbol</th><th>Strike</th><th>Type</th><th class="exp">Condition</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="alertsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="oholSection">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="ohSymbol">
+              <option value="NIFTY" selected>NIFTY</option>
+              <option value="BANKNIFTY">BANKNIFTY</option>
+              <option value="FINNIFTY">FINNIFTY</option>
+              <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:170px;">
+            <label>Which options</label>
+            <select id="ohSideMode">
+              <option value="auto" selected>Auto (from index open)</option>
+              <option value="puts">Puts only</option>
+              <option value="calls">Calls only</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:210px;">
+            <label>Option low within X pts of</label>
+            <select id="ohRule">
+              <option value="open_or_prev" selected>Open OR Prev close</option>
+              <option value="open_only">Open only</option>
+              <option value="prev_only">Prev close only</option>
+              <option value="open_and_prev">Open AND Prev close</option>
+              <option value="open_eq_prev">Open = Prev close too</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Points (₹)</label>
+            <input type="number" id="ohPts" value="10" step="0.5" min="0">
+          </div>
+          <div class="group" style="min-width:100px;">
+            <label>Volume signal ≥ %</label>
+            <input type="number" id="ohThr" value="71" min="50" max="100" step="1">
+          </div>
+          <div class="group" style="min-width:170px;">
+            <label>Signal direction</label>
+            <select id="ohDirMode">
+              <option value="follow" selected>Follow volume</option>
+              <option value="contrarian">Contrarian</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>VIX low &lt;</label>
+            <input type="number" id="ohVixLow" value="14" step="0.5">
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>VIX high &gt;</label>
+            <input type="number" id="ohVixHigh" value="20" step="0.5">
+          </div>
+          <div class="group">
+            <div class="checkline" style="margin:0;"><input type="checkbox" id="ohOnlyQualifying"><span>Only qualifying</span></div>
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="ohScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="ohol" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary" id="ohSummary" style="display:none; flex-direction:column; align-items:flex-start; gap:6px; padding:12px 16px;">
+        <div id="ohIndexLine" class="mono" style="font-size:13px;"></div>
+        <div id="ohVixLine" class="mono" style="font-size:13px;"></div>
+        <div id="ohVolLine" class="mono" style="font-size:13px;"></div>
+        <div id="ohUtBotLine" class="mono" style="font-size:13px; display:none;"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="ohTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Type</th><th>Strike</th><th>Prev Cl</th><th>Open</th><th>Low</th><th>LTP</th>
+              <th>Buy@Low</th><th>Buy@Low+9%</th><th>Buy@Open</th>
+              <th>Target+18%</th><th>Target+9%</th><th>SL−5%</th><th>SL−9%</th><th>SL−18%</th><th>Volume</th>
+            </tr>
+          </thead>
+          <tbody id="ohBody"></tbody>
+        </table>
+        <div class="empty" id="ohEmpty">Click <b>Scan</b> to run the OH/OL + VIX setup.</div>
+      </div>
+    </div>
+
+    <div id="premiumSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="font-size:11.5px; color:var(--muted); margin-bottom:12px;">
+          Same tool as <b>AlphaScan Option Matrix</b> — identical premium-range + day-low-range + &divide;8/&divide;6.5 matching logic. AlphaScan's Pine script defaults to SENSEX; that's NIFTY-only here since BSE option-chain data still isn't accessible.
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:160px;">
+            <label>Expiry</label>
+            <select id="pmExpSel">
+              <option value="both" selected>Weekly + Monthly</option>
+              <option value="weekly">Weekly only</option>
+              <option value="monthly">Monthly only</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:150px;">
+            <label>Premium =</label>
+            <select id="pmPremSrc">
+              <option value="prevclose" selected>Previous close</option>
+              <option value="open">Open</option>
+            </select>
+          </div>
+          <div class="group">
+            <label>Premium from</label>
+            <input type="number" id="pmPremFrom" value="300" step="1">
+          </div>
+          <div class="group">
+            <label>Premium to</label>
+            <input type="number" id="pmPremTo" value="349" step="1">
+          </div>
+          <div class="group">
+            <label>Day low from (₹)</label>
+            <input type="number" id="pmLowFrom" value="52" step="0.05">
+          </div>
+          <div class="group">
+            <label>Day low to (₹)</label>
+            <input type="number" id="pmLowTo" value="58" step="0.05">
+          </div>
+          <div class="group" style="min-width:200px;">
+            <label>Low must be</label>
+            <select id="pmLowMode">
+              <option value="fixed" selected>Fixed low range</option>
+              <option value="formula">Between ÷8 and ÷6.5 levels</option>
+              <option value="both">Both</option>
+              <option value="either">Either</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:100px;">
+            <label>Volume signal ≥ %</label>
+            <input type="number" id="pmThr" value="71" min="50" max="100" step="1">
+          </div>
+          <div class="group" style="min-width:170px;">
+            <label>Signal direction</label>
+            <select id="pmDirMode">
+              <option value="follow" selected>Follow volume</option>
+              <option value="contrarian">Contrarian</option>
+            </select>
+          </div>
+          <div class="group">
+            <div class="checkline" style="margin:0;"><input type="checkbox" id="pmOnlyMatches"><span>Only matches</span></div>
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="pmScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="premium" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary" id="pmSummary" style="display:none; flex-direction:column; align-items:flex-start; gap:6px; padding:12px 16px;">
+        <div id="pmExpiryLine" class="mono" style="font-size:13px;"></div>
+        <div id="pmVolLineWeekly" class="mono" style="font-size:13px;"></div>
+        <div id="pmVolLineMonthly" class="mono" style="font-size:13px;"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="pmTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Expiry</th><th>Type</th><th>Strike</th><th>Premium</th><th>Open</th><th>High</th><th>Day Low</th><th>LTP</th>
+              <th>Prem ÷ 8</th><th>Prem ÷ 6.5</th><th>Status</th><th>Volume</th>
+            </tr>
+          </thead>
+          <tbody id="pmBody"></tbody>
+        </table>
+        <div class="empty" id="pmEmpty">Click <b>Scan</b> to run the NIFTY premium scanner.</div>
+      </div>
+    </div>
+
+    <div id="utbotSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="utSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="group" style="min-width:120px;">
+            <label>Key Value (sensitivity)</label>
+            <input type="number" id="utKeyValue" value="1" step="0.1" min="0.1">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>ATR period</label>
+            <input type="number" id="utAtrPeriod" value="10" step="1" min="2" max="50">
+          </div>
+          <div class="group" style="min-width:130px;">
+            <label>Lookback (days)</label>
+            <input type="number" id="utLookback" value="60" step="5" min="30" max="180">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="utScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="utbot" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from the UT Bot Alerts Pine script (ATR trailing-stop). Daily bars only — built from NSE's public per-day index-close archive, so a scan takes a few seconds. Its current position also appears next to <b>OH / OL + VIX Setup</b> once you've run it here.
+        </div>
+      </div>
+
+      <div class="summary" id="utSummary" style="display:none; gap:16px;">
+        <div class="stat" id="utPositionStat"><div class="n" id="utPositionVal">–</div><div class="l">current position</div></div>
+        <div class="stat"><div class="n mono" id="utCloseVal" style="font-size:16px;">–</div><div class="l">last close</div></div>
+        <div class="stat"><div class="n mono" id="utStopVal" style="font-size:16px;">–</div><div class="l">trailing stop</div></div>
+        <div class="stat" id="utLastSignalStat"><div class="n" id="utLastSignalVal">–</div><div class="l" id="utLastSignalLabel">last signal</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="utTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">Date</th><th>Close</th><th>Trailing Stop</th><th>Position</th><th>Signal</th></tr>
+          </thead>
+          <tbody id="utBody"></tbody>
+        </table>
+        <div class="empty" id="utEmpty">Click <b>Scan</b> to compute UT Bot Buy/Sell signals for this index.</div>
+      </div>
+    </div>
+
+    <div id="donchianSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="dcSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Length</label>
+            <input type="number" id="dcLength" value="20" step="1" min="2" max="100">
+          </div>
+          <div class="group" style="min-width:130px;">
+            <label>Lookback (days)</label>
+            <input type="number" id="dcLookback" value="120" step="10" min="30" max="365">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="dcScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="donchian" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from the standard Donchian Channels indicator (Richard Donchian). Upper = highest high, lower = lowest low, over <b>Length</b> daily sessions. Signals fire when close breaks above/below the prior day's channel.
+        </div>
+      </div>
+
+      <div class="summary" id="dcSummary" style="display:none; gap:16px;">
+        <div class="stat"><div class="n mono" id="dcCloseVal" style="font-size:16px;">–</div><div class="l">last close</div></div>
+        <div class="stat"><div class="n mono" id="dcUpperVal" style="font-size:16px; color:var(--ol);">–</div><div class="l">upper channel</div></div>
+        <div class="stat"><div class="n mono" id="dcBasisVal" style="font-size:16px; color:var(--oh);">–</div><div class="l">basis (mid)</div></div>
+        <div class="stat"><div class="n mono" id="dcLowerVal" style="font-size:16px; color:var(--pe);">–</div><div class="l">lower channel</div></div>
+        <div class="stat" id="dcSignalStat"><div class="n" id="dcSignalVal">–</div><div class="l" id="dcSignalLabel">last signal</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="dcTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">Date</th><th>Close</th><th>Upper</th><th>Basis</th><th>Lower</th><th>Signal</th></tr>
+          </thead>
+          <tbody id="dcBody"></tbody>
+        </table>
+        <div class="empty" id="dcEmpty">Click <b>Scan</b> to compute Donchian Channel breakouts for this index.</div>
+      </div>
+    </div>
+
+    <div id="heikinSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="haSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="group" style="min-width:160px;">
+            <label>Channel type</label>
+            <select id="haChannelType">
+              <option value="bollinger" selected>Std-dev (Bollinger)</option>
+              <option value="donchian">Donchian (High/Low)</option>
+            </select>
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Length</label>
+            <input type="number" id="haLength" value="20" step="1" min="2" max="100">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Multiplier</label>
+            <input type="number" id="haMult" value="2.0" step="0.1" min="0.5" max="5">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="haScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="heikin" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from the 3M Heikin Ashi Dancing Channel BUY/SELL pair — both run together here off one shared 3-minute Heikin Ashi series (built from Yahoo Finance 1-minute data, resampled; MIDCPNIFTY isn't available intraday). BUY = first green HA candle after red, target = upper band, SL = HA candle low. SELL mirrors it on the downside. Covers roughly the last 5 trading sessions. Bitcoin trades 24/7 and Crude/Gold trade nearly 24 hours, so their "session" here is just a rolling 3-minute window, not a market open.
+        </div>
+      </div>
+
+      <div class="summary" id="haSummary" style="display:none; gap:16px;">
+        <div class="stat"><div class="n mono" id="haPriceVal" style="font-size:16px;">–</div><div class="l" id="haPriceLabel">last price</div></div>
+        <div class="stat" id="haBuyStat"><div class="n" id="haBuyVal" style="color:var(--ce);">FLAT</div><div class="l" id="haBuyLabel">BUY track</div></div>
+        <div class="stat" id="haSellStat"><div class="n" id="haSellVal" style="color:var(--pe);">FLAT</div><div class="l" id="haSellLabel">SELL track</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="haTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">Time</th><th>Type</th><th>Event</th><th>Price</th></tr>
+          </thead>
+          <tbody id="haBody"></tbody>
+        </table>
+        <div class="empty" id="haEmpty">Click <b>Scan</b> to run the 3M Heikin Ashi Dancing Channel.</div>
+      </div>
+    </div>
+
+    <div id="hatrendSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="htSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>Fast EMA</label>
+            <input type="number" id="htEmaFast" value="9" step="1" min="2" max="100">
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>Slow EMA</label>
+            <input type="number" id="htEmaSlow" value="21" step="1" min="2" max="200">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Channel length</label>
+            <input type="number" id="htChannelLen" value="20" step="1" min="2" max="100">
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>ATR length</label>
+            <input type="number" id="htAtrLen" value="14" step="1" min="2" max="50">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>ATR &times; multiplier</label>
+            <input type="number" id="htAtrMult" value="1.5" step="0.1" min="0.1" max="5">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Risk:Reward</label>
+            <input type="number" id="htRR" value="2.0" step="0.25" min="0.5" max="10">
+          </div>
+          <div class="group" style="min-width:90px;">
+            <label>ADX length</label>
+            <input type="number" id="htAdxLen" value="14" step="1" min="2" max="50">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Minimum ADX</label>
+            <input type="number" id="htAdxMin" value="18" step="1" min="0" max="60">
+          </div>
+          <div class="group">
+            <div class="checkline" style="margin:0;"><input type="checkbox" id="htUseDI"><span>Also require +DI/&minus;DI filter</span></div>
+          </div>
+          <div class="group">
+            <div class="checkline" style="margin:0;"><input type="checkbox" id="htReverse" checked><span>Opposite signal closes open trade</span></div>
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="htScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="hatrend" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from "HA 3-Min Dancing Trend Channel + BUY/SELL" — same 3-minute Heikin Ashi series as the Dancing Channel indicator above, but a fuller signal: needs the Fast/Slow EMA (on HA close) to agree on trend, an ADX filter to skip choppy periods, and a close crossing the EMA+ATR channel mid-line — then trades a fixed ATR stop-loss with a Risk:Reward target instead of the channel band itself. MIDCPNIFTY isn't available intraday, same as the Dancing Channel indicator.
+        </div>
+      </div>
+
+      <div class="summary" id="htSummary" style="display:none; gap:16px;">
+        <div class="stat"><div class="n mono" id="htPriceVal" style="font-size:16px;">–</div><div class="l" id="htPriceLabel">last price</div></div>
+        <div class="stat" id="htBuyStat"><div class="n" id="htBuyVal" style="color:var(--ce);">FLAT</div><div class="l" id="htBuyLabel">BUY track</div></div>
+        <div class="stat" id="htSellStat"><div class="n" id="htSellVal" style="color:var(--pe);">FLAT</div><div class="l" id="htSellLabel">SELL track</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="htTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">Time</th><th>Type</th><th>Event</th><th>Price</th></tr>
+          </thead>
+          <tbody id="htBody"></tbody>
+        </table>
+        <div class="empty" id="htEmpty">Click <b>Scan</b> to run the HA Dancing Trend Channel.</div>
+      </div>
+    </div>
+
+    <div id="tradepredSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="tpSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="group" style="min-width:100px;">
+            <label>ATR period</label>
+            <input type="number" id="tpAtrLength" value="10" step="1" min="2" max="50">
+          </div>
+          <div class="group" style="min-width:100px;">
+            <label>ATR &times; factor</label>
+            <input type="number" id="tpFactor" value="1.5" step="0.1" min="0.1">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Trend EMA length</label>
+            <input type="number" id="tpEmaLength" value="200" step="10" min="5" max="300">
+          </div>
+          <div class="group">
+            <div class="checkline" style="margin:0;"><input type="checkbox" id="tpUseTrendFilter"><span>EMA trend filter</span></div>
+          </div>
+          <div class="group" style="min-width:100px;">
+            <label>SL &times; ATR</label>
+            <input type="number" id="tpSlMult" value="1.5" step="0.1" min="0.1">
+          </div>
+          <div class="group" style="min-width:100px;">
+            <label>TP &times; ATR</label>
+            <input type="number" id="tpTpMult" value="2.0" step="0.1" min="0.1">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="tpScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="tradepred" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from the Trade Predictor Pine strategy: an ATR trailing-stop trend flip, gated by a long EMA trend filter, with a fixed ATR-multiple Stop Loss / Take Profit locked in at entry and held for the life of the trade. Daily bars.
+        </div>
+      </div>
+
+      <div class="summary" id="tpSummary" style="display:none; flex-direction:column; align-items:flex-start; gap:6px; padding:12px 16px;">
+        <div id="tpStatusLine" class="mono" style="font-size:13px;"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="tpTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">Date</th><th>Side</th><th>Event</th><th>Price</th></tr>
+          </thead>
+          <tbody id="tpBody"></tbody>
+        </table>
+        <div class="empty" id="tpEmpty">Click <b>Scan</b> to run Trade Predictor.</div>
+      </div>
+    </div>
+
+    <div id="quantumSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Index</label>
+            <select id="qmSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>S/R lookback</label>
+            <input type="number" id="qmLookback" value="20" step="1" min="5" max="100">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>UT Key Value</label>
+            <input type="number" id="qmKeyValue" value="1" step="0.1" min="0.1">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>UT ATR period</label>
+            <input type="number" id="qmAtrPeriod" value="10" step="1" min="2" max="50">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="qmScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="quantum" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from the Quantum Matrix Strategy indicator — key support/resistance with ATR-projected SL/TP1/TP2, the UT trailing-stop signal (same engine as UT Bot Buy/Sell), an EMA ribbon (8/13/21/34), Open=Low/High/PrevClose flags, and today's 09:15 opening-candle fractional levels (needs intraday data — not available for MIDCPNIFTY).
+        </div>
+      </div>
+
+      <div id="qmResults" style="display:none;">
+        <div class="summary" style="margin-bottom:16px;">
+          <div class="stat"><div class="n mono" id="qmCloseVal" style="font-size:16px;">–</div><div class="l" id="qmCloseLabel">last close</div></div>
+          <div class="stat" id="qmUtStat"><div class="n" id="qmUtVal">–</div><div class="l" id="qmUtLabel">UT signal</div></div>
+          <div class="stat"><div class="n mono" id="qmSupportVal" style="font-size:15px; color:var(--ce);">–</div><div class="l">support</div></div>
+          <div class="stat"><div class="n mono" id="qmResistanceVal" style="font-size:15px; color:var(--pe);">–</div><div class="l">resistance</div></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+          <div class="panel">
+            <div style="font-weight:600; color:var(--ce); margin-bottom:8px;">Bullish setup (off support)</div>
+            <div class="mono" id="qmBullishLine" style="font-size:13px;"></div>
+          </div>
+          <div class="panel">
+            <div style="font-weight:600; color:var(--pe); margin-bottom:8px;">Bearish setup (off resistance)</div>
+            <div class="mono" id="qmBearishLine" style="font-size:13px;"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:16px;">
+          <div style="font-weight:600; margin-bottom:8px;">EMA ribbon (8 / 13 / 21 / 34)</div>
+          <div class="mono" id="qmEmaLine" style="font-size:13px;"></div>
+        </div>
+
+        <div class="panel" style="margin-bottom:16px;">
+          <div style="font-weight:600; margin-bottom:8px;">09:15 opening fractional levels</div>
+          <div class="mono" id="qmOpeningLine" style="font-size:13px;"></div>
+        </div>
+
+        <div class="panel">
+          <div style="font-weight:600; margin-bottom:8px;">Signal flags (latest session)</div>
+          <div class="mono" id="qmFlagsLine" style="font-size:13px;"></div>
+        </div>
+      </div>
+      <div class="empty" id="qmEmpty">Click <b>Scan</b> to run Quantum Matrix Strategy.</div>
+    </div>
+
+    <div id="optiontargetSection" style="display:none;">
+      <div class="panel">
+        <div style="font-size:11.5px; color:var(--muted); margin-bottom:12px;">
+          Ported from Option Target Projection Levels — a pure calculator, same as the Pine script's math (no live lookup needed). Type in an option's Previous Close or Open premium and get the &divide;8 / &divide;6.5 target band instantly.
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:180px;">
+            <label>Base premium (₹)</label>
+            <input type="number" id="otBase" value="340" step="0.05" min="0">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Lower divisor</label>
+            <input type="number" id="otDiv1" value="8" step="0.1" min="0.1">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Upper divisor</label>
+            <input type="number" id="otDiv2" value="6.5" step="0.1" min="0.1">
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="optiontarget" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div class="summary" style="margin-top:16px;">
+          <div class="stat"><div class="n mono" id="otBaseVal" style="font-size:18px;">–</div><div class="l">base premium</div></div>
+          <div class="stat"><div class="n mono" id="otLowerVal" style="font-size:18px; color:var(--ol);">–</div><div class="l">target lower (&divide;8)</div></div>
+          <div class="stat"><div class="n mono" id="otUpperVal" style="font-size:18px; color:var(--oh);">–</div><div class="l">target upper (&divide;6.5)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="rajanPavanSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="font-size:11.5px; color:var(--muted); margin-bottom:10px;">
+          15 Pine Script v6 indicators ported from Rajan/Pavan's TradingView pack (chart patterns, EMA setups, breakout/volume screens, RSI divergence, Darvas/Supertrend momentum, VIX range) — pick one below, then Scan. All run on this app's daily index/commodity bars (the pack's "15-Minute" screens are adapted to run on the same daily series, since intraday data isn't available for this full symbol set).
+        </div>
+        <div id="rpSubPicker" style="display:flex; flex-wrap:wrap; gap:8px;">
+          <button type="button" class="rp-pill active" data-rp="hammer-support">🔨 Uptrend Hammer Support Entry</button>
+          <button type="button" class="rp-pill" data-rp="w-pattern">〰️ W Pattern Support Entry</button>
+          <button type="button" class="rp-pill" data-rp="ema-9-15">📶 9/15 EMA Intraday Setup</button>
+          <button type="button" class="rp-pill" data-rp="tight-range">🤏 Tight Range + EMA Compression</button>
+          <button type="button" class="rp-pill" data-rp="breakout-15m">🚀 15-Min Breakout</button>
+          <button type="button" class="rp-pill" data-rp="breakdown-15m">📉 15-Min Breakdown</button>
+          <button type="button" class="rp-pill" data-rp="volume-buzzer-15m">🔔 15-Min Volume Buzzer</button>
+          <button type="button" class="rp-pill" data-rp="volume-buzzer-daily">📯 Daily Volume Buzzer</button>
+          <button type="button" class="rp-pill" data-rp="rsi-divergence">↕️ RSI Divergence</button>
+          <button type="button" class="rp-pill" data-rp="nr7-breakout">📏 NR7 Breakout Setup</button>
+          <button type="button" class="rp-pill" data-rp="potential-breakout">🎯 Potential Breakout (200D + 30D)</button>
+          <button type="button" class="rp-pill" data-rp="darvas-supertrend">🌀 Darvas + Supertrend Momentum</button>
+          <button type="button" class="rp-pill" data-rp="bottom-reversal">🔻 Bottom Reversal Confluence</button>
+          <button type="button" class="rp-pill" data-rp="vix-range">🌡️ India VIX Next-Day Range</button>
+          <button type="button" class="rp-pill" data-rp="confluence">🧬 9/15 + Hammer + W Confluence</button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Symbol</label>
+            <select id="rpSymbol">
+              <optgroup label="Indices">
+                <option value="NIFTY" selected>NIFTY</option>
+                <option value="BANKNIFTY">BANKNIFTY</option>
+                <option value="FINNIFTY">FINNIFTY</option>
+                <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+                <option value="SENSEX">SENSEX</option>
+              </optgroup>
+              <optgroup label="Global markets">
+                <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+                <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+                <option value="GOLD">GOLD (COMEX)</option>
+              </optgroup>
+            </select>
+          </div>
+          <div id="rpParams" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;"></div>
+          <div class="group">
+            <button class="scan-btn" id="rpScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" id="rpClearBtn" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;" id="rpDesc"></div>
+      </div>
+
+      <div class="summary" id="rpSummary" style="display:none; gap:16px;">
+        <div class="stat"><div class="n mono" id="rpDateVal" style="font-size:15px;">–</div><div class="l">last bar</div></div>
+        <div class="stat"><div class="n mono" id="rpCloseVal" style="font-size:16px;">–</div><div class="l">close</div></div>
+        <div class="stat"><div class="n" id="rpSignalVal" style="font-size:16px;">–</div><div class="l">signal</div></div>
+        <div id="rpExtraStats" style="display:contents;"></div>
+        <button type="button" class="dl-btn" id="rpViewChartBtn" style="align-self:center; margin-left:auto;">📈 View on Chart</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="rpTable" style="display:none;">
+          <thead><tr id="rpTableHead"></tr></thead>
+          <tbody id="rpBody"></tbody>
+        </table>
+        <div class="empty" id="rpEmpty">Click <b>Scan</b> to run the selected Rajan/Pavan indicator.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chartsPanel" style="display:none;">
+    <div class="panel" style="margin-bottom:16px;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+        <div class="group" style="min-width:160px;">
+          <label>Index</label>
+          <select id="tvSymbolSelect">
+            <optgroup label="Indices">
+              <option value="NIFTY" selected>NIFTY</option>
+              <option value="BANKNIFTY">BANKNIFTY</option>
+              <option value="FINNIFTY">FINNIFTY</option>
+              <option value="MIDCPNIFTY">MIDCPNIFTY</option>
+              <option value="SENSEX">SENSEX</option>
+            </optgroup>
+            <optgroup label="Global markets">
+              <option value="BITCOIN">BITCOIN (BTC-USD)</option>
+              <option value="CRUDEOIL">CRUDE OIL (WTI)</option>
+              <option value="GOLD">GOLD (COMEX)</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="group" style="min-width:130px;">
+          <label>Lookback (days)</label>
+          <input type="number" id="tvLookback" value="180" step="10" min="30" max="365">
+        </div>
+        <div class="group" style="min-width:220px;">
+          <label>Overlay</label>
+          <select id="tvOverlaySelect">
+            <option value="none">None (candles only)</option>
+            <option value="utbot" selected>UT Bot</option>
+            <optgroup label="Rajan / Pavan" id="tvRpOptgroup"></optgroup>
+          </select>
+        </div>
+        <div class="group">
+          <button class="scan-btn" id="tvLoadBtn" style="width:auto; padding:10px 22px; margin-top:0;">Load Chart</button>
+        </div>
+        <div class="group">
+          <a id="tvExternalLink" href="https://www.tradingview.com/chart/?symbol=NSE:NIFTY" target="_blank" rel="noopener" class="dl-btn" style="display:inline-block; text-decoration:none; padding:10px 16px;">Open in TradingView ↗</a>
+        </div>
+      </div>
+      <div style="font-size:11.5px; color:var(--muted); margin-top:8px;" id="tvOverlayHint">
+        Daily candles built from NSE's historical data (SENSEX comes from Yahoo Finance instead, since BSE blocks this app's requests), rendered with TradingView's open-source <b>Lightweight Charts</b> library. The yellow line and green/red markers are our UT Bot trailing-stop and BUY/SELL signals. For TradingView's own full toolset on this exact symbol, use <b>Open in TradingView</b>.
+      </div>
+    </div>
+    <div class="chart-wrap fade-in">
+      <div id="tvChartError" class="empty" style="display:none;"></div>
+      <div id="tvChartContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin.startsWith('http') ? '' : 'http://localhost:8000';
+let currentMode = 'auto'; // 'auto' | 'live' | 'manual'
+let lastResults = [];
+let sortKey = 'oi';
+let sortDir = 'desc';
+let liveTimer = null;
+let allSymbols = [];
+let loadedAppVersion = null;
+
+// Initialize status and load symbols
+async function initStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/status`);
+    const data = await res.json();
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('marketStatusText');
+    const loadedInfo = document.getElementById('loadedInfo');
+
+    if (data.marketStatus === 'Open') {
+      dot.className = 'status-dot live';
+      text.textContent = 'Market: LIVE (' + (data.tradeDate || '') + ')';
+    } else {
+      dot.className = 'status-dot closed';
+      text.textContent = 'Market: Closed (' + (data.tradeDate || '') + ')';
+    }
+
+    if (data.todayDateLoaded) {
+      loadedInfo.textContent = 'EOD data: ' + data.todayDateLoaded + ' (' + data.totalLoaded.toLocaleString() + ' contracts)';
+      document.getElementById('autoBannerMsg').textContent = 'Daily data for ' + data.todayDateLoaded + ' loaded (' + data.totalLoaded.toLocaleString() + ' contracts) — cross-checked with ' + (data.prevDateLoaded || 'previous day');
+    }
+    if (data.appVersion) loadedAppVersion = data.appVersion;
+    loadSymbols();
+  } catch (err) {
+    document.getElementById('marketStatusText').textContent = 'API connected';
+  }
+}
+
+// Update-available banner: cheap version poll (no NSE round-trip) every 5
+// minutes plus whenever the tab regains focus, so a deploy doesn't silently
+// leave someone running stale cached JS.
+async function checkForUpdate() {
+  if (!loadedAppVersion) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/version?_=${Date.now()}`, { cache: 'no-store' });
+    const data = await res.json();
+    if (data.version && data.version !== loadedAppVersion) {
+      document.getElementById('updateBanner').classList.add('show');
+    }
+  } catch (e) {}
+}
+setInterval(checkForUpdate, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+document.getElementById('updateRefreshBtn').addEventListener('click', () => window.location.reload());
+document.getElementById('updateLaterBtn').addEventListener('click', () => {
+  document.getElementById('updateBanner').classList.remove('show');
+});
+
+// Live news ticker — backend caches the aggregated RSS pull for ~10 minutes,
+// so refetching here on the same cadence just picks up whatever's newly cached
+// without re-triggering the (slower) live fetch on every page view.
+let newsItems = [];
+
+function buildNewsTickerItem(item) {
+  const a = document.createElement('a');
+  a.className = 'news-ticker-item';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.href = '#';
+  if (item.link) {
+    try {
+      const u = new URL(item.link, window.location.href);
+      if (u.protocol === 'http:' || u.protocol === 'https:') a.href = u.href;
+    } catch (e) { /* leave href as # if the feed gave us garbage */ }
+  }
+  const titleSpan = document.createElement('span');
+  titleSpan.textContent = item.title || '';
+  const sep = document.createElement('span');
+  sep.className = 'sep';
+  sep.textContent = '•';
+  const srcSpan = document.createElement('span');
+  srcSpan.className = 'src';
+  srcSpan.textContent = item.source || '';
+  a.appendChild(titleSpan);
+  a.appendChild(sep);
+  a.appendChild(srcSpan);
+  return a;
+}
+
+function renderNewsTicker() {
+  const track = document.getElementById('newsTickerTrack');
+  track.innerHTML = '';
+  if (!newsItems.length) {
+    track.classList.add('no-scroll');
+    const span = document.createElement('span');
+    span.className = 'news-ticker-empty';
+    span.textContent = 'Market news unavailable right now.';
+    track.appendChild(span);
+    return;
+  }
+  track.classList.remove('no-scroll');
+  // Rendered twice back-to-back so the CSS translateX(-50%) scroll loops seamlessly.
+  newsItems.forEach(n => track.appendChild(buildNewsTickerItem(n)));
+  newsItems.forEach(n => track.appendChild(buildNewsTickerItem(n)));
+
+  // A fixed animation-duration would scroll faster as more headlines load (more
+  // pixels to cover in the same time). Pin the speed instead (px/sec) so the
+  // ticker always reads at the same slow, comfortable pace regardless of item count.
+  const NEWS_TICKER_PX_PER_SEC = 28;
+  const halfWidth = track.scrollWidth / 2;
+  const duration = Math.max(halfWidth / NEWS_TICKER_PX_PER_SEC, 30);
+  track.style.animationDuration = duration + 's';
+}
+
+async function loadMarketNews() {
+  try {
+    const res = await fetch(`${API_BASE}/api/news?limit=30`);
+    const data = await res.json();
+    if (res.ok) {
+      newsItems = data.items || [];
+      renderNewsTicker();
+    }
+  } catch (e) {
+    console.error(e);
+    if (!newsItems.length) renderNewsTicker();
+  }
+}
+loadMarketNews();
+setInterval(loadMarketNews, 10 * 60 * 1000);
+
+async function loadSymbols() {
+  try {
+    const res = await fetch(`${API_BASE}/api/symbols`);
+    const data = await res.json();
+    if (data.symbols && data.symbols.length) {
+      allSymbols = data.symbols;
+      populateSymbols(allSymbols);
+    }
+  } catch (e) {}
+}
+
+function populateSymbols(list) {
+  const sel = document.getElementById('symSelect');
+  sel.innerHTML = '<option value="__ALL__">All symbols</option>' +
+    list.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+// Show/hide helper that retriggers the fade-in animation each time a panel appears
+function showPanel(el, displayValue) {
+  el.style.display = displayValue;
+  el.classList.remove('fade-in');
+  void el.offsetWidth;
+  el.classList.add('fade-in');
+}
+
+// Tab Switching
+function switchToTab(tab) {
+  const targetBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (targetBtn) targetBtn.classList.add('active');
+  currentMode = tab;
+
+  // Auto-refresh only makes sense while actively viewing the Live tab —
+  // otherwise it silently keeps polling the API every 15s in the
+  // background after the user navigates away.
+  if (currentMode !== 'live' && liveTimer) {
+    clearInterval(liveTimer);
+    liveTimer = null;
+    document.getElementById('liveAutoRefresh').checked = false;
+  }
+
+  document.getElementById('autoBanner').style.display = currentMode === 'auto' ? 'flex' : 'none';
+  document.getElementById('liveBar').style.display = currentMode === 'live' ? 'flex' : 'none';
+  document.getElementById('manualUploadRow').style.display = currentMode === 'manual' ? 'flex' : 'none';
+  // Live Market Scanner always fetches one symbol's own live chain at its
+  // current nearest expiry — Instrument type and Expiry don't apply to that
+  // (the backend ignores them there), so hide them instead of leaving
+  // controls on screen that silently do nothing while on this tab.
+  document.getElementById('symbolFilterGroup').style.display = currentMode === 'live' ? 'none' : 'block';
+  document.getElementById('instrGroup').style.display = currentMode === 'live' ? 'none' : 'block';
+  document.getElementById('expiryGroup').style.display = currentMode === 'live' ? 'none' : 'block';
+  document.getElementById('workspace').style.display = (currentMode === 'indicators' || currentMode === 'charts') ? 'none' : 'grid';
+  document.getElementById('indicatorsPanel').style.display = currentMode === 'indicators' ? 'block' : 'none';
+
+  if (currentMode === 'charts') {
+    showPanel(document.getElementById('chartsPanel'), 'block');
+    loadTvChart();
+  } else {
+    document.getElementById('chartsPanel').style.display = 'none';
+  }
+
+  if (currentMode === 'live') {
+    runLiveScan();
+  } else if (currentMode === 'auto') {
+    runServerScan();
+  } else if (currentMode === 'indicators') {
+    runIndicatorScan();
+  }
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchToTab(btn.dataset.tab));
+});
+
+// Charts tab: TradingView's open-source Lightweight Charts library, fed by our
+// own NSE historical data (their free tv.js widget embed blocks NSE symbols
+// entirely and silently falls back to a US stock, so it isn't used here).
+//
+// Overlay data source is either UT Bot (/api/indicators/ut-bot, unchanged
+// behavior) or one of the 15 Rajan/Pavan indicators (/api/indicators/rajan-pavan),
+// picked via #tvOverlaySelect ('none' | 'utbot' | 'rp:<key>'). Whichever is
+// picked, its response's own `bars` array supplies BOTH the candles (or, for
+// the one OHLC-less indicator, a close-price line) AND the overlay lines/
+// markers — never a separate fetch — so they stay perfectly aligned.
+let lwScriptLoaded = false;
+let lwScriptLoading = null;
+let lwChart = null;
+let lwSeries = null;       // candlestick series (used for everything except vix-range)
+let lwMainLineSeries = null; // close-price line series (used only for vix-range, which has no O/H/L)
+let lwStopSeries = null;   // UT Bot trailing-stop line
+let lwExtraSeries = [];    // dynamically (re)created per Rajan/Pavan `columns`
+let lastChartData = null;
+
+// Rajan/Pavan numeric columns whose values are on a wildly different scale
+// than the instrument's own price (0-100 RSI, raw volume figures, a 0-5
+// score, India VIX and its points-based expected-move) — these get their own
+// thin price-scale strip at the bottom instead of the main candle scale.
+// Everything else (EMAs, support/resistance/neckline/breakout levels,
+// Supertrend, the 200D high, vix-range's own upper/lower range) is genuinely
+// in the instrument's own price units and belongs on the main scale.
+const RP_OSCILLATOR_KEYS = new Set(['rsi', 'volume', 'avgVolume', 'score', 'vix', 'expectedMove']);
+const RP_LINE_COLORS = ['#4fc3f7', '#ffca28', '#ba68c8', '#81c784', '#ff8a65', '#f06292', '#90a4ae'];
+// vix-range's `signal` is a constant "RANGE" on every single bar (there's no
+// discrete event there — see india_vix_range_scan's events:[] on the backend)
+// so it's excluded from markers to avoid stamping every bar.
+const RP_IGNORE_MARKER_SIGNALS = new Set(['RANGE']);
+
+// Real TradingView symbol tickers (same convention Rajan's Pine scripts already use
+// for request.security() on these underlyings) — for the external "Open in
+// TradingView" link, since their own site supports NSE symbols fine even though
+// their free embeddable widget for third-party sites does not.
+const TV_EXTERNAL_SYMBOL = {
+  NIFTY: 'NSE:NIFTY',
+  BANKNIFTY: 'NSE:BANKNIFTY',
+  FINNIFTY: 'NSE:CNXFINANCE',
+  MIDCPNIFTY: 'NSE:NIFTY_MID_SELECT',
+  SENSEX: 'BSE:SENSEX',
+  BITCOIN: 'COINBASE:BTCUSD',
+  CRUDEOIL: 'NYMEX:CL1!',
+  GOLD: 'COMEX:GC1!',
+};
+
+function updateTvExternalLink() {
+  const symbol = document.getElementById('tvSymbolSelect').value;
+  const tvSymbol = TV_EXTERNAL_SYMBOL[symbol] || ('NSE:' + symbol);
+  document.getElementById('tvExternalLink').href = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
+}
+
+function loadLwScript() {
+  if (lwScriptLoaded) return Promise.resolve();
+  if (lwScriptLoading) return lwScriptLoading;
+  lwScriptLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/lightweight-charts@4/dist/lightweight-charts.standalone.production.js';
+    s.onload = () => { lwScriptLoaded = true; resolve(); };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return lwScriptLoading;
+}
+
+function ensureLwChart(container) {
+  if (lwChart) return;
+  lwChart = LightweightCharts.createChart(container, {
+    autoSize: true,
+    layout: { background: { color: '#12161f' }, textColor: '#8891a5' },
+    grid: { vertLines: { color: '#242a3a' }, horzLines: { color: '#242a3a' } },
+    timeScale: { borderColor: '#242a3a' },
+    rightPriceScale: { borderColor: '#242a3a' },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  });
+  lwSeries = lwChart.addCandlestickSeries({
+    upColor: '#35d07f', downColor: '#ff6b81', borderVisible: false,
+    wickUpColor: '#35d07f', wickDownColor: '#ff6b81',
+    priceScaleId: 'right',
+  });
+  lwMainLineSeries = lwChart.addLineSeries({
+    color: '#4fc3f7', lineWidth: 2, priceLineVisible: false, lastValueVisible: true,
+    priceScaleId: 'right', visible: false,
+  });
+  lwStopSeries = lwChart.addLineSeries({
+    color: '#f5c344', lineWidth: 1, priceLineVisible: false, lastValueVisible: false,
+    priceScaleId: 'right',
+  });
+  // Reserve a thin strip at the bottom of the pane for oscillator-scale
+  // columns (RSI, volume, score, VIX, ...) so they never get plotted directly
+  // on top of a ₹20,000+ index price scale, where a 0-100 value is invisible.
+  lwChart.priceScale('right').applyOptions({ scaleMargins: { top: 0.08, bottom: 0.28 } });
+  lwChart.priceScale('oscillator').applyOptions({ scaleMargins: { top: 0.75, bottom: 0.02 } });
+}
+
+// Populate the Charts tab's overlay picker's Rajan/Pavan options from the
+// Indicators tab's own #rpSubPicker buttons, so the two lists can never drift
+// out of sync with each other or with RAJAN_PAVAN_KEYS on the backend.
+(function populateTvRpOverlayOptions() {
+  const group = document.getElementById('tvRpOptgroup');
+  if (!group) return;
+  document.querySelectorAll('#rpSubPicker button[data-rp]').forEach(btn => {
+    const opt = document.createElement('option');
+    opt.value = 'rp:' + btn.dataset.rp;
+    opt.textContent = btn.textContent.trim();
+    group.appendChild(opt);
+  });
+})();
+
+function showChartError(msg) {
+  const err = document.getElementById('tvChartError');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+function clearChartError() {
+  document.getElementById('tvChartError').style.display = 'none';
+}
+
+function clearRpExtraSeries() {
+  lwExtraSeries.forEach(s => { try { lwChart.removeSeries(s); } catch (e) { /* already gone */ } });
+  lwExtraSeries = [];
+}
+
+function currentOverlaySelection() {
+  const val = document.getElementById('tvOverlaySelect').value;
+  if (val.startsWith('rp:')) return { type: 'rp', key: val.slice(3) };
+  return { type: val }; // 'none' | 'utbot'
+}
+
+// Generic renderer for the 15 Rajan/Pavan indicators, driven entirely by the
+// response's `columns` metadata — no per-indicator chart code. One line
+// series per non-bool column (main price scale, or the oscillator strip for
+// RSI/volume/score/VIX-like fields), plus one marker per bar from `signal`
+// (direction from RP_BULLISH_SIGNALS/RP_BEARISH_SIGNALS, same sets the table
+// view already uses) or, failing that, from any true fmt:"bool" column.
+function renderRpOverlay(overlay) {
+  const bars = lastChartData.bars || [];
+  const cols = lastChartData.columns || [];
+  const boolCols = cols.filter(c => c.fmt === 'bool');
+
+  let colorIdx = 0;
+  cols.forEach(c => {
+    if (c.fmt === 'bool') return;
+    if (!bars.some(b => b[c.key] != null)) return;
+    const series = lwChart.addLineSeries({
+      color: RP_LINE_COLORS[colorIdx % RP_LINE_COLORS.length],
+      lineWidth: 2, priceLineVisible: false, lastValueVisible: true,
+      title: c.label,
+      priceScaleId: RP_OSCILLATOR_KEYS.has(c.key) ? 'oscillator' : 'right',
+    });
+    colorIdx++;
+    series.setData(bars.filter(b => b[c.key] != null).map(b => ({ time: b.date, value: b[c.key] })));
+    lwExtraSeries.push(series);
+  });
+
+  const markers = [];
+  bars.forEach(b => {
+    const sig = b.signal;
+    if (sig && sig !== 'NONE' && !RP_IGNORE_MARKER_SIGNALS.has(sig)) {
+      const bullish = RP_BULLISH_SIGNALS.has(sig);
+      const bearish = RP_BEARISH_SIGNALS.has(sig);
+      markers.push({
+        time: b.date,
+        position: bearish ? 'aboveBar' : 'belowBar',
+        color: bullish ? '#35d07f' : bearish ? '#ff6b81' : '#8891a5',
+        shape: bullish ? 'arrowUp' : bearish ? 'arrowDown' : 'circle',
+        text: sig,
+      });
+      return;
+    }
+    const trueBool = boolCols.find(c => b[c.key]);
+    if (trueBool) {
+      markers.push({ time: b.date, position: 'belowBar', color: '#8891a5', shape: 'circle', text: trueBool.label });
+    }
+  });
+
+  const targetSeries = overlay.key === 'vix-range' ? lwMainLineSeries : lwSeries;
+  const otherSeries = overlay.key === 'vix-range' ? lwSeries : lwMainLineSeries;
+  targetSeries.setMarkers(markers);
+  otherSeries.setMarkers([]);
+}
+
+function renderChartOverlay() {
+  if (!lastChartData || !lwSeries) return;
+  const overlay = currentOverlaySelection();
+  clearRpExtraSeries();
+
+  if (overlay.type !== 'rp') {
+    const bars = lastChartData.bars || [];
+    const showUtBot = overlay.type === 'utbot';
+    lwStopSeries.setData(showUtBot ? bars.filter(b => b.trailingStop != null).map(b => ({ time: b.date, value: b.trailingStop })) : []);
+    lwMainLineSeries.setMarkers([]);
+    lwSeries.setMarkers(showUtBot ? bars.filter(b => b.signal).map(b => ({
+      time: b.date,
+      position: b.signal === 'BUY' ? 'belowBar' : 'aboveBar',
+      color: b.signal === 'BUY' ? '#35d07f' : '#ff6b81',
+      shape: b.signal === 'BUY' ? 'arrowUp' : 'arrowDown',
+      text: b.signal,
+    })) : []);
+    return;
+  }
+
+  lwStopSeries.setData([]);
+  renderRpOverlay(overlay);
+}
+
+async function loadTvChart() {
+  updateTvExternalLink();
+  clearChartError();
+  const container = document.getElementById('tvChartContainer');
+  try {
+    await loadLwScript();
+  } catch (e) {
+    showChartError('Could not load the charting library (network blocked?).');
+    return;
+  }
+  ensureLwChart(container);
+
+  const symbol = document.getElementById('tvSymbolSelect').value;
+  const lookback = document.getElementById('tvLookback').value || 180;
+  const overlay = currentOverlaySelection();
+  const url = overlay.type === 'rp'
+    ? `${API_BASE}/api/indicators/rajan-pavan?key=${encodeURIComponent(overlay.key)}&symbol=${symbol}&lookbackDays=${lookback}`
+    : `${API_BASE}/api/indicators/ut-bot?symbol=${symbol}&lookbackDays=${lookback}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) { showChartError(data.detail || 'Could not load chart data.'); return; }
+
+    lastChartData = data;
+    const bars = data.bars || [];
+    const isVixRange = overlay.type === 'rp' && overlay.key === 'vix-range';
+
+    if (isVixRange) {
+      // india_vix_range_scan has no open/high/low per bar — render as a close
+      // price line instead of candles.
+      lwSeries.applyOptions({ visible: false });
+      lwSeries.setData([]);
+      lwMainLineSeries.applyOptions({ visible: true });
+      lwMainLineSeries.setData(bars.filter(b => b.close != null).map(b => ({ time: b.date, value: b.close })));
+    } else {
+      lwMainLineSeries.applyOptions({ visible: false });
+      lwMainLineSeries.setData([]);
+      lwSeries.applyOptions({ visible: true });
+      lwSeries.setData(bars.filter(b => b.open != null && b.high != null && b.low != null && b.close != null)
+        .map(b => ({ time: b.date, open: b.open, high: b.high, low: b.low, close: b.close })));
+    }
+    renderChartOverlay();
+    lwChart.timeScale().fitContent();
+  } catch (e) {
+    console.error(e);
+    showChartError('Could not load chart data — check your connection and try again.');
+  }
+}
+
+document.getElementById('tvLoadBtn').addEventListener('click', loadTvChart);
+document.getElementById('tvOverlaySelect').addEventListener('change', loadTvChart);
+document.getElementById('tvSymbolSelect').addEventListener('change', loadTvChart);
+
+// Indicators: tool sub-switcher
+// ───────────── Rajan / Pavan Indicators (15-in-one section) ─────────────
+// Each entry's `params` drives BOTH the dynamically-built config form and the
+// query string sent to /api/indicators/rajan-pavan — field `id`s match the
+// endpoint's query param names 1:1 (see server.py / rajan_pavan_indicators.py).
+const RP_INDICATORS = {
+  'hammer-support': {
+    desc: 'Uptrend (price above a rising trend EMA, optionally confirmed by higher-high/higher-low structure) pulling back near swing support and forming a hammer candle.',
+    params: [
+      { id: 'emaLength', label: 'Trend EMA', type: 'number', value: 50, step: 1, min: 2, max: 300 },
+      { id: 'pivotLeft', label: 'Pivot Left', type: 'number', value: 3, step: 1, min: 1, max: 20 },
+      { id: 'pivotRight', label: 'Pivot Right', type: 'number', value: 3, step: 1, min: 1, max: 20 },
+      { id: 'useStructure', label: 'Require HH/HL structure', type: 'checkbox', value: true },
+      { id: 'maxBodyPct', label: 'Max Body / Range', type: 'number', value: 0.35, step: 0.05, min: 0.05, max: 0.8 },
+      { id: 'minLowerWickBody', label: 'Min Lower Wick / Body', type: 'number', value: 2.0, step: 0.25, min: 1 },
+      { id: 'maxUpperWickBody', label: 'Max Upper Wick / Body', type: 'number', value: 0.5, step: 0.1, min: 0 },
+      { id: 'supportDistancePct', label: 'Max Distance From Support %', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 180, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'w-pattern': {
+    desc: 'Uptrend pulling back near support with two similar swing lows (a W) and a close breaking back above the middle swing-high neckline.',
+    params: [
+      { id: 'pivotLeft', label: 'Pivot Left', type: 'number', value: 3, step: 1, min: 1, max: 20 },
+      { id: 'pivotRight', label: 'Pivot Right', type: 'number', value: 3, step: 1, min: 1, max: 20 },
+      { id: 'emaLength', label: 'Trend EMA', type: 'number', value: 50, step: 1, min: 2, max: 300 },
+      { id: 'supportTolerancePct', label: 'Support Tolerance %', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 180, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'ema-9-15': {
+    desc: 'EMA 9 vs EMA 15 momentum/trend pair — BUY when 9 crosses above 15 (or stays above, in Trend State mode), SELL on the mirror, with optional volume and a longer trend-EMA filter.',
+    params: [
+      { id: 'fastLength', label: 'Fast EMA', type: 'number', value: 9, step: 1, min: 2, max: 100 },
+      { id: 'slowLength', label: 'Slow EMA', type: 'number', value: 15, step: 1, min: 2, max: 200 },
+      { id: 'signalMode', label: 'Signal Mode', type: 'select', value: 'crossover', options: [{ value: 'crossover', label: 'Crossover' }, { value: 'trend', label: 'Trend State' }] },
+      { id: 'useTrend', label: 'Use trend EMA filter', type: 'checkbox', value: true },
+      { id: 'trendLength', label: 'Trend EMA', type: 'number', value: 50, step: 1, min: 2, max: 300 },
+      { id: 'useVolume', label: 'Use volume confirmation', type: 'checkbox', value: true },
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'volumeMultiplier', label: 'Min Volume / Avg', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 150, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'tight-range': {
+    desc: 'Narrow high-low range + compressed EMA 9/15 spread + contracted volume, then a breakout above the pre-compression high.',
+    params: [
+      { id: 'rangeLength', label: 'Range Lookback', type: 'number', value: 7, step: 1, min: 2, max: 60 },
+      { id: 'fastLength', label: 'Fast EMA', type: 'number', value: 9, step: 1, min: 2, max: 100 },
+      { id: 'slowLength', label: 'Slow EMA', type: 'number', value: 15, step: 1, min: 2, max: 200 },
+      { id: 'volumeLength', label: 'Volume Avg', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'volumeFactor', label: 'Max Volume / Avg', type: 'number', value: 0.8, step: 0.05, min: 0.05 },
+      { id: 'emaDistancePct', label: 'Max EMA Distance %', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 120, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'breakout-15m': {
+    desc: 'Close breaking above the prior N-bar high with volume confirmation, plus an optional EMA trend filter. (Runs on daily bars — see the note above.)',
+    params: [
+      { id: 'lookback', label: 'Breakout Lookback', type: 'number', value: 20, step: 1, min: 2, max: 200 },
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'volumeMultiplier', label: 'Volume Multiplier', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'useEMA', label: 'Use EMA trend filter', type: 'checkbox', value: false },
+      { id: 'emaLength', label: 'EMA Length', type: 'number', value: 50, step: 1, min: 2, max: 300 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 150, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'breakdown-15m': {
+    desc: 'Close breaking below the prior N-bar low with volume confirmation, plus optional RSI / MACD / SMA50 filters. (Runs on daily bars — see the note above.)',
+    params: [
+      { id: 'lookback', label: 'Breakdown Lookback', type: 'number', value: 20, step: 1, min: 2, max: 200 },
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'volumeMultiplier', label: 'Volume Multiplier', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'useRSI', label: 'Use RSI filter', type: 'checkbox', value: false },
+      { id: 'rsiLength', label: 'RSI Length', type: 'number', value: 14, step: 1, min: 2, max: 100 },
+      { id: 'rsiMax', label: 'Max RSI', type: 'number', value: 40, step: 1, min: 1, max: 100 },
+      { id: 'useMACD', label: 'Use MACD filter', type: 'checkbox', value: false },
+      { id: 'useSMA50', label: 'Use SMA50 filter', type: 'checkbox', value: false },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 150, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'volume-buzzer-15m': {
+    desc: 'Volume spike vs the previous bar, plus a short EMA price filter and an optional weekly-trend confirmation. (Runs on daily bars — see the note above.)',
+    params: [
+      { id: 'volumeMultiplier', label: 'Volume Spike Multiplier', type: 'number', value: 1.5, step: 0.1, min: 1.0 },
+      { id: 'useEMA', label: 'Require price above EMA', type: 'checkbox', value: true },
+      { id: 'emaLength', label: 'EMA Length', type: 'number', value: 5, step: 1, min: 2, max: 100 },
+      { id: 'useWeeklyTrend', label: 'Require weekly close above weekly EMA', type: 'checkbox', value: false },
+      { id: 'weeklyEmaLength', label: 'Weekly EMA Length', type: 'number', value: 30, step: 1, min: 2, max: 100 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 420, step: 10, min: 30, max: 730 },
+    ],
+  },
+  'volume-buzzer-daily': {
+    desc: 'Daily volume above its 10-day average alongside a close at least 2% above the previous close.',
+    params: [
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 10, step: 1, min: 2, max: 100 },
+      { id: 'priceMovePct', label: 'Min Price Increase %', type: 'number', value: 2.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 90, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'rsi-divergence': {
+    desc: 'Classic price/RSI divergence off confirmed pivots — bullish when price makes a lower low but RSI makes a higher low, bearish the mirror.',
+    params: [
+      { id: 'rsiLength', label: 'RSI Length', type: 'number', value: 14, step: 1, min: 2, max: 100 },
+      { id: 'pivotLeft', label: 'Pivot Left', type: 'number', value: 5, step: 1, min: 1, max: 30 },
+      { id: 'pivotRight', label: 'Pivot Right', type: 'number', value: 5, step: 1, min: 1, max: 30 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 150, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'nr7-breakout': {
+    desc: 'NR7 = today\'s high-low range is the narrowest of the last 7 bars. Flags the NR7 bar, then a close above/below its high/low as a breakout/breakdown.',
+    params: [
+      { id: 'nrLength', label: 'NR Length', type: 'number', value: 7, step: 1, min: 2, max: 60 },
+      { id: 'useVolume', label: 'Use volume confirmation', type: 'checkbox', value: true },
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'volumeMultiplier', label: 'Volume Multiplier', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 120, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'potential-breakout': {
+    desc: 'Close within X% of the 200-day high, with the last 30 days consolidating below the 200-day high from 30 days ago, confirmed by above-average volume.',
+    params: [
+      { id: 'nearHighPct', label: 'Max Distance From 200D High %', type: 'number', value: 5.0, step: 0.5, min: 0.5 },
+      { id: 'consolidationLength', label: 'Consolidation Length', type: 'number', value: 30, step: 1, min: 2, max: 90 },
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 50, step: 1, min: 2, max: 150 },
+      { id: 'minimumClose', label: 'Minimum Close', type: 'number', value: 0, step: 1, min: 0 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 180, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'darvas-supertrend': {
+    desc: 'Daily low above the Supertrend line with RSI > 40 and rising volume, confirmed by the weekly AND monthly Supertrend also being bullish (derived locally from daily bars).',
+    params: [
+      { id: 'stAtrLength', label: 'Supertrend ATR Length', type: 'number', value: 7, step: 1, min: 2, max: 50 },
+      { id: 'stFactor', label: 'Supertrend Factor', type: 'number', value: 3.0, step: 0.1, min: 0.5 },
+      { id: 'rsiLength', label: 'RSI Length', type: 'number', value: 14, step: 1, min: 2, max: 100 },
+      { id: 'rsiMinimum', label: 'Minimum RSI', type: 'number', value: 40, step: 1, min: 1, max: 100 },
+      { id: 'useVolume', label: 'Require increasing volume', type: 'checkbox', value: true },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 500, step: 20, min: 60, max: 730 },
+    ],
+  },
+  'bottom-reversal': {
+    desc: 'Scores up to 5 bottoming signs — low-volume big red candle, a prior selling-climax rejection, a tight/shrinking-volume contraction, a failed breakdown, and proximity to long-term support — flags a bottom at 3+.',
+    params: [
+      { id: 'volumeLength', label: 'Volume Average', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'bigVolumeMultiplier', label: 'Big Volume Multiplier', type: 'number', value: 1.5, step: 0.1, min: 1.0 },
+      { id: 'lowVolumeMultiplier', label: 'Low Volume Multiplier', type: 'number', value: 0.7, step: 0.05, min: 0.05 },
+      { id: 'supportLength', label: 'Support Lookback', type: 'number', value: 50, step: 5, min: 5, max: 200 },
+      { id: 'supportTolerancePct', label: 'Support Distance %', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'contractionBars', label: 'Contraction Bars', type: 'number', value: 4, step: 1, min: 3, max: 5 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 150, step: 10, min: 30, max: 500 },
+    ],
+  },
+  'vix-range': {
+    desc: 'Indicative next-day range: Index ± (Index × India VIX / divisor). A volatility-implied band, not a prediction. Most meaningful for NIFTY, since India VIX is NIFTY\'s own volatility index.',
+    params: [
+      { id: 'vixDivisor', label: 'VIX Divisor', type: 'number', value: 1600, step: 100, min: 100 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 90, step: 10, min: 20, max: 400 },
+    ],
+  },
+  confluence: {
+    desc: 'The master long setup: EMA 9/15 uptrend, price near support, and either a hammer or a W-pattern breakout, with optional volume confirmation.',
+    params: [
+      { id: 'supportLookback', label: 'Support Lookback', type: 'number', value: 20, step: 1, min: 2, max: 120 },
+      { id: 'supportTolerancePct', label: 'Support Tolerance %', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'pivotLeft', label: 'Pivot Left', type: 'number', value: 3, step: 1, min: 1, max: 20 },
+      { id: 'pivotRight', label: 'Pivot Right', type: 'number', value: 3, step: 1, min: 1, max: 20 },
+      { id: 'useVolume', label: 'Require volume confirmation', type: 'checkbox', value: true },
+      { id: 'volumeLength', label: 'Volume SMA', type: 'number', value: 20, step: 1, min: 2, max: 100 },
+      { id: 'volumeMultiplier', label: 'Volume Multiplier', type: 'number', value: 1.0, step: 0.1, min: 0.1 },
+      { id: 'lookbackDays', label: 'Lookback (days)', type: 'number', value: 150, step: 10, min: 30, max: 500 },
+    ],
+  },
+};
+
+let currentIndicator = 'ohol';
+// Rajan/Pavan sub-picker's active indicator key — rendered now (before the
+// generic auto-rescan wiring below runs) so its param form already has real
+// <select>/<input> elements in the DOM for that wiring to attach to.
+let currentRpKey = 'hammer-support';
+renderRpParamsForm(currentRpKey);
+document.querySelectorAll('#indicatorToolSeg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#indicatorToolSeg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentIndicator = btn.dataset.v;
+    const allSections = ['oholSection', 'premiumSection', 'utbotSection', 'donchianSection', 'heikinSection', 'hatrendSection', 'tradepredSection', 'quantumSection', 'optiontargetSection', 'rajanPavanSection'];
+    allSections.forEach(id => { document.getElementById(id).style.display = 'none'; });
+    const sectionMap = {
+      ohol: 'oholSection', premium: 'premiumSection', utbot: 'utbotSection', donchian: 'donchianSection',
+      heikin: 'heikinSection', hatrend: 'hatrendSection', tradepred: 'tradepredSection', quantum: 'quantumSection', optiontarget: 'optiontargetSection',
+      rajanpavan: 'rajanPavanSection',
+    };
+    showPanel(document.getElementById(sectionMap[currentIndicator]), 'block');
+    runIndicatorScan();
+  });
+});
+
+function runIndicatorScan() {
+  if (currentIndicator === 'ohol') runOhOlScan();
+  else if (currentIndicator === 'premium') runPremiumScan();
+  else if (currentIndicator === 'utbot') runUtBotScan();
+  else if (currentIndicator === 'donchian') runDonchianScan();
+  else if (currentIndicator === 'heikin') runHeikinScan();
+  else if (currentIndicator === 'hatrend') runHaTrendScan();
+  else if (currentIndicator === 'tradepred') runTradePredictorScan();
+  else if (currentIndicator === 'quantum') runQuantumMatrixScan();
+  else if (currentIndicator === 'rajanpavan') runRajanPavanScan();
+  else runOptionTargetCalc();
+  loadIndicatorOptionChain();
+}
+
+// Live option chain panel shown inside the Indicators section, contextual to
+// whichever symbol the currently-selected indicator is scanning.
+const INDICATOR_SYMBOL_FIELD = {
+  ohol: 'ohSymbol', utbot: 'utSymbol', donchian: 'dcSymbol',
+  heikin: 'haSymbol', hatrend: 'htSymbol', tradepred: 'tpSymbol', quantum: 'qmSymbol', rajanpavan: 'rpSymbol',
+};
+
+function getActiveIndicatorSymbol() {
+  const fieldId = INDICATOR_SYMBOL_FIELD[currentIndicator];
+  if (fieldId) {
+    const el = document.getElementById(fieldId);
+    if (el) return el.value;
+  }
+  return 'NIFTY'; // AlphaScan Option Matrix (premium) is NIFTY-only; Option Target Projection has no symbol
+}
+
+const GLOBAL_MARKET_SYMBOLS = new Set(['BITCOIN', 'CRUDEOIL', 'GOLD']);
+
+async function loadIndicatorOptionChain() {
+  const symbol = getActiveIndicatorSymbol();
+  document.getElementById('indChainSymbol').textContent = symbol;
+  const table = document.getElementById('indChainTable');
+  const empty = document.getElementById('indChainEmpty');
+  const meta = document.getElementById('indChainMeta');
+
+  if (GLOBAL_MARKET_SYMBOLS.has(symbol)) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = `${symbol} is a global price-only symbol — it has no NSE option chain to show here.`;
+    meta.textContent = '';
+    return;
+  }
+
+  const params = new URLSearchParams({
+    symbol, optType: 'BOTH', lowOn: 'false', prevOn: 'false', showMode: 'all',
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/live/scan?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) {
+      table.style.display = 'none';
+      empty.style.display = 'block';
+      empty.textContent = data.detail || `No live option chain available for ${symbol}.`;
+      meta.textContent = '';
+      return;
+    }
+    renderIndicatorOptionChain(data, symbol);
+  } catch (e) {
+    console.error(e);
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = 'Could not load the option chain — check your connection and try again.';
+  }
+}
+
+function renderIndicatorOptionChain(data, symbol) {
+  const table = document.getElementById('indChainTable');
+  const empty = document.getElementById('indChainEmpty');
+  const meta = document.getElementById('indChainMeta');
+  const rows = data.results || [];
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = `No live strikes returned for ${symbol} right now.`;
+    meta.textContent = '';
+    return;
+  }
+
+  const spot = rows.find(r => r.spot != null)?.spot ?? null;
+  const byStrike = {};
+  rows.forEach(r => {
+    const k = r.strike;
+    if (!byStrike[k]) byStrike[k] = {};
+    byStrike[k][r.type] = r;
+  });
+  let strikes = Object.keys(byStrike).map(Number).sort((a, b) => a - b);
+
+  if (spot != null && strikes.length > 20) {
+    let atmIdx = 0, best = Infinity;
+    strikes.forEach((k, i) => { const d = Math.abs(k - spot); if (d < best) { best = d; atmIdx = i; } });
+    const from = Math.max(0, atmIdx - 10);
+    strikes = strikes.slice(from, from + 21);
+  }
+
+  meta.textContent = `Spot ${numOrDash(spot)} · ${data.liveTimestamp || ''}`;
+  table.style.display = 'table';
+  empty.style.display = 'none';
+
+  document.getElementById('indChainBody').innerHTML = strikes.map(k => {
+    const ce = byStrike[k].CE || {};
+    const pe = byStrike[k].PE || {};
+    const isAtm = spot != null && Math.abs(k - spot) === Math.min(...strikes.map(s => Math.abs(s - spot)));
+    const strikeStyle = isAtm ? 'color:var(--match); font-weight:700;' : 'font-weight:600;';
+    const ceSig = ce.sig ? '<span class="sig ce-cell">' + ce.sig + '</span>' : '–';
+    const peSig = pe.sig ? '<span class="sig pe-cell">' + pe.sig + '</span>' : '–';
+    return '<tr>' +
+      '<td>' + fmtOI(ce.oi) + '</td>' +
+      '<td>' + fmtOI(ce.volume) + '</td>' +
+      '<td>' + numOrDash(ce.low) + '</td>' +
+      '<td>' + numOrDash(ce.high) + '</td>' +
+      '<td class="ce-cell">' + numOrDash(ce.close) + '</td>' +
+      '<td class="exp">' + ceSig + '</td>' +
+      '<td style="text-align:center; ' + strikeStyle + '">' + k + '</td>' +
+      '<td class="exp">' + peSig + '</td>' +
+      '<td class="pe-cell">' + numOrDash(pe.close) + '</td>' +
+      '<td>' + numOrDash(pe.low) + '</td>' +
+      '<td>' + numOrDash(pe.high) + '</td>' +
+      '<td>' + fmtOI(pe.volume) + '</td>' +
+      '<td>' + fmtOI(pe.oi) + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('indChainBody'));
+}
+
+document.getElementById('indChainRefreshBtn').addEventListener('click', loadIndicatorOptionChain);
+// Auto re-run the active indicator's scan (which also refreshes the chain above)
+// whenever ANY of its own settings change — symbol, thresholds, checkboxes,
+// rule selects, everything — instead of requiring a manual Scan click every
+// time. Previously this only covered the symbol dropdowns.
+const INDICATOR_SECTION_ID = {
+  ohol: 'oholSection', premium: 'premiumSection', utbot: 'utbotSection',
+  donchian: 'donchianSection', heikin: 'heikinSection', hatrend: 'hatrendSection',
+  tradepred: 'tradepredSection', quantum: 'quantumSection', rajanpavan: 'rajanPavanSection',
+};
+Object.entries(INDICATOR_SECTION_ID).forEach(([key, sectionId]) => {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  section.querySelectorAll('select, input').forEach(el => {
+    el.addEventListener('change', () => {
+      if (currentIndicator === key) runIndicatorScan();
+    });
+  });
+});
+
+// ───────────── Clear / reset buttons ─────────────
+const INDICATOR_DEFAULTS = {
+  ohol: {
+    ohSymbol: 'NIFTY', ohSideMode: 'auto', ohRule: 'open_or_prev', ohPts: '10',
+    ohThr: '71', ohDirMode: 'follow', ohVixLow: '14', ohVixHigh: '20', ohOnlyQualifying: false,
+  },
+  premium: {
+    pmExpSel: 'both', pmPremSrc: 'prevclose', pmPremFrom: '300', pmPremTo: '349',
+    pmLowFrom: '52', pmLowTo: '58', pmLowMode: 'fixed', pmThr: '71', pmDirMode: 'follow', pmOnlyMatches: false,
+  },
+  utbot: { utSymbol: 'NIFTY', utKeyValue: '1', utAtrPeriod: '10', utLookback: '60' },
+  donchian: { dcSymbol: 'NIFTY', dcLength: '20', dcLookback: '120' },
+  heikin: { haSymbol: 'NIFTY', haChannelType: 'bollinger', haLength: '20', haMult: '2.0' },
+  hatrend: {
+    htSymbol: 'NIFTY', htEmaFast: '9', htEmaSlow: '21', htChannelLen: '20',
+    htAtrLen: '14', htAtrMult: '1.5', htRR: '2.0', htAdxLen: '14', htAdxMin: '18',
+    htUseDI: false, htReverse: true,
+  },
+  tradepred: {
+    tpSymbol: 'NIFTY', tpAtrLength: '10', tpFactor: '1.5', tpEmaLength: '200',
+    tpUseTrendFilter: false, tpSlMult: '1.5', tpTpMult: '2.0',
+  },
+  quantum: { qmSymbol: 'NIFTY', qmLookback: '20', qmKeyValue: '1', qmAtrPeriod: '10' },
+  optiontarget: { otBase: '340', otDiv1: '8', otDiv2: '6.5' },
+  // Rajan/Pavan's own Clear button (rpClearBtn) also resets the active
+  // sub-indicator pill back to 'hammer-support' and rebuilds its param form —
+  // see the dedicated listener near runRajanPavanScan, since this section's
+  // per-indicator fields are rebuilt dynamically rather than being fixed IDs.
+  rajanpavan: { rpSymbol: 'NIFTY' },
+};
+
+document.querySelectorAll('[data-clear]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.clear;
+    const defaults = INDICATOR_DEFAULTS[key];
+    if (!defaults) return;
+    Object.entries(defaults).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = val;
+      else el.value = val;
+    });
+    if (key === 'optiontarget') {
+      runOptionTargetCalc();
+    } else {
+      currentIndicator = key;
+      document.querySelectorAll('#indicatorToolSeg button').forEach(b => b.classList.remove('active'));
+      document.querySelector(`#indicatorToolSeg button[data-v="${key}"]`).classList.add('active');
+      runIndicatorScan();
+    }
+  });
+});
+
+// Cross-reference: last UT Bot result, shown as a bias badge inside the OH/OL panel
+let lastUtBotResult = null;
+
+function numOrDash(v) { return (v === null || v === undefined || isNaN(v)) ? '–' : Number(v).toFixed(2); }
+
+// Ticks a stat's displayed number from its current value up/down to the new target
+function animateNumber(el, target) {
+  const start = parseInt((el.textContent || '0').replace(/[^0-9-]/g, ''), 10) || 0;
+  if (start === target) { el.textContent = target.toLocaleString(); return; }
+  const duration = 500;
+  const t0 = performance.now();
+  function tick(now) {
+    const p = Math.min((now - t0) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(start + (target - start) * eased).toLocaleString();
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// Adds a staggered fade-in class to freshly rendered <tr> rows (capped so large tables don't crawl in)
+function staggerRows(tbody) {
+  Array.from(tbody.children).forEach((tr, i) => {
+    tr.classList.add('row-in');
+    tr.style.animationDelay = (Math.min(i, 24) * 14) + 'ms';
+  });
+}
+
+async function runOhOlScan() {
+  const btn = document.getElementById('ohScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('ohSymbol').value,
+    sideMode: document.getElementById('ohSideMode').value,
+    rule: document.getElementById('ohRule').value,
+    pts: document.getElementById('ohPts').value || 0,
+    thr: document.getElementById('ohThr').value || 71,
+    dirMode: document.getElementById('ohDirMode').value,
+    vixLow: document.getElementById('ohVixLow').value || 14,
+    vixHigh: document.getElementById('ohVixHigh').value || 20,
+    onlyQualifying: document.getElementById('ohOnlyQualifying').checked,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/oh-ol?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { alert(data.detail || 'Scan failed'); return; }
+    renderOhOl(data);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderOhOl(d) {
+  document.getElementById('ohSummary').style.display = 'flex';
+  const idx = d.index || {};
+  document.getElementById('ohIndexLine').textContent =
+    `${d.symbol}  ·  O ${numOrDash(idx.open)}  H ${numOrDash(idx.high)}  L ${numOrDash(idx.low)}  LTP ${numOrDash(idx.last)}   ▶ ${d.indexSignal}`;
+  const tierText = d.vixTier === 1 ? 'LOW VIX → Target +9%, SL −5%' : d.vixTier === 3 ? 'HIGH VIX → Target +18%, SL −18%' : 'MEDIUM VIX → Target +18%, SL −9%';
+  document.getElementById('ohVixLine').textContent = `India VIX ${numOrDash(d.vix)}  ·  ${tierText}`;
+  const vs = d.volumeSignal || {};
+  const confTxt = d.confirmed ? '   ✔ CONFIRMED by index open' : '';
+  document.getElementById('ohVolLine').textContent =
+    `Call vol ${vs.callPct == null ? '–' : vs.callPct.toFixed(1) + '%'} (${vs.callVolFmt})  ·  Put vol ${vs.putPct == null ? '–' : vs.putPct.toFixed(1) + '%'} (${vs.putVolFmt})  ▶ ${vs.signal === 'none' ? 'No signal' : vs.signal}${confTxt}`;
+
+  const utLine = document.getElementById('ohUtBotLine');
+  if (lastUtBotResult && lastUtBotResult.symbol === d.symbol) {
+    const cur = lastUtBotResult.current;
+    const bias = cur.position === 'LONG' ? 'bullish → favors CALLS' : cur.position === 'SHORT' ? 'bearish → favors PUTS' : 'flat';
+    const sigTxt = cur.lastSignal ? `last ${cur.lastSignal} on ${cur.lastSignalDate} (${cur.barsSinceSignal} session${cur.barsSinceSignal === 1 ? '' : 's'} ago)` : 'no signal yet';
+    utLine.style.display = 'block';
+    utLine.textContent = `UT Bot: ${cur.position} (${bias})  ·  ${sigTxt}  ·  stop ${numOrDash(cur.trailingStop)}`;
+  } else {
+    utLine.style.display = 'none';
+  }
+
+  const table = document.getElementById('ohTable');
+  const empty = document.getElementById('ohEmpty');
+  const rows = d.results || [];
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.innerHTML = (!d.doCall && !d.doPut)
+      ? 'Index did not open at its High or Low today — no setup (switch <b>Which options</b> to see anyway).'
+      : 'No option matches the current rule.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('ohBody').innerHTML = rows.map(r => {
+    const tc = r.type === 'CALL' ? 'ce-cell' : 'pe-cell';
+    const rowBg = r.qualifies ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="' + tc + '">' + r.type + '</td>' +
+      '<td>' + r.strike + '</td>' +
+      '<td>' + numOrDash(r.prevClose) + '</td>' +
+      '<td>' + numOrDash(r.open) + '</td>' +
+      '<td class="' + (r.qualifies ? 'yellow' : '') + '">' + numOrDash(r.low) + '</td>' +
+      '<td>' + numOrDash(r.ltp) + '</td>' +
+      '<td>' + numOrDash(r.buyAtLow) + '</td>' +
+      '<td>' + numOrDash(r.buyLowPlus9) + '</td>' +
+      '<td>' + numOrDash(r.buyAtOpen) + '</td>' +
+      '<td class="' + (r.useT18 ? 'sig' : '') + '">' + numOrDash(r.targetT18) + '</td>' +
+      '<td class="' + (r.useT9 ? 'sig' : '') + '">' + numOrDash(r.targetT9) + '</td>' +
+      '<td class="' + (r.useS5 ? 'sig pe-cell' : '') + '">' + numOrDash(r.slS5) + '</td>' +
+      '<td class="' + (r.useS9 ? 'sig pe-cell' : '') + '">' + numOrDash(r.slS9) + '</td>' +
+      '<td class="' + (r.useS18 ? 'sig pe-cell' : '') + '">' + numOrDash(r.slS18) + '</td>' +
+      '<td>' + fmtOI(r.volume) + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('ohBody'));
+}
+
+document.getElementById('ohScanBtn').addEventListener('click', runOhOlScan);
+
+async function runPremiumScan() {
+  const btn = document.getElementById('pmScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    expSel: document.getElementById('pmExpSel').value,
+    premSrc: document.getElementById('pmPremSrc').value,
+    premFrom: document.getElementById('pmPremFrom').value || 0,
+    premTo: document.getElementById('pmPremTo').value || 0,
+    lowFrom: document.getElementById('pmLowFrom').value || 0,
+    lowTo: document.getElementById('pmLowTo').value || 0,
+    lowMode: document.getElementById('pmLowMode').value,
+    thr: document.getElementById('pmThr').value || 71,
+    dirMode: document.getElementById('pmDirMode').value,
+    onlyMatches: document.getElementById('pmOnlyMatches').checked,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/premium-scanner?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { alert(data.detail || 'Scan failed'); return; }
+    renderPremiumScan(data);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderPremiumScan(d) {
+  document.getElementById('pmSummary').style.display = 'flex';
+  document.getElementById('pmExpiryLine').textContent =
+    `NIFTY  ·  Weekly ${d.weeklyExpiry || '–'}  ·  Monthly ${d.monthlyExpiry || '–'}` + (d.sameContract ? '  (same contract this week)' : '');
+  const wk = (d.signals || {}).weekly;
+  const mo = (d.signals || {}).monthly;
+  document.getElementById('pmVolLineWeekly').textContent = wk
+    ? `Weekly: Call vol ${wk.callPct == null ? '–' : wk.callPct.toFixed(1) + '%'} (${wk.callVolFmt})  ·  Put vol ${wk.putPct == null ? '–' : wk.putPct.toFixed(1) + '%'} (${wk.putVolFmt})  ▶ ${wk.signal === 'none' ? 'No signal' : wk.signal}`
+    : '';
+  document.getElementById('pmVolLineMonthly').textContent = mo
+    ? `Monthly: Call vol ${mo.callPct == null ? '–' : mo.callPct.toFixed(1) + '%'} (${mo.callVolFmt})  ·  Put vol ${mo.putPct == null ? '–' : mo.putPct.toFixed(1) + '%'} (${mo.putVolFmt})  ▶ ${mo.signal === 'none' ? 'No signal' : mo.signal}`
+    : '';
+
+  const table = document.getElementById('pmTable');
+  const empty = document.getElementById('pmEmpty');
+  const rows = d.results || [];
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.innerHTML = 'No contracts match right now. Try widening the ranges or unchecking <b>Only matches</b>.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('pmBody').innerHTML = rows.map(r => {
+    const tc = r.type === 'CALL' ? 'ce-cell' : 'pe-cell';
+    const status = r.match ? 'MATCH' : r.premOk ? 'Prem ✓ / Low ✗' : r.lowOk ? 'Low ✓ / Prem ✗' : '–';
+    const rowBg = r.match ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="exp">' + r.expiryTag + '</td>' +
+      '<td class="' + tc + '">' + r.type + '</td>' +
+      '<td>' + r.strike + '</td>' +
+      '<td class="' + (r.premOk ? 'yellow' : '') + '">' + numOrDash(r.premium) + '</td>' +
+      '<td>' + numOrDash(r.open) + '</td>' +
+      '<td>' + numOrDash(r.high) + '</td>' +
+      '<td class="' + (r.lowOk ? 'yellow' : '') + '">' + numOrDash(r.low) + '</td>' +
+      '<td>' + numOrDash(r.ltp) + '</td>' +
+      '<td>' + numOrDash(r.formula1) + '</td>' +
+      '<td>' + numOrDash(r.formula2) + '</td>' +
+      '<td class="' + (r.match ? 'yellow' : '') + '">' + status + '</td>' +
+      '<td>' + fmtOI(r.volume) + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('pmBody'));
+}
+
+document.getElementById('pmScanBtn').addEventListener('click', runPremiumScan);
+
+async function runUtBotScan() {
+  const btn = document.getElementById('utScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('utSymbol').value,
+    keyValue: document.getElementById('utKeyValue').value || 1,
+    atrPeriod: document.getElementById('utAtrPeriod').value || 10,
+    lookbackDays: document.getElementById('utLookback').value || 60,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/ut-bot?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { alert(data.detail || 'Scan failed'); return; }
+    lastUtBotResult = data;
+    renderUtBot(data);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderUtBot(d) {
+  document.getElementById('utSummary').style.display = 'flex';
+  const cur = d.current;
+  const posEl = document.getElementById('utPositionVal');
+  posEl.textContent = cur.position;
+  posEl.style.color = cur.position === 'LONG' ? 'var(--ce)' : cur.position === 'SHORT' ? 'var(--pe)' : 'var(--muted)';
+  document.getElementById('utCloseVal').textContent = numOrDash(cur.close);
+  document.getElementById('utStopVal').textContent = numOrDash(cur.trailingStop);
+  const sigEl = document.getElementById('utLastSignalVal');
+  sigEl.textContent = cur.lastSignal || '–';
+  sigEl.style.color = cur.lastSignal === 'BUY' ? 'var(--ce)' : cur.lastSignal === 'SELL' ? 'var(--pe)' : 'var(--text)';
+  document.getElementById('utLastSignalLabel').textContent = cur.lastSignal
+    ? `last signal · ${cur.lastSignalDate} (${cur.barsSinceSignal} session${cur.barsSinceSignal === 1 ? '' : 's'} ago)`
+    : 'last signal';
+
+  const table = document.getElementById('utTable');
+  const empty = document.getElementById('utEmpty');
+  const rows = (d.bars || []).slice(-20).reverse();
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('utBody').innerHTML = rows.map(r => {
+    const posColor = r.position === 'LONG' ? 'ce-cell' : r.position === 'SHORT' ? 'pe-cell' : '';
+    const sigCell = r.signal
+      ? '<span class="sig ' + (r.signal === 'BUY' ? 'ce-cell' : 'pe-cell') + '">' + r.signal + '</span>'
+      : '–';
+    const rowBg = r.signal ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="exp">' + r.date + '</td>' +
+      '<td>' + numOrDash(r.close) + '</td>' +
+      '<td>' + numOrDash(r.trailingStop) + '</td>' +
+      '<td class="' + posColor + '">' + r.position + '</td>' +
+      '<td>' + sigCell + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('utBody'));
+
+  // Refresh the OH/OL panel's cross-reference badge if it's currently showing this symbol
+  if (document.getElementById('ohSummary').style.display !== 'none') {
+    const ohSym = document.getElementById('ohSymbol').value;
+    if (ohSym === d.symbol) runOhOlScan();
+  }
+}
+
+document.getElementById('utScanBtn').addEventListener('click', runUtBotScan);
+
+async function runDonchianScan() {
+  const btn = document.getElementById('dcScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('dcSymbol').value,
+    length: document.getElementById('dcLength').value || 20,
+    lookbackDays: document.getElementById('dcLookback').value || 120,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/donchian?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { showToolError('dcEmpty', 'dcTable', data.detail || 'Scan failed'); return; }
+    renderDonchian(data);
+  } catch (e) {
+    console.error(e);
+    showToolError('dcEmpty', 'dcTable', 'Could not load Donchian data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function showToolError(emptyId, tableId, msg) {
+  document.getElementById(tableId).style.display = 'none';
+  const empty = document.getElementById(emptyId);
+  empty.style.display = 'block';
+  empty.textContent = msg;
+}
+
+function renderDonchian(d) {
+  document.getElementById('dcSummary').style.display = 'flex';
+  const cur = d.current;
+  document.getElementById('dcCloseVal').textContent = numOrDash(cur.close);
+  document.getElementById('dcUpperVal').textContent = numOrDash(cur.upper);
+  document.getElementById('dcBasisVal').textContent = numOrDash(cur.basis);
+  document.getElementById('dcLowerVal').textContent = numOrDash(cur.lower);
+  const sigEl = document.getElementById('dcSignalVal');
+  sigEl.textContent = cur.lastSignal || '–';
+  sigEl.style.color = cur.lastSignal === 'BREAK_ABOVE' ? 'var(--ce)' : cur.lastSignal === 'BREAK_BELOW' ? 'var(--pe)' : 'var(--text)';
+  document.getElementById('dcSignalLabel').textContent = cur.lastSignal
+    ? `last signal · ${cur.lastSignalDate} (${cur.barsSinceSignal} session${cur.barsSinceSignal === 1 ? '' : 's'} ago)`
+    : 'last signal';
+
+  const table = document.getElementById('dcTable');
+  const empty = document.getElementById('dcEmpty');
+  const rows = (d.bars || []).slice(-20).reverse();
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('dcBody').innerHTML = rows.map(r => {
+    const sigTxt = r.signal === 'BREAK_ABOVE' ? 'BREAK ↑' : r.signal === 'BREAK_BELOW' ? 'BREAK ↓' : '–';
+    const sigCls = r.signal === 'BREAK_ABOVE' ? 'ce-cell' : r.signal === 'BREAK_BELOW' ? 'pe-cell' : '';
+    const rowBg = r.signal ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="exp">' + r.date + '</td>' +
+      '<td>' + numOrDash(r.close) + '</td>' +
+      '<td>' + numOrDash(r.upper) + '</td>' +
+      '<td>' + numOrDash(r.basis) + '</td>' +
+      '<td>' + numOrDash(r.lower) + '</td>' +
+      '<td class="' + sigCls + '">' + sigTxt + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('dcBody'));
+}
+
+document.getElementById('dcScanBtn').addEventListener('click', runDonchianScan);
+
+async function runHeikinScan() {
+  const btn = document.getElementById('haScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('haSymbol').value,
+    length: document.getElementById('haLength').value || 20,
+    mult: document.getElementById('haMult').value || 2.0,
+    channelType: document.getElementById('haChannelType').value,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/heikin-ashi-channel?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { showToolError('haEmpty', 'haTable', data.detail || 'Scan failed'); return; }
+    renderHeikin(data);
+  } catch (e) {
+    console.error(e);
+    showToolError('haEmpty', 'haTable', 'Could not load intraday data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderHeikin(d) {
+  document.getElementById('haSummary').style.display = 'flex';
+  document.getElementById('haPriceVal').textContent = numOrDash(d.lastPrice);
+  document.getElementById('haPriceLabel').textContent = 'last price · ' + (d.lastTime || '–');
+
+  const buyEl = document.getElementById('haBuyVal');
+  if (d.buyActive) {
+    buyEl.textContent = 'OPEN @ ' + numOrDash(d.buyActive.entryPrice);
+    document.getElementById('haBuyLabel').textContent = `SL ${numOrDash(d.buyActive.stopLoss)} · Target ${numOrDash(d.buyActive.target)} · since ${d.buyActive.entryTime}`;
+  } else {
+    buyEl.textContent = 'FLAT';
+    document.getElementById('haBuyLabel').textContent = 'BUY track';
+  }
+
+  const sellEl = document.getElementById('haSellVal');
+  if (d.sellActive) {
+    sellEl.textContent = 'OPEN @ ' + numOrDash(d.sellActive.entryPrice);
+    document.getElementById('haSellLabel').textContent = `SL ${numOrDash(d.sellActive.stopLoss)} · Target ${numOrDash(d.sellActive.target)} · since ${d.sellActive.entryTime}`;
+  } else {
+    sellEl.textContent = 'FLAT';
+    document.getElementById('haSellLabel').textContent = 'SELL track';
+  }
+
+  const table = document.getElementById('haTable');
+  const empty = document.getElementById('haEmpty');
+  const rows = (d.events || []).slice().reverse();
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.innerHTML = 'No BUY/SELL events in the available intraday window yet.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('haBody').innerHTML = rows.map(r => {
+    const typeCls = r.type === 'BUY' ? 'ce-cell' : 'pe-cell';
+    const evTxt = r.event === 'ENTRY' ? 'ENTRY' : r.event === 'SL_HIT' ? 'SL HIT' : 'TARGET HIT';
+    const evCls = r.event === 'TARGET_HIT' ? 'ce-cell' : r.event === 'SL_HIT' ? 'pe-cell' : '';
+    const rowBg = r.event !== 'ENTRY' ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="exp">' + r.time + '</td>' +
+      '<td class="' + typeCls + '">' + r.type + '</td>' +
+      '<td class="' + evCls + '">' + evTxt + '</td>' +
+      '<td>' + numOrDash(r.price) + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('haBody'));
+}
+
+document.getElementById('haScanBtn').addEventListener('click', runHeikinScan);
+
+async function runHaTrendScan() {
+  const btn = document.getElementById('htScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('htSymbol').value,
+    emaFastLen: document.getElementById('htEmaFast').value || 9,
+    emaSlowLen: document.getElementById('htEmaSlow').value || 21,
+    channelLen: document.getElementById('htChannelLen').value || 20,
+    atrLen: document.getElementById('htAtrLen').value || 14,
+    atrMult: document.getElementById('htAtrMult').value || 1.5,
+    rr: document.getElementById('htRR').value || 2.0,
+    adxLen: document.getElementById('htAdxLen').value || 14,
+    adxMin: document.getElementById('htAdxMin').value || 18,
+    useDI: document.getElementById('htUseDI').checked,
+    reverse: document.getElementById('htReverse').checked,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/ha-dancing-trend?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { showToolError('htEmpty', 'htTable', data.detail || 'Scan failed'); return; }
+    renderHaTrend(data);
+  } catch (e) {
+    console.error(e);
+    showToolError('htEmpty', 'htTable', 'Could not load intraday data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderHaTrend(d) {
+  document.getElementById('htSummary').style.display = 'flex';
+  document.getElementById('htPriceVal').textContent = numOrDash(d.lastPrice);
+  document.getElementById('htPriceLabel').textContent = 'last price · ' + (d.lastTime || '–');
+
+  const buyEl = document.getElementById('htBuyVal');
+  if (d.buyActive) {
+    buyEl.textContent = 'OPEN @ ' + numOrDash(d.buyActive.entryPrice);
+    document.getElementById('htBuyLabel').textContent = `SL ${numOrDash(d.buyActive.stopLoss)} · Target ${numOrDash(d.buyActive.target)} · since ${d.buyActive.entryTime}`;
+  } else {
+    buyEl.textContent = 'FLAT';
+    document.getElementById('htBuyLabel').textContent = 'BUY track';
+  }
+
+  const sellEl = document.getElementById('htSellVal');
+  if (d.sellActive) {
+    sellEl.textContent = 'OPEN @ ' + numOrDash(d.sellActive.entryPrice);
+    document.getElementById('htSellLabel').textContent = `SL ${numOrDash(d.sellActive.stopLoss)} · Target ${numOrDash(d.sellActive.target)} · since ${d.sellActive.entryTime}`;
+  } else {
+    sellEl.textContent = 'FLAT';
+    document.getElementById('htSellLabel').textContent = 'SELL track';
+  }
+
+  const table = document.getElementById('htTable');
+  const empty = document.getElementById('htEmpty');
+  const rows = (d.events || []).slice().reverse();
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.innerHTML = 'No BUY/SELL events in the available intraday window yet.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('htBody').innerHTML = rows.map(r => {
+    const typeCls = r.type === 'BUY' ? 'ce-cell' : 'pe-cell';
+    const evTxt = r.event === 'ENTRY' ? 'ENTRY' : r.event === 'SL_HIT' ? 'SL HIT' : r.event === 'TARGET_HIT' ? 'TARGET HIT' : 'EXIT (opposite)';
+    const evCls = r.event === 'TARGET_HIT' ? 'ce-cell' : r.event === 'SL_HIT' ? 'pe-cell' : '';
+    const rowBg = r.event !== 'ENTRY' ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="exp">' + r.time + '</td>' +
+      '<td class="' + typeCls + '">' + r.type + '</td>' +
+      '<td class="' + evCls + '">' + evTxt + '</td>' +
+      '<td>' + numOrDash(r.price) + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('htBody'));
+}
+
+document.getElementById('htScanBtn').addEventListener('click', runHaTrendScan);
+
+async function runTradePredictorScan() {
+  const btn = document.getElementById('tpScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('tpSymbol').value,
+    atrLength: document.getElementById('tpAtrLength').value || 10,
+    factor: document.getElementById('tpFactor').value || 1.5,
+    emaLength: document.getElementById('tpEmaLength').value || 200,
+    useTrendFilter: document.getElementById('tpUseTrendFilter').checked,
+    slMultiplier: document.getElementById('tpSlMult').value || 1.5,
+    tpMultiplier: document.getElementById('tpTpMult').value || 2.0,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/trade-predictor?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { showToolError('tpEmpty', 'tpTable', data.detail || 'Scan failed'); return; }
+    renderTradePredictor(data);
+  } catch (e) {
+    console.error(e);
+    showToolError('tpEmpty', 'tpTable', 'Could not load data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderTradePredictor(d) {
+  document.getElementById('tpSummary').style.display = 'flex';
+  const line = document.getElementById('tpStatusLine');
+  if (d.active) {
+    const a = d.active;
+    const color = a.side === 'long' ? 'var(--ce)' : 'var(--pe)';
+    line.innerHTML = `<span style="color:${color}; font-weight:600;">${a.side.toUpperCase()} open</span> since ${a.entryDate} @ ${numOrDash(a.entryPrice)} · SL ${numOrDash(a.sl)} · TP ${numOrDash(a.tp)} · last close ${numOrDash(d.lastClose)} (${d.lastDate})`;
+  } else {
+    line.textContent = `FLAT · last close ${numOrDash(d.lastClose)} (${d.lastDate})`;
+  }
+
+  const table = document.getElementById('tpTable');
+  const empty = document.getElementById('tpEmpty');
+  const rows = (d.events || []).slice().reverse();
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = 'No entries in the scanned window yet.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('tpBody').innerHTML = rows.map(r => {
+    const sideCls = r.side === 'long' ? 'ce-cell' : 'pe-cell';
+    const evCls = r.event === 'TP_HIT' ? 'ce-cell' : r.event === 'SL_HIT' ? 'pe-cell' : '';
+    const rowBg = r.event !== 'ENTRY' ? 'background:#16291f;' : '';
+    return '<tr style="' + rowBg + '">' +
+      '<td class="exp">' + r.date + '</td>' +
+      '<td class="' + sideCls + '">' + r.side.toUpperCase() + '</td>' +
+      '<td class="' + evCls + '">' + r.event.replace('_', ' ') + '</td>' +
+      '<td>' + numOrDash(r.price) + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('tpBody'));
+}
+
+document.getElementById('tpScanBtn').addEventListener('click', runTradePredictorScan);
+
+async function runQuantumMatrixScan() {
+  const btn = document.getElementById('qmScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    symbol: document.getElementById('qmSymbol').value,
+    lookback: document.getElementById('qmLookback').value || 20,
+    keyValue: document.getElementById('qmKeyValue').value || 1,
+    atrPeriod: document.getElementById('qmAtrPeriod').value || 10,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/quantum-matrix?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('qmResults').style.display = 'none';
+      const empty = document.getElementById('qmEmpty');
+      empty.style.display = 'block';
+      empty.textContent = data.detail || 'Scan failed';
+      return;
+    }
+    renderQuantumMatrix(data);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('qmResults').style.display = 'none';
+    document.getElementById('qmEmpty').style.display = 'block';
+    document.getElementById('qmEmpty').textContent = 'Could not load data — check your connection and try again.';
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderQuantumMatrix(d) {
+  document.getElementById('qmEmpty').style.display = 'none';
+  document.getElementById('qmResults').style.display = 'block';
+
+  document.getElementById('qmCloseVal').textContent = numOrDash(d.lastClose);
+  document.getElementById('qmCloseLabel').textContent = 'last close · ' + d.lastDate;
+  const utEl = document.getElementById('qmUtVal');
+  utEl.textContent = d.utSignal.position;
+  utEl.style.color = d.utSignal.position === 'LONG' ? 'var(--ce)' : d.utSignal.position === 'SHORT' ? 'var(--pe)' : 'var(--text)';
+  document.getElementById('qmUtLabel').textContent = d.utSignal.lastSignal
+    ? `UT signal · last ${d.utSignal.lastSignal} ${d.utSignal.lastSignalDate}`
+    : 'UT signal';
+  document.getElementById('qmSupportVal').textContent = numOrDash(d.keyLevels.support);
+  document.getElementById('qmResistanceVal').textContent = numOrDash(d.keyLevels.resistance);
+
+  const bl = d.keyLevels.bullish;
+  document.getElementById('qmBullishLine').innerHTML =
+    `SL ${numOrDash(bl.sl)} &nbsp;·&nbsp; TP1 ${numOrDash(bl.tp1)} &nbsp;·&nbsp; TP2 ${numOrDash(bl.tp2)}`;
+  const be = d.keyLevels.bearish;
+  document.getElementById('qmBearishLine').innerHTML =
+    `SL ${numOrDash(be.sl)} &nbsp;·&nbsp; TP1 ${numOrDash(be.tp1)} &nbsp;·&nbsp; TP2 ${numOrDash(be.tp2)}`;
+
+  const er = d.emaRibbon;
+  document.getElementById('qmEmaLine').innerHTML =
+    `EMA8 ${numOrDash(er.ema8)} &nbsp;·&nbsp; EMA13 ${numOrDash(er.ema13)} &nbsp;·&nbsp; EMA21 ${numOrDash(er.ema21)} &nbsp;·&nbsp; EMA34 ${numOrDash(er.ema34)}`;
+
+  const openingEl = document.getElementById('qmOpeningLine');
+  if (d.opening) {
+    const lv = d.opening.levels;
+    openingEl.innerHTML = `${d.opening.date} ${d.opening.time} candle — O ${numOrDash(d.opening.open)} H ${numOrDash(d.opening.high)} L ${numOrDash(d.opening.low)}<br>` +
+      `H/2 ${numOrDash(lv['H/2'])} &nbsp;·&nbsp; H/3 ${numOrDash(lv['H/3'])} &nbsp;·&nbsp; H/4 ${numOrDash(lv['H/4'])} &nbsp;·&nbsp; L/2 ${numOrDash(lv['L/2'])} &nbsp;·&nbsp; L/3 ${numOrDash(lv['L/3'])} &nbsp;·&nbsp; L/4 ${numOrDash(lv['L/4'])}`;
+  } else {
+    openingEl.textContent = 'Not available for this symbol (needs intraday data).';
+  }
+
+  const fl = d.flags;
+  const flagParts = [];
+  if (fl.openEqLow) flagParts.push('<span class="ol" style="color:var(--ol); font-weight:600;">Open = Low</span>');
+  if (fl.openEqHigh) flagParts.push('<span style="color:var(--oh); font-weight:600;">Open = High</span>');
+  if (fl.openEqPrevClose) flagParts.push('<span class="yellow">Open = Prev Close</span>');
+  document.getElementById('qmFlagsLine').innerHTML = flagParts.length ? flagParts.join(' &nbsp;·&nbsp; ') : 'None today';
+}
+
+document.getElementById('qmScanBtn').addEventListener('click', runQuantumMatrixScan);
+
+function runOptionTargetCalc() {
+  const base = parseFloat(document.getElementById('otBase').value) || 0;
+  const div1 = parseFloat(document.getElementById('otDiv1').value) || 8;
+  const div2 = parseFloat(document.getElementById('otDiv2').value) || 6.5;
+  document.getElementById('otBaseVal').textContent = base.toFixed(2);
+  document.getElementById('otLowerVal').textContent = (base / div1).toFixed(2);
+  document.getElementById('otUpperVal').textContent = (base / div2).toFixed(2);
+}
+
+['otBase', 'otDiv1', 'otDiv2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', runOptionTargetCalc);
+});
+
+// ───────────── Price alerts (Live Option Chain) ─────────────
+// Stored per-browser in localStorage — never sent anywhere, and only fire
+// while this tab is open (works if it's backgrounded, not if fully closed;
+// true closed-tab push notifications would need a server-side push
+// subscription store, which is out of scope here).
+const ALERTS_STORAGE_KEY = 'optionPriceAlerts_v1';
+let priceAlerts = [];
+let alertsPollTimer = null;
+
+function loadAlertsFromStorage() {
+  try {
+    const raw = localStorage.getItem(ALERTS_STORAGE_KEY);
+    priceAlerts = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    priceAlerts = [];
+  }
+}
+
+function saveAlertsToStorage() {
+  try {
+    localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(priceAlerts));
+  } catch (e) {}
+}
+
+function renderAlertsList() {
+  const countEl = document.getElementById('indAlertsCount');
+  if (countEl) countEl.textContent = priceAlerts.filter(a => !a.triggered).length;
+
+  const table = document.getElementById('alertsTable');
+  const empty = document.getElementById('alertsEmpty');
+  if (!priceAlerts.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('alertsBody').innerHTML = priceAlerts.slice().reverse().map(al => {
+    const condTxt = (al.direction === 'above' ? '&gt; ' : '&lt; ') + numOrDash(al.threshold);
+    const statusTxt = al.triggered
+      ? '<span class="sig pe-cell">TRIGGERED @ ' + numOrDash(al.triggeredPrice) + '</span>'
+      : '<span class="sig ce-cell">ARMED</span>';
+    return '<tr>' +
+      '<td class="exp">' + al.symbol + '</td>' +
+      '<td>' + al.strike + '</td>' +
+      '<td class="' + (al.type === 'CE' ? 'ce-cell' : 'pe-cell') + '">' + al.type + '</td>' +
+      '<td class="exp">' + condTxt + '</td>' +
+      '<td>' + statusTxt + '</td>' +
+      '<td><button class="dl-btn" data-remove-alert="' + al.id + '" style="padding:3px 8px; font-size:11px;">Remove</button></td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('alertsBody').querySelectorAll('[data-remove-alert]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      priceAlerts = priceAlerts.filter(al => al.id !== btn.dataset.removeAlert);
+      saveAlertsToStorage();
+      renderAlertsList();
+      manageAlertsPolling();
+    });
+  });
+}
+
+function manageAlertsPolling() {
+  const hasArmed = priceAlerts.some(al => !al.triggered);
+  if (hasArmed && !alertsPollTimer) {
+    alertsPollTimer = setInterval(checkPriceAlerts, 20000);
+  } else if (!hasArmed && alertsPollTimer) {
+    clearInterval(alertsPollTimer);
+    alertsPollTimer = null;
+  }
+}
+
+function showAlertToast(msg) {
+  const toast = document.createElement('div');
+  toast.textContent = '🔔 ' + msg;
+  toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#12161f; ' +
+    'border:1px solid var(--accent); color:var(--text); padding:12px 16px; border-radius:8px; ' +
+    'box-shadow:0 8px 24px rgba(0,0,0,0.45); z-index:9999; font-size:13px; max-width:320px; ' +
+    'animation: fadeInUp .3s ease both;';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 8000);
+}
+
+function fireAlertNotification(al, price) {
+  const msg = `${al.symbol} ${al.strike}${al.type} is now ${numOrDash(price)} (${al.direction} ${numOrDash(al.threshold)})`;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    try { new Notification('Option price alert', { body: msg }); } catch (e) { console.error(e); }
+  }
+  showAlertToast(msg);
+}
+
+async function checkPriceAlerts() {
+  const armed = priceAlerts.filter(al => !al.triggered);
+  if (!armed.length) return;
+  const symbols = [...new Set(armed.map(al => al.symbol))];
+  for (const symbol of symbols) {
+    try {
+      const params = new URLSearchParams({ symbol, optType: 'BOTH', lowOn: 'false', prevOn: 'false', showMode: 'all' });
+      const res = await fetch(`${API_BASE}/api/live/scan?${params.toString()}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const rows = data.results || [];
+      armed.filter(al => al.symbol === symbol).forEach(al => {
+        const row = rows.find(r => Number(r.strike) === Number(al.strike) && r.type === al.type);
+        if (!row || row.close == null) return;
+        const crossed = al.direction === 'above' ? row.close > al.threshold : row.close < al.threshold;
+        if (crossed) {
+          al.triggered = true;
+          al.triggeredAt = new Date().toISOString();
+          al.triggeredPrice = row.close;
+          fireAlertNotification(al, row.close);
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  saveAlertsToStorage();
+  renderAlertsList();
+  manageAlertsPolling();
+}
+
+document.getElementById('indAlertsToggleBtn').addEventListener('click', () => {
+  const panel = document.getElementById('indAlertsPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('alertAddBtn').addEventListener('click', () => {
+  const strike = parseFloat(document.getElementById('alertStrike').value);
+  const type = document.getElementById('alertType').value;
+  const direction = document.getElementById('alertDirection').value;
+  const threshold = parseFloat(document.getElementById('alertThreshold').value);
+  if (!strike || isNaN(threshold)) {
+    window.alert('Enter a strike and a target price first.');
+    return;
+  }
+  // Fire-and-forget: never let a stalled/ignored permission prompt block adding the alert itself.
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+  priceAlerts.push({
+    id: 'al' + Date.now() + Math.random().toString(36).slice(2, 7),
+    symbol: getActiveIndicatorSymbol(),
+    strike, type, direction, threshold,
+    triggered: false,
+    createdAt: new Date().toISOString(),
+  });
+  saveAlertsToStorage();
+  renderAlertsList();
+  manageAlertsPolling();
+  document.getElementById('alertStrike').value = '';
+  document.getElementById('alertThreshold').value = '';
+});
+
+loadAlertsFromStorage();
+renderAlertsList();
+manageAlertsPolling();
+
+// Force Re-Fetch Bhavcopy
+document.getElementById('refreshBhavBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('refreshBhavBtn');
+  btn.textContent = '⏳ Fetching from NSE…';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/fetch-latest?force=true`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('autoBannerMsg').textContent = 'Loaded ' + data.totalContracts.toLocaleString() + ' contracts for ' + data.todayDate + '!';
+      await initStatus();
+      runServerScan();
+    }
+  } catch (e) {
+    alert('Error fetching from NSE: ' + e.message);
+  } finally {
+    btn.textContent = '🔄 Force Re-Fetch Latest from NSE';
+    btn.disabled = false;
+  }
+});
+
+// Symbol Search Filter — narrowing the dropdown's option list here used to
+// leave the actual scan filter (symSelect) sitting on "All symbols"
+// underneath, so typing a search term and hitting Scan still searched the
+// whole market instead of just what was typed. Now: an exact narrow to one
+// symbol auto-selects it; an existing specific selection that's still among
+// the narrowed matches is kept; otherwise it falls back to "All symbols"
+// (only when there are genuinely multiple ambiguous matches to choose from).
+document.getElementById('symSearch').addEventListener('input', function() {
+  const q = this.value.trim().toUpperCase();
+  const filtered = q ? allSymbols.filter(s => s.includes(q)) : allSymbols;
+  const sel = document.getElementById('symSelect');
+  const prevValue = sel.value;
+  populateSymbols(filtered);
+  if (!q) {
+    sel.value = '__ALL__';
+  } else if (filtered.length === 1) {
+    sel.value = filtered[0];
+  } else if (filtered.includes(prevValue)) {
+    sel.value = prevValue;
+  } else {
+    sel.value = '__ALL__';
+  }
+});
+
+// Option Type Segmented Buttons
+document.querySelectorAll('#optTypeSeg button').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('#optTypeSeg button').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    if (currentMode === 'live') runLiveScan();
+    else runServerScan();
+  });
+});
+
+// The tolerance field only feeds the Open=Low / Open=High signal test — it has
+// no effect at all when Show is "All strikes" or "Matches only" (those are
+// governed purely by the day-low/prev-close range filters above). Make that
+// visible instead of leaving it as a silent, easy-to-misread interaction.
+function updateTolHint() {
+  const mode = document.getElementById('showMode').value;
+  const group = document.getElementById('tolGroup');
+  const hint = document.getElementById('tolHint');
+  const usesTolerance = mode === 'ol' || mode === 'oh' || mode === 'any';
+  group.classList.toggle('inactive-filter', !usesTolerance);
+  hint.textContent = usesTolerance
+    ? 'Active — used by the current Show mode below to decide Open=Low / Open=High matches.'
+    : 'Not used right now — only applies when Show below is set to Open=Low, Open=High, or Any signal.';
+}
+document.getElementById('showMode').addEventListener('change', updateTolHint);
+updateTolHint();
+
+// Collect Filter State
+function getFilters() {
+  return {
+    symSelect: document.getElementById('symSelect').value,
+    instIdx: document.getElementById('instIdx').checked,
+    instStk: document.getElementById('instStk').checked,
+    optType: document.querySelector('#optTypeSeg button.active').dataset.v,
+    expSelect: document.getElementById('expSelect').value,
+    lowOn: document.getElementById('lowOn').checked,
+    lowFrom: parseFloat(document.getElementById('lowFrom').value) || 0,
+    lowTo: parseFloat(document.getElementById('lowTo').value) || 0,
+    prevOn: document.getElementById('prevOn').checked,
+    prevFrom: parseFloat(document.getElementById('prevFrom').value) || 0,
+    prevTo: parseFloat(document.getElementById('prevTo').value) || 0,
+    cheapOn: document.getElementById('cheapOn').checked,
+    cheapFrom: parseFloat(document.getElementById('cheapFrom').value) || 0.80,
+    cheapTo: parseFloat(document.getElementById('cheapTo').value) || 1.50,
+    tol: parseFloat(document.getElementById('tol').value) || 0,
+    minOi: parseFloat(document.getElementById('minOi').value) || 0,
+    includeUntraded: document.getElementById('includeUntraded').checked,
+    showMode: document.getElementById('showMode').value
+  };
+}
+
+// Server Scan
+async function runServerScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+
+  try {
+    const filters = getFilters();
+    const res = await fetch(`${API_BASE}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filters)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      lastResults = data.results || [];
+      animateNumber(document.getElementById('statTotal'), data.totalContracts || 0);
+      animateNumber(document.getElementById('statMatch'), data.statMatch || 0);
+      animateNumber(document.getElementById('statOL'), data.statOL || 0);
+      animateNumber(document.getElementById('statOH'), data.statOH || 0);
+      document.getElementById('summary').style.display = 'flex';
+      document.getElementById('toolbar').style.display = 'flex';
+      sortAndRender();
+    } else {
+      alert(data.detail || 'Scan failed');
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btn.textContent = 'Scan Market';
+    btn.disabled = false;
+  }
+}
+
+// Live Market Scan
+async function runLiveScan() {
+  const sym = document.getElementById('liveSymbolSelect').value;
+  const filters = getFilters();
+  const params = new URLSearchParams({
+    symbol: sym,
+    optType: filters.optType,
+    lowOn: filters.lowOn,
+    lowFrom: filters.lowFrom,
+    lowTo: filters.lowTo,
+    prevOn: filters.prevOn,
+    prevFrom: filters.prevFrom,
+    prevTo: filters.prevTo,
+    cheapOn: filters.cheapOn,
+    cheapFrom: filters.cheapFrom,
+    cheapTo: filters.cheapTo,
+    tol: filters.tol,
+    minOi: filters.minOi,
+    includeUntraded: filters.includeUntraded,
+    showMode: filters.showMode
+  });
+
+  try {
+    const res = await fetch(`${API_BASE}/api/live/scan?${params.toString()}`);
+    const data = await res.json();
+    if (res.ok) {
+      lastResults = data.results || [];
+      document.getElementById('liveLastTime').textContent = 'Last updated: ' + (data.liveTimestamp || '');
+      animateNumber(document.getElementById('statTotal'), data.totalContracts || 0);
+      animateNumber(document.getElementById('statMatch'), data.statMatch || 0);
+      animateNumber(document.getElementById('statOL'), data.statOL || 0);
+      animateNumber(document.getElementById('statOH'), data.statOH || 0);
+      document.getElementById('summary').style.display = 'flex';
+      document.getElementById('toolbar').style.display = 'flex';
+      sortAndRender();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Auto Refresh for Live Mode
+document.getElementById('liveAutoRefresh').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    liveTimer = setInterval(runLiveScan, 15000);
+  } else {
+    clearInterval(liveTimer);
+    liveTimer = null;
+  }
+});
+document.getElementById('liveScanBtn').addEventListener('click', runLiveScan);
+document.getElementById('liveSymbolSelect').addEventListener('change', runLiveScan);
+
+// Scan Button Trigger
+document.getElementById('scanBtn').addEventListener('click', () => {
+  if (currentMode === 'live') {
+    runLiveScan();
+  } else {
+    runServerScan();
+  }
+});
+
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  document.getElementById('symSearch').value = '';
+  populateSymbols(allSymbols);
+  document.getElementById('symSelect').value = '__ALL__';
+  document.getElementById('instIdx').checked = true;
+  document.getElementById('instStk').checked = true;
+  document.getElementById('expSelect').value = 'nearest';
+  document.querySelectorAll('#optTypeSeg button').forEach(b => b.classList.remove('active'));
+  document.querySelector('#optTypeSeg button[data-v="BOTH"]').classList.add('active');
+  document.getElementById('lowOn').checked = false;
+  document.getElementById('lowFrom').value = '';
+  document.getElementById('lowTo').value = '';
+  document.getElementById('prevOn').checked = false;
+  document.getElementById('prevFrom').value = '';
+  document.getElementById('prevTo').value = '';
+  document.getElementById('cheapOn').checked = false;
+  document.getElementById('cheapFrom').value = '';
+  document.getElementById('cheapTo').value = '';
+  document.getElementById('tol').value = '';
+  document.getElementById('minOi').value = '';
+  document.getElementById('includeUntraded').checked = false;
+  document.getElementById('showMode').value = 'all';
+  updateTolHint();
+  if (currentMode === 'live') {
+    document.getElementById('liveSymbolSelect').value = 'NIFTY';
+    runLiveScan();
+  } else {
+    runServerScan();
+  }
+});
+
+// Sorting and Table Rendering
+function sortAndRender() {
+  const rows = lastResults.slice();
+  const k = sortKey, dir = sortDir;
+  rows.sort((a,b) => {
+    let av = a[k], bv = b[k];
+    if(av === null || av === undefined) av = -Infinity;
+    if(bv === null || bv === undefined) bv = -Infinity;
+    if(typeof av === 'string') return dir==='asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return dir==='asc' ? av-bv : bv-av;
+  });
+  renderTable(rows);
+}
+
+document.querySelectorAll('#resultsTable th').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    if(sortKey === k) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { sortKey = k; sortDir = 'desc'; }
+    sortAndRender();
+  });
+});
+
+const CAP = 500;
+function fmtOI(v) {
+  if(v === null || v === undefined || isNaN(v)) return '–';
+  if(v >= 100000) return (v/100000).toFixed(2) + 'L';
+  if(v >= 1000) return (v/1000).toFixed(1) + 'K';
+  return String(v);
+}
+function fmtPct(v) {
+  if(v === null || v === undefined || isNaN(v)) return '–';
+  return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+function fmtNum(v) { return (v === null || v === undefined || isNaN(v)) ? '–' : v.toFixed(2); }
+
+function renderTable(rows) {
+  const table = document.getElementById('resultsTable');
+  const empty = document.getElementById('emptyMsg');
+  const msg = document.getElementById('rowMsg');
+  if(rows.length === 0){
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.innerHTML = 'No contracts match these filters. Try widening the ranges or switching <b>Show</b> to "All strikes".';
+    msg.textContent = '';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  const shown = rows.slice(0, CAP);
+  msg.textContent = 'Showing ' + shown.length.toLocaleString() + ' of ' + rows.length.toLocaleString() + ' rows' + (rows.length>CAP ? ' — narrow filters to see the rest' : '');
+
+  const body = shown.map(r => {
+    const typeCls = r.type === 'CE' ? 'ce-cell' : 'pe-cell';
+    const sigCls = r.sig.includes('L') && !r.sig.includes('H') ? 'ol' : r.sig.includes('H') && !r.sig.includes('L=H') ? 'oh' : (r.sig==='O=L=H' ? 'ol' : '');
+    return '<tr>' +
+      '<td class="sym">'+r.symbol+'</td>' +
+      '<td class="exp">'+r.expiry+'</td>' +
+      '<td>'+r.strike+'</td>' +
+      '<td class="'+typeCls+'">'+r.type+'</td>' +
+      '<td class="sig '+sigCls+'">'+(r.sig||'–')+'</td>' +
+      '<td>'+fmtOI(r.oi)+'</td>' +
+      '<td class="'+(r.oiPct>0?'ce-cell':r.oiPct<0?'pe-cell':'')+'">'+fmtPct(r.oiPct)+'</td>' +
+      '<td class="'+(r.isMatch?'yellow':'')+'">'+fmtNum(r.prevCloseUsed)+'</td>' +
+      '<td>'+fmtNum(r.open)+'</td>' +
+      '<td>'+fmtNum(r.high)+'</td>' +
+      '<td class="'+(r.isMatch?'yellow':'')+'">'+fmtNum(r.low)+'</td>' +
+      '<td>'+fmtNum(r.close)+'</td>' +
+      '<td>'+fmtNum(r.spot)+'</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('resultsBody').innerHTML = body;
+  staggerRows(document.getElementById('resultsBody'));
+}
+
+// CSV Download
+document.getElementById('dlBtn').addEventListener('click', () => {
+  if(!lastResults.length) return;
+  const header = ['Symbol','Expiry','Strike','Type','Signal','OI','OI%','PrevClose','Open','High','Low','LTP','Spot'];
+  const lines = [header.join(',')];
+  lastResults.forEach(r => {
+    lines.push([r.symbol, r.expiry, r.strike, r.type, r.sig, r.oi, r.oiPct==null?'':r.oiPct.toFixed(2), r.prevCloseUsed, r.open, r.high, r.low, r.close, r.spot].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'option-scan-results.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Manual File Drop Handlers
+function bindDrop(dropId, inputId, isToday) {
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  drop.addEventListener('click', () => input.click());
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('isToday', isToday);
+    const detailEl = document.getElementById(isToday ? 'todayDetail' : 'prevDetail');
+    detailEl.textContent = 'Uploading & parsing…';
+    const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      detailEl.textContent = data.contractsLoaded.toLocaleString() + ' contracts loaded';
+      drop.classList.add('filled');
+      loadSymbols();
+      runServerScan();
+    } else {
+      detailEl.textContent = 'Error: ' + data.detail;
+    }
+  });
+}
+bindDrop('dropToday', 'fileToday', true);
+bindDrop('dropPrev', 'filePrev', false);
+
+
+const RP_BULLISH_SIGNALS = new Set(['BUY', 'LONG', 'CANDIDATE', 'MOMENTUM', 'BULL_DIV', 'BUZZ', 'BREAKOUT']);
+const RP_BEARISH_SIGNALS = new Set(['SELL', 'BEAR_DIV']);
+
+function renderRpParamsForm(key) {
+  const spec = RP_INDICATORS[key];
+  const container = document.getElementById('rpParams');
+  if (!spec || !container) return;
+  container.innerHTML = spec.params.map(p => {
+    if (p.type === 'checkbox') {
+      return `<div class="group"><div class="checkline" style="margin:0;"><input type="checkbox" id="rp_field_${p.id}" ${p.value ? 'checked' : ''}><span>${p.label}</span></div></div>`;
+    }
+    if (p.type === 'select') {
+      const opts = p.options.map(o => `<option value="${o.value}" ${o.value === p.value ? 'selected' : ''}>${o.label}</option>`).join('');
+      return `<div class="group" style="min-width:140px;"><label>${p.label}</label><select id="rp_field_${p.id}">${opts}</select></div>`;
+    }
+    return `<div class="group" style="min-width:110px;"><label>${p.label}</label><input type="number" id="rp_field_${p.id}" value="${p.value}" step="${p.step || 1}"${p.min !== undefined ? ` min="${p.min}"` : ''}${p.max !== undefined ? ` max="${p.max}"` : ''}></div>`;
+  }).join('');
+  container.querySelectorAll('select, input').forEach(el => {
+    el.addEventListener('change', () => {
+      if (currentIndicator === 'rajanpavan') runRajanPavanScan();
+    });
+  });
+  const descEl = document.getElementById('rpDesc');
+  if (descEl) descEl.textContent = spec.desc;
+}
+
+document.querySelectorAll('#rpSubPicker button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#rpSubPicker button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRpKey = btn.dataset.rp;
+    renderRpParamsForm(currentRpKey);
+    if (currentIndicator === 'rajanpavan') runRajanPavanScan();
+  });
+});
+
+document.getElementById('rpClearBtn').addEventListener('click', () => {
+  const defaults = INDICATOR_DEFAULTS.rajanpavan || {};
+  Object.entries(defaults).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+  currentRpKey = 'hammer-support';
+  document.querySelectorAll('#rpSubPicker button').forEach(b => b.classList.remove('active'));
+  document.querySelector('#rpSubPicker button[data-rp="hammer-support"]').classList.add('active');
+  renderRpParamsForm(currentRpKey);
+  if (currentIndicator === 'rajanpavan') runRajanPavanScan();
+});
+
+async function runRajanPavanScan() {
+  const btn = document.getElementById('rpScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const spec = RP_INDICATORS[currentRpKey];
+  const params = new URLSearchParams({ key: currentRpKey, symbol: document.getElementById('rpSymbol').value });
+  spec.params.forEach(p => {
+    const el = document.getElementById('rp_field_' + p.id);
+    if (!el) return;
+    params.set(p.id, p.type === 'checkbox' ? el.checked : el.value);
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/indicators/rajan-pavan?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('rpSummary').style.display = 'none';
+      showToolError('rpEmpty', 'rpTable', data.detail || 'Scan failed');
+      return;
+    }
+    renderRajanPavan(data);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('rpSummary').style.display = 'none';
+    showToolError('rpEmpty', 'rpTable', 'Could not load data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderRajanPavan(d) {
+  const cur = d.current || {};
+  const cols = d.columns || [];
+
+  document.getElementById('rpSummary').style.display = 'flex';
+  document.getElementById('rpDateVal').textContent = cur.date || '–';
+  document.getElementById('rpCloseVal').textContent = numOrDash(cur.close);
+  const sigEl = document.getElementById('rpSignalVal');
+  const sig = cur.signal || 'NONE';
+  sigEl.textContent = sig;
+  sigEl.style.color = RP_BULLISH_SIGNALS.has(sig) ? 'var(--ce)' : RP_BEARISH_SIGNALS.has(sig) ? 'var(--pe)' : 'var(--text)';
+
+  document.getElementById('rpExtraStats').innerHTML = cols.slice(0, 3).map(c => {
+    const v = cur[c.key];
+    const txt = c.fmt === 'bool' ? (v ? 'YES' : 'NO') : numOrDash(v);
+    return `<div class="stat"><div class="n mono" style="font-size:16px;">${txt}</div><div class="l">${c.label}</div></div>`;
+  }).join('');
+
+  const table = document.getElementById('rpTable');
+  const empty = document.getElementById('rpEmpty');
+  const rows = (d.bars || []).slice().reverse().slice(0, 150);
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = 'No bars returned for this symbol/setting combination.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('rpTableHead').innerHTML =
+    '<th class="exp">Date</th><th>Close</th>' + cols.map(c => `<th>${c.label}</th>`).join('') + '<th>Signal</th>';
+  document.getElementById('rpBody').innerHTML = rows.map(r => {
+    const sig = (r.signal && r.signal !== 'NONE') ? r.signal : '–';
+    const sigCls = RP_BULLISH_SIGNALS.has(r.signal) || r.signal === 'NR7' ? 'ce-cell' : RP_BEARISH_SIGNALS.has(r.signal) ? 'pe-cell' : '';
+    const cells = cols.map(c => {
+      const v = r[c.key];
+      return '<td>' + (c.fmt === 'bool' ? (v ? 'YES' : '–') : numOrDash(v)) + '</td>';
+    }).join('');
+    return '<tr><td class="exp">' + r.date + '</td><td>' + numOrDash(r.close) + '</td>' + cells + '<td class="' + sigCls + '">' + sig + '</td></tr>';
+  }).join('');
+  staggerRows(document.getElementById('rpBody'));
+}
+
+document.getElementById('rpScanBtn').addEventListener('click', runRajanPavanScan);
+
+// "View on Chart" — jumps to the Charts tab with the SAME symbol and SAME
+// Rajan/Pavan indicator pre-selected in the overlay picker, and loads it
+// immediately (switchToTab('charts') already calls loadTvChart()).
+document.getElementById('rpViewChartBtn').addEventListener('click', () => {
+  const symbol = document.getElementById('rpSymbol').value;
+  const tvSymbolEl = document.getElementById('tvSymbolSelect');
+  if ([...tvSymbolEl.options].some(o => o.value === symbol)) tvSymbolEl.value = symbol;
+  document.getElementById('tvOverlaySelect').value = 'rp:' + currentRpKey;
+  switchToTab('charts');
+});
+
+// Init on load — status + symbols only. No filters are pre-selected, so
+// don't auto-fire a whole-market scan on every page visit; the empty state
+// already prompts the user to hit Scan Market once they're ready.
+initStatus();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "BHAV_CACHE_WRITE_DIR": "/tmp/bhav_cache"
+  },
+  "crons": [
+    { "path": "/api/cron/morning-refresh", "schedule": "46 3 * * 1-5" },
+    { "path": "/api/cron/weekly-cleanup", "schedule": "30 18 * * 6" }
+  ]
+}
