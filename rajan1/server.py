@@ -272,11 +272,14 @@ def api_indicator_ut_bot(
 
 @app.get("/api/cron/morning-refresh")
 def api_cron_morning_refresh():
-    """Hit automatically by Vercel Cron at market open (see vercel.json). Refreshes
-    the bhavcopy cache and warms the NSE session/cookies so the first real user
+    """Hit automatically by Vercel Cron at market open (see vercel.json — two
+    entries call this, 9:16 and 9:21 IST Mon-Fri, so a transient NSE hiccup on
+    the first run gets a same-morning retry 5 minutes later). Refreshes the
+    bhavcopy cache and warms the NSE session/cookies so the first real user
     request of the day doesn't pay that cold-start cost, and snapshots each
-    index's opening price. There's no notification channel wired up — it just
-    runs server-side; check Vercel's Cron Jobs dashboard to confirm it fired."""
+    index's opening price. Idempotent — re-running it just re-fetches the same
+    day's data. There's no notification channel wired up — it just runs
+    server-side; check Vercel's Cron Jobs dashboard to confirm it fired."""
     summary = {"ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
     try:
