@@ -14,6 +14,7 @@ import heikin_ashi
 import indicators
 import market_news
 import quantum_matrix
+import stock_scanner
 import rajan_pavan_indicators as rajan_pavan
 import scan_engine
 import trade_predictor
@@ -511,6 +512,41 @@ def api_indicator_rajan_pavan(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     result["key"] = key
+    result["liveTimestamp"] = datetime.now().strftime("%H:%M:%S")
+    return result
+
+
+@app.get("/api/stocks/block-deal")
+def api_stocks_block_deal(
+    volMult: float = 3.0,
+    avgLength: int = 20,
+    onlyHits: bool = False,
+    maxRows: int = 25,
+):
+    volMult = max(1.0, min(volMult, 20.0))
+    avgLength = max(5, min(avgLength, 100))
+    maxRows = max(5, min(maxRows, 50))
+    try:
+        result = stock_scanner.block_deal_scan(
+            vol_mult=volMult, avg_length=avgLength, only_hits=onlyHits, max_rows=maxRows,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    result["liveTimestamp"] = datetime.now().strftime("%H:%M:%S")
+    return result
+
+
+@app.get("/api/stocks/high-volume")
+def api_stocks_high_volume(
+    avgLength: int = 20,
+    maxRows: int = 25,
+):
+    avgLength = max(5, min(avgLength, 100))
+    maxRows = max(5, min(maxRows, 50))
+    try:
+        result = stock_scanner.high_volume_scan(avg_length=avgLength, max_rows=maxRows)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
     result["liveTimestamp"] = datetime.now().strftime("%H:%M:%S")
     return result
 

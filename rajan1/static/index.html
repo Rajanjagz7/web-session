@@ -668,6 +668,7 @@
     <button class="tab-btn" data-tab="live">🔴 Live Market Scanner</button>
     <button class="tab-btn" data-tab="manual">📁 Manual CSV Upload</button>
     <button class="tab-btn" data-tab="indicators">📐 Indicators</button>
+    <button class="tab-btn" data-tab="stocks">📦 Stocks</button>
     <button class="tab-btn" data-tab="charts">📈 Charts</button>
   </div>
 
@@ -1662,6 +1663,101 @@
     </div>
   </div>
 
+  <div id="stocksPanel" style="display:none;">
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="indicator-grid" id="stockToolSeg">
+        <button class="indicator-chip active" data-v="blockdeal">
+          <span class="chip-top"><span class="chip-icon">🧱</span><span class="chip-title">Block Deal Stocks</span></span>
+          <span class="chip-sub">Volume-spike scanner, Top 50 NSE stocks</span>
+        </button>
+        <button class="indicator-chip" data-v="highvolume">
+          <span class="chip-top"><span class="chip-icon">🔥</span><span class="chip-title">High Volume Stocks</span></span>
+          <span class="chip-sub">Leaderboard: today's volume vs its own average</span>
+        </button>
+      </div>
+      <div style="font-size:11.5px; color:var(--muted); margin-top:12px;">
+        Runs against a curated universe of 50 large-cap NSE stocks (Rajan's Top 50 list), using each stock's own daily volume history from Yahoo Finance — this app's other daily indicators only cover indices and commodities, not individual stocks, so these two use a separate data path built specifically for stock-level scanning.
+      </div>
+    </div>
+
+    <div id="blockDealSection">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:150px;">
+            <label>Block volume = X &times; avg</label>
+            <input type="number" id="bdVolMult" value="3.0" step="0.5" min="1" max="20">
+          </div>
+          <div class="group" style="min-width:140px;">
+            <label>Average length (days)</label>
+            <input type="number" id="bdAvgLength" value="20" step="1" min="5" max="100">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Rows to show</label>
+            <input type="number" id="bdMaxRows" value="25" step="1" min="5" max="50">
+          </div>
+          <div class="group">
+            <div class="checkline" style="margin:0;"><input type="checkbox" id="bdOnlyHits"><span>Only show volume spikes</span></div>
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="bdScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="blockdeal" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          Ported from "Top 50 Block Deal Scanner" — flags a stock as BLOCK BUY / BLOCK SELL when today's volume crosses the multiplier above its own trailing average (direction from today's price change), and Watch just under that threshold. A real block deal is a large, privately negotiated trade NSE reports separately — a volume spike like this is the closest public signal of one without paying for that actual bulk/block deal feed.
+        </div>
+      </div>
+      <div class="summary" id="bdSummary" style="display:none;">
+        <div class="stat"><div class="n" id="bdLoadedVal">0</div><div class="l">stocks loaded</div></div>
+        <div class="stat match"><div class="n" id="bdHitsVal">0</div><div class="l">volume spikes</div></div>
+      </div>
+      <div class="table-wrap">
+        <table id="bdTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">#</th><th class="exp">Stock</th><th>Close</th><th>Chg %</th><th>Volume</th><th>Avg Vol</th><th>Vol &times;</th><th class="exp">Signal</th></tr>
+          </thead>
+          <tbody id="bdBody"></tbody>
+        </table>
+        <div class="empty" id="bdEmpty">Click <b>Scan</b> to run the Block Deal Stocks scanner.</div>
+      </div>
+    </div>
+
+    <div id="highVolumeSection" style="display:none;">
+      <div class="panel" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="group" style="min-width:140px;">
+            <label>Average length (days)</label>
+            <input type="number" id="hvAvgLength" value="20" step="1" min="5" max="100">
+          </div>
+          <div class="group" style="min-width:110px;">
+            <label>Rows to show</label>
+            <input type="number" id="hvMaxRows" value="25" step="1" min="5" max="50">
+          </div>
+          <div class="group">
+            <button class="scan-btn" id="hvScanBtn" style="width:auto; padding:10px 22px; margin-top:0;">Scan</button>
+          </div>
+          <div class="group">
+            <button class="clear-btn" data-clear="highvolume" style="width:auto; padding:9px 16px; margin-top:0;">✕ Clear</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">
+          A plain leaderboard, no buy/sell signal — every stock in the same 50-stock universe, ranked by today's volume against its own trailing average, highest first.
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="hvTable" style="display:none;">
+          <thead>
+            <tr><th class="exp">#</th><th class="exp">Stock</th><th>Close</th><th>Chg %</th><th>Volume</th><th>Avg Vol</th><th>Vol &times;</th></tr>
+          </thead>
+          <tbody id="hvBody"></tbody>
+        </table>
+        <div class="empty" id="hvEmpty">Click <b>Scan</b> to run the High Volume Stocks leaderboard.</div>
+      </div>
+    </div>
+  </div>
+
   <div id="chartsPanel" style="display:none;">
     <div class="panel" style="margin-bottom:16px;">
       <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
@@ -1928,8 +2024,9 @@ function switchToTab(tab) {
   document.getElementById('symbolFilterGroup').style.display = currentMode === 'live' ? 'none' : 'block';
   document.getElementById('instrGroup').style.display = currentMode === 'live' ? 'none' : 'block';
   document.getElementById('expiryGroup').style.display = currentMode === 'live' ? 'none' : 'block';
-  document.getElementById('workspace').style.display = (currentMode === 'indicators' || currentMode === 'charts') ? 'none' : 'grid';
+  document.getElementById('workspace').style.display = (currentMode === 'indicators' || currentMode === 'charts' || currentMode === 'stocks') ? 'none' : 'grid';
   document.getElementById('indicatorsPanel').style.display = currentMode === 'indicators' ? 'block' : 'none';
+  document.getElementById('stocksPanel').style.display = currentMode === 'stocks' ? 'block' : 'none';
 
   if (currentMode === 'charts') {
     showPanel(document.getElementById('chartsPanel'), 'block');
@@ -1944,6 +2041,8 @@ function switchToTab(tab) {
     runServerScan();
   } else if (currentMode === 'indicators') {
     runIndicatorScan();
+  } else if (currentMode === 'stocks') {
+    runStockScan();
   }
 }
 
@@ -2410,6 +2509,136 @@ document.querySelectorAll('#indicatorToolSeg button').forEach(btn => {
   });
 });
 
+// Stocks tab tool-picker — same chip pattern as Indicators above, but a
+// separate currentStockTool/section pair since it lives on its own tab.
+let currentStockTool = 'blockdeal';
+document.querySelectorAll('#stockToolSeg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#stockToolSeg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentStockTool = btn.dataset.v;
+    const stockSectionMap = { blockdeal: 'blockDealSection', highvolume: 'highVolumeSection' };
+    Object.values(stockSectionMap).forEach(id => { document.getElementById(id).style.display = 'none'; });
+    showPanel(document.getElementById(stockSectionMap[currentStockTool]), 'block');
+    runStockScan();
+  });
+});
+
+function runStockScan() {
+  if (currentStockTool === 'blockdeal') runBlockDealScan();
+  else runHighVolumeScan();
+}
+
+async function runBlockDealScan() {
+  const btn = document.getElementById('bdScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    volMult: document.getElementById('bdVolMult').value || 3.0,
+    avgLength: document.getElementById('bdAvgLength').value || 20,
+    onlyHits: document.getElementById('bdOnlyHits').checked,
+    maxRows: document.getElementById('bdMaxRows').value || 25,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/stocks/block-deal?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { document.getElementById('bdSummary').style.display = 'none'; showToolError('bdEmpty', 'bdTable', data.detail || 'Scan failed'); return; }
+    renderBlockDeal(data);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('bdSummary').style.display = 'none';
+    showToolError('bdEmpty', 'bdTable', 'Could not load stock data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderBlockDeal(d) {
+  document.getElementById('bdSummary').style.display = 'flex';
+  animateNumber(document.getElementById('bdLoadedVal'), d.loaded || 0);
+  animateNumber(document.getElementById('bdHitsVal'), d.hits || 0);
+
+  const table = document.getElementById('bdTable');
+  const empty = document.getElementById('bdEmpty');
+  const rows = d.results || [];
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    empty.textContent = 'No stocks matched — try unchecking "Only show volume spikes" or lowering the multiplier.';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('bdBody').innerHTML = rows.map((r, i) => {
+    const sigCls = r.signal === 'BLOCK BUY' ? 'ce-cell' : r.signal === 'BLOCK SELL' ? 'pe-cell' : '';
+    const chgCls = r.changePct >= 0 ? 'ce-cell' : 'pe-cell';
+    return '<tr>' +
+      '<td class="exp">' + (i + 1) + '</td>' +
+      '<td class="exp">' + r.symbol + '</td>' +
+      '<td>' + numOrDash(r.close) + '</td>' +
+      '<td class="' + chgCls + '">' + (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%</td>' +
+      '<td>' + fmtOI(r.volume) + '</td>' +
+      '<td>' + fmtOI(r.avgVolume) + '</td>' +
+      '<td>' + r.ratio.toFixed(2) + 'x</td>' +
+      '<td class="exp ' + sigCls + '">' + r.signal + '</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('bdBody'));
+}
+
+document.getElementById('bdScanBtn').addEventListener('click', runBlockDealScan);
+
+async function runHighVolumeScan() {
+  const btn = document.getElementById('hvScanBtn');
+  btn.textContent = 'Scanning…';
+  btn.disabled = true;
+  const params = new URLSearchParams({
+    avgLength: document.getElementById('hvAvgLength').value || 20,
+    maxRows: document.getElementById('hvMaxRows').value || 25,
+  });
+  try {
+    const res = await fetch(`${API_BASE}/api/stocks/high-volume?${params.toString()}`);
+    const data = await res.json();
+    if (!res.ok) { showToolError('hvEmpty', 'hvTable', data.detail || 'Scan failed'); return; }
+    renderHighVolume(data);
+  } catch (e) {
+    console.error(e);
+    showToolError('hvEmpty', 'hvTable', 'Could not load stock data — check your connection and try again.');
+  } finally {
+    btn.textContent = 'Scan';
+    btn.disabled = false;
+  }
+}
+
+function renderHighVolume(d) {
+  const table = document.getElementById('hvTable');
+  const empty = document.getElementById('hvEmpty');
+  const rows = d.results || [];
+  if (!rows.length) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  document.getElementById('hvBody').innerHTML = rows.map((r, i) => {
+    const chgCls = r.changePct >= 0 ? 'ce-cell' : 'pe-cell';
+    return '<tr>' +
+      '<td class="exp">' + (i + 1) + '</td>' +
+      '<td class="exp">' + r.symbol + '</td>' +
+      '<td>' + numOrDash(r.close) + '</td>' +
+      '<td class="' + chgCls + '">' + (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%</td>' +
+      '<td>' + fmtOI(r.volume) + '</td>' +
+      '<td>' + fmtOI(r.avgVolume) + '</td>' +
+      '<td>' + r.ratio.toFixed(2) + 'x</td>' +
+    '</tr>';
+  }).join('');
+  staggerRows(document.getElementById('hvBody'));
+}
+
+document.getElementById('hvScanBtn').addEventListener('click', runHighVolumeScan);
+
 function runIndicatorScan() {
   if (currentIndicator === 'ohol') runOhOlScan();
   else if (currentIndicator === 'premium') runPremiumScan();
@@ -2558,6 +2787,17 @@ Object.entries(INDICATOR_SECTION_ID).forEach(([key, sectionId]) => {
   });
 });
 
+const STOCK_SECTION_ID = { blockdeal: 'blockDealSection', highvolume: 'highVolumeSection' };
+Object.entries(STOCK_SECTION_ID).forEach(([key, sectionId]) => {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  section.querySelectorAll('select, input').forEach(el => {
+    el.addEventListener('change', () => {
+      if (currentStockTool === key) runStockScan();
+    });
+  });
+});
+
 // ───────────── Clear / reset buttons ─────────────
 const INDICATOR_DEFAULTS = {
   ohol: {
@@ -2587,6 +2827,8 @@ const INDICATOR_DEFAULTS = {
   // see the dedicated listener near runRajanPavanScan, since this section's
   // per-indicator fields are rebuilt dynamically rather than being fixed IDs.
   rajanpavan: { rpSymbol: 'NIFTY' },
+  blockdeal: { bdVolMult: '3.0', bdAvgLength: '20', bdMaxRows: '25', bdOnlyHits: false },
+  highvolume: { hvAvgLength: '20', hvMaxRows: '25' },
 };
 
 document.querySelectorAll('[data-clear]').forEach(btn => {
@@ -2602,6 +2844,11 @@ document.querySelectorAll('[data-clear]').forEach(btn => {
     });
     if (key === 'optiontarget') {
       runOptionTargetCalc();
+    } else if (key === 'blockdeal' || key === 'highvolume') {
+      currentStockTool = key;
+      document.querySelectorAll('#stockToolSeg button').forEach(b => b.classList.remove('active'));
+      document.querySelector(`#stockToolSeg button[data-v="${key}"]`).classList.add('active');
+      runStockScan();
     } else {
       currentIndicator = key;
       document.querySelectorAll('#indicatorToolSeg button').forEach(b => b.classList.remove('active'));
