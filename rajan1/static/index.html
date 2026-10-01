@@ -249,6 +249,17 @@
   td .sig.pe-cell, span.sig.pe-cell { background: rgba(255,107,129,0.16); }
   td .sig.ol, span.sig.ol { background: rgba(79,195,247,0.16); }
   td .sig.oh, span.sig.oh { background: rgba(255,183,77,0.16); }
+  .sig.watch { color: var(--match); background: rgba(245,195,68,0.16); }
+  .sig.none { color: var(--muted); background: transparent; padding-left: 0; }
+  /* Stock scanner tables (Block Deal / High Volume) */
+  tr.row-hit-buy td:first-child { box-shadow: inset 3px 0 0 var(--ce); }
+  tr.row-hit-sell td:first-child { box-shadow: inset 3px 0 0 var(--pe); }
+  .chg-arrow { font-size: 10px; margin-right: 2px; }
+  .ratio-bar-wrap { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; }
+  .ratio-bar-wrap .ratio-num { color: var(--text); font-weight: 600; }
+  .ratio-bar-track { flex: none; width: 44px; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+  .ratio-bar-fill { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .ratio-bar-fill.hot { background: var(--match); }
   .yellow { color: var(--match); font-weight: 600; animation: matchGlow 2.2s ease-in-out infinite; }
   @keyframes matchGlow {
     0%, 100% { text-shadow: 0 0 0 rgba(245,195,68,0); }
@@ -1710,8 +1721,8 @@
         </div>
       </div>
       <div class="summary" id="bdSummary" style="display:none;">
-        <div class="stat"><div class="n" id="bdLoadedVal">0</div><div class="l">stocks loaded</div></div>
-        <div class="stat match"><div class="n" id="bdHitsVal">0</div><div class="l">volume spikes</div></div>
+        <div class="stat"><div class="n" id="bdLoadedVal">0</div><div class="l">📦 stocks loaded</div></div>
+        <div class="stat match"><div class="n" id="bdHitsVal">0</div><div class="l">⚡ volume spikes</div></div>
       </div>
       <div class="table-wrap">
         <table id="bdTable" style="display:none;">
@@ -2554,6 +2565,23 @@ async function runBlockDealScan() {
   }
 }
 
+// Shared by both stock scanners: a small inline bar so the volume ratio is
+// scannable at a glance instead of just a number, and a direction arrow on
+// the change% cell instead of relying on color alone.
+function ratioBarHtml(ratio, hotAt) {
+  const pct = Math.max(4, Math.min(ratio / 5, 1) * 100);
+  const hot = ratio >= hotAt;
+  return '<span class="ratio-bar-wrap">' +
+    '<span class="ratio-num">' + ratio.toFixed(2) + 'x</span>' +
+    '<span class="ratio-bar-track"><span class="ratio-bar-fill' + (hot ? ' hot' : '') + '" style="width:' + pct + '%"></span></span>' +
+  '</span>';
+}
+function chgCellHtml(changePct) {
+  const cls = changePct >= 0 ? 'ce-cell' : 'pe-cell';
+  const arrow = changePct >= 0 ? '▲' : '▼';
+  return '<td class="' + cls + '"><span class="chg-arrow">' + arrow + '</span>' + (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%</td>';
+}
+
 function renderBlockDeal(d) {
   document.getElementById('bdSummary').style.display = 'flex';
   animateNumber(document.getElementById('bdLoadedVal'), d.loaded || 0);
@@ -2571,17 +2599,17 @@ function renderBlockDeal(d) {
   table.style.display = 'table';
   empty.style.display = 'none';
   document.getElementById('bdBody').innerHTML = rows.map((r, i) => {
-    const sigCls = r.signal === 'BLOCK BUY' ? 'ce-cell' : r.signal === 'BLOCK SELL' ? 'pe-cell' : '';
-    const chgCls = r.changePct >= 0 ? 'ce-cell' : 'pe-cell';
-    return '<tr>' +
+    const sigCls = r.signal === 'BLOCK BUY' ? 'sig ce-cell' : r.signal === 'BLOCK SELL' ? 'sig pe-cell' : r.signal === 'Watch' ? 'sig watch' : 'sig none';
+    const rowCls = r.signal === 'BLOCK BUY' ? ' class="row-hit-buy"' : r.signal === 'BLOCK SELL' ? ' class="row-hit-sell"' : '';
+    return '<tr' + rowCls + '>' +
       '<td class="exp">' + (i + 1) + '</td>' +
       '<td class="exp">' + r.symbol + '</td>' +
       '<td>' + numOrDash(r.close) + '</td>' +
-      '<td class="' + chgCls + '">' + (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%</td>' +
+      chgCellHtml(r.changePct) +
       '<td>' + fmtOI(r.volume) + '</td>' +
       '<td>' + fmtOI(r.avgVolume) + '</td>' +
-      '<td>' + r.ratio.toFixed(2) + 'x</td>' +
-      '<td class="exp ' + sigCls + '">' + r.signal + '</td>' +
+      '<td>' + ratioBarHtml(r.ratio, d.volMult) + '</td>' +
+      '<td class="exp"><span class="' + sigCls + '">' + r.signal + '</span></td>' +
     '</tr>';
   }).join('');
   staggerRows(document.getElementById('bdBody'));
@@ -2622,16 +2650,17 @@ function renderHighVolume(d) {
   }
   table.style.display = 'table';
   empty.style.display = 'none';
+  const medals = ['🥇', '🥈', '🥉'];
   document.getElementById('hvBody').innerHTML = rows.map((r, i) => {
-    const chgCls = r.changePct >= 0 ? 'ce-cell' : 'pe-cell';
+    const rank = i < 3 ? medals[i] + ' ' + (i + 1) : String(i + 1);
     return '<tr>' +
-      '<td class="exp">' + (i + 1) + '</td>' +
+      '<td class="exp">' + rank + '</td>' +
       '<td class="exp">' + r.symbol + '</td>' +
       '<td>' + numOrDash(r.close) + '</td>' +
-      '<td class="' + chgCls + '">' + (r.changePct >= 0 ? '+' : '') + r.changePct.toFixed(2) + '%</td>' +
+      chgCellHtml(r.changePct) +
       '<td>' + fmtOI(r.volume) + '</td>' +
       '<td>' + fmtOI(r.avgVolume) + '</td>' +
-      '<td>' + r.ratio.toFixed(2) + 'x</td>' +
+      '<td>' + ratioBarHtml(r.ratio, 3) + '</td>' +
     '</tr>';
   }).join('');
   staggerRows(document.getElementById('hvBody'));
