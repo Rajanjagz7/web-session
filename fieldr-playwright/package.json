@@ -1,0 +1,22 @@
+{
+  "name": "fieldr-playwright-automation",
+  "version": "1.0.0",
+  "description": "Playwright end-to-end test automation suite for Fieldr app (https://c1.dev.fieldr.app/)",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report"
+  },
+  "keywords": ["playwright", "testing", "fieldr", "automation"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.2",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.7.2"
+  }
+}

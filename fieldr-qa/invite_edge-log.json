@@ -1,0 +1,442 @@
+[
+ {
+  "label": "empty body",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 500,
+  "message": "Cannot read properties of undefined (reading 'toString')",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email empty string",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 400,
+  "message": "Email is required",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email whitespace only",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 400,
+  "message": "Email is required",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email no @",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 500,
+  "message": "The invitation could not be emailed, so it was not created. Check the address and try again.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email missing tld",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118209126cedff45d9261\", \"email\": \"a@b\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expiresAt\": \"2026-09-28T11:"
+ },
+ {
+  "label": "email double dot",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 500,
+  "message": "The invitation could not be emailed, so it was not created. Check the address and try again.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email leading space",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118249126cedff45d92ed\", \"email\": \"qa.edge1@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expiresAt\""
+ },
+ {
+  "label": "email 254+ char local part",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118279126cedff45d930c\", \"email\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+ },
+ {
+  "label": "email unicode homoglyph",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118299126cedff45d932b\", \"email\": \"qa.\\u0430dge@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expire"
+ },
+ {
+  "label": "email null byte",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab1182c9126cedff45d934a\", \"email\": \"qa.edge\\u0000@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expir"
+ },
+ {
+  "label": "email XSS payload",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 500,
+  "message": "The invitation could not be emailed, so it was not created. Check the address and try again.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email NoSQL operator",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 500,
+  "message": "The invitation could not be emailed, so it was not created. Check the address and try again.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "email as array",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118329126cedff45d93a3\", \"email\": \"a@yopmail.com,b@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"exp"
+ },
+ {
+  "label": "email as number",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 500,
+  "message": "The invitation could not be emailed, so it was not created. Check the address and try again.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "roleId missing (default role?)",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118369126cedff45d93df\", \"email\": \"qa.edge.norole@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expi"
+ },
+ {
+  "label": "roleId bogus string",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab118399126cedff45d93fe\", \"email\": \"qa.edge.badrole@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"exp"
+ },
+ {
+  "label": "roleId privilege escalation -> companyAdmin",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab1183c9126cedff45d941d\", \"email\": \"qa.edge.escalate@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"ex"
+ },
+ {
+  "label": "valid invite #1",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab1183f9126cedff45d943c\", \"email\": \"qa.edge.dup@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expires"
+ },
+ {
+  "label": "duplicate invite (same email)",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 400,
+  "message": "This person already has an invitation waiting. Resend it instead.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "invite to existing user's email",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 400,
+  "message": "This person is already a member of this workspace",
+  "data_preview": "{}"
+ },
+ {
+  "label": "invite to workspace owner's own email",
+  "method": "POST",
+  "path": "/invite/create",
+  "code": 400,
+  "message": "This person is already a member of this workspace",
+  "data_preview": "{}"
+ },
+ {
+  "label": "resend valid invite",
+  "method": "POST",
+  "path": "/invite/6ab1183f9126cedff45d943c/resend",
+  "code": 200,
+  "message": "Invitation sent",
+  "data_preview": "{\"_id\": \"6ab1183f9126cedff45d943c\", \"email\": \"qa.edge.dup@yopmail.com\", \"status\": \"pending\", \"roleId\": \"6aae2a63d77d9ef26bdcf0fb\", \"roleName\": \"User\", \"invitedBy\": \"6aae2a64d77d9ef26bdcf123\", \"expires"
+ },
+ {
+  "label": "resend nonexistent invite id (fake ObjectId)",
+  "method": "POST",
+  "path": "/invite/000000000000000000000000/resend",
+  "code": 404,
+  "message": "Invitation not found",
+  "data_preview": "{}"
+ },
+ {
+  "label": "resend malformed id",
+  "method": "POST",
+  "path": "/invite/not-an-id/resend",
+  "code": 400,
+  "message": "Invalid id provided",
+  "data_preview": "{}"
+ },
+ {
+  "label": "verify own invite id (should need no auth normally)",
+  "method": "GET",
+  "path": "/invite/verify/6ab1183f9126cedff45d943c",
+  "code": 400,
+  "message": "This invitation link has expired or has already been used. Ask your administrator to send a new one.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "verify with SQLi-style id",
+  "method": "GET",
+  "path": "/invite/verify/' OR '1'='1",
+  "code": 400,
+  "message": "This invitation link has expired or has already been used. Ask your administrator to send a new one.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "get invite by id",
+  "method": "GET",
+  "path": "/invite/6ab1183f9126cedff45d943c",
+  "code": 404,
+  "message": "API endpoint doesn't exist",
+  "data_preview": "null"
+ },
+ {
+  "label": "get invite: sequential id guess (IDOR probe)",
+  "method": "GET",
+  "path": "/invite/000000000000000000000001",
+  "code": 404,
+  "message": "API endpoint doesn't exist",
+  "data_preview": "null"
+ },
+ {
+  "label": "accept with garbage token",
+  "method": "POST",
+  "path": "/invite/accept",
+  "code": 400,
+  "message": "This invitation link has expired or has already been used. Ask your administrator to send a new one.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "accept with empty token",
+  "method": "POST",
+  "path": "/invite/accept",
+  "code": 400,
+  "message": "This invitation link has expired or has already been used. Ask your administrator to send a new one.",
+  "data_preview": "{}"
+ },
+ {
+  "label": "empty body",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 400,
+  "message": "Group name is required",
+  "data_preview": "{}"
+ },
+ {
+  "label": "name empty string",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 400,
+  "message": "Group name is required",
+  "data_preview": "{}"
+ },
+ {
+  "label": "name whitespace only",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 400,
+  "message": "Group name is required",
+  "data_preview": "{}"
+ },
+ {
+  "label": "name 1 char",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118489126cedff45d95bd\", \"name\": \"A\", \"description\": \"\", \"users\": [], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43:04.897Z\", \"updatedAt\": \"2026-09-21T11:43:04.897Z\", \"createdBy\": \"6aae2"
+ },
+ {
+  "label": "name 255 chars",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118499126cedff45d95d0\", \"name\": \"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+ },
+ {
+  "label": "name 256 chars",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118499126cedff45d95e3\", \"name\": \"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+ },
+ {
+  "label": "name 2000 chars",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184a9126cedff45d95f6\", \"name\": \"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+ },
+ {
+  "label": "name XSS payload",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184a9126cedff45d9609\", \"name\": \"<img src=x onerror=alert(1)>QA_EDGE\", \"description\": \"\", \"users\": [], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43:06.388Z\", \"updatedAt\": \"2026-09-21T1"
+ },
+ {
+  "label": "name with only emoji",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184b9126cedff45d961c\", \"name\": \"\\ud83d\\ude00\\ud83d\\ude00\\ud83d\\ude00\", \"description\": \"\", \"users\": [], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43:07.317Z\", \"updatedAt\": \"2026-09-21T"
+ },
+ {
+  "label": "valid group (for dup test)",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184c9126cedff45d962f\", \"name\": \"QA_EDGE Duplicate Test Crew\", \"description\": \"\", \"users\": [], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43:08.220Z\", \"updatedAt\": \"2026-09-21T11:43:08."
+ },
+ {
+  "label": "duplicate group name",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184c9126cedff45d9642\", \"name\": \"QA_EDGE Duplicate Test Crew\", \"description\": \"\", \"users\": [], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43:08.602Z\", \"updatedAt\": \"2026-09-21T11:43:08."
+ },
+ {
+  "label": "group with nonexistent user id",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184c9126cedff45d9655\", \"name\": \"QA_EDGE Bad Members\", \"description\": \"\", \"users\": [\"000000000000000000000000\"], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43:08.975Z\", \"updatedAt\": \"20"
+ },
+ {
+  "label": "group with malformed user id",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 400,
+  "message": "Invalid id provided",
+  "data_preview": "{}"
+ },
+ {
+  "label": "group with duplicate member twice",
+  "method": "POST",
+  "path": "/user/group/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab1184e9126cedff45d9689\", \"name\": \"QA_EDGE Dup Member\", \"description\": \"\", \"users\": [\"6ab10a4e9126cedff45cf4f4\", \"6ab10a4e9126cedff45cf4f4\"], \"isActive\": true, \"createdAt\": \"2026-09-21T11:43"
+ },
+ {
+  "label": "update group: add same member twice via update",
+  "method": "PUT",
+  "path": "/user/group/update/6ab1184c9126cedff45d962f",
+  "code": 200,
+  "message": "Data updated successfully",
+  "data_preview": "{\"_id\": \"6ab1184c9126cedff45d962f\", \"name\": \"QA_EDGE Duplicate Test Crew\", \"description\": \"\", \"users\": [\"6ab10a4e9126cedff45cf4f4\", \"6ab10a4e9126cedff45cf4f4\"], \"isActive\": true, \"createdAt\": \"2026-09"
+ },
+ {
+  "label": "update nonexistent group",
+  "method": "PUT",
+  "path": "/user/group/update/000000000000000000000000",
+  "code": 400,
+  "message": "Invalid id provided",
+  "data_preview": "{}"
+ },
+ {
+  "label": "delete nonexistent group",
+  "method": "DELETE",
+  "path": "/user/group/delete/000000000000000000000000",
+  "code": 400,
+  "message": "Invalid id provided",
+  "data_preview": "{}"
+ },
+ {
+  "label": "get group by malformed id",
+  "method": "GET",
+  "path": "/user/group/list/not-an-id",
+  "code": 400,
+  "message": "Invalid id provided",
+  "data_preview": "{}"
+ },
+ {
+  "label": "empty body",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 400,
+  "message": "Name, Phone, Email, Country code, Industry are required",
+  "data_preview": "{}"
+ },
+ {
+  "label": "firstName 2 chars (below 3 min seen in Customer)",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118519126cedff45d96ec\", \"name\": \"Al Edge\", \"lastName\": \"Edge\", \"firstName\": \"Al\", \"phone\": \"412345001\", \"email\": \"qa.edge.short@yopmail.com\", \"countryCode\": \"+61\", \"industry\": \"Agriculture"
+ },
+ {
+  "label": "firstName 200 chars",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118529126cedff45d970b\", \"name\": \"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+ },
+ {
+  "label": "phone letters",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118539126cedff45d972a\", \"name\": \"Qa Edge\", \"lastName\": \"Edge\", \"firstName\": \"Qa\", \"phone\": \"ABCDEFGHI\", \"email\": \"qa.edge.phone1@yopmail.com\", \"countryCode\": \"+61\", \"industry\": \"Agricultur"
+ },
+ {
+  "label": "phone with + and spaces",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118539126cedff45d9749\", \"name\": \"Qa Edge\", \"lastName\": \"Edge\", \"firstName\": \"Qa\", \"phone\": \"+61412345678\", \"email\": \"qa.edge.phone2@yopmail.com\", \"countryCode\": \"+61\", \"industry\": \"Agricul"
+ },
+ {
+  "label": "type = companyAdmin (privilege escalation)",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118549126cedff45d9768\", \"name\": \"Qa Edge\", \"lastName\": \"Edge\", \"firstName\": \"Qa\", \"phone\": \"412345004\", \"email\": \"qa.edge.priv@yopmail.com\", \"countryCode\": \"+61\", \"industry\": \"Agriculture\""
+ },
+ {
+  "label": "email SQLi-ish payload",
+  "method": "POST",
+  "path": "/user/create",
+  "code": 200,
+  "message": "Data created successfully",
+  "data_preview": "{\"_id\": \"6ab118549126cedff45d9787\", \"name\": \"Qa Edge\", \"lastName\": \"Edge\", \"firstName\": \"Qa\", \"phone\": \"412345005\", \"email\": \"';droptableusers;--@yopmail.com\", \"countryCode\": \"+61\", \"industry\": \"Agric"
+ }
+]

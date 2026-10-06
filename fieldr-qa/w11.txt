@@ -1,0 +1,5 @@
+uid=31_0 RootWebArea "Fieldr" url="https://rajanjagz7.dev.fieldr.app/app/report/list"
+  uid=32_0 heading "We couldn't load this page" level="1"
+  uid=32_1 StaticText "Something unexpected happened, but your events and data are safe. Head back to your dashboard or refresh to try again."
+  uid=32_2 button "Go to home"
+  uid=32_3 button "Reload page"
