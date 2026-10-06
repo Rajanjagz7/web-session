@@ -1,0 +1,7 @@
+.env
+.auth/
+__pycache__/
+*.pyc
+screenshots/*.png
+test-results/
+report.html
