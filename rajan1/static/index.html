@@ -787,7 +787,7 @@
 
       <div class="group" id="tolGroup">
         <label>Open = Low / Open = High tolerance (₹)</label>
-        <input type="number" id="tol" step="0.05" placeholder="0" min="0">
+        <input type="number" id="tol" step="0.05" placeholder="0.05" min="0" value="0.05">
         <div id="tolHint" style="font-size:11px; color:var(--muted); margin-top:5px; line-height:1.4;"></div>
       </div>
 
@@ -3809,7 +3809,10 @@ async function runServerScan() {
     const data = await res.json();
     if (res.ok) {
       lastResults = data.results || [];
-      animateNumber(document.getElementById('statTotal'), data.totalContracts || 0);
+      // storeTotal = all contracts in the bhavcopy (not filtered by segment/symbol).
+      // Fall back to totalContracts so the counter never shows a misleading 0
+      // when the user picks Stocks Only but only index data is cached.
+      animateNumber(document.getElementById('statTotal'), data.storeTotal || data.totalContracts || 0);
       animateNumber(document.getElementById('statMatch'), data.statMatch || 0);
       animateNumber(document.getElementById('statOL'), data.statOL || 0);
       animateNumber(document.getElementById('statOH'), data.statOH || 0);
@@ -3855,7 +3858,7 @@ async function runLiveScan() {
     if (res.ok) {
       lastResults = data.results || [];
       document.getElementById('liveLastTime').textContent = 'Last updated: ' + (data.liveTimestamp || '');
-      animateNumber(document.getElementById('statTotal'), data.totalContracts || 0);
+      animateNumber(document.getElementById('statTotal'), data.storeTotal || data.totalContracts || 0);
       animateNumber(document.getElementById('statMatch'), data.statMatch || 0);
       animateNumber(document.getElementById('statOL'), data.statOL || 0);
       animateNumber(document.getElementById('statOH'), data.statOH || 0);
@@ -3907,7 +3910,7 @@ document.getElementById('clearFiltersBtn').addEventListener('click', () => {
   document.getElementById('cheapOn').checked = false;
   document.getElementById('cheapFrom').value = '';
   document.getElementById('cheapTo').value = '';
-  document.getElementById('tol').value = '';
+  document.getElementById('tol').value = '0.05';
   document.getElementById('minOi').value = '';
   document.getElementById('includeUntraded').checked = false;
   document.getElementById('showMode').value = 'all';

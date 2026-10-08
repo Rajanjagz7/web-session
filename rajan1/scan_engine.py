@@ -50,7 +50,7 @@ def scan(records, filters):
     prev_on = parse_bool(filters.get("prevOn"), True)
     prev_from = parse_float(filters.get("prevFrom"), 0)
     prev_to = parse_float(filters.get("prevTo"), 0)
-    tol = parse_float(filters.get("tol"), 0)
+    tol = parse_float(filters.get("tol"), 0.05)  # 1 NSE tick default
     min_oi = parse_float(filters.get("minOi"), 0)
     include_untraded = parse_bool(filters.get("includeUntraded"), False)
     show_mode = filters.get("showMode", "matches")
@@ -184,4 +184,8 @@ def scan(records, filters):
         "statMatch": stat_match,
         "statOL": stat_ol,
         "statOH": stat_oh,
+        # Number of contracts in the filtered pool (segment/symbol/expiry applied).
+        # Frontend can show storeTotal separately to avoid "0 loaded" confusion
+        # when Stocks Only is selected but only index data is cached.
+        "poolSize": total_contracts,
     }

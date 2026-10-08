@@ -87,11 +87,21 @@ def api_symbols():
 @app.post("/api/scan")
 def api_scan(filters: dict = Body(default={})):
     if not store.is_loaded():
+        # Try auto-fetch before giving up (handles cold-start on Vercel)
+        try:
+            fetch_latest_bhavcopy(nse_service)
+            store.reload()
+        except Exception:
+            pass
+    if not store.is_loaded():
         raise HTTPException(
             status_code=400,
             detail="No bhavcopy loaded yet. Use 'Force Re-Fetch' or upload a CSV.",
         )
-    return scan_engine.scan(store.today_records(), filters)
+    result = scan_engine.scan(store.today_records(), filters)
+    result["storeTotal"] = len(store.today_rows)
+    result["todayDate"] = store.today_date or ""
+    return result
 
 
 @app.post("/api/fetch-latest")
