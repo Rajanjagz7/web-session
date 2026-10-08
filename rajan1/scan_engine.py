@@ -124,22 +124,16 @@ def scan(records, filters):
         if not (low_ok and prev_ok):
             continue
 
-        # Cheap-option guard: checked ("cheapOn") shows contracts priced in
-        # this band on EITHER LTP or Day Low -- unchecked instead actively
-        # hides near-worthless junk where EITHER LTP or Day Low is at or
-        # below the band's upper bound, so it doesn't clutter the default
-        # view. This is a hard filter like the range filters above, applied
-        # regardless of Show mode.
+        # Cheap-option filter: only applied when cheapOn is checked — shows
+        # contracts priced in the specified band (LTP or Day Low).
+        # No default junk filtering when cheapOn=False so stock options
+        # (which have much lower absolute premiums than index options) are
+        # not silently hidden.
         ltp = r.get("close")
-        ltp_in_band = ltp is not None and cheap_from <= ltp <= cheap_to
-        low_in_band = low is not None and cheap_from <= low <= cheap_to
-        ltp_junk = ltp is not None and ltp <= cheap_to
-        low_junk = low is not None and low <= cheap_to
         if cheap_on:
+            ltp_in_band = ltp is not None and cheap_from <= ltp <= cheap_to
+            low_in_band = low is not None and cheap_from <= low <= cheap_to
             if not (ltp_in_band or low_in_band):
-                continue
-        else:
-            if ltp_junk or low_junk:
                 continue
 
         if show_mode == "ol":
