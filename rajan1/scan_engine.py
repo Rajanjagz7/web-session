@@ -140,6 +140,8 @@ def scan(records, filters):
             keep = is_ol
         elif show_mode == "oh":
             keep = is_oh
+        elif show_mode == "ol_oh":
+            keep = is_ol or is_oh
         elif show_mode == "any":
             keep = is_match or is_ol or is_oh
         elif show_mode == "matches":
