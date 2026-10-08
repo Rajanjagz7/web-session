@@ -675,53 +675,31 @@
 
   <!-- Mode Selector Tabs -->
   <div class="mode-tabs">
-    <button class="tab-btn active" data-tab="auto">⚡ Daily Sync (Auto)</button>
-    <button class="tab-btn" data-tab="live">🔴 Live Market Scanner</button>
-    <button class="tab-btn" data-tab="manual">📁 Manual CSV Upload</button>
+    <button class="tab-btn active" data-tab="auto">⚡ Live Market Scan</button>
+    <button class="tab-btn" data-tab="live">🔴 Live Symbol Chain</button>
     <button class="tab-btn" data-tab="indicators">📐 Indicators</button>
     <button class="tab-btn" data-tab="stocks">📦 Stocks</button>
     <button class="tab-btn" data-tab="charts">📈 Charts</button>
   </div>
 
-  <!-- Auto Fetch Banner -->
+  <!-- Live Scan Banner -->
   <div class="banner" id="autoBanner">
     <div class="banner-text">
-      <span>📥</span>
-      <span id="autoBannerMsg">Daily market data automatically synced from NSE.</span>
+      <span>🔴</span>
+      <span id="autoBannerMsg">Fetches live option chains from NSE for indices + top F&amp;O stocks.</span>
     </div>
-    <button class="action-btn" id="refreshBhavBtn">🔄 Force Re-Fetch Latest from NSE</button>
-  </div>
-
-  <!-- Manual Upload Section (visible only in manual tab) -->
-  <div class="upload-row" id="manualUploadRow" style="display:none;">
-    <label class="drop" id="dropToday">
-      <div class="tag">Required</div>
-      <div class="title" id="todayTitle">Today's EOD data file</div>
-      <div class="detail" id="todayDetail">Click to choose a BhavCopy_NSE_FO CSV file</div>
-      <input type="file" id="fileToday" accept=".csv">
-    </label>
-    <label class="drop" id="dropPrev">
-      <div class="tag">Optional — cross-check</div>
-      <div class="title" id="prevTitle">Previous day's EOD data file</div>
-      <div class="detail" id="prevDetail">Adds a real yesterday-vs-today OI &amp; close comparison</div>
-      <input type="file" id="filePrev" accept=".csv">
-    </label>
+    <button class="action-btn" id="refreshBhavBtn">🔄 Refresh Live Data</button>
   </div>
 
   <!-- Live Market Bar (visible only in live tab) -->
   <div class="banner" id="liveBar" style="display:none;">
     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
       <label style="font-size:13px; font-weight:600; color:var(--muted);">Live Symbol:</label>
-      <select id="liveSymbolSelect" style="width:160px; padding:5px 8px;">
+      <select id="liveSymbolSelect" style="width:180px; padding:5px 8px;">
         <option value="NIFTY" selected>NIFTY</option>
         <option value="BANKNIFTY">BANKNIFTY</option>
         <option value="FINNIFTY">FINNIFTY</option>
         <option value="MIDCPNIFTY">MIDCPNIFTY</option>
-        <option value="RELIANCE">RELIANCE</option>
-        <option value="HDFCBANK">HDFCBANK</option>
-        <option value="ICICIBANK">ICICIBANK</option>
-        <option value="INFY">INFY</option>
-        <option value="TCS">TCS</option>
       </select>
       <label class="checkline" style="margin:0;"><input type="checkbox" id="liveAutoRefresh"> <span>Auto-refresh (15s)</span></label>
       <span id="liveLastTime" style="font-size:12px; color:var(--muted);"></span>
@@ -1846,10 +1824,7 @@ async function initStatus() {
       text.textContent = 'Market: Closed (' + (data.tradeDate || '') + ')';
     }
 
-    if (data.todayDateLoaded) {
-      loadedInfo.textContent = 'EOD data: ' + data.todayDateLoaded + ' (' + data.totalLoaded.toLocaleString() + ' contracts)';
-      document.getElementById('autoBannerMsg').textContent = 'Daily data for ' + data.todayDateLoaded + ' loaded (' + data.totalLoaded.toLocaleString() + ' contracts) — cross-checked with ' + (data.prevDateLoaded || 'previous day');
-    }
+    loadedInfo.textContent = '';  // no bhavcopy info — data is live
     if (data.appVersion) loadedAppVersion = data.appVersion;
     loadSymbols();
   } catch (err) {
@@ -1991,6 +1966,12 @@ async function loadSymbols() {
     if (data.symbols && data.symbols.length) {
       allSymbols = data.symbols;
       populateSymbols(allSymbols);
+      // Also populate the live symbol dropdown
+      const liveSel = document.getElementById('liveSymbolSelect');
+      const cur = liveSel.value;
+      liveSel.innerHTML = allSymbols.map(s => `<option value="${s}">${s}</option>`).join('');
+      if (allSymbols.includes(cur)) liveSel.value = cur;
+      else liveSel.value = 'NIFTY';
     }
   } catch (e) {}
 }
@@ -2027,7 +2008,6 @@ function switchToTab(tab) {
 
   document.getElementById('autoBanner').style.display = currentMode === 'auto' ? 'flex' : 'none';
   document.getElementById('liveBar').style.display = currentMode === 'live' ? 'flex' : 'none';
-  document.getElementById('manualUploadRow').style.display = currentMode === 'manual' ? 'flex' : 'none';
   // Live Market Scanner always fetches one symbol's own live chain at its
   // current nearest expiry — Instrument type and Expiry don't apply to that
   // (the backend ignores them there), so hide them instead of leaving
@@ -3697,23 +3677,16 @@ loadAlertsFromStorage();
 renderAlertsList();
 manageAlertsPolling();
 
-// Force Re-Fetch Bhavcopy
+// Refresh live data
 document.getElementById('refreshBhavBtn').addEventListener('click', async () => {
   const btn = document.getElementById('refreshBhavBtn');
-  btn.textContent = '⏳ Fetching from NSE…';
+  btn.textContent = '⏳ Refreshing…';
   btn.disabled = true;
   try {
-    const res = await fetch(`${API_BASE}/api/fetch-latest?force=true`, { method: 'POST' });
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById('autoBannerMsg').textContent = 'Loaded ' + data.totalContracts.toLocaleString() + ' contracts for ' + data.todayDate + '!';
-      await initStatus();
-      runServerScan();
-    }
-  } catch (e) {
-    alert('Error fetching from NSE: ' + e.message);
+    if (currentMode === 'live') runLiveScan();
+    else runServerScan();
   } finally {
-    btn.textContent = '🔄 Force Re-Fetch Latest from NSE';
+    btn.textContent = '🔄 Refresh Live Data';
     btn.disabled = false;
   }
 });
@@ -3796,8 +3769,9 @@ function getFilters() {
 // Server Scan
 async function runServerScan() {
   const btn = document.getElementById('scanBtn');
-  btn.textContent = 'Scanning…';
+  btn.textContent = 'Fetching live data…';
   btn.disabled = true;
+  document.getElementById('autoBannerMsg').textContent = 'Fetching live option chains from NSE…';
 
   try {
     const filters = getFilters();
@@ -3807,23 +3781,28 @@ async function runServerScan() {
       body: JSON.stringify(filters)
     });
     const data = await res.json();
-    if (res.ok) {
-      lastResults = data.results || [];
-      // storeTotal = all contracts in the bhavcopy (not filtered by segment/symbol).
-      // Fall back to totalContracts so the counter never shows a misleading 0
-      // when the user picks Stocks Only but only index data is cached.
-      animateNumber(document.getElementById('statTotal'), data.storeTotal || data.totalContracts || 0);
-      animateNumber(document.getElementById('statMatch'), data.statMatch || 0);
-      animateNumber(document.getElementById('statOL'), data.statOL || 0);
-      animateNumber(document.getElementById('statOH'), data.statOH || 0);
-      document.getElementById('summary').style.display = 'flex';
-      document.getElementById('toolbar').style.display = 'flex';
-      sortAndRender();
-    } else {
-      alert(data.detail || 'Scan failed');
+    if (data.error) {
+      document.getElementById('emptyMsg').innerHTML = '⚠️ ' + data.error;
+      document.getElementById('emptyMsg').style.display = 'block';
+      document.getElementById('resultsTable').style.display = 'none';
+      document.getElementById('autoBannerMsg').textContent = 'Live data from NSE · ' + data.error;
+      return;
     }
+    lastResults = data.results || [];
+    animateNumber(document.getElementById('statTotal'), data.storeTotal || data.totalContracts || 0);
+    animateNumber(document.getElementById('statMatch'), data.statMatch || 0);
+    animateNumber(document.getElementById('statOL'), data.statOL || 0);
+    animateNumber(document.getElementById('statOH'), data.statOH || 0);
+    document.getElementById('summary').style.display = 'flex';
+    document.getElementById('toolbar').style.display = 'flex';
+    const ts = data.liveTimestamp ? ' · Updated ' + data.liveTimestamp : '';
+    const partial = data.partialErrors ? ` · ${data.partialErrors} symbol(s) failed` : '';
+    document.getElementById('autoBannerMsg').textContent = 'Live data from NSE' + ts + partial;
+    sortAndRender();
   } catch (e) {
     console.error(e);
+    document.getElementById('emptyMsg').textContent = '⚠️ Could not reach the server. Check your connection.';
+    document.getElementById('emptyMsg').style.display = 'block';
   } finally {
     btn.textContent = 'Scan Market';
     btn.disabled = false;

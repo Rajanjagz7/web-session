@@ -1,9 +1,8 @@
-import glob
 import os
 from datetime import datetime
 from typing import Optional
 
-from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,9 +18,8 @@ import rajan_pavan_indicators as rajan_pavan
 import scan_engine
 import trade_predictor
 import ut_bot
-from bhav_fetch import fetch_latest_bhavcopy
-from data_store import DATA_DIR, INDEX_SYMBOLS, WRITE_DIR, live_row_to_record, parse_bhavcopy_text, store
-from nse_service import nse_service
+from data_store import INDEX_SYMBOLS, live_row_to_record, store
+from nse_service import TOP_FO_STOCKS, nse_service
 
 BASE_DIR = os.path.dirname(__file__)
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -29,7 +27,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 # Bumped on every deploy so the frontend's update-check banner can detect a
 # newer build is live and prompt the user to refresh instead of silently
 # running stale cached JS.
-APP_VERSION = "2026.10.01-2"
+APP_VERSION = "2026.10.08-1"
 
 app = FastAPI(title="Bhavcopy & Live Option Scanner")
 
@@ -80,66 +78,70 @@ def api_news(limit: int = 40):
 
 @app.get("/api/symbols")
 def api_symbols():
-    symbols = sorted(set(store.symbols()) | INDEX_SYMBOLS)
+    if store.is_loaded():
+        symbols = sorted(set(store.symbols()) | INDEX_SYMBOLS)
+    else:
+        symbols = sorted(set(TOP_FO_STOCKS) | INDEX_SYMBOLS)
     return {"symbols": symbols}
 
 
 @app.post("/api/scan")
 def api_scan(filters: dict = Body(default={})):
-    if not store.is_loaded():
-        # Try auto-fetch before giving up (handles cold-start on Vercel)
-        try:
-            fetch_latest_bhavcopy(nse_service)
-            store.reload()
-        except Exception:
-            pass
-    if not store.is_loaded():
-        raise HTTPException(
-            status_code=400,
-            detail="No bhavcopy loaded yet. Use 'Force Re-Fetch' or upload a CSV.",
+    """Live market scan — fetches NSE option chains in parallel for all requested symbols."""
+    sym_filter = filters.get("symSelect", "__ALL__") or "__ALL__"
+    inst_idx = bool(filters.get("instIdx", True))
+    inst_stk = bool(filters.get("instStk", True))
+
+    try:
+        live_rows, trade_date, errors = nse_service.scan_live_all(
+            inst_idx=inst_idx,
+            inst_stk=inst_stk,
+            sym_filter=sym_filter,
+            max_stocks=40,
         )
-    result = scan_engine.scan(store.today_records(), filters)
-    result["storeTotal"] = len(store.today_rows)
-    result["todayDate"] = store.today_date or ""
+    except Exception as exc:
+        return {
+            "results": [], "totalContracts": 0, "statMatch": 0,
+            "statOL": 0, "statOH": 0, "poolSize": 0,
+            "storeTotal": 0, "todayDate": "",
+            "error": f"Live scan failed: {exc}",
+        }
+
+    if not live_rows and errors:
+        return {
+            "results": [], "totalContracts": 0, "statMatch": 0,
+            "statOL": 0, "statOH": 0, "poolSize": 0,
+            "storeTotal": 0, "todayDate": trade_date,
+            "error": f"NSE data unavailable: {errors[0]}",
+        }
+
+    baseline_lookup = store.today_lookup()
+    records = [live_row_to_record(r, baseline_lookup) for r in live_rows]
+
+    result = scan_engine.scan(records, filters)
+    result["storeTotal"] = len(live_rows)
+    result["todayDate"] = trade_date
+    result["liveTimestamp"] = datetime.now().strftime("%H:%M:%S")
+    if errors:
+        result["partialErrors"] = len(errors)
     return result
 
 
 @app.post("/api/fetch-latest")
 def api_fetch_latest(force: bool = False):
+    # Bhavcopy is no longer used — this endpoint is kept for backward compatibility.
+    # It warms the NSE session so subsequent live scans have fresh cookies.
     try:
-        fetch_latest_bhavcopy(nse_service)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
-    store.reload()
-    return {
-        "success": True,
-        "totalContracts": len(store.today_rows),
-        "todayDate": store.today_date,
-    }
+        nse_service.refresh_cookies(force=True)
+    except Exception:
+        pass
+    return {"success": True, "totalContracts": 0, "todayDate": ""}
 
 
 @app.post("/api/upload")
 async def api_upload(file: UploadFile = File(...), isToday: str = Form(...)):
-    content = await file.read()
-    try:
-        text = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="Could not decode file as UTF-8 CSV")
-
-    rows = parse_bhavcopy_text(text)
-    if not rows:
-        raise HTTPException(
-            status_code=400,
-            detail="No option contracts found — check this is an NSE FO bhavcopy CSV",
-        )
-
-    trade_date = (rows[0]["tradeDate"] or "").replace("-", "")
-    is_today = str(isToday).strip().lower() in ("1", "true", "yes", "on")
-    if is_today:
-        store.set_today(rows, trade_date)
-    else:
-        store.set_prev(rows, trade_date)
-    return {"contractsLoaded": len(rows)}
+    # Bhavcopy upload is no longer used — endpoint kept for backward compatibility.
+    return {"contractsLoaded": 0}
 
 
 @app.get("/api/live/scan")
@@ -292,17 +294,6 @@ def api_cron_morning_refresh():
     day's data. There's no notification channel wired up — it just runs
     server-side; check Vercel's Cron Jobs dashboard to confirm it fired."""
     summary = {"ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-    try:
-        fetch_latest_bhavcopy(nse_service)
-        store.reload()
-        summary["bhavcopy"] = {
-            "status": "ok",
-            "todayDate": store.today_date,
-            "totalLoaded": len(store.today_rows),
-        }
-    except Exception as exc:
-        summary["bhavcopy"] = {"status": "failed", "error": str(exc)}
 
     try:
         nse_service.refresh_cookies(force=True)
@@ -563,41 +554,9 @@ def api_stocks_high_volume(
 
 @app.get("/api/cron/weekly-cleanup")
 def api_cron_weekly_cleanup():
-    """Hit automatically by Vercel Cron every Sunday 00:00 IST (see vercel.json).
-    Deletes fetched bhavcopy CSVs from the writable cache dir (WRITE_DIR) only.
-    On Vercel, WRITE_DIR is /tmp/bhav_cache — a separate, genuinely ephemeral
-    path from the bundled data_cache/ baseline this app ships with, so this
-    never touches the fallback data. Vercel already wipes /tmp on cold starts
-    on its own; this just keeps a long-lived warm container from accumulating
-    a full week of daily files before Monday morning's fresh fetch.
-
-    Safety guard: if WRITE_DIR isn't configured to a separate path (e.g. local
-    dev or a self-host without BHAV_CACHE_WRITE_DIR set), it equals the bundled
-    data_cache/ dir — deleting there would destroy the only baseline data, so
-    this refuses to run in that case instead."""
-    if os.path.abspath(WRITE_DIR) == os.path.abspath(DATA_DIR):
-        return {
-            "status": "skipped",
-            "reason": (
-                "WRITE_DIR is the same as the bundled data_cache directory "
-                "(BHAV_CACHE_WRITE_DIR isn't set to a separate path) — refusing to "
-                "delete the only baseline bhavcopy files this app has."
-            ),
-        }
-
-    deleted, errors = [], []
-    for path in glob.glob(os.path.join(WRITE_DIR, "BhavCopy_NSE_FO_*.csv")):
-        try:
-            os.remove(path)
-            deleted.append(os.path.basename(path))
-        except Exception as exc:
-            errors.append({"file": os.path.basename(path), "error": str(exc)})
-
-    store.reload()
-    return {
-        "status": "ok",
-        "deletedFiles": deleted,
-        "errors": errors,
-        "remainingLoaded": {"todayDate": store.today_date, "prevDate": store.prev_date},
-        "ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
+    """Cron endpoint kept for Vercel scheduling compatibility. Warms NSE cookies."""
+    try:
+        nse_service.refresh_cookies(force=True)
+    except Exception:
+        pass
+    return {"status": "ok", "ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}

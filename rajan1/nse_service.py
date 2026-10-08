@@ -1,5 +1,6 @@
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date as date_cls
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +10,17 @@ from common import normalize_expiry, normalize_strike
 from data_store import INDEX_SYMBOLS, store
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+# Curated top NSE F&O stock symbols — used when no bhavcopy is loaded
+TOP_FO_STOCKS = [
+    "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "ITC",
+    "SBIN", "BHARTIARTL", "KOTAKBANK", "LT", "AXISBANK", "BAJFINANCE",
+    "MARUTI", "SUNPHARMA", "TITAN", "WIPRO", "HCLTECH", "ASIANPAINT",
+    "ADANIPORTS", "POWERGRID", "NTPC", "ONGC", "TATAMOTORS",
+    "BAJAJFINSV", "TECHM", "DIVISLAB", "DRREDDY", "GRASIM", "CIPLA",
+    "EICHERMOT", "HEROMOTOCO", "HINDALCO", "INDUSINDBK", "NESTLEIND",
+    "TRENT", "ZOMATO", "BEL", "APOLLOHOSP", "SHRIRAMFIN", "JSWSTEEL",
+]
 
 BASE_HEADERS = {
     "User-Agent": (
@@ -21,21 +33,6 @@ BASE_HEADERS = {
 }
 
 
-def _nearest_expiry_for(symbol):
-    """NSE's live option-chain endpoint requires an exact expiry string per
-    request rather than defaulting to the nearest one, so it's resolved from
-    the bhavcopy already cached on disk instead of a separate lookup call."""
-    today_iso = date_cls.today().isoformat()
-    candidates = sorted({
-        r["expiry"] for r in store.today_rows
-        if r["symbol"] == symbol and r["expiry"]
-    })
-    upcoming = [e for e in candidates if e >= today_iso]
-    if upcoming:
-        return upcoming[0]
-    return candidates[-1] if candidates else None
-
-
 def _to_nse_expiry_param(iso_date):
     return datetime.strptime(iso_date, "%Y-%m-%d").strftime("%d-%b-%Y")
 
@@ -44,9 +41,7 @@ class OHLCTracker:
     """NSE's live option-chain feed only exposes LTP/OI per strike, not
     open/high/low. This derives a running intraday open/high/low from the
     LTPs observed across successive polls, reset whenever the trade date
-    changes. Accuracy improves the longer the server has been polling that
-    contract during the session, and 'open' reflects the first price seen by
-    this process rather than the official 9:15 open."""
+    changes."""
 
     def __init__(self):
         self._day = None
@@ -118,29 +113,70 @@ class NSEService:
             "tradeDate": now.strftime("%d-%b-%Y"),
         }
 
-    def fetch_option_chain(self, symbol, expiry_param):
+    def fetch_option_chain(self, symbol, expiry_param=None):
+        """Fetch NSE option chain. If expiry_param is None, NSE uses the nearest expiry."""
         symbol = symbol.upper()
         chain_type = "Indices" if symbol in INDEX_SYMBOLS else "Equities"
         url = "https://www.nseindia.com/api/option-chain-v3"
-        return self._get_json(
-            url, params={"symbol": symbol, "type": chain_type, "expiry": expiry_param}
-        )
+        params = {"symbol": symbol, "type": chain_type}
+        if expiry_param:
+            params["expiry"] = expiry_param
+        return self._get_json(url, params=params)
 
     def get_all_indices(self):
         raw = self._get_json("https://www.nseindia.com/api/allIndices")
         return {row["index"]: row for row in raw.get("data", [])}
 
+    def _resolve_nearest_expiry(self, symbol):
+        """Return (nearest_iso, prefetched_raw_or_None).
+
+        1. Check bhavcopy for upcoming expiries (fast, no network).
+        2. If not found, call NSE without expiry (avoids a second call since
+           we can reuse the response data for the chain itself).
+        """
+        today_iso = date_cls.today().isoformat()
+
+        # Try bhavcopy — only accept upcoming expiries (past ones cause NSE to reject)
+        if store.today_rows:
+            candidates = sorted({
+                r["expiry"] for r in store.today_rows
+                if r["symbol"] == symbol and r["expiry"]
+            })
+            upcoming = [e for e in candidates if e >= today_iso]
+            if upcoming:
+                return upcoming[0], None  # caller fetches chain data
+
+        # Fall back: call NSE without expiry, it returns the nearest expiry's chain
+        raw = self.fetch_option_chain(symbol)
+        expiry_dates = raw.get("records", {}).get("expiryDates", [])
+        nearest_iso = None
+        for ed in expiry_dates:
+            try:
+                ed_iso = datetime.strptime(ed, "%d-%b-%Y").strftime("%Y-%m-%d")
+                if ed_iso >= today_iso:
+                    nearest_iso = ed_iso
+                    break
+            except ValueError:
+                continue
+        return nearest_iso, raw  # raw already fetched — reuse it, no second call needed
+
     def get_live_records(self, symbol, expiry_override=None):
         symbol = symbol.upper()
-        nearest_iso = expiry_override or _nearest_expiry_for(symbol)
-        if not nearest_iso:
-            raise RuntimeError(
-                f"No expiry data available for {symbol} — load a bhavcopy first "
-                "so the nearest expiry can be resolved"
-            )
-        expiry_param = _to_nse_expiry_param(nearest_iso)
 
-        raw = self.fetch_option_chain(symbol, expiry_param)
+        if expiry_override:
+            nearest_iso = expiry_override
+            raw = self.fetch_option_chain(symbol, _to_nse_expiry_param(nearest_iso))
+        else:
+            nearest_iso, raw = self._resolve_nearest_expiry(symbol)
+            if not nearest_iso:
+                raise RuntimeError(
+                    f"No upcoming expiry found for {symbol}. "
+                    "NSE option chain may be unavailable for this symbol."
+                )
+            if raw is None:
+                # Got expiry from bhavcopy — fetch the chain for that specific expiry
+                raw = self.fetch_option_chain(symbol, _to_nse_expiry_param(nearest_iso))
+
         records_block = raw.get("records", {})
         underlying_value = records_block.get("underlyingValue")
         trade_date = (records_block.get("timestamp") or "").split(" ")[0]
@@ -174,6 +210,55 @@ class NSEService:
                     "volume": leg.get("totalTradedVolume"),
                 })
         return out, trade_date
+
+    def _fetch_symbol_records(self, symbol):
+        """Fetch live records for one symbol. Returns (symbol, records, trade_date, error)."""
+        try:
+            records, td = self.get_live_records(symbol)
+            return symbol, records, td, None
+        except Exception as exc:
+            return symbol, [], "", str(exc)
+
+    def scan_live_all(self, inst_idx=True, inst_stk=True, sym_filter="__ALL__", max_stocks=40):
+        """Fetch live NSE option chains for multiple symbols in parallel.
+
+        Returns (all_records, trade_date, errors_list).
+        """
+        symbols = []
+        if inst_idx:
+            symbols.extend(sorted(INDEX_SYMBOLS))
+        if inst_stk:
+            # Use bhavcopy stock symbols if loaded (fuller list), else TOP_FO_STOCKS
+            if store.today_rows:
+                stock_syms = sorted({r["symbol"] for r in store.today_rows if not r["isIndex"]})
+            else:
+                stock_syms = list(TOP_FO_STOCKS)
+            symbols.extend(stock_syms[:max_stocks])
+
+        # Apply symbol filter
+        if sym_filter and sym_filter not in ("__ALL__", ""):
+            sym_up = sym_filter.upper()
+            symbols = [s for s in symbols if s == sym_up]
+
+        if not symbols:
+            return [], "", ["No symbols selected — check Instrument type filter"]
+
+        all_records = []
+        trade_date = ""
+        errors = []
+
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = {executor.submit(self._fetch_symbol_records, sym): sym for sym in symbols}
+            for future in as_completed(futures):
+                sym, records, td, err = future.result()
+                if err:
+                    errors.append(f"{sym}: {err}")
+                else:
+                    all_records.extend(records)
+                    if td:
+                        trade_date = td
+
+        return all_records, trade_date, errors
 
 
 nse_service = NSEService()
