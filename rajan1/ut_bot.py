@@ -34,9 +34,6 @@ INDEX_CSV_NAME = {
 
 YAHOO_SYMBOL = {
     "SENSEX": "^BSESN",
-    "BITCOIN": "BTC-USD",       # spot, USD
-    "CRUDEOIL": "CL=F",         # NYMEX WTI front-month future, USD/barrel
-    "GOLD": "GC=F",             # COMEX front-month future, USD/oz troy
     # Internal-only: not part of the app's normal selectable symbol universe,
     # used by rajan_pavan_indicators.india_vix_range_scan to pull India VIX's
     # own daily series alongside whichever index the user picked.
@@ -146,6 +143,14 @@ def _parse_index_row(csv_text, index_name):
 
 def fetch_index_history(symbol, lookback_days=60, max_workers=20):
     symbol = symbol.upper()
+    import bar_source
+    if bar_source.supports(symbol):
+        try:
+            bars = bar_source.daily_bars(symbol, lookback_days)
+            if bars:
+                return bars
+        except Exception as exc:
+            print(f"[bar_source] Upstox daily bars failed for {symbol}: {exc}")
     if symbol in YAHOO_SYMBOL:
         return fetch_yahoo_history(symbol, lookback_days=lookback_days)
 

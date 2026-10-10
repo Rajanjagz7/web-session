@@ -66,7 +66,8 @@ def ha_dancing_trend_scan(
     reverse=True,
 ):
     symbol = symbol.upper()
-    if symbol not in YAHOO_INTRADAY_SYMBOL:
+    import bar_source
+    if symbol not in YAHOO_INTRADAY_SYMBOL and not bar_source.supports(symbol):
         raise RuntimeError(
             f"HA Dancing Trend Channel supports {', '.join(YAHOO_INTRADAY_SYMBOL)} only "
             "(MIDCPNIFTY has no matching intraday data source)"

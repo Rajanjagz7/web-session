@@ -8,6 +8,7 @@ import requests
 
 from common import normalize_expiry, normalize_strike
 from data_store import INDEX_SYMBOLS, store
+from upstox_service import UpstoxService
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -16,10 +17,10 @@ TOP_FO_STOCKS = [
     "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "ITC",
     "SBIN", "BHARTIARTL", "KOTAKBANK", "LT", "AXISBANK", "BAJFINANCE",
     "MARUTI", "SUNPHARMA", "TITAN", "WIPRO", "HCLTECH", "ASIANPAINT",
-    "ADANIPORTS", "POWERGRID", "NTPC", "ONGC", "TATAMOTORS",
+    "ADANIPORTS", "POWERGRID", "NTPC", "ONGC", "TMPV",
     "BAJAJFINSV", "TECHM", "DIVISLAB", "DRREDDY", "GRASIM", "CIPLA",
     "EICHERMOT", "HEROMOTOCO", "HINDALCO", "INDUSINDBK", "NESTLEIND",
-    "TRENT", "ZOMATO", "BEL", "APOLLOHOSP", "SHRIRAMFIN", "JSWSTEEL",
+    "TRENT", "ETERNAL", "BEL", "APOLLOHOSP", "SHRIRAMFIN", "JSWSTEEL",
 ]
 
 BASE_HEADERS = {
@@ -75,6 +76,7 @@ class NSEService:
         self._cookie_ttl = 240
         self._cookie_lock = threading.Lock()
         self.ohlc = OHLCTracker()
+        self.upstox = UpstoxService()
 
     def refresh_cookies(self, force=False):
         with self._cookie_lock:
@@ -160,8 +162,41 @@ class NSEService:
                 continue
         return nearest_iso, raw  # raw already fetched — reuse it, no second call needed
 
+    def _upstox_live_records(self, symbol, expiry_override=None):
+        """Option-chain rows from Upstox (works from cloud hosts where NSE blocks us)."""
+        chain = self.upstox.fetch_option_chain(symbol, expiry_override)
+        is_index = symbol in INDEX_SYMBOLS
+        out = []
+        for r in chain["rows"]:
+            oi, chg = r.get("oi"), r.get("oiChgRaw") or 0.0
+            prev_oi = (oi - chg) if oi is not None else None
+            out.append({
+                "symbol": symbol,
+                "isIndex": is_index,
+                "expiry": r["expiry"],
+                "strike": normalize_strike(r["strike"]),
+                "type": r["type"],
+                "open": r.get("open") or None,
+                "high": r.get("high") or None,
+                "low": r.get("low") or None,
+                "close": r.get("close"),
+                "prevClose": r.get("prevClose"),
+                "spot": r.get("spot"),
+                "oi": oi,
+                "changeOi": chg,
+                "pChangeOi": (chg / prev_oi * 100) if prev_oi else None,
+                "volume": r.get("vol"),
+            })
+        return out, datetime.now(IST).strftime("%d-%b-%Y")
+
     def get_live_records(self, symbol, expiry_override=None):
         symbol = symbol.upper()
+
+        if self.upstox.is_configured():
+            try:
+                return self._upstox_live_records(symbol, expiry_override)
+            except Exception as exc:
+                print(f"[Upstox] falling back to NSE for {symbol}: {exc}")
 
         if expiry_override:
             nearest_iso = expiry_override

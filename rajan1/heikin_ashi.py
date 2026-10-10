@@ -24,9 +24,6 @@ YAHOO_INTRADAY_SYMBOL = {
     "BANKNIFTY": "^NSEBANK",
     "FINNIFTY": "NIFTY_FIN_SERVICE.NS",
     "SENSEX": "^BSESN",
-    "BITCOIN": "BTC-USD",
-    "CRUDEOIL": "CL=F",
-    "GOLD": "GC=F",
 }
 
 _session = requests.Session()
@@ -39,6 +36,14 @@ _session.headers.update({
 
 
 def fetch_1m_bars(symbol):
+    import bar_source
+    if bar_source.supports(symbol):
+        try:
+            bars = bar_source.bars_1m(symbol)
+            if bars:
+                return bars
+        except Exception as exc:
+            print(f"[bar_source] Upstox 1m bars failed for {symbol}: {exc}")
     yahoo_symbol = YAHOO_INTRADAY_SYMBOL[symbol.upper()]
     resp = _session.get(
         f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_symbol}",
@@ -179,7 +184,8 @@ def simulate_trades(ha, upper, lower, side):
 
 def dancing_channel_scan(symbol, length=20, mult=2.0, channel_type="bollinger"):
     symbol = symbol.upper()
-    if symbol not in YAHOO_INTRADAY_SYMBOL:
+    import bar_source
+    if symbol not in YAHOO_INTRADAY_SYMBOL and not bar_source.supports(symbol):
         raise RuntimeError(
             f"3M Heikin Ashi Dancing Channel supports {', '.join(YAHOO_INTRADAY_SYMBOL)} only "
             "(MIDCPNIFTY has no matching intraday data source)"

@@ -95,7 +95,9 @@ def bhav_row_to_record(row, prev_lookup):
 
 def live_row_to_record(row, baseline_lookup):
     baseline = baseline_lookup.get(record_key(row))
-    prev_close = baseline["close"] if baseline is not None else None
+    prev_close = row.get("prevClose")
+    if prev_close is None and baseline is not None:
+        prev_close = baseline["close"]
     prev_oi = baseline["oi"] if baseline is not None else None
 
     oi = row.get("oi")

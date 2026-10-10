@@ -29,7 +29,7 @@ from datetime import datetime
 from trade_predictor import _ema
 from ut_bot import _rma, _true_range, fetch_index_history
 
-ALLOWED_SYMBOLS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", "BITCOIN", "CRUDEOIL", "GOLD")
+ALLOWED_SYMBOLS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
 
 
 # ───────────────────────── generic numeric/series helpers ─────────────────────────
@@ -249,7 +249,8 @@ def _htf_prev_value(bucket_idx, htf_values):
 
 def _validate_symbol(symbol):
     symbol = (symbol or "").upper()
-    if symbol not in ALLOWED_SYMBOLS:
+    import bar_source
+    if symbol not in ALLOWED_SYMBOLS and not bar_source.supports(symbol):
         raise ValueError(f"Rajan/Pavan indicators support {', '.join(ALLOWED_SYMBOLS)} only")
     return symbol
 

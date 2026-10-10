@@ -55,7 +55,8 @@ def compute_ema_ribbon(bars):
 
 
 def compute_opening_levels(symbol):
-    if symbol.upper() not in YAHOO_INTRADAY_SYMBOL:
+    import bar_source
+    if symbol.upper() not in YAHOO_INTRADAY_SYMBOL and not bar_source.supports(symbol):
         return None
     try:
         bars_1m = fetch_1m_bars(symbol)

@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import Body, FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -17,6 +18,9 @@ import stock_scanner
 import rajan_pavan_indicators as rajan_pavan
 import scan_engine
 import trade_predictor
+import market_api
+import bar_source
+import strategies_api
 import ut_bot
 from data_store import INDEX_SYMBOLS, live_row_to_record, store
 from nse_service import TOP_FO_STOCKS, nse_service
@@ -31,6 +35,10 @@ APP_VERSION = "2026.10.08-1"
 
 app = FastAPI(title="Bhavcopy & Live Option Scanner")
 
+app.include_router(market_api.router)
+app.include_router(strategies_api.router)
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -484,7 +492,7 @@ def api_indicator_rajan_pavan(
             status_code=400,
             detail=f"Unknown Rajan/Pavan indicator key '{key}' — supported: {', '.join(rajan_pavan.RAJAN_PAVAN_KEYS)}",
         )
-    if symbol.upper() not in rajan_pavan.ALLOWED_SYMBOLS:
+    if symbol.upper() not in rajan_pavan.ALLOWED_SYMBOLS and not bar_source.supports(symbol):
         raise HTTPException(
             status_code=400,
             detail=f"Rajan/Pavan indicators support {', '.join(rajan_pavan.ALLOWED_SYMBOLS)} only",
