@@ -343,7 +343,6 @@ td.oc-click{cursor:pointer}.scan-pager{display:flex;justify-content:space-betwee
     <nav class="nav" id="mainNav"></nav>
     <div class="hdr-r">
       <span class="live-dot" id="mktDot"><i></i><span id="mktTxt">Connecting…</span></span>
-      <button class="btn sm" id="sbBtn" onclick="SB.open()" title="Browse and search every NSE-listed stock">All stocks</button>
       <button class="pnl-chip" id="pnlChip" onclick="switchTab('v-orders')" title="Total paper P&L (open + closed) — open Journal" hidden></button>
       <button class="ibtn" id="rnBell" aria-label="Notifications"></button>
       <button class="ibtn" id="settingsBtn" onclick="openSettings()" aria-label="Settings" title="Upstox API Token"></button>
@@ -358,6 +357,7 @@ td.oc-click{cursor:pointer}.scan-pager{display:flex;justify-content:space-betwee
   <section class="view" id="v-scanner"></section>
   <section class="view" id="v-calls"></section>
   <section class="view" id="v-orders"></section>
+  <section class="view" id="v-stocks"></section>
 </main>
 <div id="toasts" role="status" aria-live="polite"></div>
 <div class="overlay" id="settingsModal" onclick="if(event.target===this)closeSettings()">
@@ -398,6 +398,7 @@ const $=(s,r)=>(r||document).querySelector(s);
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fp=(n,d=2)=>isFinite(n)&&n!==null?Number(n).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const get=p=>S.h.get(p);
+const panel=()=>S.mode==='page'?S.mountEl:document.getElementById('sbPanel');
 
 function ensureAll(){if(S.all)return Promise.resolve(S.all);
   if(!S.allP)S.allP=get('/api/m/stocks/all').then(r=>{S.all=(r&&r.stocks)||[];return S.all}).catch(e=>{S.allP=null;throw e});
@@ -432,12 +433,12 @@ async function fetchQuotes(all){if(!S.h)return;const l=view(),page=S.tab==='ALL'
   for(let i=0;i<si.length;i+=60)chunks.push(['/api/m/quotes?symbols=',si.slice(i,i+60)]);
   for(let i=0;i<ss.length;i+=100)chunks.push(['/api/m/stocks/quotes?symbols=',ss.slice(i,i+100)]);
   for(const [u,c] of chunks){try{const r=await get(u+encodeURIComponent(c.join(',')));(r.quotes||[]).forEach(x=>S.quotes[x.s]=x)}catch(e){}}
-  if($('#sbPanel'))drawTable()}
+  if(panel())drawTable()}
 
 function chipsHtml(){return CHIPS.map(([k,l])=>`<button class="sb-chip ${S.tab===k?'on':''}" data-sb="tab:${k}">${esc(l)}</button>`).join('')+
   `<select class="sb-sel" id="sbMore" aria-label="More lists"><option value="">More lists…</option>${S.more.map(g=>`<optgroup label="${esc(g[0])}">${g[1].map(i=>`<option value="${esc(i.key)}" ${S.tab===i.key?'selected':''}>${esc(i.label)}</option>`).join('')}</optgroup>`).join('')}</select>`}
-function draw(){let p=$('#sbPanel');if(!p){p=document.createElement('div');p.id='sbPanel';p.className='sb-bg';document.body.appendChild(p)}
-  p.innerHTML=`<div class="sb-box" role="dialog" aria-modal="true" aria-label="All NSE stocks"><div class="sb-h"><h2>NSE stocks</h2><input id="sbQ" placeholder="Search any stock — e.g. SEPC, Suzlon, Rail Vikas" value="${esc(S.q)}" autocomplete="off" aria-label="Search stocks"><span class="sb-cnt" id="sbCnt"></span><button class="sb-x" data-sb="close" aria-label="Close">×</button></div>
+function draw(){let p;if(S.mode==='page'){p=S.mountEl;if(!p)return}else{p=$('#sbPanel');if(!p){p=document.createElement('div');p.id='sbPanel';p.className='sb-bg';document.body.appendChild(p)}}
+  p.innerHTML=`<div class="sb-box${S.mode==='page'?' sb-page':''}" ${S.mode==='page'?'':'role="dialog" aria-modal="true"'} aria-label="All NSE stocks"><div class="sb-h"><h2>NSE stocks</h2><input id="sbQ" placeholder="Search any stock — e.g. SEPC, Suzlon, Rail Vikas" value="${esc(S.q)}" autocomplete="off" aria-label="Search stocks"><span class="sb-cnt" id="sbCnt"></span>${S.mode==='page'?'':'<button class="sb-x" data-sb="close" aria-label="Close">×</button>'}</div>
     <div class="sb-chips" id="sbChips">${chipsHtml()}</div>${S.tab==='IDX'?`<div class="sb-chips sb-sub" id="sbGrp">${GROUPS.map(g=>`<button class="sb-chip ${S.grp===g?'on':''}" data-sb="grp:${esc(g)}">${g==='ALL'?'All groups':esc(g)}</button>`).join('')}</div>`:''}<div class="sb-b" id="sbBody"></div></div>`;
   drawTable();setTimeout(()=>{const i=$('#sbQ');if(i&&!S._focused){S._focused=1}},0)}
 function drawTable(){const b=$('#sbBody');if(!b)return;
@@ -453,15 +454,19 @@ function drawTable(){const b=$('#sbBody');if(!b)return;
       <td class="r sb-act">${r.idx&&S.nameKey[(r.n||'').toLowerCase()]?`<button class="sb-btn" data-sb="cons:${esc(S.nameKey[(r.n||'').toLowerCase()])}" title="See the stocks in this index">Stocks</button>`:''}<button class="sb-btn buy" data-sb="buy:${esc(r.s)}">Buy</button><button class="sb-btn sell" data-sb="sell:${esc(r.s)}">Sell</button><button class="sb-btn" data-sb="alert:${esc(r.s)}" title="Price alert">Alert</button><button class="sb-btn" data-sb="chart:${esc(r.s)}">Chart</button></td></tr>`}).join('')}</tbody></table></div>
     <div class="sb-pg"><span class="sb-sub">Showing ${S.page*S.size+1}–${S.page*S.size+part.length} of ${l.length.toLocaleString('en-IN')}</span><span class="sb-pgb"><button class="sb-btn" data-sb="page:${S.page-1}" ${S.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="sb-sub">…</span>':`<button class="sb-btn ${i===S.page?'pri':''}" data-sb="page:${i}">${i+1}</button>`).join('')}<button class="sb-btn" data-sb="page:${S.page+1}" ${S.page>=pages-1?'disabled':''}>Next ›</button></span></div>`}
 
-function open(tab){if(!S.h)return;if(tab)S.tab=tab;draw();if(!S.rows.length||tab)loadTab();else fetchQuotes(true);
+function open(tab){if(!S.h)return;if(S.h.goTab){S.h.goTab(tab);return}S.mode='overlay';if(tab)S.tab=tab;draw();if(!S.rows.length||tab)loadTab();else fetchQuotes(true);
   if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);(r.indices||[]).forEach(i=>{S.nameKey[i.label.toLowerCase()]=i.key});if($('#sbMore'))$('#sbChips').innerHTML=chipsHtml();if($('#sbBody'))drawTable()}).catch(()=>{});
-  clearInterval(S.timer);S.timer=setInterval(()=>{if(!$('#sbPanel')){clearInterval(S.timer);return}fetchQuotes(false)},6000);
+  startTimer();
   setTimeout(()=>{const i=$('#sbQ');if(i)i.focus()},50)}
-function close(){const p=$('#sbPanel');if(p)p.remove();clearInterval(S.timer)}
+function startTimer(){clearInterval(S.timer);S.timer=setInterval(()=>{const p=panel();if(!p){clearInterval(S.timer);return}if(S.mode==='page'&&!p.offsetParent)return;fetchQuotes(false)},6000)}
+function page(el,tab){if(!S.h||!el)return;S.mode='page';S.mountEl=el;if(tab)S.tab=tab;draw();if(!S.rows.length||tab)loadTab();else fetchQuotes(true);
+  if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);(r.indices||[]).forEach(i=>{S.nameKey[i.label.toLowerCase()]=i.key});if($('#sbMore'))$('#sbChips').innerHTML=chipsHtml();if($('#sbBody'))drawTable()}).catch(()=>{});
+  startTimer()}
+function close(){if(S.mode==='page')return;const p=$('#sbPanel');if(p)p.remove();clearInterval(S.timer)}
 async function act(kind,sym){const r=S.rows.find(x=>x.s===sym)||(S.idxAll||[]).find(x=>x.s===sym)||(await lookup(sym))||{s:sym,n:sym};close();
   try{if(kind==='alert')S.h.alert(sym,r.n,!!r.idx);else if(kind==='chart')S.h.chart(sym,r.n,!!r.idx);else S.h.trade(sym,r.n,kind==='sell'?'SELL':'BUY',!!r.idx)}catch(e){console.error(e)}}
 
-document.addEventListener('click',e=>{const bg=$('#sbPanel');if(bg&&e.target===bg){close();return}
+document.addEventListener('click',e=>{const bg=panel();if(bg&&S.mode!=='page'&&e.target===bg){close();return}
   const t=e.target.closest('[data-sb]');if(!t||!bg)return;const[k,a]=t.dataset.sb.split(':');
   if(k==='close')close();else if(k==='tab'||k==='cons'){S.tab=a;S.q='';S.grp='ALL';loadTab()}
   else if(k==='grp'){S.grp=a;S.page=0;draw();fetchQuotes(true)}
@@ -470,7 +475,7 @@ document.addEventListener('click',e=>{const bg=$('#sbPanel');if(bg&&e.target===b
   else if(k==='buy'||k==='sell'||k==='alert'||k==='chart')act(k,a)});
 document.addEventListener('input',e=>{if(e.target.id==='sbQ'){S.q=e.target.value;S.page=0;drawTable();clearTimeout(S._qt);S._qt=setTimeout(()=>fetchQuotes(false),250)}});
 document.addEventListener('change',e=>{if(e.target.id==='sbMore'&&e.target.value){S.tab=e.target.value;S.q='';loadTab()}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#sbPanel')){close();e.preventDefault()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.mode!=='page'&&$('#sbPanel')){close();e.preventDefault()}});
 
 const CSS=`.sb-bg{position:fixed;inset:0;z-index:360;background:rgba(0,0,0,.55);display:grid;place-items:start center;padding:3vh 10px;overflow:auto}
 .sb-box{width:min(1020px,100%);max-height:94vh;display:flex;flex-direction:column;background:var(--panel,#fff);color:var(--text,#0E1726);border:1px solid var(--line,#E2E6EC);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.4)}
@@ -501,9 +506,10 @@ const CSS=`.sb-bg{position:fixed;inset:0;z-index:360;background:rgba(0,0,0,.55);
 .sb-empty{padding:40px 16px;text-align:center;color:var(--text-2,#4A5568)}
 .sb-pg{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px}
 .sb-pgb{display:flex;gap:2px;flex-wrap:wrap;align-items:center}
+.sb-box.sb-page{width:100%;max-height:none;box-shadow:none}.sb-page .sb-b{max-height:calc(100vh - 250px);min-height:320px}
 @media(max-width:640px){.sb-bg{padding:0}.sb-box{max-height:100vh;border-radius:0;min-height:100vh}}`;
 function init(host){S.h=host;if(!document.getElementById('sbCss')){const s=document.createElement('style');s.id='sbCss';s.textContent=CSS;document.head.appendChild(s)}}
-global.SB={init,open,close,lookup,load:ensureAll,cached:()=>S.all,indices:()=>S.idxAll,loadIndices:()=>get('/api/m/universe').then(u=>{S.idxAll=[...(u.indices||[]).map(i=>({s:i.s,n:i.n,industry:'Main',idx:1})),...(u.more||[]).map(i=>({s:i.s,n:i.n,industry:i.g,idx:1}))];return S.idxAll})};
+global.SB={init,open,page,close,lookup,load:ensureAll,cached:()=>S.all,indices:()=>S.idxAll,loadIndices:()=>get('/api/m/universe').then(u=>{S.idxAll=[...(u.indices||[]).map(i=>({s:i.s,n:i.n,industry:'Main',idx:1})),...(u.more||[]).map(i=>({s:i.s,n:i.n,industry:i.g,idx:1}))];return S.idxAll})};
 })(window);
 </script>
 <script>
@@ -2338,6 +2344,7 @@ const TABS=[
   {id:'v-scanner', label:'Scanner',   icon:'scan',     render:renderScanner},
   {id:'v-calls',   label:'Calls',     icon:'bolt',     render:renderCalls},
   {id:'v-orders',  label:'Journal',   icon:'portfolio',render:renderOrders},
+  {id:'v-stocks',  label:'Stocks',    icon:'scan',     render:()=>SB.page($('#v-stocks'))},
 ];
 let currentTab='';
 
@@ -2441,7 +2448,7 @@ async function loadNewsBar(){try{const r=await api.get('/api/news');const items=
   updateThemeBtn(true);
   _initSettingsBtn();
   updateTokenStatus();
-  SB.init({get:p=>api.get(p),
+  SB.init({get:p=>api.get(p),goTab:t=>{switchTab('v-stocks')},
     async trade(sym,name,side,idx){const s=await ensureStockAsync(sym,name,idx);if(!(s.last>0)){toast('No live price for '+sym+' right now','bad');return}
       TK.side=side;TK.type='market';TK_PRE={t:Date.now(),side,sl:null,tp:null};ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')},
     async chart(sym,name,idx){const s=await ensureStockAsync(sym,name,idx);if(!(s.last>0)){toast('No live price for '+sym+' right now','bad');return}ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')},
