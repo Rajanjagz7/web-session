@@ -18,14 +18,14 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0B0E14; --panel:#11151D; --panel-2:#171C26; --line:#232A37; --grid:#181E29;
-  --text:#E6EAF2; --text-2:#A3ADBF; --text-3:#6B7588; --water:rgba(230,234,242,.04); --pill:#2A3242;
+  --text:#E6EAF2; --text-2:#A3ADBF; --text-3:#8E99AD; --water:rgba(230,234,242,.04); --pill:#2A3242;
   --brand:#3987e5; --brand-2:#14233B; --up:#22AB94; --down:#F7525F; --up-bg:#0F2A26; --down-bg:#2D1418;
   --warn:#E3A846; --warn-bg:#2B2210;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#2f9a2f; --s7:#9085e9; --s8:#e66767;
   --shadow:0 10px 30px rgba(0,0,0,.45); color-scheme:dark;}}
 :root[data-theme="dark"]{
   --bg:#0B0E14; --panel:#11151D; --panel-2:#171C26; --line:#232A37; --grid:#181E29;
-  --text:#E6EAF2; --text-2:#A3ADBF; --text-3:#6B7588; --water:rgba(230,234,242,.04); --pill:#2A3242;
+  --text:#E6EAF2; --text-2:#A3ADBF; --text-3:#8E99AD; --water:rgba(230,234,242,.04); --pill:#2A3242;
   --brand:#3987e5; --brand-2:#14233B; --up:#22AB94; --down:#F7525F; --up-bg:#0F2A26; --down-bg:#2D1418;
   --warn:#E3A846; --warn-bg:#2B2210;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#2f9a2f; --s7:#9085e9; --s8:#e66767;
@@ -522,7 +522,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 #opkList{max-height:52vh;overflow:auto}
 .os-v{padding:8px 14px;font-weight:600;font-size:13px}.os-v.up{color:var(--up)}.os-v.down{color:var(--down)}.os-v.muted{color:var(--text-2)}
 #opStrat .rd td{vertical-align:top}
-.pk-act{font-size:12.5px;padding:6px 9px;border-radius:8px;margin:6px 0;background:var(--panel-2)}.pk-act.be-up{border-left:3px solid var(--up)}.pk-act.be-dn{border-left:3px solid var(--down)}</style>
+.pk-act{font-size:12.5px;padding:6px 9px;border-radius:8px;margin:6px 0;background:var(--panel-2)}.pk-act.be-up{border-left:3px solid var(--up)}.pk-act.be-dn{border-left:3px solid var(--down)}.chip .muted,.seg button .muted,.btn .muted{color:inherit;opacity:.72;font-weight:600;font-variant-numeric:tabular-nums}
+.chip.on .muted,.btn.pri .muted{color:#fff;opacity:.9}
+.seg button.on .muted{color:var(--text-2);opacity:1}
+</style>
 </head>
 <body>
 <div class="newsbar" id="newsBar" hidden></div>
@@ -578,6 +581,338 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <div id="modalRoot"></div>
 <div id="toasts" role="status" aria-live="polite"></div>
 
+<script>
+/* ===================== Notifications (Notifications-Feature-BRD) =====================
+   In-app centre, toasts, browser push, price alerts, preferences, delivery log and audit log.
+   Host app calls RN.init({...}) and RN.emit('N-02', vars). Storage is per browser (localStorage). */
+(function(global){
+'use strict';
+const KEY={n:'rn_notifs_v1',p:'rn_prefs_v1',a:'rn_alerts_v1',au:'rn_audit_v1'};
+const CH=['inapp','push','email','sms'],CHL={inapp:'In-app',push:'Push',email:'Email',sms:'SMS'};
+const CATS=[['trading','Trading'],['price','Price alerts'],['account','Account'],['security','Security']];
+const PRI={critical:3,high:2,normal:1};
+const cap=s=>String(s||'').charAt(0).toUpperCase()+String(s||'').slice(1);
+const EV={
+ 'N-01':{cat:'trading',name:'Order placed',pri:'normal',def:['inapp'],lock:[],need:['side','qty','sym','price'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.qty} ${v.sym} @ ${v.price} placed`,'Waiting for the price to reach your level']},
+ 'N-02':{cat:'trading',name:'Order filled',pri:'high',def:['inapp','push','email'],lock:['email'],need:['side','qty','sym','price'],t:v=>[`${v.side==='buy'?'Bought':'Sold'} ${v.qty} ${v.sym} @ ${v.price}`,`Order fully executed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-03':{cat:'trading',name:'Order partially filled',pri:'high',def:['inapp','push'],lock:[],need:['filled','qty','sym','price'],t:v=>[`${v.filled} of ${v.qty} ${v.sym} filled @ ${v.price}`,'The rest of the order is still working']},
+ 'N-04':{cat:'trading',name:'Order cancelled',pri:'normal',def:['inapp'],lock:[],need:['side','sym'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.sym} cancelled`,'The order will not be executed']},
+ 'N-05':{cat:'trading',name:'Order rejected',pri:'high',def:['inapp','push'],lock:[],need:['reason'],t:v=>[`Order rejected: ${v.reason}`,v.sym?`${cap(v.side||'')} ${v.qty||''} ${v.sym}`.trim():'']},
+ 'N-06':{cat:'trading',name:'Order expired',pri:'normal',def:['inapp','email'],lock:[],need:['sym'],t:v=>[`Day order for ${v.sym} expired`,'It was not filled before the session ended']},
+ 'N-07':{cat:'trading',name:'Take profit hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`Take profit hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-08':{cat:'trading',name:'Stop loss hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`Stop loss hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-09':{cat:'price',name:'Price crosses above',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed above ${v.level} — now ${v.price}`,'Your price alert was triggered']},
+ 'N-10':{cat:'price',name:'Price crosses below',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed below ${v.level} — now ${v.price}`,'Your price alert was triggered']},
+ 'N-11':{cat:'price',name:'Day change exceeds %',pri:'high',def:['inapp','push'],lock:[],need:['sym','dir','pct'],t:v=>[`${v.sym} is ${v.dir} ${v.pct}% today`,v.price?`Last price ${v.price}`:'']},
+ 'N-12':{cat:'account',name:'Deposit received',pri:'normal',def:['inapp','email'],lock:[],need:['amount'],t:v=>[`${v.amount} deposit received`,v.note||'Funds were credited to your account']},
+ 'N-13':{cat:'account',name:'Withdrawal requested / sent',pri:'high',def:['inapp','email'],lock:['email'],need:['amount'],t:v=>[`${v.amount} withdrawal ${v.state||'sent'}`,v.note||'']},
+ 'N-14':{cat:'account',name:'Margin / buying-power warning',pri:'critical',def:['inapp','push','email'],lock:['email'],need:['threshold','available'],t:v=>[`Buying power is below ${v.threshold}`,`Available cash ${v.available}`]},
+ 'N-15':{cat:'security',name:'New device sign-in',pri:'critical',def:['push','email','sms'],lock:['push','email','sms'],need:['device'],t:v=>[`New sign-in from ${v.device}${v.place?', '+v.place:''}`,'Was this you?']},
+ 'N-16':{cat:'security',name:'Password or 2FA changed',pri:'critical',def:['email','sms'],lock:['email','sms'],need:[],t:v=>[`Your ${v.what||'password'} was changed`,'If this was not you, secure your account now']},
+ 'SYS-01':{cat:'price',name:'Price alert expired',pri:'normal',def:['inapp'],lock:[],need:['sym'],hidden:true,t:v=>[`Price alert on ${v.sym} expired`,v.note||'It did not trigger before its expiry date']},
+ 'SYS-02':{cat:'trading',name:'General',pri:'normal',def:['inapp'],lock:[],need:['title'],hidden:true,t:v=>[v.title,v.body||'']},
+};
+const COND={above:'Crosses above',below:'Crosses below',up:'Day change ≥ +%',down:'Day change ≤ −%'};
+const MAX_ALERTS=200,DAYS=90,KEEP=500;
+
+const S={notifs:[],prefs:null,alerts:[],audit:[],held:[],pushTimes:[],throttled:0,seen:new Map(),H:null,tab:'notifs',f:{cat:'ALL',read:'ALL',q:'',n:50,dq:'',dn:100},editing:null,popOpen:false,bell:null,toasts:[],queue:[]};
+const $=(s,r)=>(r||document).querySelector(s),$$=(s,r)=>[].slice.call((r||document).querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const jget=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+const jset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const IST_MIN=()=>{const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',weekday:'short',hour12:false}).formatToParts(new Date()),g=t=>(f.find(p=>p.type===t)||{}).value;return{m:(+g('hour')%24)*60+ +g('minute'),d:g('weekday')}};
+function defaultPrefs(){const ev={};for(const id in EV){ev[id]={};CH.forEach(c=>ev[id][c]=EV[id].def.includes(c)||EV[id].lock.includes(c))}
+  return{ev,quiet:{on:false,start:'22:00',end:'07:00',tz:(Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata')},sound:false,bp:10000,paused:{}}}
+function load(){S.notifs=jget(KEY.n,[]);S.alerts=jget(KEY.a,[]);S.audit=jget(KEY.au,[]);const d=defaultPrefs(),p=jget(KEY.p,null);
+  if(p){for(const id in d.ev)if(p.ev&&p.ev[id])Object.assign(d.ev[id],p.ev[id]);Object.assign(d.quiet,p.quiet||{});d.sound=!!p.sound;d.bp=p.bp>0?p.bp:d.bp;d.paused=p.paused||{}}
+  for(const id in EV)EV[id].lock.forEach(c=>d.ev[id][c]=true);S.prefs=d;prune()}
+function prune(){const cut=Date.now()-DAYS*864e5;S.notifs=S.notifs.filter(n=>n.t>=cut).slice(0,KEEP)}
+const saveN=()=>jset(KEY.n,S.notifs),saveP=()=>jset(KEY.p,S.prefs),saveA=()=>jset(KEY.a,S.alerts),saveAu=()=>jset(KEY.au,S.audit.slice(0,300));
+function audit(what,detail){S.audit.unshift({t:Date.now(),what,detail:detail||'',dev:(navigator.userAgent.match(/(Edg|Chrome|Firefox|Safari)\/[\d.]+/)||['browser'])[0]});saveAu()}
+
+/* ---------- delivery ---------- */
+function addDeliv(n,ch,status,reason){n.deliv.push({id:uid(),ch,status,reason:reason||'',attempts:1,at:Date.now()})}
+function inQuiet(){const q=S.prefs.quiet;if(!q.on)return false;let m;try{const f=new Intl.DateTimeFormat('en-GB',{timeZone:q.tz,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());m=(+f.find(p=>p.type==='hour').value%24)*60+ +f.find(p=>p.type==='minute').value}catch(e){const d=new Date();m=d.getHours()*60+d.getMinutes()}
+  const t=s=>{const[a,b]=s.split(':');return+a*60+ +b},s=t(q.start),e=t(q.end);return s===e?false:s<e?m>=s&&m<e:m>=s||m<e}
+function emit(id,v,opt){opt=opt||{};v=v||{};const ev=EV[id];if(!ev)return null;
+  for(const k of ev.need)if(v[k]==null||v[k]===''){console.error('[notifications] missing variable "'+k+'" for '+id+' — not sent');return null}
+  if(S.prefs.paused[id]&&!opt.test)return null;
+  const now=Date.now(),key=opt.key||id+'|'+JSON.stringify(v),win=opt.key?36e5:2000,last=S.seen.get(key);
+  if(last&&now-last<win)return null;S.seen.set(key,now);if(S.seen.size>800)S.seen.forEach((t,k)=>{if(now-t>36e5)S.seen.delete(k)});
+  const tt=ev.t(v),n={id:uid(),evt:id,cat:ev.cat,pri:ev.pri,title:tt[0],body:tt[1]||'',link:opt.link||v.link||null,t:now,read:false,test:!!opt.test,deliv:[]};
+  const allowed=c=>ev.lock.includes(c)||!!(S.prefs.ev[id]&&S.prefs.ev[id][c]);
+  addDeliv(n,'inapp','delivered','');
+  if((allowed('inapp')||ev.pri==='critical')&&PRI[ev.pri]>=2)showToast(n);   /* FR-B1: Critical always toasts */
+  if(allowed('inapp')&&S.prefs.sound&&PRI[ev.pri]>=2&&!inQuiet())beep();
+  if(allowed('push'))routePush(n,ev,opt);
+  ['email','sms'].forEach(c=>{if(allowed(c))addDeliv(n,c,'suppressed','No '+CHL[c].toLowerCase()+' provider is connected in this build')});
+  S.notifs.unshift(n);prune();saveN();refresh();return n}
+function routePush(n,ev,opt){const crit=ev.pri==='critical';
+  if(!crit&&!opt.forcePush&&inQuiet()){S.held.push(n.id);addDeliv(n,'push','queued','Held for quiet hours');return}
+  if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=20){S.throttled++;addDeliv(n,'push','suppressed','Throttled: 20 push messages per hour');return}}
+  sendPush(n,opt.forcePush)}
+function sendPush(n,force,title,body){
+  if(!('Notification' in global)){addDeliv(n,'push','suppressed','This browser does not support notifications');return}
+  if(Notification.permission!=='granted'){addDeliv(n,'push','suppressed',Notification.permission==='denied'?'Browser notifications are blocked':'Browser permission not granted yet');return}
+  if(!force&&!document.hidden&&document.hasFocus()){addDeliv(n,'push','delivered','Tab in focus — shown in-app');S.pushTimes.push(Date.now());return}
+  try{const o=new Notification(title||n.title,{body:body!=null?body:n.body,tag:n.id,renotify:false});o.onclick=()=>{try{global.focus()}catch(e){}o.close();open(n)};S.pushTimes.push(Date.now());addDeliv(n,'push','delivered','')}
+  catch(e){addDeliv(n,'push','failed',String(e.message||e))}}
+function releaseHeld(){if(!S.held.length&&!S.throttled)return;if(inQuiet())return;
+  const now=Date.now(),ns=S.held.splice(0).map(i=>S.notifs.find(n=>n.id===i)).filter(Boolean),live=[];
+  ns.forEach(n=>{const d=n.deliv.find(x=>x.ch==='push'&&x.status==='queued');
+    if(n.cat==='price'&&PRI[n.pri]>=2&&now-n.t>10*60e3){if(d){d.status='suppressed';d.reason='Dropped: price alert older than 10 minutes'}}   /* BR-09 */
+    else{if(d){d.status='sent';d.reason='Held for quiet hours, then delivered'}live.push(n)}});
+  if(live.length===1)sendPush({id:live[0].id,title:live[0].title,body:live[0].body,deliv:[]},false);
+  else if(live.length>1){live.forEach(n=>{const d=n.deliv.find(x=>x.ch==='push'&&x.status==='sent');if(d)d.reason='Held for quiet hours, delivered in a summary'});
+    sendPush({id:uid(),title:'',body:'',deliv:[]},false,live.length+' notifications while you were away',live.slice(0,3).map(x=>x.title).join(' · '))}
+  if(S.throttled&&S.pushTimes.filter(t=>now-t<36e5).length<20){sendPush({id:uid(),title:'',body:'',deliv:[]},false,S.throttled+' notifications held',"You've reached the hourly push limit; they are in your notification centre.");S.throttled=0}
+  saveN();refresh()}
+setInterval(releaseHeld,30000);
+
+/* ---------- toasts (max 3 visible, queue, polite/assertive live regions) ---------- */
+function toastHost(){let h=$('#rnToasts');if(h)return h;h=document.createElement('div');h.id='rnToasts';
+  h.innerHTML='<div class="rn-live" id="rnLiveP" aria-live="polite" role="status"></div><div class="rn-live" id="rnLiveA" aria-live="assertive" role="alert"></div>';document.body.appendChild(h);return h}
+function showToast(n){S.queue.push(n);pumpToasts()}
+function pumpToasts(){toastHost();while(S.toasts.length<3&&S.queue.length){const n=S.queue.shift(),crit=n.pri==='critical',el=document.createElement('div');
+    el.className='rn-toast '+(n.cat==='security'||n.evt==='N-08'||n.evt==='N-05'||n.evt==='N-14'?'bad':n.evt==='N-02'||n.evt==='N-07'?'ok':'info');
+    el.innerHTML=`<div class="rn-t-b"><b>${esc(n.title)}</b>${n.body?`<span>${esc(n.body)}</span>`:''}</div><button class="rn-t-x" aria-label="Dismiss notification">×</button>`;
+    const done=()=>{if(el._d)return;el._d=1;el.remove();S.toasts=S.toasts.filter(x=>x!==el);pumpToasts()};
+    el.querySelector('.rn-t-x').onclick=e=>{e.stopPropagation();done()};el.onclick=()=>{open(n);done()};
+    $(crit?'#rnLiveA':'#rnLiveP').appendChild(el);S.toasts.push(el);if(!crit)setTimeout(done,6000)}}
+let actx=null;function beep(){try{actx=actx||new(global.AudioContext||global.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;g.gain.value=.05;o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+.12)}catch(e){}}
+
+/* ---------- read state, deep link ---------- */
+const unread=()=>S.notifs.filter(n=>!n.read).length;
+function markRead(id){const n=S.notifs.find(x=>x.id===id);if(n&&!n.read){n.read=true;saveN();refresh()}}
+function markAll(){S.notifs.forEach(n=>n.read=true);saveN();audit('Marked all notifications as read');refresh()}
+function open(n){markRead(n.id);closePop();if(n.link&&S.H&&S.H.openLink){try{S.H.openLink(n.link)}catch(e){toastInfo('That item is no longer available')}}else if(n.link)toastInfo('That item is no longer available')}
+function toastInfo(t){showToast({id:uid(),title:t,body:'',cat:'info',evt:'INFO',pri:'high'})}
+const ago=t=>{const s=Math.max(0,(Date.now()-t)/1000);return s<45?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':new Date(t).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})};
+const ICON={trading:'<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',price:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',account:'<path d="M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',security:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'};
+const ico=(c,s)=>`<svg width="${s||16}" height="${s||16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[c]||''}</svg>`;
+const BELL=ico('price',18);
+
+/* ---------- bell + popover ---------- */
+function refresh(){const c=unread(),b=S.bell;const ae=document.activeElement,typing=ae&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)&&ae.closest&&ae.closest('#rnCentre');if(b){let k=$('.rn-count',b);if(!k){k=document.createElement('span');k.className='rn-count';b.appendChild(k)}
+    k.textContent=c>99?'99+':String(c);k.style.display=c?'':'none';b.setAttribute('aria-label',c?`Notifications, ${c} unread`:'Notifications')}
+  if(S.popOpen)drawPop();if($('#rnCentre')){if(typing){if(S.tab==='notifs')drawNotifList()}else drawCentre(true)}}
+function itemHtml(n){const sec=n.evt==='N-15'&&!n.answered;
+  return`<div class="rn-item ${n.read?'':'unread'}" role="button" tabindex="0" data-rn="open:${n.id}"><span class="rn-ico c-${n.cat}">${ico(n.cat)}</span><span class="rn-main"><b>${esc(n.title)}</b>${n.body?`<span>${esc(n.body)}</span>`:''}${n.test?'<em>Test</em>':''}<small>${ago(n.t)} · ${esc((CATS.find(c=>c[0]===n.cat)||[0,n.cat])[1])}</small>${sec?`<span class="rn-sec"><button data-rn="sec:${n.id}:yes">Yes, it was me</button><button class="bad" data-rn="sec:${n.id}:no">No, secure my account</button></span>`:''}</span>${n.read?'':'<i class="rn-dot" aria-label="Unread"></i>'}</div>`}
+function drawPop(){let p=$('#rnPop');if(!p){p=document.createElement('div');p.id='rnPop';p.className='rn-pop';p.setAttribute('role','dialog');p.setAttribute('aria-label','Notifications');document.body.appendChild(p)}
+  const r=S.bell.getBoundingClientRect();p.style.top=(r.bottom+6)+'px';p.style.right=Math.max(8,innerWidth-r.right-4)+'px';
+  p.innerHTML=`<div class="rn-pop-h"><b>Notifications</b><span class="rn-sp"></span><button data-rn="readall">Mark all read</button><button data-rn="centre:notifs">View all</button></div>
+  <div class="rn-list">${S.notifs.slice(0,50).map(itemHtml).join('')||'<div class="rn-empty">You’re all caught up.</div>'}</div>`}
+function togglePop(){S.popOpen?closePop():(S.popOpen=true,drawPop())}
+function closePop(){S.popOpen=false;const p=$('#rnPop');if(p)p.remove()}
+
+/* ---------- price alerts ---------- */
+const money=v=>Number(v).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const alertText=a=>a.cond==='above'?`Crosses above ${money(a.v)}`:a.cond==='below'?`Crosses below ${money(a.v)}`:a.cond==='up'?`Day change ≥ +${a.v}%`:`Day change ≤ −${a.v}%`;
+function price(sym){try{return S.H.price(sym)||null}catch(e){return null}}
+function condMet(a,p){return a.cond==='above'?p.last>=a.v:a.cond==='below'?p.last<=a.v:a.cond==='up'?p.chgPct>=a.v:p.chgPct<=-a.v}
+function marketOpen(p){if(!p||p.market==='GLOBAL')return true;if(S.H.marketOpen)return S.H.marketOpen(p);const t=IST_MIN();return!(t.d==='Sat'||t.d==='Sun')&&t.m>=9*60&&t.m<=15*60+40}
+function evalAlerts(){let ch=false;const now=Date.now();
+  for(const a of S.alerts){if(a.status!=='Active')continue;
+    if(a.expires&&now>a.expires){a.status='Expired';ch=true;emit('SYS-01',{sym:a.sym},{key:'exp|'+a.id,link:{sym:a.sym}});continue}
+    const p=price(a.sym);if(!p||!(p.last>0)||!marketOpen(p))continue;
+    const met=condMet(a,p),crossed=!a.inside&&met;   /* fires once per crossing: needs the previous tick on the other side */
+    if(crossed){const px=money(p.last);
+      emit(a.cond==='above'?'N-09':a.cond==='below'?'N-10':'N-11',a.cond==='up'||a.cond==='down'?{sym:a.sym,dir:a.cond==='up'?'up':'down',pct:Math.abs(p.chgPct).toFixed(1),price:px}:{sym:a.sym,level:money(a.v),price:px},{key:'alert|'+a.id+'|'+now,link:{sym:a.sym}});
+      a.last=now;ch=true;if(a.recurring)a.inside=true;else a.status='Triggered'}
+    else if(a.inside&&!met){a.inside=false;ch=true}
+    if(a.prev!==p.last){a.prev=p.last;ch=true}
+  }
+  if(ch){saveA();if(S.H.onAlerts)S.H.onAlerts();if($('#rnCentre')&&S.tab==='alerts')drawAlertList()}}
+setInterval(()=>{try{evalAlerts()}catch(e){console.error(e)}},1000);
+function activeCount(){return S.alerts.filter(a=>a.status==='Active'||a.status==='Paused').length}
+function saveAlert(f){const sym=String(f.sym||'').trim().toUpperCase(),v=parseFloat(f.v);
+  if(!sym)return{err:'Choose a symbol'};if(!(v>0))return{err:'Enter a value above 0'};
+  const p=price(sym);if(!p||!(p.last>0))return{err:'No live price for '+sym+' yet — try again in a moment'};
+  const exp=f.days>0?Date.now()+f.days*864e5:0;
+  if(f.id){const a=S.alerts.find(x=>x.id===f.id);if(!a)return{err:'Alert not found'};Object.assign(a,{sym,cond:f.cond,v,recurring:!!f.recurring,expires:exp,prev:p.last,inside:condMet({cond:f.cond,v},p),status:'Active'});audit('Edited price alert',sym+' '+alertText(a))}
+  else{if(activeCount()>=MAX_ALERTS)return{err:`You have reached the limit of ${MAX_ALERTS} active alerts`};
+    const a={id:uid(),sym,cond:f.cond,v,recurring:!!f.recurring,expires:exp,status:'Active',created:Date.now(),last:null,prev:p.last,inside:false};a.inside=condMet(a,p);S.alerts.unshift(a);audit('Created price alert',sym+' '+alertText(a))}
+  saveA();if(S.H.onAlerts)S.H.onAlerts();return{ok:true,warn:condMet({cond:f.cond,v},p)?'That level has already been passed — the alert fires next time it is crossed.':''}}
+function alertAction(act,id){const a=S.alerts.find(x=>x.id===id);if(!a)return;
+  if(act==='pause'){a.status='Paused';audit('Paused price alert',a.sym)}
+  else if(act==='resume'){const p=price(a.sym);a.status='Active';a.prev=p?p.last:a.prev;a.inside=p?condMet(a,p):false;audit('Resumed price alert',a.sym)}   /* re-armed from the current price */
+  else if(act==='del'){S.alerts=S.alerts.filter(x=>x!==a);audit('Deleted price alert',a.sym)}
+  else if(act==='edit'){S.editing=id;drawCentre();return}
+  saveA();if(S.H.onAlerts)S.H.onAlerts();drawAlertList();refresh()}
+function linesFor(sym){return S.alerts.filter(a=>a.sym===sym&&a.status==='Active'&&(a.cond==='above'||a.cond==='below')).map(a=>({price:a.v,label:'ALERT '+money(a.v),color:'#EDA100',drag:false}))}
+function alertSyms(){return[...new Set(S.alerts.filter(a=>a.status==='Active').map(a=>a.sym))]}
+
+/* ---------- centre ---------- */
+const TABS=()=>[['notifs','Notifications'],...(S.H.hasAlerts?[]:[['alerts','Alerts']]),['prefs','Preferences'],['log','Delivery log'],['audit','Audit log']];
+function openCentre(tab,opts){closePop();if(tab)S.tab=tab;if(opts&&opts.sym)S.newSym=opts.sym;
+  let bg=$('#rnCentre');if(!bg){bg=document.createElement('div');bg.id='rnCentre';bg.className='rn-bg';document.body.appendChild(bg)}drawCentre()}
+function closeCentre(){const b=$('#rnCentre');if(b)b.remove();S.editing=null}
+function drawCentre(soft){const bg=$('#rnCentre');if(!bg)return;if(soft&&(S.tab==='prefs'||(S.tab==='alerts'&&($('#rnAlForm')&&document.activeElement&&$('#rnAlForm').contains(document.activeElement)))))return;
+  if(!TABS().some(t=>t[0]===S.tab))S.tab='notifs';
+  bg.innerHTML=`<div class="rn-centre" role="dialog" aria-modal="true" aria-label="Notification centre"><div class="rn-c-h"><h2>Notification centre</h2><div class="rn-tabs" role="tablist">${TABS().map(([k,l])=>`<button role="tab" aria-selected="${S.tab===k}" class="${S.tab===k?'on':''}" data-rn="tab:${k}">${l}${k==='notifs'&&unread()?` <span class="rn-pill">${unread()}</span>`:''}</button>`).join('')}</div><button class="rn-x" data-rn="close" aria-label="Close">×</button></div><div class="rn-c-b" id="rnBody">${tabBody()}</div></div>`;
+  if(S.tab==='alerts')bindAlertForm();if(S.tab==='notifs')drawNotifList()}
+function tabBody(){switch(S.tab){case'alerts':return alertsHtml();case'prefs':return prefsHtml();case'log':return logHtml();case'audit':return auditHtml();default:return`<div class="rn-bar"><select id="rnFcat" aria-label="Category"><option value="ALL">All categories</option>${CATS.map(c=>`<option value="${c[0]}" ${S.f.cat===c[0]?'selected':''}>${c[1]}</option>`).join('')}</select>
+    <select id="rnFread" aria-label="Read state">${[['ALL','All'],['unread','Unread'],['read','Read']].map(([v,l])=>`<option value="${v}" ${S.f.read===v?'selected':''}>${l}</option>`).join('')}</select>
+    <input id="rnFq" placeholder="Search" value="${esc(S.f.q)}" aria-label="Search notifications"><span class="rn-sp"></span><button class="rn-btn" data-rn="readall">Mark all read</button><button class="rn-btn" data-rn="csv">Export CSV</button></div><div id="rnNList"></div>`}}
+function filtered(){const q=S.f.q.trim().toLowerCase();return S.notifs.filter(n=>(S.f.cat==='ALL'||n.cat===S.f.cat)&&(S.f.read==='ALL'||(S.f.read==='unread'?!n.read:n.read))&&(!q||(n.title+' '+n.body).toLowerCase().includes(q)))}
+function drawNotifList(){const h=$('#rnNList');if(!h)return;const l=filtered(),part=l.slice(0,S.f.n);
+  h.innerHTML=part.length?`<div class="rn-list big">${part.map(itemHtml).join('')}</div>${l.length>part.length?`<button class="rn-btn" style="margin:10px auto;display:block" data-rn="more">Show more (${l.length-part.length})</button>`:''}<p class="rn-note">Showing the last ${DAYS} days.</p>`:`<div class="rn-empty">${S.notifs.length?'No notifications match these filters.':'No notifications yet. Orders, price alerts and account events will appear here.'}</div>`}
+function alertsHtml(){const e=S.editing&&S.alerts.find(a=>a.id===S.editing),sym=(e&&e.sym)||S.newSym||'';
+  return`<div class="rn-card" id="rnAlForm"><h3>${e?'Edit alert':'New price alert'}</h3><div class="rn-grid">
+   <label>Symbol<input id="alS" list="rnSyms" value="${esc(sym)}" placeholder="e.g. RELIANCE" autocomplete="off"><datalist id="rnSyms">${(S.H.symbols?S.H.symbols():[]).map(x=>`<option value="${esc(x.s)}">${esc(x.n||'')}</option>`).join('')}</datalist></label>
+   <label>Condition<select id="alC">${Object.entries(COND).map(([k,l])=>`<option value="${k}" ${(e?e.cond:'above')===k?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label>Level / %<input id="alV" type="number" step="0.05" min="0" value="${e?e.v:''}"></label>
+   <label>Expires after (days)<input id="alD" type="number" min="0" max="365" value="${e?(e.expires?Math.max(1,Math.round((e.expires-Date.now())/864e5)):0):90}"></label>
+   <label class="rn-chk"><input id="alR" type="checkbox" ${e&&e.recurring?'checked':''}> Recurring</label></div>
+   <p class="rn-note" id="alHint"></p><p class="rn-err" id="alErr" role="alert"></p>
+   <div><button class="rn-btn pri" id="alGo">${e?'Save alert':'Create alert'}</button>${e?'<button class="rn-btn" data-rn="canceledit">Cancel</button>':''}</div></div>
+  <div class="rn-bar"><b>Your alerts</b><span class="rn-note">${activeCount()} of ${MAX_ALERTS} active · checked on every price tick</span></div><div id="rnAlList"></div>`}
+function bindAlertForm(){const hint=()=>{const sym=($('#alS')||{}).value||'',p=sym&&price(sym.toUpperCase()),c=$('#alC').value,v=parseFloat($('#alV').value);
+    $('#alHint').textContent=!p||!(p.last>0)?'Enter a symbol to see its live price.':!(v>0)?`${sym.toUpperCase()} is ${money(p.last)} now.`:(c==='above'||c==='below')?`${sym.toUpperCase()} is ${money(p.last)} now — ${((v/p.last-1)*100).toFixed(2)}% from your level.`:`${sym.toUpperCase()} is ${p.chgPct>=0?'+':''}${(p.chgPct||0).toFixed(2)}% today.`};
+  const pre=()=>{const sym=$('#alS').value.toUpperCase(),p=price(sym),c=$('#alC').value;if(!p||!(p.last>0))return;if($('#alV').dataset.t==='1')return;$('#alV').value=c==='up'||c==='down'?'3':(p.last*(c==='below'?0.98:1.02)).toFixed(2)};
+  if($('#alV')&&!$('#alV').value)pre();['alS','alC'].forEach(i=>$('#'+i).addEventListener('input',()=>{pre();hint()}));$('#alV').addEventListener('input',()=>{$('#alV').dataset.t='1';hint()});hint();
+  $('#alGo').onclick=()=>{const r=saveAlert({id:S.editing,sym:$('#alS').value,cond:$('#alC').value,v:$('#alV').value,days:parseInt($('#alD').value)||0,recurring:$('#alR').checked});
+    if(r.err){$('#alErr').textContent=r.err;return}S.editing=null;S.newSym=null;drawCentre();if(r.warn)toastInfo(r.warn);else toastInfo('Alert created')};
+  drawAlertList()}
+function drawAlertList(){const h=$('#rnAlList');if(!h)return;const ord={Active:0,Paused:1,Triggered:2,Expired:3},l=S.alerts.slice().sort((a,b)=>ord[a.status]-ord[b.status]||b.created-a.created);
+  h.innerHTML=l.length?`<div class="rn-tw"><table><thead><tr><th>Symbol</th><th>Condition</th><th class="r">Now</th><th>Status</th><th>Expires</th><th></th></tr></thead><tbody>${l.map(a=>{const p=price(a.sym);return`<tr><td><b>${esc(a.sym)}</b></td><td>${alertText(a)}${a.recurring?' · recurring':''}</td><td class="r">${p&&p.last>0?money(p.last):'—'}</td><td><span class="rn-st s-${a.status}">${a.status}</span></td><td>${a.expires?new Date(a.expires).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'—'}</td>
+    <td class="r">${a.status==='Active'?`<button class="rn-btn sm" data-rn="al:pause:${a.id}">Pause</button>`:a.status==='Paused'?`<button class="rn-btn sm" data-rn="al:resume:${a.id}">Resume</button>`:''}<button class="rn-btn sm" data-rn="al:edit:${a.id}">Edit</button><button class="rn-btn sm" data-rn="al:del:${a.id}">Delete</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="rn-empty">No alerts yet. Create one above, or use the Alert button on the chart.</div>'}
+function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notification.permission:'unsupported';
+  const rows=CATS.map(([ck,cl])=>{const ids=Object.keys(EV).filter(i=>EV[i].cat===ck&&!EV[i].hidden);
+    return`<tr class="rn-cat"><td colspan="5"><b>${cl}</b></td></tr>`+ids.map(id=>`<tr><td>${id} · ${esc(EV[id].name)}<small class="rn-pr p-${EV[id].pri}">${EV[id].pri}</small></td>${CH.map(c=>{const lock=EV[id].lock.includes(c),on=lock||P.ev[id][c];
+      return`<td class="c"><label class="rn-sw ${lock?'lock':''}" title="${lock?'Locked: this channel cannot be turned off for this event':''}"><input type="checkbox" data-pref="${id}:${c}" ${on?'checked':''} ${lock?'disabled':''} aria-label="${esc(EV[id].name)} ${CHL[c]}"><span></span></label>${lock?'<i class="rn-lk" aria-hidden="true">🔒</i>':''}</td>`}).join('')}</tr>`).join('')}).join('');
+  return`<div class="rn-card"><h3>Browser notifications</h3><p class="rn-note">Push messages use your browser's notification permission (status: <b>${perm}</b>). They appear when this tab is in the background or minimised.</p>
+    <div>${perm==='granted'?'<span class="rn-st s-Active">Enabled</span>':perm==='denied'?'<span class="rn-note">Blocked — allow notifications for this site in your browser settings.</span>':perm==='unsupported'?'<span class="rn-note">This browser does not support notifications.</span>':'<button class="rn-btn pri" data-rn="perm">Enable browser notifications</button>'}
+    <label class="rn-chk" style="margin-left:12px"><input type="checkbox" id="pfSound" ${P.sound?'checked':''}> Sound for fills and alerts</label></div></div>
+  <div class="rn-card"><h3>Quiet hours</h3><p class="rn-note">Normal and High push messages are held and delivered as one summary when quiet hours end. Critical messages always deliver.</p>
+    <div class="rn-grid"><label class="rn-chk"><input type="checkbox" id="pfQon" ${P.quiet.on?'checked':''}> Turn on</label><label>From<input type="time" id="pfQs" value="${P.quiet.start}"></label><label>To<input type="time" id="pfQe" value="${P.quiet.end}"></label>
+    <label>Time zone<input id="pfQz" value="${esc(P.quiet.tz)}" placeholder="Asia/Kolkata"></label><label>Buying-power warning below (₹)<input type="number" id="pfBp" min="0" step="1000" value="${P.bp}"></label></div></div>
+  <div class="rn-card"><h3>Channels by event</h3><p class="rn-note">Locked cells (🔒) can't be turned off. In-app controls the pop-up toast and sound; every notification still lands in your notification centre.</p>
+    <div class="rn-tw"><table class="rn-matrix"><thead><tr><th>Event</th>${CH.map(c=>`<th class="c">${CHL[c]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="rn-note">Email and SMS are recorded in the delivery log, but no email or SMS provider is connected in this build.</p></div>
+  <div class="rn-card"><h3>Send a test</h3><p class="rn-note">Check that a message reaches you. Test messages are marked as such.</p><div class="rn-grid"><label>Event<select id="tsEv">${Object.keys(EV).filter(i=>!EV[i].hidden).map(i=>`<option value="${i}">${i} · ${esc(EV[i].name)}</option>`).join('')}</select></label></div>
+    <div style="margin-top:8px"><button class="rn-btn pri" data-rn="test">Send test</button></div></div>
+  <div class="rn-card"><h3>Pause an event type (incident switch)</h3><p class="rn-note">Stops an event type from being sent platform-wide. Pause and resume are written to the audit log.</p><div class="rn-grid">
+    <label>Event<select id="psEv">${Object.keys(EV).filter(i=>!EV[i].hidden).map(i=>`<option value="${i}">${i} · ${esc(EV[i].name)}${P.paused[i]?' (paused)':''}</option>`).join('')}</select></label><label>Reason<input id="psWhy" placeholder="e.g. provider incident"></label></div>
+    <div style="margin-top:8px"><button class="rn-btn" data-rn="pause">Pause</button><button class="rn-btn" data-rn="unpause">Resume</button></div>
+    <p class="rn-note">${Object.keys(P.paused).length?'Paused: '+Object.keys(P.paused).map(esc).join(', '):'Nothing is paused.'}</p></div>`}
+function sample(id){const s={'N-01':{side:'buy',qty:10,sym:'TCS',price:'3,950.00',type:'limit'},'N-02':{side:'buy',qty:10,sym:'TCS',price:'3,950.00'},'N-03':{filled:4,qty:10,sym:'TCS',price:'3,950.00'},'N-04':{side:'buy',sym:'TCS',type:'limit'},'N-05':{reason:'insufficient buying power',side:'buy',qty:10,sym:'TCS'},'N-06':{sym:'TCS'},'N-07':{sym:'TCS',price:'4,050.00',pnl:'+₹1,000'},'N-08':{sym:'TCS',price:'3,900.00',pnl:'−₹500'},'N-09':{sym:'TCS',level:'4,000.00',price:'4,001.20'},'N-10':{sym:'TCS',level:'3,900.00',price:'3,899.10'},'N-11':{sym:'TCS',dir:'up',pct:'5.2',price:'4,100.00'},'N-12':{amount:'₹5,000.00'},'N-13':{amount:'₹1,200.00',state:'sent',note:'Sent to ••4821'},'N-14':{threshold:'₹10,000',available:'₹8,250.00'},'N-15':{device:'Chrome on Windows',place:'Mumbai'},'N-16':{what:'password'}};return s[id]||{}}
+function logHtml(){const q=S.f.dq.trim().toLowerCase(),rows=[];S.notifs.forEach(n=>n.deliv.forEach(d=>rows.push({n,d})));
+  const l=rows.sort((a,b)=>b.d.at-a.d.at).filter(r=>!q||(r.n.title+' '+r.n.evt+' '+r.d.ch+' '+r.d.status+' '+r.d.reason).toLowerCase().includes(q)).slice(0,S.f.dn);
+  return`<div class="rn-bar"><input id="rnLq" placeholder="Search delivery log" value="${esc(S.f.dq)}" aria-label="Search delivery log"><span class="rn-note">Statuses: queued, sent, delivered, opened, failed, suppressed</span></div>
+  ${l.length?`<div class="rn-tw"><table><thead><tr><th>Time</th><th>Event</th><th>Channel</th><th>Status</th><th>Reason</th><th class="r">Attempts</th></tr></thead><tbody>${l.map(({n,d})=>`<tr><td>${new Date(d.at).toLocaleString('en-IN')}</td><td>${n.evt} · ${esc(n.title)}${n.test?' (test)':''}</td><td>${CHL[d.ch]}</td><td><span class="rn-st d-${d.status}">${d.status}</span></td><td>${esc(d.reason)}</td><td class="r">${d.attempts}</td></tr>`).join('')}</tbody></table></div>`:'<div class="rn-empty">No deliveries yet.</div>'}`}
+function auditHtml(){return S.audit.length?`<div class="rn-tw"><table><thead><tr><th>When</th><th>What</th><th>Detail</th><th>Device</th></tr></thead><tbody>${S.audit.slice(0,200).map(a=>`<tr><td>${new Date(a.t).toLocaleString('en-IN')}</td><td>${esc(a.what)}</td><td>${esc(a.detail)}</td><td>${esc(a.dev)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="rn-empty">Preference, alert and security actions are recorded here.</div>'}
+function csv(){const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',rows=filtered().slice().reverse(),h=['notification_id','event','category','priority','title','body','created_at','read','channels'];
+  const out=[h.join(','),...rows.map(n=>[n.id,n.evt,n.cat,n.pri,n.title,n.body,new Date(n.t).toISOString(),n.read,n.deliv.map(d=>d.ch+':'+d.status).join('|')].map(q).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));a.download='notifications-'+new Date().toISOString().slice(0,10)+'.csv';a.click()}
+
+const CSS=`.rn-bell{position:relative}
+.rn-count{position:absolute;top:1px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--down,#D93240);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;line-height:1;font-variant-numeric:tabular-nums}
+#rnToasts{position:fixed;top:64px;right:12px;z-index:400;width:min(360px,calc(100vw - 24px));display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.rn-live{display:flex;flex-direction:column;gap:8px}
+.rn-toast{pointer-events:auto;display:flex;gap:8px;align-items:flex-start;background:var(--panel,#fff);color:var(--text,#0E1726);border:1px solid var(--line,#E2E6EC);border-left:4px solid var(--brand,#2a78d6);border-radius:10px;padding:10px 10px 10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.25);cursor:pointer;animation:rnIn .18s ease-out}
+.rn-toast.ok{border-left-color:var(--up,#0A8F6C)}.rn-toast.bad{border-left-color:var(--down,#D93240)}
+.rn-t-b{flex:1;display:grid;gap:2px;font-size:13px}.rn-t-b b{font-weight:600}.rn-t-b span{color:var(--text-2,#4A5568);font-size:12px}
+.rn-t-x{width:24px;height:24px;border-radius:6px;color:var(--text-2,#4A5568);font-size:18px;line-height:1}
+.rn-t-x:hover{background:var(--panel-2,#F6F7FA)}
+@keyframes rnIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.rn-pop{position:fixed;z-index:300;width:min(380px,calc(100vw - 16px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--panel,#fff);color:var(--text,#0E1726);border:1px solid var(--line,#E2E6EC);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.rn-pop-h{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line,#E2E6EC)}
+.rn-pop-h button{font-size:12px;color:var(--brand,#2a78d6);font-weight:600;padding:2px 4px}
+.rn-sp{flex:1}
+.rn-list{overflow:auto;flex:1}
+.rn-list.big{max-height:none}
+.rn-item{display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line,#E2E6EC);cursor:pointer;align-items:flex-start;text-align:left}
+.rn-item:hover,.rn-item:focus-visible{background:var(--panel-2,#F6F7FA)}
+.rn-item.unread{background:var(--brand-2,#E7F0FC)}
+.rn-ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:var(--panel-2,#F6F7FA);color:var(--text-2,#4A5568)}
+.rn-ico.c-trading{color:var(--brand,#2a78d6)}.rn-ico.c-price{color:#EDA100}.rn-ico.c-account{color:var(--up,#0A8F6C)}.rn-ico.c-security{color:var(--down,#D93240)}
+.rn-main{flex:1;display:grid;gap:2px;font-size:13px;min-width:0}.rn-main b{font-weight:600}.rn-main>span{color:var(--text-2,#4A5568);font-size:12px}
+.rn-main small{color:var(--text-3,#8592A6);font-size:11px}.rn-main em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--text-2,#4A5568)}
+.rn-dot{width:8px;height:8px;border-radius:50%;background:var(--brand,#2a78d6);margin-top:6px;flex-shrink:0}
+.rn-sec{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.rn-sec button{height:26px;padding:0 9px;border-radius:7px;border:1px solid var(--line,#E2E6EC);background:var(--panel,#fff);font-size:12px;font-weight:600;color:var(--text,#0E1726)}
+.rn-sec button.bad{border-color:var(--down,#D93240);color:var(--down,#D93240)}
+.rn-empty{padding:28px;text-align:center;color:var(--text-3,#8592A6);font-size:13px}
+.rn-bg{position:fixed;inset:0;z-index:350;background:rgba(0,0,0,.5);display:grid;place-items:start center;padding:4vh 10px;overflow:auto}
+.rn-centre{width:min(980px,100%);background:var(--panel,#fff);color:var(--text,#0E1726);border:1px solid var(--line,#E2E6EC);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.4);display:flex;flex-direction:column;max-height:92vh}
+.rn-c-h{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line,#E2E6EC);flex-wrap:wrap}
+.rn-c-h h2{font-size:16px;font-weight:700}
+.rn-tabs{display:flex;gap:2px;flex:1;overflow-x:auto}
+.rn-tabs button{height:30px;padding:0 11px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-2,#4A5568);white-space:nowrap}
+.rn-tabs button.on{background:var(--brand-2,#E7F0FC);color:var(--brand,#2a78d6)}
+.rn-pill{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--down,#D93240);color:#fff;font-size:10.5px;font-weight:700;text-align:center}
+.rn-x{width:30px;height:30px;border-radius:8px;font-size:22px;color:var(--text-2,#4A5568)}.rn-x:hover{background:var(--panel-2,#F6F7FA)}
+.rn-c-b{padding:14px 16px;overflow:auto}
+.rn-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.rn-bar select,.rn-bar input,.rn-grid input,.rn-grid select{height:32px;border:1px solid var(--line,#E2E6EC);border-radius:8px;background:var(--panel,#fff);color:var(--text,#0E1726);padding:0 9px;font:inherit}
+.rn-btn{height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line,#E2E6EC);background:var(--panel,#fff);color:var(--text-2,#4A5568);font-size:12.5px;font-weight:600;margin-right:6px}
+.rn-btn:hover{color:var(--text,#0E1726);border-color:var(--text-3,#8592A6)}.rn-btn.pri{background:var(--brand,#2a78d6);border-color:var(--brand,#2a78d6);color:#fff}.rn-btn.sm{height:26px;padding:0 9px}
+.rn-card{border:1px solid var(--line,#E2E6EC);border-radius:12px;padding:14px;margin-bottom:12px}
+.rn-card h3{font-size:14px;margin-bottom:6px}
+.rn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+.rn-grid label{display:grid;gap:4px;font-size:12px;color:var(--text-2,#4A5568);font-weight:500}
+.rn-chk{display:inline-flex!important;grid-auto-flow:column;align-items:center;gap:6px!important}
+.rn-note{font-size:12px;color:var(--text-2,#4A5568);margin:6px 0}.rn-err{font-size:12.5px;color:var(--down,#D93240);min-height:18px}
+.rn-tw{overflow:auto;border:1px solid var(--line,#E2E6EC);border-radius:10px}
+.rn-tw table{width:100%;border-collapse:collapse;font-size:12.5px}
+.rn-tw th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-3,#8592A6);padding:8px 10px;border-bottom:1px solid var(--line,#E2E6EC);white-space:nowrap}
+.rn-tw td{padding:8px 10px;border-bottom:1px solid var(--line,#E2E6EC)}
+.rn-tw .r,.rn-tw th.r{text-align:right}.rn-tw .c,.rn-tw th.c{text-align:center}
+.rn-cat td{background:var(--panel-2,#F6F7FA);font-size:12px}
+.rn-pr{margin-left:8px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--text-3,#8592A6)}.rn-pr.p-critical{color:var(--down,#D93240)}
+.rn-sw{position:relative;display:inline-block;width:34px;height:20px;vertical-align:middle}
+.rn-sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.rn-sw span{position:absolute;inset:0;border-radius:10px;background:var(--line,#E2E6EC);transition:.15s}
+.rn-sw span:before{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+.rn-sw input:checked+span{background:var(--brand,#2a78d6)}.rn-sw input:checked+span:before{transform:translateX(14px)}
+.rn-sw input:focus-visible+span{outline:2px solid var(--brand,#2a78d6);outline-offset:2px}
+.rn-sw.lock{opacity:.6}.rn-sw.lock input{cursor:not-allowed}
+.rn-lk{font-style:normal;font-size:11px;margin-left:4px}
+.rn-st{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;font-weight:600;background:var(--panel-2,#F6F7FA);color:var(--text-2,#4A5568);border:1px solid var(--line,#E2E6EC)}
+.rn-st.s-Active,.rn-st.d-delivered,.rn-st.d-sent{color:var(--up,#0A8F6C);border-color:var(--up,#0A8F6C)}
+.rn-st.s-Triggered{color:var(--brand,#2a78d6);border-color:var(--brand,#2a78d6)}
+.rn-st.d-failed,.rn-st.s-Expired{color:var(--down,#D93240);border-color:var(--down,#D93240)}
+@media(max-width:600px){.rn-bg{padding:0}.rn-centre{max-height:100vh;border-radius:0}#rnToasts{top:56px}}
+`;
+function injectCss(){if(document.getElementById('rnCss'))return;const s=document.createElement('style');s.id='rnCss';s.textContent=CSS;document.head.appendChild(s)}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const pop=$('#rnPop');if(S.popOpen&&pop&&!pop.contains(e.target)&&!(S.bell&&S.bell.contains(e.target)))closePop();
+  const bg=$('#rnCentre');if(bg&&e.target===bg){closeCentre();return}
+  const t=e.target.closest('[data-rn]');if(!t)return;const[k,a,b]=t.dataset.rn.split(':');
+  if(e.target.closest('.rn-sec button')&&k!=='sec')return;
+  if(k==='open'){const n=S.notifs.find(x=>x.id===a);if(n)open(n)}
+  else if(k==='sec'){const n=S.notifs.find(x=>x.id===a);if(n){n.answered=b;n.read=true;saveN();audit(b==='yes'?'Confirmed new sign-in':'Secured account from sign-in alert',n.title);if(b==='no')toastInfo('Other sessions were signed out. Please reset your password.');refresh()}}
+  else if(k==='readall'){markAll()}else if(k==='centre')openCentre(a);else if(k==='close')closeCentre();
+  else if(k==='tab'){S.tab=a;S.editing=null;drawCentre()}else if(k==='more'){S.f.n+=50;drawNotifList()}else if(k==='csv')csv();
+  else if(k==='al')alertAction(a,b);else if(k==='canceledit'){S.editing=null;drawCentre()}
+  else if(k==='perm'){Notification.requestPermission().then(p=>{audit('Browser notification permission',p);drawCentre()})}
+  else if(k==='test'){const id=$('#tsEv').value;emit(id,sample(id),{test:true,forcePush:true,key:'test|'+id+'|'+Date.now()});toastInfo('Test sent — see the notification list and delivery log')}
+  else if(k==='pause'){const id=$('#psEv').value,why=$('#psWhy').value.trim();S.prefs.paused[id]={t:Date.now(),why};saveP();audit('Paused event type '+id,why||'no reason given');drawCentre()}
+  else if(k==='unpause'){const id=$('#psEv').value;delete S.prefs.paused[id];saveP();audit('Resumed event type '+id);drawCentre()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#rnCentre')){closeCentre();e.preventDefault()}else if(S.popOpen)closePop()}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.rn-item')){e.preventDefault();e.target.click()}});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset&&t.dataset.pref){const[id,c]=t.dataset.pref.split(':');if(!EV[id].lock.includes(c)){S.prefs.ev[id][c]=t.checked;saveP();audit('Changed notification preference',`${id} · ${CHL[c]} ${t.checked?'on':'off'}`)}}
+  else if(t.id==='pfSound'){S.prefs.sound=t.checked;saveP();audit('Sound '+(t.checked?'on':'off'))}
+  else if(t.id==='pfQon'||t.id==='pfQs'||t.id==='pfQe'||t.id==='pfQz'){const q=S.prefs.quiet;q.on=$('#pfQon').checked;q.start=$('#pfQs').value||q.start;q.end=$('#pfQe').value||q.end;const z=$('#pfQz').value.trim();
+    try{new Intl.DateTimeFormat('en-GB',{timeZone:z});q.tz=z||q.tz}catch(er){$('#pfQz').value=q.tz}saveP();audit('Changed quiet hours',`${q.on?'on':'off'} ${q.start}–${q.end} ${q.tz}`)}
+  else if(t.id==='pfBp'){S.prefs.bp=Math.max(0,+t.value||0);saveP();audit('Buying-power threshold',String(S.prefs.bp))}
+  else if(t.id==='rnFcat'){S.f.cat=t.value;S.f.n=50;drawNotifList()}else if(t.id==='rnFread'){S.f.read=t.value;S.f.n=50;drawNotifList()}});
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='rnFq'){S.f.q=t.value;S.f.n=50;drawNotifList()}else if(t.id==='rnLq'){S.f.dq=t.value;const b=$('#rnBody');b.innerHTML=logHtml();const i=$('#rnLq');i.focus();i.setSelectionRange(i.value.length,i.value.length)}});
+addEventListener('storage',e=>{if(e.key===KEY.n||e.key===KEY.p||e.key===KEY.a){const o=S.prefs;load();refresh()}});   /* other tabs/devices stay in sync */
+addEventListener('resize',()=>{if(S.popOpen)drawPop()});
+
+function init(host){injectCss();S.H=host;load();
+  const el=host.bell&&(typeof host.bell==='string'?$(host.bell):host.bell);
+  if(el){S.bell=el;el.innerHTML=BELL;el.classList.add('rn-bell');el.setAttribute('aria-haspopup','dialog');el.onclick=e=>{e.stopPropagation();togglePop()};el.title='Notifications'}
+  refresh();toastHost()}
+global.RN={init,emit,open:openCentre,unread,newAlert:sym=>openCentre('alerts',{sym}),linesFor,alertSyms,events:EV,state:S,_price:price,_eval:evalAlerts,_save:saveAlert,_route:routePush};
+})(window);
+
+</script>
 <script>
 /* ======================= Icons ======================= */
 const IC={
@@ -960,8 +1295,8 @@ const qfmt=(q,s)=>Number(q).toLocaleString('en-IN',{maximumFractionDigits:s.qdp|
 
 /* ======================= Shared UI ======================= */
 function toast(msg,kind=''){const t=document.createElement('div');t.className='toast '+kind;t.textContent=msg;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),3800)}
-function notify(msg,kind){App.notes.unshift({t:Date.now(),msg,kind});App.unread++;renderBell();toast(msg,kind)}
-function renderBell(){$('#bellBtn').innerHTML=I('bell')+(App.unread?`<span class="cnt">${App.unread}</span>`:'')}
+function notify(msg,kind){try{RN.emit('SYS-02',{title:msg},{key:'gen|'+Date.now()+'|'+msg})}catch(e){}toast(msg,kind)}
+function renderBell(){}
 function modal(title,body,{foot='',wide=false,onClose}={}){closeModal();const bg=document.createElement('div');bg.className='modal-bg';
   bg.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}" style="${wide?'max-width:720px':''}"><div class="modal-h"><h3>${esc(title)}</h3><button class="ibtn" data-close aria-label="Close">${I('x')}</button></div><div class="modal-b">${body}</div>${foot?`<div class="modal-f">${foot}</div>`:''}</div>`;
   bg.addEventListener('mousedown',e=>{if(e.target===bg||e.target.closest('[data-close]'))closeModal()});bg._onClose=onClose;$('#modalRoot').appendChild(bg);setTimeout(()=>bg.querySelector('input,button.pri,select')?.focus(),20);return bg}
@@ -1079,7 +1414,7 @@ function reviewOrder(){if(App.sym.noTrade){toast('Global instruments are chart-o
    {foot:`<button class="btn" data-close>Edit</button><button class="btn pri" id="confirmGo" style="background:var(${L?'--up':'--down'});border-color:var(${L?'--up':'--down'})">Confirm ${L?'buy':'sell'}</button>`});
   $('#confirmGo').onclick=()=>{closeModal();placeOrder()}}
 function placeOrder(){const s=App.sym,tk=App.tk,q=parseFloat(tk.qty),L=tk.side==='buy';const o={id:++OID,t:Date.now(),sym:s.s,side:tk.side,type:tk.type,qty:q,tif:tk.tif,tp:tk.tp?+tk.tpPx:null,sl:tk.sl?+tk.slPx:null};
-  if(tk.type==='market'){fill(o,L?ask(s):bid(s))}else{o.price=+tk.price;o.status='Open';App.orders.push(o);notify(`${o.type==='limit'?'Limit':'Stop'} ${o.side} ${qfmt(q,s)} ${s.s} @ ${fmtP(o.price,s.dp)} placed`,'');App.btab='orders'}
+  if(tk.type==='market'){fill(o,L?ask(s):bid(s))}else{o.price=+tk.price;o.status='Open';App.orders.push(o);RN.emit('N-01',{type:o.type,side:o.side,qty:qfmt(q,s),sym:s.s,price:fmtP(o.price,s.dp)},{key:'placed|'+o.id,link:{sym:s.s}});toast(`${o.type==='limit'?'Limit':'Stop'} ${o.side} ${qfmt(q,s)} ${s.s} @ ${fmtP(o.price,s.dp)} placed`);App.btab='orders'}
   tk.price='';tk.tp=false;tk.sl=false;tk.tpPx='';tk.slPx='';renderTicket();renderBottom();setChartLines();renderSymbar();liveUpdate()}
 function fill(o,price){const s=SYM(o.sym),sg=o.side==='buy'?1:-1;let p=posOf(o.sym);const pre={q:p?p.q:0,avg:p?p.avg:0};
   App.cash-=sg*o.qty*price;
@@ -1087,7 +1422,11 @@ function fill(o,price){const s=SYM(o.sym),sg=o.side==='buy'?1:-1;let p=posOf(o.s
   const nq=p.q+sg*o.qty;if(Math.sign(p.q)===sg||p.q===0)p.avg=(p.avg*Math.abs(p.q)+price*o.qty)/Math.abs(nq);else if(Math.sign(nq)===sg)p.avg=price;
   p.q=+nq.toFixed(8);if(o.tp)p.tp=o.tp;if(o.sl)p.sl=o.sl;if(Math.abs(p.q)<1e-9)App.positions=App.positions.filter(x=>x!==p);
   o.status='Filled';o.price=price;o.t=Date.now();App.orders=App.orders.filter(x=>x!==o);App.history.push(o);try{logTrade(o,price,pre)}catch(e){console.error(e)}
-  notify(`Filled: ${o.side==='buy'?'Bought':'Sold'} ${qfmt(o.qty,s)} ${s.s} @ ${fmtP(price,s.dp)}`,'ok');App.btab='positions'}
+  {const px=fmtP(price,s.dp),key='fill|'+o.id,link={sym:s.s};try{
+    if(o.src==='TP')RN.emit('N-07',{sym:s.s,price:px},{key,link});
+    else if(o.src==='SL')RN.emit('N-08',{sym:s.s,price:px},{key,link});
+    else RN.emit('N-02',{side:o.side,qty:qfmt(o.qty,s),sym:s.s,price:px},{key,link});bpCheck()}catch(e){console.error(e)}}
+  App.btab='positions'}
 function closePos(sym,src){const p=posOf(sym),s=SYM(sym);if(!p)return;fill({id:++OID,t:Date.now(),sym,side:p.q>0?'sell':'buy',type:'market',qty:Math.abs(p.q),tif:'Day',src:src||'manual'},p.q>0?bid(s):ask(s));renderBottom();setChartLines();renderSymbar();if(App.view==='portfolio')renderPortfolio()}
 
 /* ----- Order book & tape ----- */
@@ -1137,7 +1476,7 @@ function alertForm(s,price){return`<div class="form" style="padding:0"><div><lab
   <p class="muted" id="alHint" style="font-size:12px"></p><div><label>Notify me by</label><div class="chips"><label class="chip on" style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" checked style="accent-color:var(--brand)">In-app</label><label class="chip" style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" style="accent-color:var(--brand)">Email</label><label class="chip" style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" style="accent-color:var(--brand)">Push</label></div></div></div>`}
 function bindAlertForm(){const hint=()=>{const s=SYM($('#alSym').value),c=$('#alCond').value,v=parseFloat($('#alV').value);$('#alHint').textContent=!(v>0)?'Enter a value.':c==='above'||c==='below'?`${s.s} is ${fmtP(s.last,s.dp)} now, ${pct(v/s.last-1)} from your level.`:`${s.s} is ${pct(s.last/s.prev-1)} today.`};
   ['alSym','alCond','alV'].forEach(id=>$('#'+id).addEventListener('input',()=>{if(id==='alSym'||id==='alCond'){const s=SYM($('#alSym').value),c=$('#alCond').value;$('#alV').value=c==='up'||c==='down'?'3':(s.last*(c==='below'?0.98:1.02)).toFixed(s.dp)}hint()}));hint();
-  $('#alOk').onclick=()=>{const v=parseFloat($('#alV').value);if(!(v>0)){$('#alV').focus();return}App.alerts.push({id:Date.now(),sym:$('#alSym').value,cond:$('#alCond').value,v,on:true,status:'Active'});closeModal();toast('Alert created','ok');renderBottom();setChartLines();if(App.view==='alerts')renderAlerts()}}
+  $('#alOk').onclick=()=>{const v=parseFloat($('#alV').value);if(!(v>0)){$('#alV').focus();return}if(App.alerts.filter(x=>x.status==='Active').length>=200){toast('You have reached the limit of 200 active alerts','bad');return}App.alerts.push({id:Date.now(),sym:$('#alSym').value,cond:$('#alCond').value,v,on:true,status:'Active'});closeModal();toast('Alert created','ok');renderBottom();setChartLines();if(App.view==='alerts')renderAlerts()}}
 
 /* ======================= Other views ======================= */
 function pageHead(t,p,extra=''){return`<div class="page-h"><div style="flex:1"><h1>${t}</h1><p>${p}</p></div>${extra}</div>`}
@@ -1973,10 +2312,13 @@ async function optStrats(){const box=$('#opStrat');if(!box||!OPT.sel)return;cons
 /* ======================= Live engine (real NSE quotes via Upstox) ======================= */
 function trig(s,pv){
   for(const a of App.alerts){if(!a.on||a.status!=='Active'||a.sym!==s.s)continue;const c=s.last/s.prev-1;
-    if((a.cond==='above'&&pv<a.v&&s.last>=a.v)||(a.cond==='below'&&pv>a.v&&s.last<=a.v)||(a.cond==='up'&&c*100>=a.v)||(a.cond==='down'&&c*100<=-a.v)){a.status='Triggered';notify(`Alert: ${s.s} ${condText(a).toLowerCase()} — now ${fmtP(s.last,s.dp)}`,'warn');renderBottom();setChartLines();if(App.view==='alerts')renderAlerts()}}
+    if((a.cond==='above'&&pv<a.v&&s.last>=a.v)||(a.cond==='below'&&pv>a.v&&s.last<=a.v)||(a.cond==='up'&&c*100>=a.v)||(a.cond==='down'&&c*100<=-a.v)){a.status='Triggered';{const px=fmtP(s.last,s.dp),link={sym:s.s},key='alert|'+a.id+'|'+Date.now();
+      if(a.cond==='above')RN.emit('N-09',{sym:s.s,level:fmtP(a.v,s.dp),price:px},{key,link});
+      else if(a.cond==='below')RN.emit('N-10',{sym:s.s,level:fmtP(a.v,s.dp),price:px},{key,link});
+      else RN.emit('N-11',{sym:s.s,dir:a.cond==='up'?'up':'down',pct:Math.abs(c*100).toFixed(1),price:px},{key,link})}renderBottom();setChartLines();if(App.view==='alerts')renderAlerts()}}
   for(const o of App.orders.slice()){if(o.sym!==s.s||o.status!=='Open')continue;const L=o.side==='buy';
     if(o.type==='limit'?(L?s.last<=o.price:s.last>=o.price):(L?s.last>=o.price:s.last<=o.price)){fill(o,o.type==='limit'?o.price:s.last);renderBottom();setChartLines();if(s===App.sym)renderSymbar()}}
-  const p=posOf(s.s);if(p){const L=p.q>0;if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){notify(`Take profit hit on ${s.s}`,'ok');closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){notify(`Stop loss hit on ${s.s}`,'bad');closePos(s.s,'SL')}}}
+  const p=posOf(s.s);if(p){const L=p.q>0;if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){closePos(s.s,'SL')}}}
 function setStatus(){const t=$('#liveTxt'),d=$('#liveDot');if(!t)return;
   if(MKT.err){t.textContent='Data unavailable — retrying';d.style.background='var(--down)';return}
   t.textContent=MKT.open?'Live · '+new Date().toLocaleTimeString('en-IN',{hour12:false}):'Market closed · last close';d.style.background=MKT.open?'var(--up)':'var(--warn)'}
@@ -2012,7 +2354,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[dat
   if(d.tool){chart.setTool(d.tool);return}
   if(d.btab){App.btab=d.btab;$('#bottom').classList.remove('collapsed');renderBottom();return}
   if(d.close!=null&&d.close!==''){closePos(d.close);return}
-  if(d.cancel){const o=App.orders.find(x=>x.id==d.cancel);if(o){o.status='Cancelled';o.t=Date.now();App.orders=App.orders.filter(x=>x!==o);App.history.push(o);toast(`Order cancelled: ${o.side} ${o.sym}`);renderBottom();setChartLines();if(App.view==='orders')renderOrders()}return}
+  if(d.cancel){const o=App.orders.find(x=>x.id==d.cancel);if(o){o.status='Cancelled';o.t=Date.now();App.orders=App.orders.filter(x=>x!==o);App.history.push(o);RN.emit('N-04',{type:o.type,side:o.side,sym:o.sym},{key:'cx|'+o.id,link:{sym:o.sym}});toast(`Order cancelled: ${o.side} ${o.sym}`);renderBottom();setChartLines();if(App.view==='orders')renderOrders()}return}
   if(d.side){App.tk.side=d.side;renderTicket();setChartLines();return}
   if(d.otype){App.tk.type=d.otype;if(d.otype!=='market'&&!App.tk.price)App.tk.price=App.sym.last.toFixed(App.sym.dp);renderTicket();setChartLines();return}
   if(d.pct){const s=App.sym,tk=App.tk,p=posOf(s.s),px=tk.type==='market'?ask(s):(+tk.price||s.last),f=+d.pct/100,qd=10**(s.qdp||0);
@@ -2043,7 +2385,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[dat
     star:()=>{const k=App.sym.s;App.watch.has(k)?App.watch.delete(k):App.watch.add(k);renderSymbar();renderWatchlist();if(App.view==='mobile')renderMobile();liveUpdate()},
     usemkt:()=>{App.tk.price=App.sym.last.toFixed(App.sym.dp);$('#tkPrice').value=App.tk.price;calcTicket();setChartLines()},
     more:()=>{modal('More',VIEWS.filter(v=>!PRIMARY.includes(v[0])).map(v=>`<button class="pick-row" onclick="closeModal();go('${v[0]}')"><span class="t"><b>${v[1]}</b></span></button>`).join('')+'<button class="pick-row" onclick="closeModal();openSearch()"><span class="t"><b>Search symbols</b></span></button>')},
-    resetpaper:()=>{if(confirm('Reset the paper account to ₹10,00,000 and clear all positions, orders and alerts?')){App.cash=1000000;App.positions=[];App.orders=[];App.history=[];App.alerts=[];App.trades=[];App.meta={};saveTrades();savePaper();if(App.view==='journal')renderJournal();else renderPortfolio();renderBottom();setChartLines();toast('Paper account reset','ok')}},
+    resetpaper:()=>{if(confirm('Reset the paper account to ₹10,00,000 and clear all positions, orders and alerts?')){App.cash=1000000;App.positions=[];App.orders=[];App.history=[];App.alerts=[];App.trades=[];App.meta={};saveTrades();savePaper();if(App.view==='journal')renderJournal();else renderPortfolio();renderBottom();setChartLines();toast('Paper account reset','ok');RN.emit('N-12',{amount:'₹10,00,000.00',note:'Paper account funded'},{key:'fund|'+Date.now()})}},
     csv:()=>{const rows=[['id','time','symbol','side','type','qty','price','status'],...[...App.orders,...App.history].map(o=>[o.id,new Date(o.t).toISOString(),o.sym,o.side,o.type,o.qty,o.price,o.status])];const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='orders.csv';l.click();toast('orders.csv downloaded','ok')},
   })[a]?.()});
 document.addEventListener('input',e=>{const id=e.target.id,tk=App.tk;
@@ -2059,7 +2401,11 @@ $('#book').addEventListener('click',e=>{const r=e.target.closest('.ob-row');if(!
 $('#wlList').addEventListener('click',e=>{const r=e.target.closest('[data-sym]');if(r)e.stopPropagation(),switchSym(r.dataset.sym)});
 $('#wlClose').onclick=()=>$('#v-trade').classList.remove('wl-open');
 $('#searchBtn').onclick=openSearch;$('#themeBtn').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
-$('#bellBtn').onclick=()=>{const ex=$('.pop');if(ex){ex.remove();return}App.unread=0;renderBell();const p=document.createElement('div');p.className='pop card';p.innerHTML=`<div class="card-h"><h3>Notifications</h3></div>${App.notes.map(n=>`<div class="n">${esc(n.msg)}<small>${clockStr(n.t)}</small></div>`).join('')||'<div class="empty">You’re all caught up.</div>'}`;document.body.appendChild(p);setTimeout(()=>document.addEventListener('click',function h(ev){if(!p.contains(ev.target)&&!ev.target.closest('#bellBtn')){p.remove();document.removeEventListener('click',h)}}),0)};
+RN.init({bell:'#bellBtn',hasAlerts:true,
+  price(sym){const s=SYM(sym);if(!s||!(s.last>0))return null;const pv=s.prev>0?s.prev:s.last;return{last:s.last,prev:pv,chgPct:(s.last/pv-1)*100,market:s.tv?'GLOBAL':'NSE'}},
+  symbols(){return SYMS.map(x=>({s:x.s,n:x.n}))},
+  openLink(l){if(l.sym&&SYM(l.sym)){go('trade');switchSym(l.sym)}else if(l.view)go(l.view)}});
+function bpCheck(){const th=RN.state.prefs.bp;if(App.cash<th){if(!bpCheck.w){bpCheck.w=1;RN.emit('N-14',{threshold:money(th,0),available:money(App.cash,0)},{key:'bp|'+Date.now(),link:{view:'portfolio'}})}}else bpCheck.w=0}
 document.addEventListener('keydown',e=>{const inField=e.target.matches('input,select,textarea');
   if(e.key==='Escape'){if($('.modal-bg')){closeModal();return}if(chart.pending||chart.tool!=='cursor'){chart.setTool('cursor');return}chart.sel=-1;chart.req();return}
   if(inField||$('.modal-bg'))return;
