@@ -212,7 +212,7 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 .page-h p{color:var(--text-2);margin-top:2px}
 .grid{display:grid;gap:14px}
 .grid>*,.two>*,.card{min-width:0}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 .kpi{padding:14px 16px}
 .kpi small{color:var(--text-3);font-size:12px}
 .kpi b{display:block;font-size:22px;margin-top:3px;font-variant-numeric:tabular-nums}
@@ -527,6 +527,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pk-act{font-size:12.5px;padding:6px 9px;border-radius:8px;margin:6px 0;background:var(--panel-2)}.pk-act.be-up{border-left:3px solid var(--up)}.pk-act.be-dn{border-left:3px solid var(--down)}.chip .muted,.seg button .muted,.btn .muted{color:inherit;opacity:.72;font-weight:600;font-variant-numeric:tabular-nums}
 .chip.on .muted,.btn.pri .muted{color:#fff;opacity:.9}
 .seg button.on .muted{color:var(--text-2);opacity:1}
+.pnl-chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pnl-chip[hidden]{display:none}.pnl-chip small{color:var(--text-3);font-weight:600}.pnl-chip.up{border-color:var(--up);background:var(--up-bg)}.pnl-chip.down{border-color:var(--down);background:var(--down-bg)}
+@media(max-width:560px){.pnl-chip small{display:none}}
 </style>
 </head>
 <body>
@@ -537,6 +540,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
   <div class="hdr-r">
     <span class="live"><i id="liveDot"></i><span id="liveTxt">Connecting…</span></span>
+    <button class="pnl-chip" id="pnlChip" data-view="portfolio" hidden title="Total paper P&L (realized + unrealized)"></button>
     <div class="eq"><small>Equity</small><b data-eq></b></div>
     <button class="ibtn" id="bellBtn" aria-label="Notifications"></button>
     <button class="ibtn" id="themeBtn" aria-label="Toggle theme"></button>
@@ -1342,6 +1346,14 @@ function liveUpdate(){
   $$('[data-pnlp]').forEach(e=>{const p=posOf(e.dataset.pnlp);if(!p)return;const v=(SYM(p.sym).last/p.avg-1)*Math.sign(p.q);e.textContent=pct(v);e.className='num '+cls(v)});
   $$('[data-mv]').forEach(e=>{const p=posOf(e.dataset.mv);if(p)e.textContent=money(p.q*SYM(p.sym).last)});
   $$('[data-eq]').forEach(e=>e.textContent=money(equity()));
+  {const px=p=>{const s=SYM(p.sym);return s&&s.last>0?s.last:p.avg},unr=App.positions.reduce((a,p)=>a+p.q*(px(p)-p.avg),0),inv=App.positions.reduce((a,p)=>a+Math.abs(p.q)*p.avg,0),
+     real=(App.trades||[]).reduce((a,x)=>a+x.net,0),tot=real+unr,ar=n=>n>0.004?'▲':n<-0.004?'▼':'–';
+   $$('[data-upnl]').forEach(e=>{e.textContent=ar(unr)+' '+smoney(unr);e.className=cls(unr)});
+   $$('[data-upnlp]').forEach(e=>{e.textContent=(inv?pct(unr/inv):'—')+' on '+money(inv,0)+' invested'});
+   $$('[data-rpnl]').forEach(e=>{e.textContent=ar(real)+' '+smoney(real);e.className=cls(real)});
+   $$('[data-tpnl]').forEach(e=>{e.textContent=ar(tot)+' '+smoney(tot);e.className=cls(tot)});
+   $$('[data-npos]').forEach(e=>{const w=App.positions.filter(p=>p.q*(px(p)-p.avg)>0.004).length,l=App.positions.filter(p=>p.q*(px(p)-p.avg)<-0.004).length;e.innerHTML=`<span class="up">▲ ${w} in profit</span> · <span class="down">▼ ${l} in loss</span>`});
+   const c=$('#pnlChip');if(c){const show=(App.trades&&App.trades.length)||App.positions.length;c.hidden=!show;if(show){c.className='pnl-chip '+cls(tot);c.innerHTML=`<small>P&amp;L</small> <b>${ar(tot)} ${smoney(tot)}</b>`}}}
   $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.className=cls(v)});
   $$('[data-cash]').forEach(e=>e.textContent=money(App.cash));
   $$('[data-range]').forEach(e=>{const s=SYM(e.dataset.range);s.hi=Math.max(s.hi,s.last);s.lo=Math.min(s.lo,s.last);e.querySelector('i').style.left=((s.last-s.lo)/(s.hi-s.lo||1)*100)+'%';const t=e.parentNode.querySelector('[data-rt]');if(t)t.textContent=fmtP(s.lo,s.dp)+' – '+fmtP(s.hi,s.dp)});
@@ -1526,7 +1538,7 @@ function drawMkTable(){const mk=App.mk,chg=s=>s.last/s.prev-1;const key={s:s=>s.
 let eqRange=90;
 function renderPortfolio(){const eq=equity(),inv=App.positions.reduce((a,p)=>a+Math.abs(p.q)*p.avg,0),unr=App.positions.reduce((a,p)=>a+p.q*(SYM(p.sym).last-p.avg),0);
   $('#v-portfolio').innerHTML=`<div class="page">${pageHead('Portfolio','Simulated account · positions marked to the live price.',`<button class="btn" data-view="journal">${I('download',15)}Trade journal</button><button class="btn" data-view="orders">${I('list',15)}Order history</button><button class="btn" data-act="resetpaper">Reset</button><button class="btn pri" data-view="trade">${I('candle',15)}Trade</button>`)}
-   <div class="grid"><div class="kpis"><div class="card kpi"><small>Total equity</small><b data-eq></b><span class="muted">Cash + positions</span></div><div class="card kpi"><small>Day P&L</small><b><span data-dpnl></span></b><span class="muted">Since previous close</span></div><div class="card kpi"><small>Unrealized P&L</small><b class="${cls(unr)}">${smoney(unr)}</b><span class="muted">${pct(unr/(inv||1))} on ${money(inv,0)} invested</span></div><div class="card kpi"><small>Buying power</small><b data-cash></b><span class="muted">Available cash</span></div></div>
+   <div class="grid"><div class="kpis"><div class="card kpi"><small>Total equity</small><b data-eq></b><span class="muted">Cash + positions</span></div><div class="card kpi"><small>Day P&L</small><b><span data-dpnl></span></b><span class="muted">Since previous close</span></div><div class="card kpi"><small>Unrealized P&L · live</small><b data-upnl></b><span class="muted" data-upnlp></span></div><div class="card kpi"><small>Total P&L</small><b data-tpnl></b><span class="muted">Realized <span data-rpnl></span> + unrealized</span></div><div class="card kpi"><small>Positions</small><b data-npos style="font-size:14px"></b><span class="muted">${App.positions.length} open</span></div><div class="card kpi"><small>Buying power</small><b data-cash></b><span class="muted">Available cash</span></div></div>
    <div class="two"><div class="card"><div class="card-h"><h3>Performance</h3><div class="legend-row"><span><i class="sw" style="background:var(--s1);width:14px"></i>Portfolio</span></div><div class="seg" id="eqSeg">${[[30,'1M'],[90,'3M'],[180,'6M'],[365,'1Y']].map(([d,l])=>`<button class="${eqRange===d?'on':''}" data-eqr="${d}">${l}</button>`).join('')}</div></div><div class="eq-chart" id="eqChart"></div></div>
     <div class="card"><div class="card-h"><h3>Allocation</h3><span class="muted" style="font-size:12px">by market value</span></div><div class="alloc">${(()=>{const items=[...App.positions.filter(p=>p.q>0).map(p=>[p.sym,p.q*SYM(p.sym).last]),['Cash',App.cash]].sort((a,b)=>b[1]-a[1]),tot=items.reduce((a,x)=>a+x[1],0),mx=items[0][1];return items.map(([k,v])=>`<div class="row"><b>${esc(k)}</b><div><div class="bar" style="width:${v/mx*100}%;${k==='Cash'?'background:var(--text-3)':''}"></div></div><span class="num" style="text-align:right">${(v/tot*100).toFixed(1)}%</span></div>`).join('')})()}<p class="muted" style="font-size:12px">Short positions are excluded from allocation.</p></div></div></div>
    <div class="card"><div class="card-h"><h3>Holdings</h3><span class="muted" style="font-size:12px">${App.positions.length} positions</span></div><div class="tbl-wrap">${posTable(true)}</div></div></div></div>`;
@@ -2253,7 +2265,7 @@ function jBody(fills,trips,open){
     const days=Object.values(m).sort((x,y)=>y.day.localeCompare(x.day));if(!days.length)return'<div class="empty">No trades in this period.</div>';let cum=0;const withCum=days.slice().reverse().map(d=>({...d,cum:(cum+=d.gross-d.ch)})).reverse();
     return`<table><thead><tr><th>Date</th><th class="num">Fills</th><th class="num">Closed trades</th><th class="num">Win rate</th><th class="num">Gross</th><th class="num">Charges</th><th class="num">Net</th><th class="num">Cumulative</th></tr></thead><tbody>${withCum.map(d=>`<tr class="jr-row" data-jr="day:${d.day}"><td><b>${dLbl(d.day)}</b></td><td class="num">${d.fills}</td><td class="num">${d.trips}</td><td class="num">${d.trips?Math.round(d.wins/d.trips*100)+'%':'—'}</td><td class="num ${cls(d.gross)}">${smoney(d.gross)}</td><td class="num muted">${money(d.ch)}</td><td class="num ${cls(d.gross-d.ch)}"><b>${smoney(d.gross-d.ch)}</b></td><td class="num ${cls(d.cum)}">${smoney(d.cum)}</td></tr>`).join('')}</tbody></table>`}
   if(JR.tab==='open'){if(!App.positions.length)return'<div class="empty">No open positions. Orders you place on Trade or Options appear here.</div>';
-    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="num">Qty</th><th class="num">Avg price</th><th class="num">Last</th><th class="num">Unrealized P&L</th><th class="num">Return</th><th>Stop / target</th><th></th></tr></thead><tbody>${App.positions.map(p=>{const s=SYM(p.sym)||{last:p.avg,dp:2},u=p.q*(s.last-p.avg);return`<tr><td><b>${esc(p.sym)}</b><div class="muted" style="font-size:11px">${kindOf(s)}</div></td><td><span class="side-tag ${p.q>0?'up':'down'}">${p.q>0?'Long':'Short'}</span></td><td class="num">${qn(Math.abs(p.q))}</td><td class="num">${fmtP(p.avg)}</td><td class="num" data-px="${esc(p.sym)}">${fmtP(s.last)}</td><td class="num ${cls(u)}">${smoney(u)}</td><td class="num ${cls(u)}">${pct((s.last/p.avg-1)*Math.sign(p.q))}</td><td class="muted num">${p.sl?'SL '+fmtP(p.sl):'—'} · ${p.tp?'T '+fmtP(p.tp):'—'}</td><td><button class="btn-xs" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('')}</tbody></table>`}
+    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="num">Qty</th><th class="num">Avg price</th><th class="num">Last</th><th class="num">Unrealized P&L</th><th class="num">Return</th><th>Stop / target</th><th></th></tr></thead><tbody>${App.positions.map(p=>{const s=SYM(p.sym)||{last:p.avg,dp:2},u=p.q*(s.last-p.avg);return`<tr><td><b>${esc(p.sym)}</b><div class="muted" style="font-size:11px">${kindOf(s)}</div></td><td><span class="side-tag ${p.q>0?'up':'down'}">${p.q>0?'Long':'Short'}</span></td><td class="num">${qn(Math.abs(p.q))}</td><td class="num">${fmtP(p.avg)}</td><td class="num" data-px="${esc(p.sym)}">${fmtP(s.last)}</td><td class="num ${cls(u)}" data-pnl="${esc(p.sym)}">${smoney(u)}</td><td class="num ${cls(u)}" data-pnlp="${esc(p.sym)}">${pct((s.last/p.avg-1)*Math.sign(p.q))}</td><td class="muted num">${p.sl?'SL '+fmtP(p.sl):'—'} · ${p.tp?'T '+fmtP(p.tp):'—'}</td><td><button class="btn-xs" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('')}</tbody></table>`}
   if(JR.tab==='trips'){const all=[...trips.slice().sort((a,b)=>b.close-a.close),...open.map(o=>({...o,openTrip:true}))].filter(t=>t.openTrip?(JR.range==='all'||JR.range==='today'||true):true);
     if(!all.length)return'<div class="empty">No completed round trips in this period. A round trip is a position opened and then fully closed.</div>';
     return`<table><thead><tr><th>Opened</th><th>Instrument</th><th>Dir</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">Exit</th><th>Held</th><th class="num">Net P&L</th><th class="num">R</th></tr></thead><tbody>${all.map(t=>{const e=t.costIn/(t.qtyIn||1),x=t.qtyOut?t.valOut/t.qtyOut:null,risk=t.plan&&t.plan.sl?Math.abs(e-t.plan.sl)*t.qtyIn:0,R=!t.openTrip&&risk?t.net/risk:null;
