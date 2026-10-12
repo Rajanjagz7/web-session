@@ -885,6 +885,12 @@ const callView=p=>{const g=String(p.signal||'').toUpperCase();
   return'FLAT'};
 /* colour follows the action you take: any SELL (incl. SELL PUT) is red, any BUY is green */
 const callSide=p=>{const g=String(p.signal||'').toUpperCase(),v=callView(p);return/^SELL/.test(g)?'BEAR':/^BUY/.test(g)?'BULL':v};
+const CALLREG=[];let TK_PRE=null;
+/* click a recommendation -> chart + order ticket on the matching BUY/SELL side with its SL and target filled in */
+function tradeFromCall(i){const r=CALLREG[i];if(!r)return;
+  TK_PRE=Object.assign({t:Date.now()},r.pre);TK.side=r.pre.side;TK.type='market';
+  if(r.opt)openOptChart(r.key,r.sym,r.strike,r.side,r.exp);else selectSymAndSwitch(r.sym);
+  setTimeout(()=>{const t=$('#ticket');if(t&&t.scrollIntoView)t.scrollIntoView({block:'nearest',behavior:'smooth'})},150)}
 const callKind=p=>CALL_INDEX.has(String(p.instrument||p.symbol||'').toUpperCase())?'INDEX':'STOCK';
 function callsBlock(all){
   const nI=all.filter(p=>callKind(p)==='INDEX').length,nS=all.length-nI;
@@ -983,7 +989,9 @@ function renderCallCard(p){
   const entry=p.entry||0,t1=p.target1||p.target||(entry*1.09),sl=p.stopLoss||(entry*0.95);
   const chg=p.changePct||0;
   const contract=p.contract||'';
-  return`<div class="call-card" ${p.instrumentKey&&/CALL|PUT/.test(sg)?`onclick="openOptChart('${p.instrumentKey}','${esc(sym)}',${parseFloat(String(contract).split(' ')[1])||0},'${/ PE$/.test(contract)?'PE':'CE'}','${esc(p.expiryTag||'')}')" style="cursor:pointer"`:SYM(sym)?`onclick="selectSymAndSwitch('${esc(sym)}')" style="cursor:pointer"`:''}>
+  const isOptCall=!!(p.instrumentKey&&/CALL|PUT/.test(sg)),pre={side:dir==='SELL'?'SELL':'BUY',sl:+sl>0?+(+sl).toFixed(2):null,tp:+t1>0?+(+t1).toFixed(2):null};
+  const rid=CALLREG.push({opt:isOptCall,key:p.instrumentKey,sym,strike:parseFloat(String(contract).split(' ')[1])||0,side:/ PE$/.test(contract)?'PE':'CE',exp:p.expiryTag||'',pre})-1;
+  return`<div class="call-card" onclick="tradeFromCall(${rid})" style="cursor:pointer" title="Open ${esc(contract||sym)} on the ${pre.side} ticket">
     <div class="cc-hdr"><span class="sym">${esc(sym)}</span><span class="bs ${callSide(p)==='BULL'?'buy':callSide(p)==='BEAR'?'sell':'neu'}">${esc(badge)}</span><span class="bt">${isIdx?'INDEX':'INTRADAY'}</span></div>
     ${contract?`<div class="cc-sub">${esc(contract)}</div>`:''}
     <div class="cc-act ${callSide(p)==='BULL'?'up':callSide(p)==='BEAR'?'down':'muted'}">${act}</div>
@@ -1589,7 +1597,9 @@ function buildTicket(){
     <div class="tk-msg err" id="tkMsg"></div>
     <button class="go buy" id="tkGo" onclick="placeOrder()">Place BUY Order</button>
     <div id="tkPos"></div>`;
-  fillFindList();tkSide(TK.side);tkType(TK.type);updTicketLive()}
+  fillFindList();tkSide(TK.side);tkType(TK.type);
+  if(TK_PRE&&Date.now()-TK_PRE.t<5000){const a=$('#tkSl'),b=$('#tkTp');if(a&&TK_PRE.sl)a.value=TK_PRE.sl;if(b&&TK_PRE.tp)b.value=TK_PRE.tp}
+  updTicketLive()}
 function fillFindList(){const dl=$('#tkFindList');if(!dl)return;const seen=new Set(),list=[...NSE_SYMS.map(x=>({s:x.s,n:x.n})),...((scanState.uni&&scanState.uni.stocks)||[])];
   dl.innerHTML=list.filter(x=>!seen.has(x.s)&&seen.add(x.s)).map(x=>`<option value="${esc(x.s)}">${esc(x.n||'')}</option>`).join('');
   if(!scanState.uni&&!fillFindList._l){fillFindList._l=1;loadScanUniverse().then(fillFindList)}}
