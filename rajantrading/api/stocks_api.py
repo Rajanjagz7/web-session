@@ -30,6 +30,7 @@ TTL = 6 * 3600
 # key -> (label, group, csv file stem)
 INDEX_FILES = [
     ("nifty50", "Nifty 50", "Broad", "nifty50"),
+    ("sensex", "BSE Sensex", "Broad", None),   # BSE publishes no open file; read from the maintained public list
     ("niftynext50", "Nifty Next 50", "Broad", "niftynext50"),
     ("nifty100", "Nifty 100", "Broad", "nifty100"),
     ("nifty200", "Nifty 200", "Broad", "nifty200"),
@@ -126,6 +127,46 @@ def index_list():
     return {"indices": [{"key": k, "label": l, "group": g} for k, l, g, _ in INDEX_FILES]}
 
 
+# BSE Sensex (30) — used if the live list cannot be read. Checked against the NSE equity list.
+SENSEX_FALLBACK = [
+    ("ADANIPORTS", "Adani Ports & SEZ", "Ports"), ("ASIANPAINT", "Asian Paints", "Consumer Durables"), ("AXISBANK", "Axis Bank", "Banks"),
+    ("BAJFINANCE", "Bajaj Finance", "Finance"), ("BAJAJFINSV", "Bajaj Finserv", "Finance"), ("BEL", "Bharat Electronics", "Defence"),
+    ("BHARTIARTL", "Bharti Airtel", "Telecom"), ("ETERNAL", "Eternal", "Internet"), ("HCLTECH", "HCLTech", "IT"),
+    ("HDFCBANK", "HDFC Bank", "Banks"), ("HINDUNILVR", "Hindustan Unilever", "FMCG"), ("ICICIBANK", "ICICI Bank", "Banks"),
+    ("INDIGO", "IndiGo", "Aviation"), ("INFY", "Infosys", "IT"), ("ITC", "ITC", "FMCG"), ("KOTAKBANK", "Kotak Mahindra Bank", "Banks"),
+    ("LT", "Larsen & Toubro", "Capital Goods"), ("M&M", "Mahindra & Mahindra", "Auto"), ("MARUTI", "Maruti Suzuki", "Auto"),
+    ("NTPC", "NTPC", "Power"), ("POWERGRID", "Power Grid", "Power"), ("RELIANCE", "Reliance Industries", "Energy"),
+    ("SBIN", "State Bank of India", "Banks"), ("SUNPHARMA", "Sun Pharma", "Pharma"), ("TCS", "Tata Consultancy Services", "IT"),
+    ("TATASTEEL", "Tata Steel", "Metals"), ("TECHM", "Tech Mahindra", "IT"), ("TITAN", "Titan Company", "Consumer"),
+    ("TRENT", "Trent", "Consumer"), ("ULTRACEMCO", "UltraTech Cement", "Cement"),
+]
+
+
+def _sensex_live():
+    """Current BSE Sensex members from the public 'List of BSE SENSEX companies' table (BSE's own API blocks servers)."""
+    r = requests.get("https://en.wikipedia.org/w/api.php", timeout=15,
+                     params={"action": "parse", "page": "List_of_BSE_SENSEX_companies", "prop": "wikitext", "format": "json"},
+                     headers={"User-Agent": "AlgoTrades/1.0 (paper-trading app; index constituents)"})
+    r.raise_for_status()
+    w = r.json()["parse"]["wikitext"]["*"]
+    cur = w[w.index("==Current=="):]
+    end = cur.find("\n==", 10)
+    cur = cur[:end] if end > 0 else cur
+    out = []
+    for block in re.split(r"\n\|-\n", cur):
+        m = re.search(r"\n\|([A-Z0-9&\-]+)\.BO", block)
+        if not m:
+            continue
+        n = re.search(r"!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", block)
+        ind = re.search(r"\n\|(?:\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|([^\n|\[<]+))\n\|[0-9]", block)
+        out.append({"s": m.group(1), "n": ((n.group(2) or n.group(1)) if n else m.group(1)).strip(), "industry": ""})
+    known = _equities()["by_sym"]
+    out = [x for x in out if x["s"] in known]
+    if not 25 <= len(out) <= 35:
+        raise ValueError(f"unexpected Sensex list size {len(out)}")
+    return out
+
+
 def _constituents(key):
     meta = INDEX_BY_KEY.get(key)
     if not meta:
@@ -133,6 +174,13 @@ def _constituents(key):
     hit = _idx.get(key)
     if hit and time.time() - hit[0] < TTL:
         return hit[1]
+    if key == "sensex":
+        try:
+            rows = _sensex_live()
+        except Exception:
+            rows = [{"s": s, "n": n, "industry": i} for s, n, i in SENSEX_FALLBACK]
+        _idx[key] = (time.time(), rows)
+        return rows
     try:
         r = requests.get(IDX_URL % meta[2], timeout=20, headers=UA)
         r.raise_for_status()

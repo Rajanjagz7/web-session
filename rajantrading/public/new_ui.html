@@ -391,7 +391,7 @@ td.oc-click{cursor:pointer}.scan-pager{display:flex;justify-content:space-betwee
    and a multibagger screen. The host app supplies get(), trade(), chart() and alert(). */
 (function(global){
 'use strict';
-const CHIPS=[['IDX','All Nifty indices'],['ALL','All NSE stocks'],['multi','Multibaggers (≥2× 52W low)'],['nifty50','Nifty 50'],['niftynext50','Next 50'],['midcap150','Midcap 150'],['smallcap250','Smallcap 250'],['microcap250','Microcap 250'],['infra','Nifty Infra']];
+const CHIPS=[['IDX','All Nifty indices'],['ALL','All NSE stocks'],['multi','Multibaggers (≥2× 52W low)'],['nifty50','Nifty 50'],['sensex','BSE Sensex 30'],['niftynext50','Next 50'],['midcap150','Midcap 150'],['smallcap250','Smallcap 250'],['microcap250','Microcap 250'],['infra','Nifty Infra']];
 const GROUPS=['ALL','Main','Broad market','Midcap','Smallcap and microcap','Sectoral','Thematic','Strategy','BSE'];
 const S={h:null,all:null,allP:null,idxAll:null,nameKey:{},grp:'ALL',tab:'IDX',q:'',page:0,size:50,sort:'sym',asc:true,rows:[],quotes:{},loading:false,err:'',more:[],timer:0,tok:0};
 const $=(s,r)=>(r||document).querySelector(s);
