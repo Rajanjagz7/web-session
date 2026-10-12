@@ -218,6 +218,11 @@ tbody tr:hover td{background:var(--panel-2)}
 .tk-msg{font-size:12px;border-radius:6px;padding:5px 8px;display:none}
 .tk-msg.err{display:block;background:var(--down-bg);color:var(--down)}
 
+.tk-ltp{margin-left:auto;display:flex;align-items:baseline;gap:6px}.tk-ltp b{font-size:15px}
+.tk-h{display:flex;align-items:center}
+.tk-q{display:flex;gap:4px;margin-top:5px}.tk-q button{flex:1;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);font-size:11.5px;font-weight:600}
+.tk-q button:hover{color:var(--text);border-color:var(--text-3)}
+.tk-posbox{border:1px solid var(--line)}
 /* ── Journal ── */
 .tk-risk{display:grid;gap:8px}
 .jr-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
@@ -1235,7 +1240,7 @@ function startTick(){
     } else { await pullQuotes(); }
     if(CHART&&ACTIVE.sym){CHART.setData(getSeries(ACTIVE.sym,ACTIVE.tf),ACTIVE.sym,ACTIVE.tf,true)}
     renderWatchlistPrices();updateSymbar();
-    if($('#tkPx')&&ACTIVE.sym){const el=$('#tkPx');if(!el._touched)el.value=ACTIVE.sym.last?.toFixed(2)||0}
+    updTicketLive();
   }
   _tickTimer=setInterval(tick,LIVE_INTERVAL);}
 
@@ -1300,14 +1305,14 @@ async function openStock(sym){
 function applyStockQuote(nm,x){if(!nm||!x||!(x.last>0))return;nm.last=x.last;nm.p=x.last;nm.prev=x.prev>0?x.prev:(nm.prev||x.last);nm.chg=nm.last-nm.prev;nm.chgPct=nm.prev?nm.chg/nm.prev*100:0;nm.hi=x.high||nm.last;nm.lo=x.low||nm.last;nm.open=x.open||nm.open;if(x.vol)nm.dvol=x.vol;nm.bid=x.bid;nm.ask=x.ask}
 /* live prices for everything held (and the active chart) that the built-in quote poll doesn't cover */
 async function pollHeld(){
-  const want=new Set(PORT.positions.map(p=>p.sym));if(ACTIVE.sym)want.add(ACTIVE.sym.s);
+  const want=new Set([...PORT.positions.map(p=>p.sym),...PORT.pending.map(o=>o.sym)]);if(ACTIVE.sym)want.add(ACTIVE.sym.s);
   const stk=[],opt=[],glob=[];
-  for(const k of want){const s=XSYM[k];if(!s)continue;(s.ikey?opt:s.tv?glob:stk).push(s)}
+  for(const k of want){const s=SYM(k);if(!s)continue;(s.ikey?opt:s.tv?glob:stk).push(s)}
   try{if(stk.length){const r=await api.get('/api/m/quotes?symbols='+encodeURIComponent(stk.map(x=>x.s).join(',')));for(const x of r.quotes||[])applyStockQuote(stk.find(y=>y.s===x.s),x)}}catch(e){}
   try{if(opt.length){const r=await api.get('/api/m/oquote?keys='+encodeURIComponent(opt.map(x=>x.ikey).join(',')));
     for(const q of r.quotes||[]){const o=opt.find(y=>y.ikey===q.key);if(!o||!(q.last>0))continue;Object.assign(o,{last:q.last,p:q.last,prev:q.prev||o.prev,chg:q.last-(q.prev||q.last),chgPct:q.prev?(q.last/q.prev-1)*100:0,hi:q.high||o.hi,lo:q.low||o.lo,open:q.open||o.open,bid:q.bid,ask:q.ask})}}}catch(e){}
   if(glob.length&&DATA.global)for(const g of glob){const c=(DATA.global.commodities||[]).find(x=>x.id===g.tv);if(c&&c.price>0)Object.assign(g,{last:c.price,p:c.price,prev:c.price-c.chg,chg:c.chg,chgPct:c.chgPct})}
-  checkExits()}
+  checkExits();updTicketLive()}
 setInterval(pollHeld,2500);
 function selectSymAndSwitch(sym){
   const s=SYM(sym);if(!s){openStock(sym);return}
@@ -1341,7 +1346,7 @@ function setChartTool(t){chartTool=t;if(CHART)CHART.setTool(t);buildChartTools()
 
 function buildBottomTabs(){
   const el=$('#chartBtabs');if(!el)return;
-  el.innerHTML=`<button class="on" onclick="showBtab('chain',this)">Option Chain</button><button onclick="showBtab('orders',this)">My Orders</button>`;
+  el.innerHTML=`<button class="on" onclick="showBtab('chain',this)">Option Chain</button><button onclick="showBtab('orders',this)">Positions &amp; Orders</button>`;
   showBtab('chain',el.querySelector('.on'));}
 
 function showBtab(tab,btn){
@@ -1463,130 +1468,192 @@ async function loadOptionChain(sym){
   _renderChainData(data,btab,panel);}
 
 /* ===================== Paper Trading + Journal ===================== */
-const START_CASH=100000,TR_KEY='rajan_trades_v1';
-const PORT={cash:START_CASH,positions:[],orders:[]};
+const START_CASH=1000000,TR_KEY='rajan_trades_v1',MARGIN_CAP=1;   /* ₹10,00,000 paper capital; short exposure capped at 1x equity */
+const PORT={cash:START_CASH,base:START_CASH,positions:[],orders:[],pending:[]};   /* position.qty is signed: + long, − short */
 let TRADES=[];
 const istDay=ts=>new Date(ts+19800000).toISOString().slice(0,10);
 const money=(n,dp=2)=>'₹'+fmtP(n,dp);
 const smoney=(n,dp=2)=>(n>=0?'+':'−')+'₹'+fmtP(Math.abs(n),dp);
 const qn=n=>Number.isInteger(n)?n.toLocaleString('en-IN'):fmtP(n);
+const sgn=x=>x>0?1:x<0?-1:0;
 const kindOf=s=>s&&s.ikey?'option':s&&s.tv?'global':s&&s.cls==='Index'?'index':'stock';
 function calcCharges(side,value,kind){const buy=side==='buy',opt=kind==='option',r=x=>+x.toFixed(2);
   if(kind==='global')return{brk:0,stt:0,txn:0,sebi:0,stamp:0,gst:0,total:0};
   const brk=value>0?(opt?20:Math.min(20,value*0.0003)):0,stt=buy?0:value*(opt?0.001:0.00025),txn=value*(opt?0.00035:0.0000297),sebi=value*0.000001,stamp=buy?value*0.00003:0,gst=(brk+txn+sebi)*0.18;
   return{brk:r(brk),stt:r(stt),txn:r(txn),sebi:r(sebi),stamp:r(stamp),gst:r(gst),total:r(brk+stt+txn+sebi+stamp+gst)}}
 /* one ledger row per fill: price, charges, realised P&L, and the SL/target in force */
-function mkTrade(o,before){const s=SYM(o.sym)||{},sell=o.side==='sell',value=+(o.qty*o.price).toFixed(2),ch=calcCharges(o.side,value,kindOf(s)),closeQty=sell?Math.min(before.q,o.qty):0,realized=sell?+((o.price-before.avg)*closeQty).toFixed(2):0;
+function mkTrade(o,before){const s=SYM(o.sym)||{},sg=o.side==='buy'?1:-1,value=+(o.qty*o.price).toFixed(2),ch=calcCharges(o.side,value,kindOf(s));
+  const closes=before.q!==0&&sgn(before.q)!==sg,closeQty=closes?Math.min(Math.abs(before.q),o.qty):0,realized=closes?+((o.price-before.avg)*closeQty*sgn(before.q)).toFixed(2):0;
   return{id:o.id,t:o.t,day:istDay(o.t),sym:o.sym,name:s.n||o.sym,kind:kindOf(s),side:o.side,qty:o.qty,price:o.price,value,charges:ch.total,chg:ch,closeQty,realized,net:+(realized-ch.total).toFixed(2),
-    posAfter:0,avgBefore:before.avg,src:o.src||'manual',note:'',tag:'',plan:o.plan||null}}
+    posAfter:0,avgBefore:before.avg,src:o.src||'manual',otype:o.otype||'market',note:'',tag:'',plan:o.plan||null}}
 function migrateOrders(orders){const pos={},out=[];
-  for(const o of orders.slice().reverse()){if(!o||!o.sym||!(o.qty>0))continue;const side=String(o.side).toLowerCase()==='sell'?'sell':'buy',p=pos[o.sym]||(pos[o.sym]={q:0,avg:0});
+  for(const o of orders.slice().reverse()){if(!o||!o.sym||!(o.qty>0))continue;const side=String(o.side).toLowerCase()==='sell'?'sell':'buy',sg=side==='buy'?1:-1,p=pos[o.sym]||(pos[o.sym]={q:0,avg:0});
     const tr=mkTrade({id:o.id,t:+o.id||Date.now(),sym:o.sym,side,qty:o.qty,price:o.price,src:'manual',plan:null},{q:p.q,avg:p.avg});
-    if(side==='buy'){p.avg=(p.avg*p.q+o.qty*o.price)/(p.q+o.qty);p.q+=o.qty}else p.q=Math.max(0,p.q-o.qty);
+    if(p.q===0||sgn(p.q)===sg){p.avg=(Math.abs(p.q)*p.avg+o.qty*o.price)/(Math.abs(p.q)+o.qty)}p.q=+(p.q+sg*o.qty).toFixed(8);
     tr.posAfter=p.q;out.push(tr)}
   return out}
-(()=>{try{const d=JSON.parse(localStorage.getItem('rajan_port')||'{}');if(d.cash!=null)PORT.cash=d.cash;if(d.positions)PORT.positions=d.positions;if(d.orders)PORT.orders=d.orders}catch(e){}
+(()=>{try{const d=JSON.parse(localStorage.getItem('rajan_port')||'{}');if(d.cash!=null)PORT.cash=d.cash;if(d.positions)PORT.positions=d.positions;if(d.orders)PORT.orders=d.orders;if(d.pending)PORT.pending=d.pending;
+    /* accounts created with the old ₹1,00,000 capital are topped up to ₹10,00,000 (history kept) */
+    const base=d.base!=null?d.base:(d.cash!=null?100000:START_CASH);if(base<START_CASH)PORT.cash+=START_CASH-base;PORT.base=START_CASH}catch(e){}
   try{TRADES=JSON.parse(localStorage.getItem(TR_KEY)||'null')}catch(e){TRADES=null}
   if(!Array.isArray(TRADES)){TRADES=migrateOrders(PORT.orders);saveTrades()}
 })();
 function symFromPos(p){const m=p.meta||{},v=p.avgPrice,o={s:p.sym,n:m.n||p.sym,ex:m.ex||'NSE',cls:m.cls||'Stocks',sec:m.sec||'',dp:2,vol:.02,vb:1e6,dvol:0,unit:m.ikey?'units':'shares',last:v,p:v,prev:v,hi:v,lo:v,chg:0,chgPct:0};
   if(m.ikey){Object.assign(o,{ikey:m.ikey,lot:m.lot,und:m.und,strike:m.strike,side:m.side,expiry:m.expiry,cls:'Options',vol:.03,vb:1e5});OPTSYM[m.ikey]=o}
   if(m.tv){o.tv=m.tv;o.cls='Global'}return o}
-PORT.positions.forEach(p=>{if(!SYM(p.sym))XSYM[p.sym]=symFromPos(p)});
+function rehydrate(){const need=[...PORT.positions,...PORT.pending.map(o=>({sym:o.sym,avgPrice:o.limit,meta:o.meta}))];need.forEach(p=>{if(!SYM(p.sym))XSYM[p.sym]=symFromPos(p)})}
+rehydrate();
 function savePORT(){try{localStorage.setItem('rajan_port',JSON.stringify(PORT))}catch(e){}}
 function saveTrades(){try{localStorage.setItem(TR_KEY,JSON.stringify(TRADES.slice(-5000)))}catch(e){}}
 function portPnl(sym){const pos=PORT.positions.find(p=>p.sym===sym);if(!pos)return 0;const s=SYM(sym);return s?(s.last-pos.avgPrice)*pos.qty:0}
+const posValue=()=>PORT.positions.reduce((a,p)=>{const y=SYM(p.sym);return a+p.qty*(y&&y.last>0?y.last:p.avgPrice)},0);   /* signed: shorts are a liability */
+const equity=()=>PORT.cash+posValue();
 function buildOrderLines(sym){
   const pos=PORT.positions.find(p=>p.sym===sym);
   if(!pos)return[];
-  const L=[{price:pos.avgPrice,label:'Avg ₹'+fmtP(pos.avgPrice),color:'#f97316',drag:false}];
+  const L=[{price:pos.avgPrice,label:(pos.qty>0?'Long ':'Short ')+qn(Math.abs(pos.qty))+' @ ₹'+fmtP(pos.avgPrice),color:'#f97316',drag:false}];
   if(pos.sl>0)L.push({price:pos.sl,label:'SL ₹'+fmtP(pos.sl),color:'#F7525F',drag:false});
   if(pos.tp>0)L.push({price:pos.tp,label:'TGT ₹'+fmtP(pos.tp),color:'#22AB94',drag:false});
   return L}
+/* market orders: buys lift the ask, sells hit the bid (when the book is sane), else last traded price */
+function execPrice(s,side){const last=s.last||0;if(!(last>0))return 0;const q=side==='buy'?s.ask:s.bid;return q>0&&Math.abs(q/last-1)<=0.01?q:last}
+function lotOf(s){return s&&s.ikey?(s.lot||0):1}
 
-/* ---- every buy/sell (manual, stop-loss or target) goes through here ---- */
+/* ---- every fill (manual, limit, stop-loss or target) goes through here ---- */
 let _tid=0;
-function fillOrder(sym,side,qty,price,src,risk){
-  const sx=SYM(sym)||{},pos0=PORT.positions.find(p=>p.sym===sym),before=pos0?{q:pos0.qty,avg:pos0.avgPrice}:{q:0,avg:0},buy=side==='buy',value=qty*price;
-  let plan=null;
-  if(buy){PORT.cash-=value;let pos=pos0;
-    if(pos){pos.avgPrice=(pos.avgPrice*pos.qty+value)/(pos.qty+qty);pos.qty+=qty}else{pos={sym,qty,avgPrice:price,sl:null,tp:null,meta:{n:sx.n,ex:sx.ex,cls:sx.cls,sec:sx.sec,ikey:sx.ikey,lot:sx.lot,tv:sx.tv,und:sx.und,strike:sx.strike,side:sx.side,expiry:sx.expiry}};PORT.positions.push(pos)}
-    if(risk&&risk.sl>0)pos.sl=risk.sl;if(risk&&risk.tp>0)pos.tp=risk.tp;
-    plan={entry:price,sl:pos.sl||null,tp:pos.tp||null}}
-  else{PORT.cash+=value;plan=pos0?{entry:pos0.avgPrice,sl:pos0.sl||null,tp:pos0.tp||null}:null;pos0.qty-=qty;if(pos0.qty<=1e-9)PORT.positions=PORT.positions.filter(p=>p.sym!==sym)}
-  const now=Date.now(),tr=mkTrade({id:now*10+(++_tid%10),t:now,sym,side,qty,price,src,plan},before),after=PORT.positions.find(p=>p.sym===sym);
-  tr.posAfter=after?after.qty:0;PORT.cash-=tr.charges;TRADES.push(tr);
-  PORT.orders.unshift({id:tr.id,time:new Date(now).toLocaleTimeString('en-IN'),sym,side:buy?'BUY':'SELL',qty,price,status:src==='SL'?'STOP-LOSS':src==='TP'?'TARGET':'EXECUTED'});
+function fillOrder(sym,side,qty,price,src,risk,otype){
+  const sx=SYM(sym)||{},pos0=PORT.positions.find(p=>p.sym===sym),before={q:pos0?pos0.qty:0,avg:pos0?pos0.avgPrice:0},sg=side==='buy'?1:-1;
+  PORT.cash-=sg*qty*price;
+  const newQ=+(before.q+sg*qty).toFixed(8),oldRisk={sl:pos0&&pos0.sl||null,tp:pos0&&pos0.tp||null};let plan,pos=pos0;
+  if(!pos){pos={sym,qty:0,avgPrice:price,sl:null,tp:null,meta:{n:sx.n,ex:sx.ex,cls:sx.cls,sec:sx.sec,ikey:sx.ikey,lot:sx.lot,tv:sx.tv,und:sx.und,strike:sx.strike,side:sx.side,expiry:sx.expiry}};PORT.positions.push(pos)}
+  if(before.q===0||sgn(before.q)===sg){            /* opening or adding */
+    pos.avgPrice=(Math.abs(before.q)*pos.avgPrice+qty*price)/(Math.abs(before.q)+qty);pos.qty=newQ;
+    if(risk&&risk.sl>0)pos.sl=risk.sl;if(risk&&risk.tp>0)pos.tp=risk.tp;plan={entry:price,sl:pos.sl||null,tp:pos.tp||null}}
+  else{                                            /* reducing, closing or flipping */
+    plan={entry:before.avg,sl:oldRisk.sl,tp:oldRisk.tp};
+    if(Math.abs(newQ)<1e-9)PORT.positions=PORT.positions.filter(p=>p.sym!==sym);
+    else if(sgn(newQ)===sgn(before.q))pos.qty=newQ;
+    else{pos.qty=newQ;pos.avgPrice=price;pos.sl=risk&&risk.sl>0?risk.sl:null;pos.tp=risk&&risk.tp>0?risk.tp:null}}
+  const now=Date.now(),tr=mkTrade({id:now*10+(++_tid%10),t:now,sym,side,qty,price,src,otype,plan},before);
+  tr.posAfter=newQ;PORT.cash-=tr.charges;TRADES.push(tr);
+  PORT.orders.unshift({id:tr.id,time:new Date(now).toLocaleTimeString('en-IN'),sym,side:side.toUpperCase(),qty,price,type:otype||'market',status:src==='SL'?'STOP-LOSS':src==='TP'?'TARGET':otype==='limit'?'LIMIT FILLED':'EXECUTED'});
   PORT.orders=PORT.orders.slice(0,200);savePORT();saveTrades();return tr}
-function closePos(sym,src='manual'){const p=PORT.positions.find(x=>x.sym===sym);if(!p)return;const s=SYM(sym),px=s&&s.last>0?s.last:p.avgPrice;
-  const tr=fillOrder(sym,'sell',p.qty,px,src);refreshTradeUI(sym);return tr}
+/* returns an error string, or null when the order is allowed */
+function orderError(sym,side,qty,price){const s=SYM(sym);if(!s||!(price>0))return'No live price for this instrument yet';
+  const pos=PORT.positions.find(p=>p.sym===sym),q=pos?pos.qty:0,sg=side==='buy'?1:-1,value=qty*price,ch=calcCharges(side,value,kindOf(s)).total;
+  if(q!==0&&sgn(q)!==sg){if(qty>Math.abs(q)+1e-9)return'You hold '+qn(Math.abs(q))+' — close that first or reduce the quantity'}
+  else if(sg>0){if(value+ch>PORT.cash+1e-9)return'Insufficient cash: need '+money(value+ch,0)+', available '+money(PORT.cash,0)}
+  else{const exp=PORT.positions.reduce((a,p)=>{const y=SYM(p.sym);return a+(p.qty<0?-p.qty*(y&&y.last>0?y.last:p.avgPrice):0)},0)+value,eq=equity();
+    if(exp>eq*MARGIN_CAP+1e-9)return'Short exposure '+money(exp,0)+' would exceed your equity '+money(eq*MARGIN_CAP,0)}
+  return null}
+function closePos(sym,src='manual',px){const p=PORT.positions.find(x=>x.sym===sym);if(!p)return null;const s=SYM(sym)||{},side=p.qty>0?'sell':'buy',
+  price=px>0?px:(src==='manual'?execPrice(s,side):s.last)||p.avgPrice;
+  const tr=fillOrder(sym,side,Math.abs(p.qty),price,src,null,'market');refreshTradeUI(sym);return tr}
 function refreshTradeUI(sym){
   if($('#ticket'))buildTicket();
   if(CHART&&ACTIVE.sym&&ACTIVE.sym.s===sym)CHART.lines=buildOrderLines(sym);
   if($('#v-orders.on'))renderOrders();
-  const t=$('#chartBtabs button.on');if(t&&t.textContent==='My Orders')renderOrdersInBottom()}
-/* stop-loss / target watcher: runs whether or not the chart is open */
-function checkExits(){for(const p of PORT.positions.slice()){const s=SYM(p.sym);if(!s||!(s.last>0))continue;
-  const hitSL=p.sl>0&&s.last<=p.sl,hitTP=!hitSL&&p.tp>0&&s.last>=p.tp;if(!hitSL&&!hitTP)continue;
-  const tr=closePos(p.sym,hitSL?'SL':'TP');if(tr)toast(`${hitSL?'Stop-loss':'Target'} hit — sold ${qn(tr.qty)} ${p.sym} @ ₹${fmtP(tr.price)} · ${smoney(tr.net)}`,hitSL?'bad':'ok',6000)}}
+  if(bottomIsOrders())renderOrdersInBottom();updNavBadge()}
+const bottomIsOrders=()=>{const t=$('#chartBtabs button.on');return!!(t&&/Positions/.test(t.textContent))};
+function updNavBadge(){const b=$('#mainNav button[data-tab="v-orders"]');if(b)b.title=PORT.positions.length+' open position(s) · '+PORT.pending.length+' pending'}
+/* watcher: stop-loss, target and pending limit orders — runs whichever tab is open */
+function checkExits(){
+  for(const p of PORT.positions.slice()){const s=SYM(p.sym);if(!s||!(s.last>0))continue;const L=p.qty>0;
+    const hitSL=p.sl>0&&(L?s.last<=p.sl:s.last>=p.sl),hitTP=!hitSL&&p.tp>0&&(L?s.last>=p.tp:s.last<=p.tp);if(!hitSL&&!hitTP)continue;
+    const tr=closePos(p.sym,hitSL?'SL':'TP',s.last);if(tr)toast(`${hitSL?'Stop-loss':'Target'} hit — ${L?'sold':'covered'} ${qn(tr.qty)} ${p.sym} @ ₹${fmtP(tr.price)} · ${smoney(tr.net)}`,hitSL?'bad':'ok',6000)}
+  for(const o of PORT.pending.slice()){const s=SYM(o.sym);if(!s||!(s.last>0))continue;
+    const hit=o.side==='buy'?s.last<=o.limit:s.last>=o.limit;if(!hit)continue;
+    PORT.pending=PORT.pending.filter(x=>x.id!==o.id);const price=o.side==='buy'?Math.min(o.limit,s.last):Math.max(o.limit,s.last),err=orderError(o.sym,o.side,o.qty,price);
+    if(err){savePORT();toast('Limit order cancelled — '+err,'bad',6000);refreshTradeUI(o.sym);continue}
+    const tr=fillOrder(o.sym,o.side,o.qty,price,'manual',o.risk,'limit');toast(`Limit ${o.side} filled — ${qn(tr.qty)} ${o.sym} @ ₹${fmtP(price)}`,'ok',5000);refreshTradeUI(o.sym)}}
 setInterval(checkExits,1500);
 
 /* ---- order ticket ---- */
+const TK={side:'BUY',type:'market'};
 function buildTicket(){
   const el=$('#ticket');if(!el)return;
-  const s=ACTIVE.sym,pos=PORT.positions.find(p=>p.sym===s?.s),ph=s?.last||0,isOpt=!!(s&&s.ikey),lot=isOpt?(s.lot||0):1;
+  const s=ACTIVE.sym,isOpt=!!(s&&s.ikey),lot=lotOf(s),unit=isOpt?'lots':s&&s.tv?'units':'shares';
   el.innerHTML=`<div class="fld"><input class="inp" id="tkFind" list="tkFindList" placeholder="Find any NSE stock to trade…" autocomplete="off" onchange="openStock(this.value);this.value=''"><datalist id="tkFindList"></datalist></div>
-    <div class="tk-h"><b>Order — ${esc(s?.s||'—')}</b>${s?`<span class="badge b-mute" style="margin-left:6px">${esc(isOpt?'Option':s.tv?'Global':s.cls==='Index'?'Index':'Stock')}</span>`:''}</div>
+    <div class="tk-h"><b>${esc(s?.s||'—')}</b>${s?`<span class="badge b-mute" style="margin-left:6px">${esc(isOpt?'Option':s.tv?'Global':s.cls==='Index'?'Index':'Stock')}</span>`:''}<span class="tk-ltp"><b class="num" id="tkLtp">—</b> <small id="tkChg"></small></span></div>
+    <div class="muted" id="tkBA" style="font-size:11.5px"></div>
     <div class="side-seg"><button class="buy on" id="tkBuy" onclick="tkSide('BUY')">BUY</button><button class="sell" id="tkSell" onclick="tkSide('SELL')">SELL</button></div>
-    <div class="fld"><label>${isOpt?'Lots':s&&s.tv?'Qty (units)':'Qty (shares)'}${isOpt?`<span class="muted" id="tkUnits">${lot?'1 lot = '+lot+' · qty '+qn(lot):'loading lot size…'}</span>`:''}</label><input class="inp" id="tkQty" type="number" min="1" value="1" oninput="updTkUnits()"></div>
-    <div class="fld"><label>Price <span class="muted">(market)</span></label><div class="inp-w"><input class="inp" id="tkPx" type="number" step="0.05" value="${s?.last?.toFixed(2)||0}"><span class="suf">₹</span></div></div>
+    <div class="seg" id="tkType" style="width:100%"><button class="on" data-t="market" onclick="tkType('market')" style="flex:1">Market</button><button data-t="limit" onclick="tkType('limit')" style="flex:1">Limit</button></div>
+    <div class="fld"><label>${isOpt?'Lots':s&&s.tv?'Quantity (units)':'Quantity (shares)'}<span class="muted" id="tkUnits"></span></label><input class="inp" id="tkQty" type="number" min="1" step="1" value="1" oninput="updTicketLive()">
+      <div class="tk-q"><button onclick="tkQ(1)">1</button><button onclick="tkQ(5)">5</button><button onclick="tkQ(10)">10</button><button onclick="tkQ(100)">100</button><button onclick="tkQ('max')">${'Max'}</button></div></div>
+    <div class="fld" id="tkLimitW" style="display:none"><label>Limit price <span class="muted">fills when LTP reaches it</span></label><div class="inp-w"><input class="inp" id="tkLimit" type="number" step="0.05" min="0" oninput="updTicketLive()"><span class="suf">₹</span></div></div>
     <div class="tk-risk" id="tkRisk">
-      <div class="fld"><label>Stop-loss <span class="muted">(optional)</span></label><div class="inp-w"><input class="inp" id="tkSl" type="number" step="0.05" min="0" placeholder="${ph?(ph*0.99).toFixed(2):''}" value="${pos&&pos.sl?pos.sl:''}"><span class="suf">SL</span></div></div>
-      <div class="fld"><label>Target <span class="muted">(optional)</span></label><div class="inp-w"><input class="inp" id="tkTp" type="number" step="0.05" min="0" placeholder="${ph?(ph*1.02).toFixed(2):''}" value="${pos&&pos.tp?pos.tp:''}"><span class="suf">TGT</span></div></div>
+      <div class="fld"><label>Stop-loss <span class="muted">(optional)</span></label><div class="inp-w"><input class="inp" id="tkSl" type="number" step="0.05" min="0" placeholder="—"><span class="suf">SL</span></div><div class="tk-q"><button onclick="tkPre('sl',1)">1%</button><button onclick="tkPre('sl',2)">2%</button><button onclick="tkPre('sl',5)">5%</button></div></div>
+      <div class="fld"><label>Target <span class="muted">(optional)</span></label><div class="inp-w"><input class="inp" id="tkTp" type="number" step="0.05" min="0" placeholder="—"><span class="suf">TGT</span></div><div class="tk-q"><button onclick="tkPre('tp',2)">2%</button><button onclick="tkPre('tp',4)">4%</button><button onclick="tkPre('tp',10)">10%</button></div></div>
     </div>
-    ${pos?`<div class="sum"><div><span>Position</span><b>${pos.qty} shares @ ₹${fmtP(pos.avgPrice)}</b></div><div><span>P&amp;L</span><b class="${cls(portPnl(s.s))}">${smoney(portPnl(s.s))}</b></div>${pos.sl?`<div><span>Stop-loss</span><b class="down">₹${fmtP(pos.sl)}</b></div>`:''}${pos.tp?`<div><span>Target</span><b class="up">₹${fmtP(pos.tp)}</b></div>`:''}</div>`:''}
-    <div class="sum"><div><span>Cash</span><b>₹${fmtP(PORT.cash)}</b></div></div>
+    <div class="sum" id="tkEst"></div>
     <div class="tk-msg err" id="tkMsg"></div>
-    <button class="go buy" id="tkGo" onclick="placeOrder()">Place BUY Order</button>`;
-  fillFindList();tkSide(_tkSide)}
+    <button class="go buy" id="tkGo" onclick="placeOrder()">Place BUY Order</button>
+    <div id="tkPos"></div>`;
+  fillFindList();tkSide(TK.side);tkType(TK.type);updTicketLive()}
 function fillFindList(){const dl=$('#tkFindList');if(!dl)return;const seen=new Set(),list=[...NSE_SYMS.map(x=>({s:x.s,n:x.n})),...((scanState.uni&&scanState.uni.stocks)||[])];
   dl.innerHTML=list.filter(x=>!seen.has(x.s)&&seen.add(x.s)).map(x=>`<option value="${esc(x.s)}">${esc(x.n||'')}</option>`).join('');
   if(!scanState.uni&&!fillFindList._l){fillFindList._l=1;loadScanUniverse().then(fillFindList)}}
-function updTkUnits(){const s=ACTIVE.sym,el=$('#tkUnits');if(!el||!s||!s.ikey)return;const l=s.lot||0,n=Math.max(1,parseInt($('#tkQty').value)||1);el.textContent=l?`${n} × ${l} = qty ${qn(n*l)}`:'loading lot size…'}
-
-let _tkSide='BUY';
-function tkSide(side){_tkSide=side;const b=$('#tkBuy'),s=$('#tkSell'),g=$('#tkGo'),r=$('#tkRisk');
-  if(b){b.className='buy'+(side==='BUY'?' on':'');s.className='sell'+(side==='SELL'?' on':'')}
-  if(g){g.className='go '+side.toLowerCase();g.textContent='Place '+side+' Order'}
-  if(r)r.style.display=side==='BUY'?'':'none'}
-
+function tkSide(side){TK.side=side;const b=$('#tkBuy'),s=$('#tkSell');if(b){b.className='buy'+(side==='BUY'?' on':'');s.className='sell'+(side==='SELL'?' on':'')}updTicketLive()}
+function tkType(t){TK.type=t;$$('#tkType button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));const w=$('#tkLimitW');
+  if(w){w.style.display=t==='limit'?'':'none';const l=$('#tkLimit');if(t==='limit'&&l&&!l.value&&ACTIVE.sym&&ACTIVE.sym.last>0)l.value=ACTIVE.sym.last.toFixed(2)}updTicketLive()}
+function tkRef(){const s=ACTIVE.sym;if(!s)return 0;if(TK.type==='limit'){const v=parseFloat($('#tkLimit')?.value);if(v>0)return v}return execPrice(s,TK.side==='BUY'?'buy':'sell')||s.last||0}
+function tkQ(n){const s=ACTIVE.sym;if(!s)return;const lot=lotOf(s)||1,pos=PORT.positions.find(p=>p.sym===s.s),sg=TK.side==='BUY'?1:-1,px=tkRef();let v=n;
+  if(n==='max'){if(pos&&sgn(pos.qty)!==sg)v=Math.max(1,Math.floor(Math.abs(pos.qty)/lot));else if(px>0){const cap=sg>0?PORT.cash:Math.max(0,equity()*MARGIN_CAP-PORT.positions.reduce((a,p)=>a+(p.qty<0?-p.qty*((SYM(p.sym)||{}).last||p.avgPrice):0),0));v=Math.max(1,Math.floor(cap/(px*lot*1.003)))}else v=1}
+  const q=$('#tkQty');if(q){q.value=v;updTicketLive()}}
+function tkPre(k,pct){const px=tkRef();if(!(px>0))return;const long=TK.side==='BUY',up=(k==='tp')===long;const v=px*(1+(up?1:-1)*pct/100);const el=$(k==='sl'?'#tkSl':'#tkTp');if(el)el.value=v.toFixed(2)}
+/* refreshes numbers in place (never rebuilds, so typing is not interrupted) */
+function updTicketLive(){const s=ACTIVE.sym;if(!s||!$('#tkLtp'))return;
+  const sg=TK.side==='BUY'?1:-1,pos=PORT.positions.find(p=>p.sym===s.s),closing=!!pos&&sgn(pos.qty)!==sg,lot=lotOf(s),lots=Math.max(0,parseInt($('#tkQty')?.value)||0),qty=lots*lot,px=tkRef(),side=sg>0?'buy':'sell';
+  $('#tkLtp').textContent=s.last>0?fmtP(s.last,s.dp||2):'—';
+  const c=$('#tkChg');if(c){const ch=s.chgPct||0;c.textContent=s.last>0?(ch>=0?'+':'')+ch.toFixed(2)+'%':'';c.className=cls(ch)}
+  const ba=$('#tkBA');if(ba)ba.textContent=(s.bid>0||s.ask>0?`Bid ${fmtP(s.bid||0)} · Ask ${fmtP(s.ask||0)} · `:'')+(window.MKT_OPEN===false?'Market closed — last traded price':'Live price');
+  const u=$('#tkUnits');if(u)u.textContent=s.ikey?(lot?` ${lots} × ${lot} = ${qn(qty)} qty`:' loading lot size…'):'';
+  const risk=$('#tkRisk');if(risk)risk.style.display=closing?'none':'';
+  const lw=$('#tkLimitW');if(lw)lw.style.display=TK.type==='limit'?'':'none';
+  const go=$('#tkGo');if(go){go.className='go '+(sg>0?'buy':'sell');
+    const verb=closing?(sg>0?'Cover short':'Sell to close'):(sg>0?'BUY':'SELL (short)');
+    go.textContent=`${verb}${qty?' '+qn(qty):''} ${s.s}${TK.type==='market'?' @ market':px>0?' @ ₹'+fmtP(px):''}`}
+  const est=$('#tkEst');if(est){if(qty>0&&px>0){const val=qty*px,ch=calcCharges(side,val,kindOf(s)).total;
+    est.innerHTML=`<div><span>Order value</span><b>${money(val,0)}</b></div><div><span>Est. charges</span><b>${money(ch)}</b></div><div><span>${closing?'Cash after':sg>0?'Cash after':'Margin used'}</span><b>${money(sg>0?PORT.cash-val-ch:val,0)}</b></div><div><span>Available cash</span><b>${money(PORT.cash,0)}</b></div>`}
+    else est.innerHTML=`<div><span>Available cash</span><b>${money(PORT.cash,0)}</b></div>`}
+  const pb=$('#tkPos');if(pb){if(pos){const u=pos.qty*((s.last||pos.avgPrice)-pos.avgPrice);
+    pb.innerHTML=`<div class="sum tk-posbox"><div><span>Your position</span><b>${pos.qty>0?'Long':'Short'} ${qn(Math.abs(pos.qty))} @ ₹${fmtP(pos.avgPrice)}</b></div><div><span>Unrealised P&amp;L</span><b class="${cls(u)}">${smoney(u)}</b></div>${pos.sl?`<div><span>Stop-loss</span><b class="down">₹${fmtP(pos.sl)}</b></div>`:''}${pos.tp?`<div><span>Target</span><b class="up">₹${fmtP(pos.tp)}</b></div>`:''}<button class="btn sm" style="margin-top:4px" onclick="closePos('${esc(pos.sym)}')">Close whole position</button></div>`}
+    else pb.innerHTML=''}}
 function placeOrder(){
-  const sym=ACTIVE.sym?.s;const s=SYM(sym);if(!s)return;
-  const lots=parseInt($('#tkQty')?.value||'0'),lotSz=s.ikey?(s.lot||0):1,qty=lots*lotSz,price=parseFloat($('#tkPx')?.value||s.last),msg=$('#tkMsg');
-  const err=t=>{if(msg){msg.className='tk-msg err';msg.textContent=t}};
-  if(s.ikey&&!lotSz)return err('Lot size is still loading — try again in a moment');
-  if(!(lots>=1))return err('Quantity must be ≥ 1');
-  if(!(price>0))return err('Enter a valid price');
+  const s=ACTIVE.sym;if(!s)return;const sym=s.s,msg=$('#tkMsg'),err=t=>{if(msg){msg.className='tk-msg err';msg.textContent=t}return null};
+  const sg=TK.side==='BUY'?1:-1,side=sg>0?'buy':'sell',lot=lotOf(s),lots=parseInt($('#tkQty')?.value||'0');
+  if(s.ikey&&!lot)return err('Lot size is still loading — try again in a moment');
+  if(!(lots>=1))return err('Quantity must be at least 1');
+  const qty=lots*lot,pos=PORT.positions.find(p=>p.sym===sym),closing=!!pos&&sgn(pos.qty)!==sg;
+  if(!(s.last>0))return err('No live price for '+sym+' yet');
   let risk=null;
-  if(_tkSide==='BUY'){
-    if(price*qty>PORT.cash)return err('Insufficient cash: need ₹'+fmtP(price*qty));
-    const sl=parseFloat($('#tkSl')?.value),tp=parseFloat($('#tkTp')?.value);
-    if(sl>0&&sl>=price)return err('Stop-loss must be below the buy price');
-    if(tp>0&&tp<=price)return err('Target must be above the buy price');
+  if(!closing){const sl=parseFloat($('#tkSl')?.value),tp=parseFloat($('#tkTp')?.value),ref=tkRef();
+    if(sl>0&&(sg>0?sl>=ref:sl<=ref))return err(sg>0?'Stop-loss must be below the entry price':'Stop-loss must be above the entry price');
+    if(tp>0&&(sg>0?tp<=ref:tp>=ref))return err(sg>0?'Target must be above the entry price':'Target must be below the entry price');
     risk={sl:sl>0?sl:null,tp:tp>0?tp:null}}
-  else{const pos=PORT.positions.find(p=>p.sym===sym);if(!pos||pos.qty<qty)return err('Insufficient shares')}
   if(msg)msg.className='tk-msg';
-  const tr=fillOrder(sym,_tkSide.toLowerCase(),qty,price,'manual',risk);
-  toast(`${_tkSide} ${qn(qty)} ${sym} @ ₹${fmtP(price)} executed`,'ok');
-  refreshTradeUI(sym);return tr}
+  if(TK.type==='limit'){const lim=parseFloat($('#tkLimit')?.value);if(!(lim>0))return err('Enter a limit price');
+    const marketable=sg>0?s.last<=lim:s.last>=lim;
+    if(!marketable){const e=orderError(sym,side,qty,lim);if(e)return err(e);
+      PORT.pending.push({id:Date.now(),t:Date.now(),sym,side,qty,limit:lim,risk,meta:{n:s.n,ex:s.ex,cls:s.cls,sec:s.sec,ikey:s.ikey,lot:s.lot,tv:s.tv,und:s.und,strike:s.strike,side:s.side,expiry:s.expiry}});
+      savePORT();toast(`Limit ${side} placed — ${qn(qty)} ${sym} @ ₹${fmtP(lim)} (waiting)`,'ok');refreshTradeUI(sym);return}}
+  const price=execPrice(s,side),e=orderError(sym,side,qty,price);if(e)return err(e);
+  const tr=fillOrder(sym,side,qty,price,'manual',risk,'market');
+  toast(`${side.toUpperCase()} ${qn(qty)} ${sym} @ ₹${fmtP(price)} executed${tr.closeQty?' · '+smoney(tr.net):''}`,'ok');
+  refreshTradeUI(sym)}
+function cancelPending(id){PORT.pending=PORT.pending.filter(o=>o.id!=id);savePORT();toast('Order cancelled','ok');refreshTradeUI(ACTIVE.sym&&ACTIVE.sym.s)}
 
 function renderOrdersInBottom(){
   const body=$('#chartBbody');if(!body)return;
-  if(!PORT.orders.length){body.innerHTML='<div class="empty" style="font-size:12px;padding:16px">No orders yet.</div>';return}
-  const tag={SL:'Stop-loss hit',TP:'Target hit'};
-  body.innerHTML=`<table><thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th>Status</th></tr></thead><tbody>${PORT.orders.slice(0,20).map(o=>`<tr><td>${esc(o.time)}</td><td>${esc(o.sym)}</td><td class="${o.side==='BUY'?'up':'down'}">${esc(o.side)}</td><td class="r">${o.qty}</td><td class="r">₹${fmtP(o.price)}</td><td><span class="badge ${o.status==='STOP-LOSS'?'b-down':o.status==='TARGET'?'b-up':'b-info'}">${esc(o.status)}</span></td></tr>`).join('')}</tbody></table>`}
+  const pos=PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice);
+    return`<tr><td><b>${esc(p.sym)}</b></td><td class="${p.qty>0?'up':'down'}">${p.qty>0?'Long':'Short'}</td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">₹${fmtP(p.avgPrice)}</td><td class="r">₹${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r"><span class="down">${p.sl?fmtP(p.sl):'—'}</span> / <span class="up">${p.tp?fmtP(p.tp):'—'}</span></td><td class="r"><button class="btn sm" onclick="closePos('${esc(p.sym)}')">Close</button></td></tr>`}).join('');
+  const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td class="${o.side==='buy'?'up':'down'}">${o.side.toUpperCase()}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.limit)}</td><td colspan="3" class="muted">Pending limit</td><td class="r"><button class="btn sm" onclick="cancelPending(${o.id})">Cancel</button></td></tr>`).join('');
+  const ord=PORT.orders.slice(0,15).map(o=>`<tr><td>${esc(o.time)}</td><td>${esc(o.sym)}</td><td class="${o.side==='BUY'?'up':'down'}">${esc(o.side)}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.price)}</td><td><span class="badge ${o.status==='STOP-LOSS'?'b-down':o.status==='TARGET'?'b-up':'b-info'}">${esc(o.status)}</span></td></tr>`).join('');
+  if(!pos&&!pend&&!ord){body.innerHTML='<div class="empty" style="font-size:12px;padding:16px">No positions or orders yet.</div>';return}
+  body.innerHTML=`${pos||pend?`<table><thead><tr><th>Position</th><th>Side</th><th class="r">Qty</th><th class="r">Avg</th><th class="r">LTP</th><th class="r">P&amp;L</th><th class="r">SL / TGT</th><th></th></tr></thead><tbody>${pos}${pend}</tbody></table>`:''}
+    ${ord?`<table><thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th>Status</th></tr></thead><tbody>${ord}</tbody></table>`:''}`}
 
-/* ===================== Journal (Orders / Portfolio tab) ===================== */
+/* ===================== Journal (Journal tab) ===================== */
 const JR={range:'today',day:null,kind:'ALL',side:'ALL',q:'',tab:'trades',page:0,size:25,open:{}};
 const jDay=(d,n)=>istDay(new Date(d+'T12:00:00+05:30').getTime()+n*864e5);
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
@@ -1595,14 +1662,19 @@ const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:
 const SRC_LBL={manual:'Manual',SL:'Stop-loss hit',TP:'Target hit'};
 function jBounds(){const t=istDay(Date.now());switch(JR.range){case'today':return[t,t];case'yday':return[jDay(t,-1),jDay(t,-1)];case'7d':return[jDay(t,-6),t];case'30d':return[jDay(t,-29),t];case'day':return[JR.day||t,JR.day||t];default:return['0000-00-00','9999-99-99']}}
 function jFilter(list){const[a,b]=jBounds(),q=JR.q.trim().toLowerCase();return list.filter(x=>x.day>=a&&x.day<=b&&(JR.kind==='ALL'||x.kind===JR.kind)&&(JR.side==='ALL'||x.side===JR.side)&&(!q||(x.sym+' '+x.name).toLowerCase().includes(q)))}
-/* a round trip = position opened then fully closed */
+/* a round trip = a position opened and then fully closed (long or short) */
 function buildTrips(){const st={},trips=[];
-  for(const x of TRADES.slice().sort((a,b)=>a.t-b.t)){let s=st[x.sym]||(st[x.sym]={q:0,trip:null});
-    if(x.side==='buy'){if(s.q<=1e-9)s.trip={sym:x.sym,name:x.name,kind:x.kind,open:x.t,close:null,qtyIn:0,costIn:0,qtyOut:0,valOut:0,gross:0,charges:0,fills:[],plan:x.plan,exit:null};
-      const T=s.trip;T.fills.push(x.id);T.charges+=x.charges;T.qtyIn+=x.qty;T.costIn+=x.qty*x.price;s.q+=x.qty;if(x.plan&&!T.plan)T.plan=x.plan;else if(x.plan)T.plan=x.plan}
-    else{const T=s.trip;if(!T)continue;T.fills.push(x.id);T.charges+=x.charges;T.gross+=x.realized;T.qtyOut+=x.closeQty;T.valOut+=x.closeQty*x.price;s.q=+(s.q-x.qty).toFixed(8);T.exit=x.src;
-      if(s.q<=1e-9){s.q=0;T.close=x.t;T.net=+(T.gross-T.charges).toFixed(2);trips.push(T);s.trip=null}}}
-  return{closed:trips,open:Object.values(st).filter(s=>s.trip&&s.q>1e-9).map(s=>s.trip)}}
+  for(const x of TRADES.slice().sort((a,b)=>a.t-b.t)){const sg=x.side==='buy'?1:-1;let s=st[x.sym]||(st[x.sym]={q:0,trip:null});
+    const mk=(qty,price)=>({sym:x.sym,name:x.name,kind:x.kind,dir:sg>0?'Long':'Short',open:x.t,close:null,qtyIn:qty,costIn:qty*price,qtyOut:0,valOut:0,gross:0,charges:0,fills:[],plan:x.plan,exit:null});
+    if(s.q===0||Math.abs(s.q)<1e-9){s.q=0;s.trip=mk(0,0)}
+    const T=s.trip;T.fills.push(x.id);T.charges+=x.charges;T.gross+=x.realized;
+    const same=sgn(s.q)===sg||s.q===0;
+    if(same){T.qtyIn+=x.qty;T.costIn+=x.qty*x.price;if(x.plan&&x.plan.sl!=null||x.plan&&x.plan.tp!=null)T.plan=x.plan}
+    else{T.qtyOut+=x.closeQty;T.valOut+=x.closeQty*x.price;T.exit=x.src}
+    s.q=+(s.q+sg*x.qty).toFixed(8);
+    if(Math.abs(s.q)<1e-9){s.q=0;T.close=x.t;T.net=+(T.gross-T.charges).toFixed(2);trips.push(T);s.trip=null}
+    else if(!same&&sgn(s.q)===sg){T.close=x.t;T.net=+(T.gross-T.charges).toFixed(2);trips.push(T);const rem=Math.abs(s.q);s.trip={...mk(rem,x.price),fills:[],charges:0,gross:0}}}
+  return{closed:trips,open:Object.values(st).filter(s=>s.trip&&Math.abs(s.q)>1e-9).map(s=>s.trip)}}
 function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>t.net<=0),sum=a=>a.reduce((x,t)=>x+t.net,0),gw=sum(w),gl=Math.abs(sum(l));
   const gross=fills.reduce((a,x)=>a+x.realized,0),ch=fills.reduce((a,x)=>a+x.charges,0);let peak=0,cum=0,dd=0;
   for(const t of trips.slice().sort((a,b)=>a.close-b.close)){cum+=t.net;peak=Math.max(peak,cum);dd=Math.max(dd,peak-cum)}
@@ -1611,12 +1683,12 @@ function renderOrders(){
   const el=$('#v-orders');if(!el)return;
   const fills=jFilter(TRADES),{closed,open}=buildTrips(),[a,b]=jBounds();
   const trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
-  const unreal=PORT.positions.reduce((s,p)=>s+portPnl(p.sym),0),mv=PORT.positions.reduce((s,p)=>{const y=SYM(p.sym);return s+(y?y.last*p.qty:p.avgPrice*p.qty)},0);
+  const unreal=PORT.positions.reduce((s,p)=>s+portPnl(p.sym),0),pv=posValue(),eq=PORT.cash+pv,ret=(eq/PORT.base-1)*100;
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
-  el.innerHTML=`<div class="page"><div class="page-h"><div style="flex:1 1 240px"><h1>Journal</h1><p class="muted" style="margin-top:2px">Every paper buy, sell, stop-loss and target hit — with charges, P&amp;L and your notes. Stored in this browser.</p></div>
+  el.innerHTML=`<div class="page"><div class="page-h"><div style="flex:1 1 240px"><h1>Journal</h1><p class="muted" style="margin-top:2px">Every paper buy, sell, short, stop-loss and target hit — with charges, P&amp;L and your notes. Stored in this browser.</p></div>
       <button class="btn" data-jr="csv:1">Export CSV</button><button class="btn" data-jr="reset:1">Reset account</button></div>
-    <div class="jr-kpis">${kpi('Cash',money(PORT.cash),'available')}${kpi('Market value',money(mv),PORT.positions.length+' open position'+(PORT.positions.length===1?'':'s'))}${kpi('Unrealised P&L',smoney(unreal),'open positions',cls(unreal))}${kpi('Total value',money(PORT.cash+mv),'cash + positions')}</div>
+    <div class="jr-kpis">${kpi('Total value',money(eq,0),'cash + positions',cls(ret))}${kpi('Return',(ret>=0?'+':'−')+Math.abs(ret).toFixed(2)+'%','on '+money(PORT.base,0)+' capital',cls(ret))}${kpi('Cash',money(PORT.cash,0),'available')}${kpi('Open positions',PORT.positions.length+(PORT.pending.length?' + '+PORT.pending.length+' pending':''),'net value '+smoney(pv,0))}${kpi('Unrealised P&L',smoney(unreal),'open positions',cls(unreal))}</div>
     <div class="jr-kpis">${kpi('Net P&L',smoney(S.net),S.fills+' fill'+(S.fills===1?'':'s')+' · after charges',cls(S.net))}${kpi('Gross P&L',smoney(S.gross),'before charges',cls(S.gross))}${kpi('Charges (est.)',money(S.ch),'brokerage, STT, taxes')}${kpi('Win rate',trips.length?(S.win*100).toFixed(0)+'%':'—',S.wins+' won · '+S.losses+' lost')}${kpi('Avg win / loss',trips.length?`<span class="up">${money(S.avgW,0)}</span> / <span class="down">${money(S.avgL,0)}</span>`:'—','per closed trade')}${kpi('Profit factor',trips.length?(isFinite(S.pf)?S.pf.toFixed(2):'∞'):'—','wins ÷ losses')}${kpi('Best / worst',trips.length?`<span class="up">${money(S.best,0)}</span> / <span class="down">${money(Math.abs(S.worst),0)}</span>`:'—','single trade')}${kpi('SL / Target hits',`<span class="down">${S.slHits}</span> / <span class="up">${S.tpHits}</span>`,'auto exits')}</div>
     <div class="filters"><div class="chips">${[['today','Today'],['yday','Yesterday'],['7d','7 days'],['30d','30 days'],['all','All time']].map(([v,l])=>chip('range',v,l,JR.range)).join('')}<label class="jr-date"><input type="date" id="jrDay" value="${JR.range==='day'?JR.day:''}" max="${istDay(Date.now())}" aria-label="Pick a day"></label></div>
       <div class="chips">${[['ALL','All'],['stock','Stocks'],['option','Options'],['index','Indices'],['global','Global']].map(([v,l])=>chip('kind',v,l,JR.kind)).join('')}</div>
@@ -1626,7 +1698,7 @@ function renderOrders(){
     <div class="seg" id="jrTabs" style="margin-bottom:12px">${[['trades','Trades ('+fills.length+')'],['trips','Round trips ('+trips.length+')'],['days','Daily summary'],['open','Open positions ('+PORT.positions.length+')']].map(([v,l])=>`<button class="${JR.tab===v?'on':''}" data-jr="tab:${v}">${l}</button>`).join('')}</div>
     <div class="card"><div class="tbl-wrap" id="jrBody" style="overflow-x:auto">${jBody(fills,trips,open)}</div></div></div>`;
   drawJrBars()}
-function slTp(p){return `<td class="num down">${p&&p.sl?fmtP(p.sl):'—'}</td><td class="num up">${p&&p.tp?fmtP(p.tp):'—'}</td>`}
+function slTp(p){return `<td class="r down">${p&&p.sl?fmtP(p.sl):'—'}</td><td class="r up">${p&&p.tp?fmtP(p.tp):'—'}</td>`}
 function jBody(fills,trips,open){
   if(JR.tab==='days'){const m={},[a,b]=jBounds();
     for(const x of fills){const d=m[x.day]||(m[x.day]={day:x.day,fills:0,gross:0,ch:0,trips:0,wins:0});d.fills++;d.gross+=x.realized;d.ch+=x.charges}
@@ -1634,21 +1706,23 @@ function jBody(fills,trips,open){
     const days=Object.values(m).sort((x,y)=>y.day.localeCompare(x.day));if(!days.length)return'<div class="empty">No trades in this period.</div>';
     let cum=0;const withCum=days.slice().reverse().map(d=>({...d,cum:(cum+=d.gross-d.ch)})).reverse();
     return`<table><thead><tr><th>Date</th><th class="r">Fills</th><th class="r">Closed trades</th><th class="r">Win rate</th><th class="r">Gross</th><th class="r">Charges</th><th class="r">Net</th><th class="r">Cumulative</th></tr></thead><tbody>${withCum.map(d=>`<tr class="jr-row" data-jr="day:${d.day}"><td><b>${dLbl(d.day)}</b></td><td class="r">${d.fills}</td><td class="r">${d.trips}</td><td class="r">${d.trips?Math.round(d.wins/d.trips*100)+'%':'—'}</td><td class="r ${cls(d.gross)}">${smoney(d.gross)}</td><td class="r muted">${money(d.ch)}</td><td class="r ${cls(d.gross-d.ch)}"><b>${smoney(d.gross-d.ch)}</b></td><td class="r ${cls(d.cum)}">${smoney(d.cum)}</td></tr>`).join('')}</tbody></table>`}
-  if(JR.tab==='open'){if(!PORT.positions.length)return'<div class="empty">No open positions. Orders you place from the Chart view appear here.</div>';
-    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Avg price</th><th class="r">Last</th><th class="r">Unrealised P&amp;L</th><th class="r">Return</th><th class="r">Stop-loss</th><th class="r">Target</th><th></th></tr></thead><tbody>${PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice);
-      return`<tr><td><b>${esc(p.sym)}</b><div class="muted" style="font-size:11px">${kindOf(s)}</div></td><td><span class="side-tag up">Long</span></td><td class="r">${qn(p.qty)}</td><td class="r">${fmtP(p.avgPrice)}</td><td class="r">${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r ${cls(u)}">${pct((s.last/p.avgPrice-1)*100)}</td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-psl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-ptp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td><button class="btn sm" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('')}</tbody></table>`}
+  if(JR.tab==='open'){if(!PORT.positions.length&&!PORT.pending.length)return'<div class="empty">No open positions. Orders you place from the Chart view appear here.</div>';
+    const rows=PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice),L=p.qty>0;
+      return`<tr><td><b>${esc(p.sym)}</b><span class="badge b-mute" style="margin-left:6px">${kindOf(s)}</span></td><td><span class="side-tag ${L?'up':'down'}">${L?'Long':'Short'}</span></td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">${fmtP(p.avgPrice)}</td><td class="r">${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r ${cls(u)}">${pct((s.last/p.avgPrice-1)*100*sgn(p.qty))}</td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-psl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-ptp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td><button class="btn sm" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('');
+    const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td><span class="side-tag ${o.side==='buy'?'up':'down'}">${o.side==='buy'?'Buy':'Sell'} limit</span></td><td class="r">${qn(o.qty)}</td><td class="r">${fmtP(o.limit)}</td><td class="r muted" colspan="6">Waiting for ${o.side==='buy'?'price ≤':'price ≥'} ${fmtP(o.limit)}</td><td><button class="btn sm" data-cancel="${o.id}">Cancel</button></td></tr>`).join('');
+    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Avg price</th><th class="r">Last</th><th class="r">Unrealised P&amp;L</th><th class="r">Return</th><th class="r">Stop-loss</th><th class="r">Target</th><th></th></tr></thead><tbody>${rows}${pend}</tbody></table>`}
   if(JR.tab==='trips'){const all=[...trips.slice().sort((a,b)=>b.close-a.close),...open.map(o=>({...o,openTrip:true}))];
     if(!all.length)return'<div class="empty">No completed round trips in this period. A round trip is a position opened and then fully closed.</div>';
-    return`<table><thead><tr><th>Opened</th><th>Instrument</th><th class="r">Qty</th><th class="r">Entry</th><th class="r">Exit</th><th class="r">SL</th><th class="r">Target</th><th>Exit by</th><th>Held</th><th class="r">Net P&amp;L</th><th class="r">R</th></tr></thead><tbody>${all.map(t=>{const e=t.costIn/(t.qtyIn||1),x=t.qtyOut?t.valOut/t.qtyOut:null,risk=t.plan&&t.plan.sl?Math.abs(e-t.plan.sl)*t.qtyIn:0,R=!t.openTrip&&risk?t.net/risk:null;
-      return`<tr><td class="muted num">${dLbl(istDay(t.open)).split(',')[0]} ${tAt(t.open)}</td><td><b>${esc(t.sym)}</b><span class="badge b-mute" style="margin-left:6px">${t.kind||'stock'}</span></td><td class="r">${qn(t.qtyIn)}</td><td class="r">${fmtP(e)}</td><td class="r">${x==null?'—':fmtP(x)}</td>${slTp(t.plan).replace(/num /g,'r ')}<td>${t.openTrip?'<span class="badge b-info">Open</span>':`<span class="badge ${t.exit==='SL'?'b-down':t.exit==='TP'?'b-up':'b-info'}">${esc(SRC_LBL[t.exit]||'Manual')}</span>`}</td><td>${t.openTrip?'—':hold(t.close-t.open)}</td><td class="r ${t.openTrip?'':cls(t.net)}">${t.openTrip?'—':'<b>'+smoney(t.net)+'</b>'}</td><td class="r ${R==null?'':cls(R)}">${R==null?'—':(R>=0?'+':'−')+Math.abs(R).toFixed(2)+'R'}</td></tr>`}).join('')}</tbody></table>`}
+    return`<table><thead><tr><th>Opened</th><th>Instrument</th><th>Dir</th><th class="r">Qty</th><th class="r">Entry</th><th class="r">Exit</th><th class="r">SL</th><th class="r">Target</th><th>Exit by</th><th>Held</th><th class="r">Net P&amp;L</th><th class="r">R</th></tr></thead><tbody>${all.map(t=>{const e=t.costIn/(t.qtyIn||1),x=t.qtyOut?t.valOut/t.qtyOut:null,risk=t.plan&&t.plan.sl?Math.abs(e-t.plan.sl)*t.qtyIn:0,R=!t.openTrip&&risk?t.net/risk:null;
+      return`<tr><td class="muted num">${dLbl(istDay(t.open)).split(',')[0]} ${tAt(t.open)}</td><td><b>${esc(t.sym)}</b><span class="badge b-mute" style="margin-left:6px">${t.kind||'stock'}</span></td><td><span class="side-tag ${t.dir==='Long'?'up':'down'}">${t.dir}</span></td><td class="r">${qn(t.qtyIn)}</td><td class="r">${fmtP(e)}</td><td class="r">${x==null?'—':fmtP(x)}</td>${slTp(t.plan)}<td>${t.openTrip?'<span class="badge b-info">Open</span>':`<span class="badge ${t.exit==='SL'?'b-down':t.exit==='TP'?'b-up':'b-info'}">${esc(SRC_LBL[t.exit]||'Manual')}</span>`}</td><td>${t.openTrip?'—':hold(t.close-t.open)}</td><td class="r ${t.openTrip?'':cls(t.net)}">${t.openTrip?'—':'<b>'+smoney(t.net)+'</b>'}</td><td class="r ${R==null?'':cls(R)}">${R==null?'—':(R>=0?'+':'−')+Math.abs(R).toFixed(2)+'R'}</td></tr>`}).join('')}</tbody></table>`}
   const rows=fills.slice().sort((a,b)=>b.t-a.t),pages=Math.max(1,Math.ceil(rows.length/JR.size));JR.page=Math.min(JR.page,pages-1);const part=rows.slice(JR.page*JR.size,(JR.page+1)*JR.size);
   if(!rows.length)return'<div class="empty">No trades in this period yet. Place a paper order from the Chart view and it will be recorded here with every detail.</div>';
   const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-JR.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
-  return`<table><thead><tr><th>Time</th><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th class="r">SL</th><th class="r">Target</th><th class="r">Value</th><th class="r">Charges</th><th class="r">P&amp;L (gross)</th><th class="r">Net</th><th class="r">Position</th><th>Source</th></tr></thead><tbody>${part.map(x=>{const op=JR.open[x.id];
-    return`<tr class="jr-row ${op?'open':''}" data-jr="toggle:${x.id}"><td class="muted num">${dLbl(x.day).split(',')[0]} ${tAt(x.t)}</td><td><b>${esc(x.sym)}</b><span class="badge b-mute" style="margin-left:6px">${x.kind}</span></td><td><span class="side-tag ${x.side==='buy'?'up':'down'}">${x.side==='buy'?'Buy':'Sell'}</span></td><td class="r">${qn(x.qty)}</td><td class="r">${fmtP(x.price)}</td>${slTp(x.plan).replace(/num /g,'r ')}<td class="r">${money(x.value,0)}</td><td class="r muted">${money(x.charges)}</td><td class="r ${x.closeQty?cls(x.realized):'muted'}">${x.closeQty?smoney(x.realized):'—'}</td><td class="r ${cls(x.net)}"><b>${smoney(x.net)}</b></td><td class="r">${x.posAfter?qn(x.posAfter):'Flat'}</td><td><span class="badge ${x.src==='SL'?'b-down':x.src==='TP'?'b-up':'b-info'}">${esc(SRC_LBL[x.src]||x.src)}</span>${x.note?' <span title="Has a note">✎</span>':''}</td></tr>${op?`<tr class="jr-det"><td colspan="13">${jDetail(x)}</td></tr>`:''}`}).join('')}</tbody></table>
+  return`<table><thead><tr><th>Time</th><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th class="r">SL</th><th class="r">Target</th><th class="r">Value</th><th class="r">Charges</th><th class="r">P&amp;L (gross)</th><th class="r">Net</th><th class="r">Position</th><th>Source</th></tr></thead><tbody>${part.map(x=>{const op=JR.open[x.id],pa=x.posAfter;
+    return`<tr class="jr-row ${op?'open':''}" data-jr="toggle:${x.id}"><td class="muted num">${dLbl(x.day).split(',')[0]} ${tAt(x.t)}</td><td><b>${esc(x.sym)}</b><span class="badge b-mute" style="margin-left:6px">${x.kind}</span></td><td><span class="side-tag ${x.side==='buy'?'up':'down'}">${x.side==='buy'?'Buy':'Sell'}</span></td><td class="r">${qn(x.qty)}</td><td class="r">${fmtP(x.price)}</td>${slTp(x.plan)}<td class="r">${money(x.value,0)}</td><td class="r muted">${money(x.charges)}</td><td class="r ${x.closeQty?cls(x.realized):'muted'}">${x.closeQty?smoney(x.realized):'—'}</td><td class="r ${cls(x.net)}"><b>${smoney(x.net)}</b></td><td class="r">${pa?(pa>0?'Long ':'Short ')+qn(Math.abs(pa)):'Flat'}</td><td><span class="badge ${x.src==='SL'?'b-down':x.src==='TP'?'b-up':'b-info'}">${esc(SRC_LBL[x.src]||x.src)}</span>${x.otype==='limit'?' <span class="badge b-mute">limit</span>':''}${x.note?' <span title="Has a note">✎</span>':''}</td></tr>${op?`<tr class="jr-det"><td colspan="13">${jDetail(x)}</td></tr>`:''}`}).join('')}</tbody></table>
    <div class="jr-pager"><span class="muted">${rows.length} fill${rows.length===1?'':'s'} · showing ${JR.page*JR.size+1}–${JR.page*JR.size+part.length}</span><div class="jr-pg"><button class="btn sm" data-jr="page:${JR.page-1}" ${JR.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn sm ${i===JR.page?'pri':''}" data-jr="page:${i}">${i+1}</button>`).join('')}<button class="btn sm" data-jr="page:${JR.page+1}" ${JR.page>=pages-1?'disabled':''}>Next ›</button></div><select class="inp" id="jrSize" style="width:auto;height:30px" aria-label="Rows per page">${[10,25,50,100].map(n=>`<option ${JR.size===n?'selected':''}>${n}</option>`).join('')}</select></div>`}
 function jDetail(x){const c=x.chg||{},pl=x.plan;
-  return`<div class="jr-d"><div><h5>Order</h5><p>ID <b>#${x.id}</b> · market order · ${x.side==='buy'?'Bought':'Sold'} ${qn(x.qty)} @ ₹${fmtP(x.price)}</p><p>Avg cost before: <b class="num">${x.closeQty?fmtP(x.avgBefore):'—'}</b></p></div>
+  return`<div class="jr-d"><div><h5>Order</h5><p>ID <b>#${x.id}</b> · ${esc(x.otype||'market')} order · ${x.side==='buy'?'Bought':'Sold'} ${qn(x.qty)} @ ₹${fmtP(x.price)}</p><p>Avg cost before: <b class="num">${x.closeQty?fmtP(x.avgBefore):'—'}</b></p></div>
    <div><h5>Estimated charges</h5><p class="num">Brokerage ${money(c.brk||0)} · STT ${money(c.stt||0)} · Exchange ${money(c.txn||0)}<br>SEBI ${money(c.sebi||0)} · Stamp ${money(c.stamp||0)} · GST ${money(c.gst||0)}<br><b>Total ${money(x.charges)}</b></p></div>
    <div><h5>Risk plan</h5>${pl?`<p class="num">Entry ${fmtP(pl.entry)} · <span class="down">SL ${pl.sl?fmtP(pl.sl):'—'}</span> · <span class="up">Target ${pl.tp?fmtP(pl.tp):'—'}</span></p>${x.src==='SL'?'<p class="down">Closed automatically: stop-loss hit.</p>':x.src==='TP'?'<p class="up">Closed automatically: target hit.</p>':''}`:'<p class="muted">No stop-loss or target was set.</p>'}</div>
    <div class="jr-n"><h5>Your notes</h5><select class="inp" data-jtag="${x.id}" aria-label="Tag"><option value="">No tag</option>${['Followed plan','Impulsive','Revenge trade','Early exit','Held too long','Good setup'].map(t=>`<option ${x.tag===t?'selected':''}>${t}</option>`).join('')}</select><textarea class="inp" data-jnote="${x.id}" rows="2" style="height:auto;padding:6px 10px;margin-top:6px" placeholder="What was the idea? What would you do differently?">${esc(x.note||'')}</textarea></div></div>`}
@@ -1657,14 +1731,15 @@ function drawJrBars(){const host=$('#jrBars');if(!host)return;const m={};for(con
   if(!days.length){host.innerHTML='<div class="empty">No trading days in this period.</div>';return}
   const vals=days.map(d=>m[d]),mx=Math.max(1,...vals.map(Math.abs)),W=Math.max(320,days.length*34),H=150,mid=H/2;
   host.innerHTML=`<div class="jr-svgwrap"><svg viewBox="0 0 ${W} ${H+22}" width="${W}" height="${H+22}" role="img" aria-label="Daily net profit and loss"><line x1="0" x2="${W}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>${days.map((d,i)=>{const v=vals[i],h=Math.max(2,Math.abs(v)/mx*(mid-14)),x=i*34+6;return`<g><title>${dLbl(d)}: ${smoney(v)}</title><rect x="${x}" y="${v>=0?mid-h:mid}" width="22" height="${h}" rx="3" fill="${v>=0?'var(--up)':'var(--down)'}" opacity=".85" data-jr="day:${d}" style="cursor:pointer"/><text x="${x+11}" y="${H+14}" text-anchor="middle" font-size="9.5" fill="var(--text-3)">${d.slice(8)}/${d.slice(5,7)}</text></g>`}).join('')}</svg></div>`}
-function jCSV(){const rows=jFilter(TRADES).sort((a,b)=>a.t-b.t),h=['id','date','time','symbol','kind','side','qty','price','value','charges','gross_pnl','net_pnl','position_after','source','stop_loss','target','tag','note'];
+function jCSV(){const rows=jFilter(TRADES).sort((a,b)=>a.t-b.t),h=['id','date','time','symbol','kind','side','order_type','qty','price','value','charges','gross_pnl','net_pnl','position_after','source','stop_loss','target','tag','note'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const csv=[h.join(','),...rows.map(x=>[x.id,x.day,tAt(x.t),x.sym,x.kind,x.side,x.qty,x.price,x.value,x.charges,x.closeQty?x.realized:'',x.net,x.posAfter,SRC_LBL[x.src]||x.src,x.plan&&x.plan.sl,x.plan&&x.plan.tp,x.tag,x.note].map(q).join(','))].join('\n');
+  const csv=[h.join(','),...rows.map(x=>[x.id,x.day,tAt(x.t),x.sym,x.kind,x.side,x.otype,x.qty,x.price,x.value,x.charges,x.closeQty?x.realized:'',x.net,x.posAfter,SRC_LBL[x.src]||x.src,x.plan&&x.plan.sl,x.plan&&x.plan.tp,x.tag,x.note].map(q).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='paper-trades-'+istDay(Date.now())+'.csv';a.click();toast(rows.length+' trades exported','ok')}
 function resetPaper(){if(!confirm('Reset the paper account to ₹'+START_CASH.toLocaleString('en-IN')+' and clear all positions, orders and journal entries?'))return;
-  PORT.cash=START_CASH;PORT.positions=[];PORT.orders=[];TRADES=[];savePORT();saveTrades();if(CHART)CHART.lines=[];refreshTradeUI(ACTIVE.sym&&ACTIVE.sym.s);toast('Paper account reset','ok')}
+  PORT.cash=START_CASH;PORT.base=START_CASH;PORT.positions=[];PORT.orders=[];PORT.pending=[];TRADES=[];savePORT();saveTrades();if(CHART)CHART.lines=[];refreshTradeUI(ACTIVE.sym&&ACTIVE.sym.s);toast('Paper account reset','ok')}
 document.addEventListener('click',e=>{
   const c=e.target.closest('#v-orders [data-close]');if(c){closePos(c.dataset.close,'manual');return}
+  const cn=e.target.closest('#v-orders [data-cancel]');if(cn){cancelPending(cn.dataset.cancel);return}
   const t=e.target.closest('#v-orders [data-jr]');if(!t||!$('#v-orders.on'))return;const[k,...r]=t.dataset.jr.split(':'),v=r.join(':');
   if(k==='range'){JR.range=v;JR.page=0}else if(k==='kind'){JR.kind=v;JR.page=0}else if(k==='side'){JR.side=v;JR.page=0}else if(k==='tab'){JR.tab=v;JR.page=0}else if(k==='page'){JR.page=Math.max(0,+v)}
   else if(k==='day'){JR.range='day';JR.day=v;JR.page=0;if(JR.tab==='days')JR.tab='trades'}
@@ -1675,15 +1750,18 @@ document.addEventListener('change',e=>{const d=e.target.dataset||{};
   if(e.target.id==='jrDay'&&e.target.value){JR.range='day';JR.day=e.target.value;JR.page=0;renderOrders()}
   else if(e.target.id==='jrSize'){JR.size=+e.target.value;JR.page=0;renderOrders()}
   else if(d.jtag){const x=TRADES.find(t=>t.id==d.jtag);if(x){x.tag=e.target.value;saveTrades()}}
-  else if(d.psl||d.ptp){const sym=d.psl||d.ptp,p=PORT.positions.find(y=>y.sym===sym);if(!p)return;const v=parseFloat(e.target.value),s=SYM(sym);
-    if(d.psl){if(v>0&&v>=p.avgPrice){toast('Stop-loss must be below the average price','bad');e.target.value=p.sl||'';return}p.sl=v>0?v:null}
-    else{if(v>0&&v<=p.avgPrice){toast('Target must be above the average price','bad');e.target.value=p.tp||'';return}p.tp=v>0?v:null}
+  else if(d.psl||d.ptp){const sym=d.psl||d.ptp,p=PORT.positions.find(y=>y.sym===sym);if(!p)return;const v=parseFloat(e.target.value),L=p.qty>0;
+    if(d.psl){if(v>0&&(L?v>=p.avgPrice:v<=p.avgPrice)){toast('Stop-loss must be '+(L?'below':'above')+' the average price','bad');e.target.value=p.sl||'';return}p.sl=v>0?v:null}
+    else{if(v>0&&(L?v<=p.avgPrice:v>=p.avgPrice)){toast('Target must be '+(L?'above':'below')+' the average price','bad');e.target.value=p.tp||'';return}p.tp=v>0?v:null}
     savePORT();if(CHART&&ACTIVE.sym&&ACTIVE.sym.s===sym)CHART.lines=buildOrderLines(sym);if($('#ticket'))buildTicket();toast('Updated '+(d.psl?'stop-loss':'target')+' for '+sym,'ok');checkExits()}});
 document.addEventListener('input',e=>{
   if(e.target.id==='jrQ'){JR.q=e.target.value;JR.page=0;renderOrders();const q=$('#jrQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}
   else if(e.target.dataset&&e.target.dataset.jnote){const x=TRADES.find(t=>t.id==e.target.dataset.jnote);if(x){x.note=e.target.value;saveTrades()}}});
-/* keep open-position P&L live while the Open tab is showing (never while typing) */
-setInterval(()=>{if(!$('#v-orders.on')||JR.tab!=='open')return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;renderOrders()},3000);
+/* keep everything live: journal, bottom panel and ticket refresh themselves (never while typing) */
+setInterval(()=>{const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
+  if($('#v-orders.on')&&!typing)renderOrders();
+  if(bottomIsOrders()&&!typing)renderOrdersInBottom();
+  updTicketLive();updNavBadge()},2000);
 
 /* ===================== Navigation ===================== */
 const TABS=[
