@@ -37,6 +37,8 @@ app = FastAPI(title="Bhavcopy & Live Option Scanner")
 
 app.include_router(market_api.router)
 app.include_router(strategies_api.router)
+import push_api  # noqa: E402
+app.include_router(push_api.router)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -53,6 +55,22 @@ def index():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(os.path.join(STATIC_DIR, "sw.js"), media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
+
+
+@app.get("/manifest.webmanifest")
+def web_manifest():
+    return FileResponse(os.path.join(STATIC_DIR, "manifest.webmanifest"), media_type="application/manifest+json")
+
+
+@app.get("/icon-192.png")
+def app_icon():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"), media_type="image/png")
 
 
 @app.get("/favicon.ico")

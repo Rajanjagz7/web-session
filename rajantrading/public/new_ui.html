@@ -3,6 +3,8 @@
 <head>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta charset="utf-8">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#4f46e5">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Algo Trades · NSE Live</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -233,6 +235,14 @@ tbody tr:hover td.jr-act{background:var(--panel-2)}
 th.jr-act{z-index:2}
 .jr-openbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12.5px}
 #jrBody{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.pnl-chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pnl-chip[hidden]{display:none}.pnl-chip small{color:var(--text-3);font-weight:600}.pnl-chip.up{border-color:var(--up);background:var(--up-bg)}.pnl-chip.down{border-color:var(--down);background:var(--down-bg)}
+.jr-pnl{padding:14px 16px;margin-bottom:12px;display:grid;gap:12px}
+.jr-pnl-main{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.jr-pnl-main small{color:var(--text-3);font-size:12px;font-weight:600;flex-basis:100%}
+.jr-pnl-main b{font-size:28px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}.jr-pnl-main span{font-size:13px;font-weight:600}
+.jr-pnl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.jr-pnl-grid>div{padding:8px 10px;border-radius:8px;background:var(--panel-2)}.jr-pnl-grid small{display:block;color:var(--text-3);font-size:11px;margin-bottom:2px}.jr-pnl-grid b{font-size:14px;font-variant-numeric:tabular-nums}
+.jr-total td{background:var(--panel-2);border-top:2px solid var(--line)}
 /* ── Journal ── */
 .tk-risk{display:grid;gap:8px}
 .jr-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
@@ -330,6 +340,7 @@ td.oc-click{cursor:pointer}.scan-pager{display:flex;justify-content:space-betwee
     <nav class="nav" id="mainNav"></nav>
     <div class="hdr-r">
       <span class="live-dot" id="mktDot"><i></i><span id="mktTxt">Connecting…</span></span>
+      <button class="pnl-chip" id="pnlChip" onclick="switchTab('v-orders')" title="Total paper P&L (open + closed) — open Journal" hidden></button>
       <button class="ibtn" id="rnBell" aria-label="Notifications"></button>
       <button class="ibtn" id="settingsBtn" onclick="openSettings()" aria-label="Settings" title="Upstox API Token"></button>
       <button class="ibtn" id="themeBtn" aria-label="Toggle theme"></button>
@@ -403,6 +414,7 @@ const EV={
 };
 const COND={above:'Crosses above',below:'Crosses below',up:'Day change ≥ +%',down:'Day change ≤ −%'};
 const MAX_ALERTS=200,DAYS=90,KEEP=500;
+const VAPID='BDaJ0ouMU8W6NF9n6GkKKXx1f088Z2H83uCGYGI8T1imOBJaYHoVxmJRVDTvgrrvzM2e8SnQpeIlUJKPHOKiEjs';   /* public key; the private half lives in the server environment */
 
 const S={notifs:[],prefs:null,alerts:[],audit:[],held:[],pushTimes:[],throttled:0,seen:new Map(),H:null,tab:'notifs',f:{cat:'ALL',read:'ALL',q:'',n:50,dq:'',dn:100},editing:null,popOpen:false,bell:null,toasts:[],queue:[]};
 const $=(s,r)=>(r||document).querySelector(s),$$=(s,r)=>[].slice.call((r||document).querySelectorAll(s));
@@ -421,7 +433,7 @@ const saveN=()=>jset(KEY.n,S.notifs),saveP=()=>jset(KEY.p,S.prefs),saveA=()=>jse
 function audit(what,detail){S.audit.unshift({t:Date.now(),what,detail:detail||'',dev:(navigator.userAgent.match(/(Edg|Chrome|Firefox|Safari)\/[\d.]+/)||['browser'])[0]});saveAu()}
 
 /* ---------- delivery ---------- */
-function addDeliv(n,ch,status,reason){n.deliv.push({id:uid(),ch,status,reason:reason||'',attempts:1,at:Date.now()})}
+function addDeliv(n,ch,status,reason){const d={id:uid(),ch,status,reason:reason||'',attempts:1,at:Date.now()};n.deliv.push(d);return d}
 function inQuiet(){const q=S.prefs.quiet;if(!q.on)return false;let m;try{const f=new Intl.DateTimeFormat('en-GB',{timeZone:q.tz,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());m=(+f.find(p=>p.type==='hour').value%24)*60+ +f.find(p=>p.type==='minute').value}catch(e){const d=new Date();m=d.getHours()*60+d.getMinutes()}
   const t=s=>{const[a,b]=s.split(':');return+a*60+ +b},s=t(q.start),e=t(q.end);return s===e?false:s<e?m>=s&&m<e:m>=s||m<e}
 function emit(id,v,opt){opt=opt||{};v=v||{};const ev=EV[id];if(!ev)return null;
@@ -441,12 +453,18 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit&&!opt.forcePush&&inQuiet()){S.held.push(n.id);addDeliv(n,'push','queued','Held for quiet hours');return}
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=20){S.throttled++;addDeliv(n,'push','suppressed','Throttled: 20 push messages per hour');return}}
   sendPush(n,opt.forcePush)}
+function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+/* system notification through the service worker — works on Android Chrome, desktop and installed PWAs */
+function showSystem(n,title,body){return swReg().then(reg=>{const o={body:body||'',tag:n.id,icon:'/icon-192.png',badge:'/icon-192.png',data:{url:'/',nid:n.id},renotify:false};
+  if(reg&&reg.showNotification)return reg.showNotification(title,o);
+  const x=new Notification(title,o);x.onclick=()=>{try{global.focus()}catch(e){}x.close();open(n)}})}
 function sendPush(n,force,title,body){
   if(!('Notification' in global)){addDeliv(n,'push','suppressed','This browser does not support notifications');return}
   if(Notification.permission!=='granted'){addDeliv(n,'push','suppressed',Notification.permission==='denied'?'Browser notifications are blocked':'Browser permission not granted yet');return}
   if(!force&&!document.hidden&&document.hasFocus()){addDeliv(n,'push','delivered','Tab in focus — shown in-app');S.pushTimes.push(Date.now());return}
-  try{const o=new Notification(title||n.title,{body:body!=null?body:n.body,tag:n.id,renotify:false});o.onclick=()=>{try{global.focus()}catch(e){}o.close();open(n)};S.pushTimes.push(Date.now());addDeliv(n,'push','delivered','')}
-  catch(e){addDeliv(n,'push','failed',String(e.message||e))}}
+  const d=addDeliv(n,'push','sent','Handing to the browser…');S.pushTimes.push(Date.now());
+  showSystem(n,title||n.title,body!=null?body:n.body).then(()=>{d.status='delivered';d.reason=''},e=>{d.status='failed';d.reason=String(e&&e.message||e)}).then(()=>{saveN();if($('#rnCentre'))drawCentre(true)})}
 function releaseHeld(){if(!S.held.length&&!S.throttled)return;if(inQuiet())return;
   const now=Date.now(),ns=S.held.splice(0).map(i=>S.notifs.find(n=>n.id===i)).filter(Boolean),live=[];
   ns.forEach(n=>{const d=n.deliv.find(x=>x.ch==='push'&&x.status==='queued');
@@ -458,6 +476,20 @@ function releaseHeld(){if(!S.held.length&&!S.throttled)return;if(inQuiet())retur
   if(S.throttled&&S.pushTimes.filter(t=>now-t<36e5).length<20){sendPush({id:uid(),title:'',body:'',deliv:[]},false,S.throttled+' notifications held',"You've reached the hourly push limit; they are in your notification centre.");S.throttled=0}
   saveN();refresh()}
 setInterval(releaseHeld,30000);
+
+/* ---------- Web Push to this device (VAPID) ---------- */
+const urlB64=v=>{const p='='.repeat((4-v.length%4)%4),r=atob((v+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
+async function pushEnable(){const reg=await swReg();if(!reg||!reg.pushManager)throw new Error('This browser does not support Web Push');
+  if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted')throw new Error('Notification permission was '+p)}
+  let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(VAPID)});
+  try{localStorage.setItem('rn_push_sub',JSON.stringify(sub))}catch(e){}audit('Web Push enabled on this device',(sub.endpoint.split('/')[2]||''));return sub}
+async function pushOff(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();try{localStorage.removeItem('rn_push_sub')}catch(e){}audit('Web Push turned off on this device')}
+async function pushTest(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)throw new Error('Enable push on this device first');
+  const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),title:'Test push',body:'Delivered by the push server — this works even when the app is closed.',url:'/',tag:'rn-test-'+Date.now()})});
+  const j=await r.json().catch(()=>({}));
+  if(j&&j.gone){await pushOff();throw new Error('This device subscription expired — enable push again')}
+  if(!r.ok||!j.ok)throw new Error(j.detail||'Push server error '+r.status);return true}
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.type==='rn-open'){const n=S.notifs.find(x=>x.id===d.nid);if(n)open(n)}});
 
 /* ---------- toasts (max 3 visible, queue, polite/assertive live regions) ---------- */
 function toastHost(){let h=$('#rnToasts');if(h)return h;h=document.createElement('div');h.id='rnToasts';
@@ -571,7 +603,12 @@ function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notificatio
   const rows=CATS.map(([ck,cl])=>{const ids=Object.keys(EV).filter(i=>EV[i].cat===ck&&!EV[i].hidden);
     return`<tr class="rn-cat"><td colspan="5"><b>${cl}</b></td></tr>`+ids.map(id=>`<tr><td>${id} · ${esc(EV[id].name)}<small class="rn-pr p-${EV[id].pri}">${EV[id].pri}</small></td>${CH.map(c=>{const lock=EV[id].lock.includes(c),on=lock||P.ev[id][c];
       return`<td class="c"><label class="rn-sw ${lock?'lock':''}" title="${lock?'Locked: this channel cannot be turned off for this event':''}"><input type="checkbox" data-pref="${id}:${c}" ${on?'checked':''} ${lock?'disabled':''} aria-label="${esc(EV[id].name)} ${CHL[c]}"><span></span></label>${lock?'<i class="rn-lk" aria-hidden="true">🔒</i>':''}</td>`}).join('')}</tr>`).join('')}).join('');
-  return`<div class="rn-card"><h3>Browser notifications</h3><p class="rn-note">Push messages use your browser's notification permission (status: <b>${perm}</b>). They appear when this tab is in the background or minimised.</p>
+  const subbed=(()=>{try{return!!localStorage.getItem('rn_push_sub')}catch(e){return false}})(),mobile=/Android|iPhone|iPad/i.test(navigator.userAgent||'');
+  const wp=`<div class="rn-card"><h3>Push to this ${mobile?'phone':'device'} <span class="rn-st ${subbed?'s-Active':''}">${subbed?'On':'Off'}</span></h3>
+    <p class="rn-note">Real Web Push through the browser's push service — messages arrive even when the app is closed. ${mobile?'On Android Chrome, allow notifications when asked; tap ⋮ → <b>Add to Home screen</b> for the most reliable delivery.':'Works in Chrome, Edge and Firefox. On a phone, open this site in Chrome and enable it there.'}</p>
+    <div><button class="rn-btn pri" data-rn="wp:on">${subbed?'Re-subscribe':'Enable push on this device'}</button><button class="rn-btn" data-rn="wp:test">Send test push</button>${subbed?'<button class="rn-btn" data-rn="wp:off">Turn off</button>':''}</div>
+    <p class="rn-note">Events are pushed while the app is open or in the background. Alerts fire only while the page is running in a tab.</p></div>`;
+  return wp+`<div class="rn-card"><h3>Browser notifications</h3><p class="rn-note">Push messages use your browser's notification permission (status: <b>${perm}</b>). They appear when this tab is in the background or minimised.</p>
     <div>${perm==='granted'?'<span class="rn-st s-Active">Enabled</span>':perm==='denied'?'<span class="rn-note">Blocked — allow notifications for this site in your browser settings.</span>':perm==='unsupported'?'<span class="rn-note">This browser does not support notifications.</span>':'<button class="rn-btn pri" data-rn="perm">Enable browser notifications</button>'}
     <label class="rn-chk" style="margin-left:12px"><input type="checkbox" id="pfSound" ${P.sound?'checked':''}> Sound for fills and alerts</label></div></div>
   <div class="rn-card"><h3>Quiet hours</h3><p class="rn-note">Normal and High push messages are held and delivered as one summary when quiet hours end. Critical messages always deliver.</p>
@@ -677,6 +714,7 @@ document.addEventListener('click',e=>{
   else if(k==='readall'){markAll()}else if(k==='centre')openCentre(a);else if(k==='close')closeCentre();
   else if(k==='tab'){S.tab=a;S.editing=null;drawCentre()}else if(k==='more'){S.f.n+=50;drawNotifList()}else if(k==='csv')csv();
   else if(k==='al')alertAction(a,b);else if(k==='canceledit'){S.editing=null;drawCentre()}
+  else if(k==='wp'){t.disabled=true;(a==='on'?pushEnable():a==='off'?pushOff():pushTest()).then(()=>toastInfo(a==='on'?'Push enabled on this device':a==='off'?'Push turned off':'Test push sent — it should appear in a few seconds')).catch(err=>toastInfo(String(err&&err.message||err))).then(()=>drawCentre())}
   else if(k==='perm'){Notification.requestPermission().then(p=>{audit('Browser notification permission',p);drawCentre()})}
   else if(k==='test'){const id=$('#tsEv').value;emit(id,sample(id),{test:true,forcePush:true,key:'test|'+id+'|'+Date.now()});toastInfo('Test sent — see the notification list and delivery log')}
   else if(k==='pause'){const id=$('#psEv').value,why=$('#psWhy').value.trim();S.prefs.paused[id]={t:Date.now(),why};saveP();audit('Paused event type '+id,why||'no reason given');drawCentre()}
@@ -1831,6 +1869,8 @@ const istDay=ts=>new Date(ts+19800000).toISOString().slice(0,10);
 const money=(n,dp=2)=>'₹'+fmtP(n,dp);
 const smoney=(n,dp=2)=>(n>=0?'+':'−')+'₹'+fmtP(Math.abs(n),dp);
 const qn=n=>Number.isInteger(n)?n.toLocaleString('en-IN'):fmtP(n);
+const arrow=n=>n>0.004?'▲':n<-0.004?'▼':'–';
+const pl=(n,dp=2)=>arrow(n)+' '+smoney(n,dp);
 const sgn=x=>x>0?1:x<0?-1:0;
 const kindOf=s=>s&&s.ikey?'option':s&&s.tv?'global':s&&s.cls==='Index'?'index':'stock';
 function calcCharges(side,value,kind){const buy=side==='buy',opt=kind==='option',r=x=>+x.toFixed(2);
@@ -1911,7 +1951,9 @@ function refreshTradeUI(sym){
   if($('#v-orders.on'))renderOrders();
   if(bottomIsOrders())renderOrdersInBottom();updNavBadge()}
 const bottomIsOrders=()=>{const t=$('#chartBtabs button.on');return!!(t&&/Positions/.test(t.textContent))};
-function updNavBadge(){const b=$('#mainNav button[data-tab="v-orders"]');if(b)b.title=PORT.positions.length+' open position(s) · '+PORT.pending.length+' pending'}
+function updPnlChip(){const c=$('#pnlChip');if(!c)return;if(!TRADES.length&&!PORT.positions.length){c.hidden=true;return}
+  const t=TRADES.reduce((a,x)=>a+x.net,0)+PORT.positions.reduce((a,p)=>a+portPnl(p.sym),0);c.hidden=false;c.className='pnl-chip '+(t>=0?'up':'down');c.innerHTML=`<small>P&amp;L</small> <b>${arrow(t)} ${smoney(t,0)}</b>`}
+function updNavBadge(){updPnlChip();const b=$('#mainNav button[data-tab="v-orders"]');if(b)b.title=PORT.positions.length+' open position(s) · '+PORT.pending.length+' pending'}
 /* watcher: stop-loss, target and pending limit orders — runs whichever tab is open */
 function notifyFill(tr){const px=fmtP(tr.price),pnl=tr.closeQty?smoney(tr.net):'',link={sym:tr.sym},key='fill|'+tr.id;
   if(tr.src==='TP')RN.emit('N-07',{sym:tr.sym,price:px,pnl},{key,link});
@@ -2010,11 +2052,11 @@ function renderOrdersInBottom(){const b0=$('#chartBbody'),t0=b0?b0.scrollTop:0,l
 function _renderOrdersInBottom(){
   const body=$('#chartBbody');if(!body)return;
   const pos=PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice);
-    return`<tr><td><b>${esc(p.sym)}</b></td><td class="${p.qty>0?'up':'down'}">${p.qty>0?'Long':'Short'}</td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">₹${fmtP(p.avgPrice)}</td><td class="r">₹${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r"><span class="down">${p.sl?fmtP(p.sl):'—'}</span> / <span class="up">${p.tp?fmtP(p.tp):'—'}</span></td><td class="r jr-act"><button class="btn sm" onclick="closePos('${esc(p.sym)}')">Close</button></td></tr>`}).join('');
+    return`<tr><td><b>${esc(p.sym)}</b></td><td class="${p.qty>0?'up':'down'}">${p.qty>0?'Long':'Short'}</td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">₹${fmtP(p.avgPrice)}</td><td class="r">₹${fmtP(s.last)}</td><td class="r ${cls(u)}"><b>${pl(u)}</b></td><td class="r"><span class="down">${p.sl?fmtP(p.sl):'—'}</span> / <span class="up">${p.tp?fmtP(p.tp):'—'}</span></td><td class="r jr-act"><button class="btn sm" onclick="closePos('${esc(p.sym)}')">Close</button></td></tr>`}).join('');
   const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td class="${o.side==='buy'?'up':'down'}">${o.side.toUpperCase()}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.limit)}</td><td colspan="3" class="muted">Pending limit</td><td class="r jr-act"><button class="btn sm" onclick="cancelPending(${o.id})">Cancel</button></td></tr>`).join('');
   const ord=PORT.orders.slice(0,15).map(o=>`<tr><td>${esc(o.time)}</td><td>${esc(o.sym)}</td><td class="${o.side==='BUY'?'up':'down'}">${esc(o.side)}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.price)}</td><td><span class="badge ${o.status==='STOP-LOSS'?'b-down':o.status==='TARGET'?'b-up':'b-info'}">${esc(o.status)}</span></td></tr>`).join('');
   if(!pos&&!pend&&!ord){body.innerHTML='<div class="empty" style="font-size:12px;padding:16px">No positions or orders yet.</div>';return}
-  body.innerHTML=`${pos||pend?`<table><thead><tr><th>Position</th><th>Side</th><th class="r">Qty</th><th class="r">Avg</th><th class="r">LTP</th><th class="r">P&amp;L</th><th class="r">SL / TGT</th><th class="jr-act"></th></tr></thead><tbody>${pos}${pend}</tbody></table>`:''}
+  body.innerHTML=`${pos||pend?`<table><thead><tr><th>Position</th><th>Side</th><th class="r">Qty</th><th class="r">Avg</th><th class="r">LTP</th><th class="r">P&amp;L</th><th class="r">SL / TGT</th><th class="jr-act"></th></tr></thead><tbody>${pos}${pend}${PORT.positions.length?(()=>{const t=PORT.positions.reduce((a,p)=>a+portPnl(p.sym),0);return`<tr class="jr-total"><td colspan="5"><b>Total P&amp;L</b></td><td class="r ${cls(t)}"><b>${pl(t)}</b></td><td colspan="2"></td></tr>`})():''}</tbody></table>`:''}
     ${ord?`<table><thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th>Status</th></tr></thead><tbody>${ord}</tbody></table>`:''}`}
 
 /* ===================== Journal (Journal tab) ===================== */
@@ -2049,11 +2091,18 @@ function renderOrders(){
   const fills=jFilter(TRADES),{closed,open}=buildTrips(),[a,b]=jBounds();
   const trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const unreal=PORT.positions.reduce((s,p)=>s+portPnl(p.sym),0),pv=posValue(),eq=PORT.cash+pv,ret=(eq/PORT.base-1)*100;
+  const realAll=TRADES.reduce((a,x)=>a+x.net,0),totPnl=realAll+unreal,ups=PORT.positions.filter(p=>portPnl(p.sym)>0.004),dns=PORT.positions.filter(p=>portPnl(p.sym)<-0.004),
+    sumUp=ups.reduce((a,p)=>a+portPnl(p.sym),0),sumDn=dns.reduce((a,p)=>a+portPnl(p.sym),0),todayNet=TRADES.filter(x=>x.day===istDay(Date.now())).reduce((a,x)=>a+x.net,0);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
   el.innerHTML=`<div class="page"><div class="page-h"><div style="flex:1 1 240px"><h1>Journal</h1><p class="muted" style="margin-top:2px">Every paper buy, sell, short, stop-loss and target hit — with charges, P&amp;L and your notes. Stored in this browser.</p></div>
       <button class="btn" data-jr="csv:1">Export CSV</button><button class="btn" data-jr="reset:1">Reset account</button></div>
-    <div class="jr-kpis">${kpi('Total value',money(eq,0),'cash + positions',cls(ret))}${kpi('Return',(ret>=0?'+':'−')+Math.abs(ret).toFixed(2)+'%','on '+money(PORT.base,0)+' capital',cls(ret))}${kpi('Cash',money(PORT.cash,0),'available')}${kpi('Open positions',PORT.positions.length+(PORT.pending.length?' + '+PORT.pending.length+' pending':''),'net value '+smoney(pv,0))}${kpi('Unrealised P&L',smoney(unreal),'open positions',cls(unreal))}</div>
+    <div class="card jr-pnl"><div class="jr-pnl-main"><small>Total profit / loss</small><b class="${cls(totPnl)}">${pl(totPnl,0)}</b><span class="${cls(ret)}">${arrow(ret)} ${(ret>=0?'+':'−')+Math.abs(ret).toFixed(2)}% on ${money(PORT.base,0)} capital</span></div>
+      <div class="jr-pnl-grid"><div><small>Unrealised (open positions)</small><b class="${cls(unreal)}">${pl(unreal)}</b></div><div><small>Realised (closed, after charges)</small><b class="${cls(realAll)}">${pl(realAll)}</b></div>
+        <div><small>Today (realised)</small><b class="${cls(todayNet)}">${pl(todayNet)}</b></div>
+        <div><small>In profit · ${ups.length} position${ups.length===1?'':'s'}</small><b class="up">${ups.length?'▲ '+smoney(sumUp):'—'}</b></div>
+        <div><small>In loss · ${dns.length} position${dns.length===1?'':'s'}</small><b class="down">${dns.length?'▼ '+smoney(sumDn):'—'}</b></div>
+        <div><small>Total value</small><b>${money(eq,0)}</b></div><div><small>Cash</small><b>${money(PORT.cash,0)}</b></div></div></div>
     <div class="jr-kpis">${kpi('Net P&L',smoney(S.net),S.fills+' fill'+(S.fills===1?'':'s')+' · after charges',cls(S.net))}${kpi('Gross P&L',smoney(S.gross),'before charges',cls(S.gross))}${kpi('Charges (est.)',money(S.ch),'brokerage, STT, taxes')}${kpi('Win rate',trips.length?(S.win*100).toFixed(0)+'%':'—',S.wins+' won · '+S.losses+' lost')}${kpi('Avg win / loss',trips.length?`<span class="up">${money(S.avgW,0)}</span> / <span class="down">${money(S.avgL,0)}</span>`:'—','per closed trade')}${kpi('Profit factor',trips.length?(isFinite(S.pf)?S.pf.toFixed(2):'∞'):'—','wins ÷ losses')}${kpi('Best / worst',trips.length?`<span class="up">${money(S.best,0)}</span> / <span class="down">${money(Math.abs(S.worst),0)}</span>`:'—','single trade')}${kpi('SL / Target hits',`<span class="down">${S.slHits}</span> / <span class="up">${S.tpHits}</span>`,'auto exits')}</div>
     <div class="filters"><div class="chips">${[['today','Today'],['yday','Yesterday'],['7d','7 days'],['30d','30 days'],['all','All time']].map(([v,l])=>chip('range',v,l,JR.range)).join('')}<label class="jr-date"><input type="date" id="jrDay" value="${JR.range==='day'?JR.day:''}" max="${istDay(Date.now())}" aria-label="Pick a day"></label></div>
       <div class="chips">${[['ALL','All'],['stock','Stocks'],['option','Options'],['index','Indices'],['global','Global']].map(([v,l])=>chip('kind',v,l,JR.kind)).join('')}</div>
@@ -2075,9 +2124,9 @@ function jBody(fills,trips,open){
     return`<table><thead><tr><th>Date</th><th class="r">Fills</th><th class="r">Closed trades</th><th class="r">Win rate</th><th class="r">Gross</th><th class="r">Charges</th><th class="r">Net</th><th class="r">Cumulative</th></tr></thead><tbody>${withCum.map(d=>`<tr class="jr-row" data-jr="day:${d.day}"><td><b>${dLbl(d.day)}</b></td><td class="r">${d.fills}</td><td class="r">${d.trips}</td><td class="r">${d.trips?Math.round(d.wins/d.trips*100)+'%':'—'}</td><td class="r ${cls(d.gross)}">${smoney(d.gross)}</td><td class="r muted">${money(d.ch)}</td><td class="r ${cls(d.gross-d.ch)}"><b>${smoney(d.gross-d.ch)}</b></td><td class="r ${cls(d.cum)}">${smoney(d.cum)}</td></tr>`).join('')}</tbody></table>`}
   if(JR.tab==='open'){if(!PORT.positions.length&&!PORT.pending.length)return'<div class="empty">No open positions. Orders you place from the Chart view appear here.</div>';
     const rows=PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice),L=p.qty>0;
-      return`<tr><td><b>${esc(p.sym)}</b><span class="badge b-mute" style="margin-left:6px">${kindOf(s)}</span></td><td><span class="side-tag ${L?'up':'down'}">${L?'Long':'Short'}</span></td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">${fmtP(p.avgPrice)}</td><td class="r">${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r ${cls(u)}">${pct((s.last/p.avgPrice-1)*100*sgn(p.qty))}</td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-psl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-ptp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td class="jr-act"><button class="btn sm jr-close" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('');
+      return`<tr><td><b>${esc(p.sym)}</b><span class="badge b-mute" style="margin-left:6px">${kindOf(s)}</span></td><td><span class="side-tag ${L?'up':'down'}">${L?'Long':'Short'}</span></td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">${fmtP(p.avgPrice)}</td><td class="r">${fmtP(s.last)}</td><td class="r ${cls(u)}"><b>${pl(u)}</b></td><td class="r ${cls(u)}">${arrow(u)} ${pct((s.last/p.avgPrice-1)*100*sgn(p.qty))}</td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-psl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-ptp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td class="jr-act"><button class="btn sm jr-close" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('');
     const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td><span class="side-tag ${o.side==='buy'?'up':'down'}">${o.side==='buy'?'Buy':'Sell'} limit</span></td><td class="r">${qn(o.qty)}</td><td class="r">${fmtP(o.limit)}</td><td class="r muted" colspan="6">Waiting for ${o.side==='buy'?'price ≤':'price ≥'} ${fmtP(o.limit)}</td><td class="jr-act"><button class="btn sm" data-cancel="${o.id}">Cancel</button></td></tr>`).join('');
-    return`<div class="jr-openbar"><span class="muted">${PORT.positions.length} open position${PORT.positions.length===1?'':'s'}${PORT.pending.length?' · '+PORT.pending.length+' pending':''}</span>${PORT.positions.length>1?'<button class="btn sm" data-closeall="1">Close all positions</button>':''}</div><table><thead><tr><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Avg price</th><th class="r">Last</th><th class="r">Unrealised P&amp;L</th><th class="r">Return</th><th class="r">Stop-loss</th><th class="r">Target</th><th class="jr-act"></th></tr></thead><tbody>${rows}${pend}</tbody></table>`}
+    return`<div class="jr-openbar"><span class="muted">${PORT.positions.length} open position${PORT.positions.length===1?'':'s'}${PORT.pending.length?' · '+PORT.pending.length+' pending':''}</span>${PORT.positions.length>1?'<button class="btn sm" data-closeall="1">Close all positions</button>':''}</div><table><thead><tr><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Avg price</th><th class="r">Last</th><th class="r">Unrealised P&amp;L</th><th class="r">Return</th><th class="r">Stop-loss</th><th class="r">Target</th><th class="jr-act"></th></tr></thead><tbody>${rows}${pend}</tbody>${PORT.positions.length?(()=>{const t=PORT.positions.reduce((a,p)=>a+portPnl(p.sym),0);return`<tfoot><tr class="jr-total"><td colspan="5"><b>Total unrealised P&amp;L</b></td><td class="r ${cls(t)}"><b>${pl(t)}</b></td><td colspan="4"></td></tr></tfoot>`})():''}</table>`}
   if(JR.tab==='trips'){const all=[...trips.slice().sort((a,b)=>b.close-a.close),...open.map(o=>({...o,openTrip:true}))];
     if(!all.length)return'<div class="empty">No completed round trips in this period. A round trip is a position opened and then fully closed.</div>';
     return`<table><thead><tr><th>Opened</th><th>Instrument</th><th>Dir</th><th class="r">Qty</th><th class="r">Entry</th><th class="r">Exit</th><th class="r">SL</th><th class="r">Target</th><th>Exit by</th><th>Held</th><th class="r">Net P&amp;L</th><th class="r">R</th></tr></thead><tbody>${all.map(t=>{const e=t.costIn/(t.qtyIn||1),x=t.qtyOut?t.valOut/t.qtyOut:null,risk=t.plan&&t.plan.sl?Math.abs(e-t.plan.sl)*t.qtyIn:0,R=!t.openTrip&&risk?t.net/risk:null;

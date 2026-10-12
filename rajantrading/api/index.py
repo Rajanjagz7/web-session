@@ -39,6 +39,7 @@ _load_env_file()
 from .nse_service import nse_service, now_ist_iso, get_stock_picks as _get_stock_picks, TOP_FO_STOCKS_FALLBACK
 from .upstox_service import upstox_service
 from . import market_api
+from . import push_api
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,6 +53,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NSE Bhavcopy & Live Option Scanner API", version="2.0.0", lifespan=lifespan)
 app.include_router(market_api.router)
+app.include_router(push_api.router)
 
 app.add_middleware(
     CORSMiddleware,

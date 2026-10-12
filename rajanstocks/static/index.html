@@ -2,6 +2,8 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#4f46e5">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0E14">
 <title>Algo Stocks · NSE Live</title>
@@ -614,6 +616,7 @@ const EV={
 };
 const COND={above:'Crosses above',below:'Crosses below',up:'Day change ≥ +%',down:'Day change ≤ −%'};
 const MAX_ALERTS=200,DAYS=90,KEEP=500;
+const VAPID='BDaJ0ouMU8W6NF9n6GkKKXx1f088Z2H83uCGYGI8T1imOBJaYHoVxmJRVDTvgrrvzM2e8SnQpeIlUJKPHOKiEjs';   /* public key; the private half lives in the server environment */
 
 const S={notifs:[],prefs:null,alerts:[],audit:[],held:[],pushTimes:[],throttled:0,seen:new Map(),H:null,tab:'notifs',f:{cat:'ALL',read:'ALL',q:'',n:50,dq:'',dn:100},editing:null,popOpen:false,bell:null,toasts:[],queue:[]};
 const $=(s,r)=>(r||document).querySelector(s),$$=(s,r)=>[].slice.call((r||document).querySelectorAll(s));
@@ -632,7 +635,7 @@ const saveN=()=>jset(KEY.n,S.notifs),saveP=()=>jset(KEY.p,S.prefs),saveA=()=>jse
 function audit(what,detail){S.audit.unshift({t:Date.now(),what,detail:detail||'',dev:(navigator.userAgent.match(/(Edg|Chrome|Firefox|Safari)\/[\d.]+/)||['browser'])[0]});saveAu()}
 
 /* ---------- delivery ---------- */
-function addDeliv(n,ch,status,reason){n.deliv.push({id:uid(),ch,status,reason:reason||'',attempts:1,at:Date.now()})}
+function addDeliv(n,ch,status,reason){const d={id:uid(),ch,status,reason:reason||'',attempts:1,at:Date.now()};n.deliv.push(d);return d}
 function inQuiet(){const q=S.prefs.quiet;if(!q.on)return false;let m;try{const f=new Intl.DateTimeFormat('en-GB',{timeZone:q.tz,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());m=(+f.find(p=>p.type==='hour').value%24)*60+ +f.find(p=>p.type==='minute').value}catch(e){const d=new Date();m=d.getHours()*60+d.getMinutes()}
   const t=s=>{const[a,b]=s.split(':');return+a*60+ +b},s=t(q.start),e=t(q.end);return s===e?false:s<e?m>=s&&m<e:m>=s||m<e}
 function emit(id,v,opt){opt=opt||{};v=v||{};const ev=EV[id];if(!ev)return null;
@@ -652,12 +655,18 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit&&!opt.forcePush&&inQuiet()){S.held.push(n.id);addDeliv(n,'push','queued','Held for quiet hours');return}
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=20){S.throttled++;addDeliv(n,'push','suppressed','Throttled: 20 push messages per hour');return}}
   sendPush(n,opt.forcePush)}
+function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+/* system notification through the service worker — works on Android Chrome, desktop and installed PWAs */
+function showSystem(n,title,body){return swReg().then(reg=>{const o={body:body||'',tag:n.id,icon:'/icon-192.png',badge:'/icon-192.png',data:{url:'/',nid:n.id},renotify:false};
+  if(reg&&reg.showNotification)return reg.showNotification(title,o);
+  const x=new Notification(title,o);x.onclick=()=>{try{global.focus()}catch(e){}x.close();open(n)}})}
 function sendPush(n,force,title,body){
   if(!('Notification' in global)){addDeliv(n,'push','suppressed','This browser does not support notifications');return}
   if(Notification.permission!=='granted'){addDeliv(n,'push','suppressed',Notification.permission==='denied'?'Browser notifications are blocked':'Browser permission not granted yet');return}
   if(!force&&!document.hidden&&document.hasFocus()){addDeliv(n,'push','delivered','Tab in focus — shown in-app');S.pushTimes.push(Date.now());return}
-  try{const o=new Notification(title||n.title,{body:body!=null?body:n.body,tag:n.id,renotify:false});o.onclick=()=>{try{global.focus()}catch(e){}o.close();open(n)};S.pushTimes.push(Date.now());addDeliv(n,'push','delivered','')}
-  catch(e){addDeliv(n,'push','failed',String(e.message||e))}}
+  const d=addDeliv(n,'push','sent','Handing to the browser…');S.pushTimes.push(Date.now());
+  showSystem(n,title||n.title,body!=null?body:n.body).then(()=>{d.status='delivered';d.reason=''},e=>{d.status='failed';d.reason=String(e&&e.message||e)}).then(()=>{saveN();if($('#rnCentre'))drawCentre(true)})}
 function releaseHeld(){if(!S.held.length&&!S.throttled)return;if(inQuiet())return;
   const now=Date.now(),ns=S.held.splice(0).map(i=>S.notifs.find(n=>n.id===i)).filter(Boolean),live=[];
   ns.forEach(n=>{const d=n.deliv.find(x=>x.ch==='push'&&x.status==='queued');
@@ -669,6 +678,20 @@ function releaseHeld(){if(!S.held.length&&!S.throttled)return;if(inQuiet())retur
   if(S.throttled&&S.pushTimes.filter(t=>now-t<36e5).length<20){sendPush({id:uid(),title:'',body:'',deliv:[]},false,S.throttled+' notifications held',"You've reached the hourly push limit; they are in your notification centre.");S.throttled=0}
   saveN();refresh()}
 setInterval(releaseHeld,30000);
+
+/* ---------- Web Push to this device (VAPID) ---------- */
+const urlB64=v=>{const p='='.repeat((4-v.length%4)%4),r=atob((v+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
+async function pushEnable(){const reg=await swReg();if(!reg||!reg.pushManager)throw new Error('This browser does not support Web Push');
+  if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted')throw new Error('Notification permission was '+p)}
+  let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64(VAPID)});
+  try{localStorage.setItem('rn_push_sub',JSON.stringify(sub))}catch(e){}audit('Web Push enabled on this device',(sub.endpoint.split('/')[2]||''));return sub}
+async function pushOff(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();try{localStorage.removeItem('rn_push_sub')}catch(e){}audit('Web Push turned off on this device')}
+async function pushTest(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)throw new Error('Enable push on this device first');
+  const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),title:'Test push',body:'Delivered by the push server — this works even when the app is closed.',url:'/',tag:'rn-test-'+Date.now()})});
+  const j=await r.json().catch(()=>({}));
+  if(j&&j.gone){await pushOff();throw new Error('This device subscription expired — enable push again')}
+  if(!r.ok||!j.ok)throw new Error(j.detail||'Push server error '+r.status);return true}
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const d=e.data||{};if(d.type==='rn-open'){const n=S.notifs.find(x=>x.id===d.nid);if(n)open(n)}});
 
 /* ---------- toasts (max 3 visible, queue, polite/assertive live regions) ---------- */
 function toastHost(){let h=$('#rnToasts');if(h)return h;h=document.createElement('div');h.id='rnToasts';
@@ -782,7 +805,12 @@ function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notificatio
   const rows=CATS.map(([ck,cl])=>{const ids=Object.keys(EV).filter(i=>EV[i].cat===ck&&!EV[i].hidden);
     return`<tr class="rn-cat"><td colspan="5"><b>${cl}</b></td></tr>`+ids.map(id=>`<tr><td>${id} · ${esc(EV[id].name)}<small class="rn-pr p-${EV[id].pri}">${EV[id].pri}</small></td>${CH.map(c=>{const lock=EV[id].lock.includes(c),on=lock||P.ev[id][c];
       return`<td class="c"><label class="rn-sw ${lock?'lock':''}" title="${lock?'Locked: this channel cannot be turned off for this event':''}"><input type="checkbox" data-pref="${id}:${c}" ${on?'checked':''} ${lock?'disabled':''} aria-label="${esc(EV[id].name)} ${CHL[c]}"><span></span></label>${lock?'<i class="rn-lk" aria-hidden="true">🔒</i>':''}</td>`}).join('')}</tr>`).join('')}).join('');
-  return`<div class="rn-card"><h3>Browser notifications</h3><p class="rn-note">Push messages use your browser's notification permission (status: <b>${perm}</b>). They appear when this tab is in the background or minimised.</p>
+  const subbed=(()=>{try{return!!localStorage.getItem('rn_push_sub')}catch(e){return false}})(),mobile=/Android|iPhone|iPad/i.test(navigator.userAgent||'');
+  const wp=`<div class="rn-card"><h3>Push to this ${mobile?'phone':'device'} <span class="rn-st ${subbed?'s-Active':''}">${subbed?'On':'Off'}</span></h3>
+    <p class="rn-note">Real Web Push through the browser's push service — messages arrive even when the app is closed. ${mobile?'On Android Chrome, allow notifications when asked; tap ⋮ → <b>Add to Home screen</b> for the most reliable delivery.':'Works in Chrome, Edge and Firefox. On a phone, open this site in Chrome and enable it there.'}</p>
+    <div><button class="rn-btn pri" data-rn="wp:on">${subbed?'Re-subscribe':'Enable push on this device'}</button><button class="rn-btn" data-rn="wp:test">Send test push</button>${subbed?'<button class="rn-btn" data-rn="wp:off">Turn off</button>':''}</div>
+    <p class="rn-note">Events are pushed while the app is open or in the background. Alerts fire only while the page is running in a tab.</p></div>`;
+  return wp+`<div class="rn-card"><h3>Browser notifications</h3><p class="rn-note">Push messages use your browser's notification permission (status: <b>${perm}</b>). They appear when this tab is in the background or minimised.</p>
     <div>${perm==='granted'?'<span class="rn-st s-Active">Enabled</span>':perm==='denied'?'<span class="rn-note">Blocked — allow notifications for this site in your browser settings.</span>':perm==='unsupported'?'<span class="rn-note">This browser does not support notifications.</span>':'<button class="rn-btn pri" data-rn="perm">Enable browser notifications</button>'}
     <label class="rn-chk" style="margin-left:12px"><input type="checkbox" id="pfSound" ${P.sound?'checked':''}> Sound for fills and alerts</label></div></div>
   <div class="rn-card"><h3>Quiet hours</h3><p class="rn-note">Normal and High push messages are held and delivered as one summary when quiet hours end. Critical messages always deliver.</p>
@@ -888,6 +916,7 @@ document.addEventListener('click',e=>{
   else if(k==='readall'){markAll()}else if(k==='centre')openCentre(a);else if(k==='close')closeCentre();
   else if(k==='tab'){S.tab=a;S.editing=null;drawCentre()}else if(k==='more'){S.f.n+=50;drawNotifList()}else if(k==='csv')csv();
   else if(k==='al')alertAction(a,b);else if(k==='canceledit'){S.editing=null;drawCentre()}
+  else if(k==='wp'){t.disabled=true;(a==='on'?pushEnable():a==='off'?pushOff():pushTest()).then(()=>toastInfo(a==='on'?'Push enabled on this device':a==='off'?'Push turned off':'Test push sent — it should appear in a few seconds')).catch(err=>toastInfo(String(err&&err.message||err))).then(()=>drawCentre())}
   else if(k==='perm'){Notification.requestPermission().then(p=>{audit('Browser notification permission',p);drawCentre()})}
   else if(k==='test'){const id=$('#tsEv').value;emit(id,sample(id),{test:true,forcePush:true,key:'test|'+id+'|'+Date.now()});toastInfo('Test sent — see the notification list and delivery log')}
   else if(k==='pause'){const id=$('#psEv').value,why=$('#psWhy').value.trim();S.prefs.paused[id]={t:Date.now(),why};saveP();audit('Paused event type '+id,why||'no reason given');drawCentre()}

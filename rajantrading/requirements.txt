@@ -6,3 +6,4 @@ python-multipart==0.0.32
 defusedxml==0.7.1
 requests==2.31.0
 websocket-client
+pywebpush>=2.0.0

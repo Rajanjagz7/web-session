@@ -4,3 +4,4 @@ requests
 python-multipart
 defusedxml
 websocket-client
+pywebpush>=2.0.0
