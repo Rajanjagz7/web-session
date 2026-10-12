@@ -18,14 +18,14 @@
 }
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0B0E14;--panel:#11151D;--panel-2:#171C26;--line:#232A37;--grid:#181E29;
-  --text:#E6EAF2;--text-2:#A3ADBF;--text-3:#6B7588;--water:rgba(230,234,242,.04);--pill:#2A3242;
+  --text:#E6EAF2;--text-2:#A3ADBF;--text-3:#8E99AD;--water:rgba(230,234,242,.04);--pill:#2A3242;
   --brand:#3987e5;--brand-2:#14233B;--up:#22AB94;--down:#F7525F;--up-bg:#0F2A26;--down-bg:#2D1418;
   --warn:#E3A846;--warn-bg:#2B2210;
   --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#2f9a2f;--s7:#9085e9;--s8:#e66767;
   --shadow:0 10px 30px rgba(0,0,0,.45);color-scheme:dark;}}
 :root[data-theme="dark"]{
   --bg:#0B0E14;--panel:#11151D;--panel-2:#171C26;--line:#232A37;--grid:#181E29;
-  --text:#E6EAF2;--text-2:#A3ADBF;--text-3:#6B7588;--water:rgba(230,234,242,.04);--pill:#2A3242;
+  --text:#E6EAF2;--text-2:#A3ADBF;--text-3:#8E99AD;--water:rgba(230,234,242,.04);--pill:#2A3242;
   --brand:#3987e5;--brand-2:#14233B;--up:#22AB94;--down:#F7525F;--up-bg:#0F2A26;--down-bg:#2D1418;
   --warn:#E3A846;--warn-bg:#2B2210;
   --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#2f9a2f;--s7:#9085e9;--s8:#e66767;
@@ -223,6 +223,11 @@ tbody tr:hover td{background:var(--panel-2)}
 .tk-q{display:flex;gap:4px;margin-top:5px}.tk-q button{flex:1;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);font-size:11.5px;font-weight:600}
 .tk-q button:hover{color:var(--text);border-color:var(--text-3)}
 .tk-posbox{border:1px solid var(--line)}
+/* counts inside chips / tabs / buttons: always readable, on and off state, light and dark */
+.chip .muted,.seg button .muted,.btn .muted,.tk-q button .muted{color:inherit;opacity:.72;font-weight:600;font-variant-numeric:tabular-nums}
+.chip.on .muted,.scan-ind .chip.on .muted,.btn.pri .muted{color:#fff;opacity:.9}
+.seg button.on .muted{color:var(--text-2);opacity:1}
+.badge.b-mute{color:var(--text-2)}
 /* ── Journal ── */
 .tk-risk{display:grid;gap:8px}
 .jr-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
