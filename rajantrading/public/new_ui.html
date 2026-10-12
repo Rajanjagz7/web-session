@@ -228,6 +228,11 @@ tbody tr:hover td{background:var(--panel-2)}
 .chip.on .muted,.scan-ind .chip.on .muted,.btn.pri .muted{color:#fff;opacity:.9}
 .seg button.on .muted{color:var(--text-2);opacity:1}
 .badge.b-mute{color:var(--text-2)}
+.jr-act{position:sticky;right:0;background:var(--panel);box-shadow:-8px 0 8px -8px rgba(0,0,0,.25);text-align:right}
+tbody tr:hover td.jr-act{background:var(--panel-2)}
+th.jr-act{z-index:2}
+.jr-openbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12.5px}
+#jrBody{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 /* ── Journal ── */
 .tk-risk{display:grid;gap:8px}
 .jr-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
@@ -2001,14 +2006,15 @@ function placeOrder(){
   refreshTradeUI(sym)}
 function cancelPending(id){const o=PORT.pending.find(x=>x.id==id);PORT.pending=PORT.pending.filter(x=>x.id!=id);savePORT();if(o)RN.emit('N-04',{type:'limit',side:o.side,sym:o.sym},{key:'cx|'+id,link:{sym:o.sym}});toast('Order cancelled','ok');refreshTradeUI(ACTIVE.sym&&ACTIVE.sym.s)}
 
-function renderOrdersInBottom(){
+function renderOrdersInBottom(){const b0=$('#chartBbody'),t0=b0?b0.scrollTop:0,l0=b0?b0.scrollLeft:0;_renderOrdersInBottom();if(b0){b0.scrollTop=t0;b0.scrollLeft=l0}}
+function _renderOrdersInBottom(){
   const body=$('#chartBbody');if(!body)return;
   const pos=PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice);
-    return`<tr><td><b>${esc(p.sym)}</b></td><td class="${p.qty>0?'up':'down'}">${p.qty>0?'Long':'Short'}</td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">₹${fmtP(p.avgPrice)}</td><td class="r">₹${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r"><span class="down">${p.sl?fmtP(p.sl):'—'}</span> / <span class="up">${p.tp?fmtP(p.tp):'—'}</span></td><td class="r"><button class="btn sm" onclick="closePos('${esc(p.sym)}')">Close</button></td></tr>`}).join('');
-  const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td class="${o.side==='buy'?'up':'down'}">${o.side.toUpperCase()}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.limit)}</td><td colspan="3" class="muted">Pending limit</td><td class="r"><button class="btn sm" onclick="cancelPending(${o.id})">Cancel</button></td></tr>`).join('');
+    return`<tr><td><b>${esc(p.sym)}</b></td><td class="${p.qty>0?'up':'down'}">${p.qty>0?'Long':'Short'}</td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">₹${fmtP(p.avgPrice)}</td><td class="r">₹${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r"><span class="down">${p.sl?fmtP(p.sl):'—'}</span> / <span class="up">${p.tp?fmtP(p.tp):'—'}</span></td><td class="r jr-act"><button class="btn sm" onclick="closePos('${esc(p.sym)}')">Close</button></td></tr>`}).join('');
+  const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td class="${o.side==='buy'?'up':'down'}">${o.side.toUpperCase()}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.limit)}</td><td colspan="3" class="muted">Pending limit</td><td class="r jr-act"><button class="btn sm" onclick="cancelPending(${o.id})">Cancel</button></td></tr>`).join('');
   const ord=PORT.orders.slice(0,15).map(o=>`<tr><td>${esc(o.time)}</td><td>${esc(o.sym)}</td><td class="${o.side==='BUY'?'up':'down'}">${esc(o.side)}</td><td class="r">${qn(o.qty)}</td><td class="r">₹${fmtP(o.price)}</td><td><span class="badge ${o.status==='STOP-LOSS'?'b-down':o.status==='TARGET'?'b-up':'b-info'}">${esc(o.status)}</span></td></tr>`).join('');
   if(!pos&&!pend&&!ord){body.innerHTML='<div class="empty" style="font-size:12px;padding:16px">No positions or orders yet.</div>';return}
-  body.innerHTML=`${pos||pend?`<table><thead><tr><th>Position</th><th>Side</th><th class="r">Qty</th><th class="r">Avg</th><th class="r">LTP</th><th class="r">P&amp;L</th><th class="r">SL / TGT</th><th></th></tr></thead><tbody>${pos}${pend}</tbody></table>`:''}
+  body.innerHTML=`${pos||pend?`<table><thead><tr><th>Position</th><th>Side</th><th class="r">Qty</th><th class="r">Avg</th><th class="r">LTP</th><th class="r">P&amp;L</th><th class="r">SL / TGT</th><th class="jr-act"></th></tr></thead><tbody>${pos}${pend}</tbody></table>`:''}
     ${ord?`<table><thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th>Status</th></tr></thead><tbody>${ord}</tbody></table>`:''}`}
 
 /* ===================== Journal (Journal tab) ===================== */
@@ -2039,6 +2045,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
   return{fills:fills.length,wins:w.length,losses:l.length,win:trips.length?w.length/trips.length:0,avgW:w.length?gw/w.length:0,avgL:l.length?gl/l.length:0,pf:gl?gw/gl:(gw?Infinity:0),best:trips.length?Math.max(...trips.map(t=>t.net)):0,worst:trips.length?Math.min(...trips.map(t=>t.net)):0,gross,ch,net:gross-ch,dd,slHits:fills.filter(x=>x.src==='SL').length,tpHits:fills.filter(x=>x.src==='TP').length}}
 function renderOrders(){
   const el=$('#v-orders');if(!el)return;
+  const oldWrap=$('#jrBody'),keepL=oldWrap?oldWrap.scrollLeft:0,keepT=oldWrap?oldWrap.scrollTop:0,keepY=window.scrollY;
   const fills=jFilter(TRADES),{closed,open}=buildTrips(),[a,b]=jBounds();
   const trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const unreal=PORT.positions.reduce((s,p)=>s+portPnl(p.sym),0),pv=posValue(),eq=PORT.cash+pv,ret=(eq/PORT.base-1)*100;
@@ -2055,7 +2062,9 @@ function renderOrders(){
     <div class="card" style="margin-bottom:12px"><div class="card-h"><h3>Daily net P&amp;L</h3><span class="muted" style="font-size:12px">${a==='0000-00-00'?'all time':a===b?dLbl(a):dLbl(a)+' – '+dLbl(b)}</span></div><div id="jrBars"></div></div>
     <div class="seg" id="jrTabs" style="margin-bottom:12px">${[['trades','Trades ('+fills.length+')'],['trips','Round trips ('+trips.length+')'],['days','Daily summary'],['open','Open positions ('+PORT.positions.length+')']].map(([v,l])=>`<button class="${JR.tab===v?'on':''}" data-jr="tab:${v}">${l}</button>`).join('')}</div>
     <div class="card"><div class="tbl-wrap" id="jrBody" style="overflow-x:auto">${jBody(fills,trips,open)}</div></div></div>`;
-  drawJrBars()}
+  drawJrBars();
+  const w=$('#jrBody');if(w&&(keepL||keepT)){JR.restoring=1;w.scrollLeft=keepL;w.scrollTop=keepT;setTimeout(()=>{JR.restoring=0},60)}
+  if(Math.abs(window.scrollY-keepY)>2)window.scrollTo(0,keepY)}
 function slTp(p){return `<td class="r down">${p&&p.sl?fmtP(p.sl):'—'}</td><td class="r up">${p&&p.tp?fmtP(p.tp):'—'}</td>`}
 function jBody(fills,trips,open){
   if(JR.tab==='days'){const m={},[a,b]=jBounds();
@@ -2066,9 +2075,9 @@ function jBody(fills,trips,open){
     return`<table><thead><tr><th>Date</th><th class="r">Fills</th><th class="r">Closed trades</th><th class="r">Win rate</th><th class="r">Gross</th><th class="r">Charges</th><th class="r">Net</th><th class="r">Cumulative</th></tr></thead><tbody>${withCum.map(d=>`<tr class="jr-row" data-jr="day:${d.day}"><td><b>${dLbl(d.day)}</b></td><td class="r">${d.fills}</td><td class="r">${d.trips}</td><td class="r">${d.trips?Math.round(d.wins/d.trips*100)+'%':'—'}</td><td class="r ${cls(d.gross)}">${smoney(d.gross)}</td><td class="r muted">${money(d.ch)}</td><td class="r ${cls(d.gross-d.ch)}"><b>${smoney(d.gross-d.ch)}</b></td><td class="r ${cls(d.cum)}">${smoney(d.cum)}</td></tr>`).join('')}</tbody></table>`}
   if(JR.tab==='open'){if(!PORT.positions.length&&!PORT.pending.length)return'<div class="empty">No open positions. Orders you place from the Chart view appear here.</div>';
     const rows=PORT.positions.map(p=>{const s=SYM(p.sym)||{last:p.avgPrice},u=p.qty*(s.last-p.avgPrice),L=p.qty>0;
-      return`<tr><td><b>${esc(p.sym)}</b><span class="badge b-mute" style="margin-left:6px">${kindOf(s)}</span></td><td><span class="side-tag ${L?'up':'down'}">${L?'Long':'Short'}</span></td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">${fmtP(p.avgPrice)}</td><td class="r">${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r ${cls(u)}">${pct((s.last/p.avgPrice-1)*100*sgn(p.qty))}</td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-psl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-ptp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td><button class="btn sm" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('');
-    const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td><span class="side-tag ${o.side==='buy'?'up':'down'}">${o.side==='buy'?'Buy':'Sell'} limit</span></td><td class="r">${qn(o.qty)}</td><td class="r">${fmtP(o.limit)}</td><td class="r muted" colspan="6">Waiting for ${o.side==='buy'?'price ≤':'price ≥'} ${fmtP(o.limit)}</td><td><button class="btn sm" data-cancel="${o.id}">Cancel</button></td></tr>`).join('');
-    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Avg price</th><th class="r">Last</th><th class="r">Unrealised P&amp;L</th><th class="r">Return</th><th class="r">Stop-loss</th><th class="r">Target</th><th></th></tr></thead><tbody>${rows}${pend}</tbody></table>`}
+      return`<tr><td><b>${esc(p.sym)}</b><span class="badge b-mute" style="margin-left:6px">${kindOf(s)}</span></td><td><span class="side-tag ${L?'up':'down'}">${L?'Long':'Short'}</span></td><td class="r">${qn(Math.abs(p.qty))}</td><td class="r">${fmtP(p.avgPrice)}</td><td class="r">${fmtP(s.last)}</td><td class="r ${cls(u)}">${smoney(u)}</td><td class="r ${cls(u)}">${pct((s.last/p.avgPrice-1)*100*sgn(p.qty))}</td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-psl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="r"><input class="inp jr-px" type="number" step="0.05" min="0" data-ptp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td class="jr-act"><button class="btn sm jr-close" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('');
+    const pend=PORT.pending.map(o=>`<tr><td><b>${esc(o.sym)}</b></td><td><span class="side-tag ${o.side==='buy'?'up':'down'}">${o.side==='buy'?'Buy':'Sell'} limit</span></td><td class="r">${qn(o.qty)}</td><td class="r">${fmtP(o.limit)}</td><td class="r muted" colspan="6">Waiting for ${o.side==='buy'?'price ≤':'price ≥'} ${fmtP(o.limit)}</td><td class="jr-act"><button class="btn sm" data-cancel="${o.id}">Cancel</button></td></tr>`).join('');
+    return`<div class="jr-openbar"><span class="muted">${PORT.positions.length} open position${PORT.positions.length===1?'':'s'}${PORT.pending.length?' · '+PORT.pending.length+' pending':''}</span>${PORT.positions.length>1?'<button class="btn sm" data-closeall="1">Close all positions</button>':''}</div><table><thead><tr><th>Instrument</th><th>Side</th><th class="r">Qty</th><th class="r">Avg price</th><th class="r">Last</th><th class="r">Unrealised P&amp;L</th><th class="r">Return</th><th class="r">Stop-loss</th><th class="r">Target</th><th class="jr-act"></th></tr></thead><tbody>${rows}${pend}</tbody></table>`}
   if(JR.tab==='trips'){const all=[...trips.slice().sort((a,b)=>b.close-a.close),...open.map(o=>({...o,openTrip:true}))];
     if(!all.length)return'<div class="empty">No completed round trips in this period. A round trip is a position opened and then fully closed.</div>';
     return`<table><thead><tr><th>Opened</th><th>Instrument</th><th>Dir</th><th class="r">Qty</th><th class="r">Entry</th><th class="r">Exit</th><th class="r">SL</th><th class="r">Target</th><th>Exit by</th><th>Held</th><th class="r">Net P&amp;L</th><th class="r">R</th></tr></thead><tbody>${all.map(t=>{const e=t.costIn/(t.qtyIn||1),x=t.qtyOut?t.valOut/t.qtyOut:null,risk=t.plan&&t.plan.sl?Math.abs(e-t.plan.sl)*t.qtyIn:0,R=!t.openTrip&&risk?t.net/risk:null;
@@ -2096,6 +2105,7 @@ function jCSV(){const rows=jFilter(TRADES).sort((a,b)=>a.t-b.t),h=['id','date','
 function resetPaper(){if(!confirm('Reset the paper account to ₹'+START_CASH.toLocaleString('en-IN')+' and clear all positions, orders and journal entries?'))return;
   PORT.cash=START_CASH;PORT.base=START_CASH;PORT.positions=[];PORT.orders=[];PORT.pending=[];TRADES=[];savePORT();saveTrades();if(CHART)CHART.lines=[];refreshTradeUI(ACTIVE.sym&&ACTIVE.sym.s);toast('Paper account reset','ok');RN.emit('N-12',{amount:'₹'+START_CASH.toLocaleString('en-IN')+'.00',note:'Paper account funded'},{key:'fund|'+Date.now()})}
 document.addEventListener('click',e=>{
+  const ca=e.target.closest('#v-orders [data-closeall]');if(ca){if(PORT.positions.length&&confirm('Close all '+PORT.positions.length+' open positions at market?')){PORT.positions.map(x=>x.sym).forEach(sym=>closePos(sym,'manual'))}return}
   const c=e.target.closest('#v-orders [data-close]');if(c){closePos(c.dataset.close,'manual');return}
   const cn=e.target.closest('#v-orders [data-cancel]');if(cn){cancelPending(cn.dataset.cancel);return}
   const t=e.target.closest('#v-orders [data-jr]');if(!t||!$('#v-orders.on'))return;const[k,...r]=t.dataset.jr.split(':'),v=r.join(':');
@@ -2116,9 +2126,10 @@ document.addEventListener('input',e=>{
   if(e.target.id==='jrQ'){JR.q=e.target.value;JR.page=0;renderOrders();const q=$('#jrQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}
   else if(e.target.dataset&&e.target.dataset.jnote){const x=TRADES.find(t=>t.id==e.target.dataset.jnote);if(x){x.note=e.target.value;saveTrades()}}});
 /* keep everything live: journal, bottom panel and ticket refresh themselves (never while typing) */
-setInterval(()=>{const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName);
-  if($('#v-orders.on')&&!typing)renderOrders();
-  if(bottomIsOrders()&&!typing)renderOrdersInBottom();
+['scroll','touchstart','touchmove','wheel','pointerdown'].forEach(ev=>addEventListener(ev,()=>{if(!JR.restoring)JR.busy=Date.now()},{capture:true,passive:true}));
+setInterval(()=>{const a=document.activeElement,typing=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName),busy=Date.now()-(JR.busy||0)<4000;
+  if($('#v-orders.on')&&!typing&&!busy)renderOrders();
+  if(bottomIsOrders()&&!typing&&!busy)renderOrdersInBottom();
   updTicketLive();updNavBadge()},2000);
 
 /* ===================== Navigation ===================== */
