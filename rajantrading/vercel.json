@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "alias": [
+    "rajantrading.vercel.app",
+    "algotrades-live.vercel.app"
+  ],
+  "builds": [
+    {
+      "src": "api/tv.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/tv.*",
+      "dest": "api/tv.js"
+    },
+    {
+      "src": "/api/.*",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/",
+      "dest": "public/new_ui.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "public/$1"
+    }
+  ]
+}
