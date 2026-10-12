@@ -39,6 +39,8 @@ app.include_router(market_api.router)
 app.include_router(strategies_api.router)
 import push_api  # noqa: E402
 app.include_router(push_api.router)
+import stocks_api  # noqa: E402
+app.include_router(stocks_api.router)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(

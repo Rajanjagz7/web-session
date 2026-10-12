@@ -343,6 +343,7 @@ td.oc-click{cursor:pointer}.scan-pager{display:flex;justify-content:space-betwee
     <nav class="nav" id="mainNav"></nav>
     <div class="hdr-r">
       <span class="live-dot" id="mktDot"><i></i><span id="mktTxt">Connecting…</span></span>
+      <button class="btn sm" id="sbBtn" onclick="SB.open()" title="Browse and search every NSE-listed stock">All stocks</button>
       <button class="pnl-chip" id="pnlChip" onclick="switchTab('v-orders')" title="Total paper P&L (open + closed) — open Journal" hidden></button>
       <button class="ibtn" id="rnBell" aria-label="Notifications"></button>
       <button class="ibtn" id="settingsBtn" onclick="openSettings()" aria-label="Settings" title="Upstox API Token"></button>
@@ -384,6 +385,118 @@ td.oc-click{cursor:pointer}.scan-pager{display:flex;justify-content:space-betwee
     </div>
   </div>
 </div>
+<script>
+/* ===================== All NSE stocks browser (SB) =====================
+   Search and trade every listed NSE stock: full list, index constituents (Nifty 50 … Microcap 250, Infra, sectors)
+   and a multibagger screen. The host app supplies get(), trade(), chart() and alert(). */
+(function(global){
+'use strict';
+const CHIPS=[['ALL','All NSE stocks'],['multi','Multibaggers (≥2× 52W low)'],['nifty50','Nifty 50'],['niftynext50','Next 50'],['midcap150','Midcap 150'],['smallcap250','Smallcap 250'],['microcap250','Microcap 250'],['infra','Nifty Infra']];
+const S={h:null,all:null,allP:null,tab:'ALL',q:'',page:0,size:50,sort:'sym',asc:true,rows:[],quotes:{},loading:false,err:'',more:[],timer:0,tok:0};
+const $=(s,r)=>(r||document).querySelector(s);
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fp=(n,d=2)=>isFinite(n)&&n!==null?Number(n).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
+const get=p=>S.h.get(p);
+
+function ensureAll(){if(S.all)return Promise.resolve(S.all);
+  if(!S.allP)S.allP=get('/api/m/stocks/all').then(r=>{S.all=(r&&r.stocks)||[];return S.all}).catch(e=>{S.allP=null;throw e});
+  return S.allP}
+function lookup(sym){sym=String(sym||'').trim().toUpperCase();return ensureAll().then(a=>{const r=a.find(x=>x[0]===sym);return r?{s:r[0],n:r[1]}:null}).catch(()=>null)}
+
+async function loadTab(){const tok=++S.tok;S.loading=true;S.err='';S.page=0;S.quotes=S.quotes||{};draw();
+  try{
+    let rows;
+    if(S.tab==='ALL'){rows=(await ensureAll()).map(([s,n])=>({s,n}))}
+    else if(S.tab==='multi'){const r=await get('/api/m/multibaggers?min_x=2&limit=300');rows=(r.stocks||[]).map(x=>({s:x.s,n:x.n,industry:x.industry}));(r.stocks||[]).forEach(x=>{S.quotes[x.s]={s:x.s,last:x.last,prev:x.prev,yl:x.yl,yh:x.yh}})}
+    else{const r=await get('/api/m/index-stocks?index='+encodeURIComponent(S.tab));rows=r.stocks||[]}
+    if(tok!==S.tok)return;S.rows=rows;S.loading=false;
+    S.sort=S.tab==='multi'?'x':'sym';S.asc=S.tab!=='multi';
+    draw();fetchQuotes(true)
+  }catch(e){if(tok!==S.tok)return;S.loading=false;S.rows=[];S.err='Could not load this list ('+(e&&e.message||e)+'). Please try again.';draw()}}
+
+function view(){const q=S.q.trim().toLowerCase();
+  let l=S.rows.filter(r=>!q||r.s.toLowerCase().includes(q)||(r.n||'').toLowerCase().includes(q)||(r.industry||'').toLowerCase().includes(q));
+  if(q)l=l.slice().sort((a,b)=>(+b.s.toLowerCase().startsWith(q)-+a.s.toLowerCase().startsWith(q))||a.s.localeCompare(b.s));
+  else{const v=r=>{const k=S.quotes[r.s];if(S.sort==='sym')return r.s;if(!k||!(k.last>0))return null;
+      return S.sort==='chg'?(k.prev>0?(k.last/k.prev-1):0):S.sort==='x'?(k.yl>0?k.last/k.yl:0):k.last};
+    l=l.slice().sort((a,b)=>{const x=v(a),y=v(b);if(x===y)return 0;if(x==null)return 1;if(y==null)return -1;return(S.asc?1:-1)*(typeof x==='string'?x.localeCompare(y):x-y)})}
+  return l}
+async function fetchQuotes(all){if(!S.h)return;const l=view(),page=S.tab==='ALL'||S.q?l.slice(S.page*S.size,(S.page+1)*S.size):l;
+  const need=(all?page:l.slice(S.page*S.size,(S.page+1)*S.size)).map(r=>r.s);
+  const chunks=[];for(let i=0;i<need.length;i+=100)chunks.push(need.slice(i,i+100));
+  for(const c of chunks){try{const r=await get('/api/m/stocks/quotes?symbols='+encodeURIComponent(c.join(',')));(r.quotes||[]).forEach(x=>S.quotes[x.s]=x)}catch(e){}}
+  if($('#sbPanel'))drawTable()}
+
+function chipsHtml(){return CHIPS.map(([k,l])=>`<button class="sb-chip ${S.tab===k?'on':''}" data-sb="tab:${k}">${esc(l)}</button>`).join('')+
+  `<select class="sb-sel" id="sbMore" aria-label="More lists"><option value="">More lists…</option>${S.more.map(g=>`<optgroup label="${esc(g[0])}">${g[1].map(i=>`<option value="${esc(i.key)}" ${S.tab===i.key?'selected':''}>${esc(i.label)}</option>`).join('')}</optgroup>`).join('')}</select>`}
+function draw(){let p=$('#sbPanel');if(!p){p=document.createElement('div');p.id='sbPanel';p.className='sb-bg';document.body.appendChild(p)}
+  p.innerHTML=`<div class="sb-box" role="dialog" aria-modal="true" aria-label="All NSE stocks"><div class="sb-h"><h2>NSE stocks</h2><input id="sbQ" placeholder="Search any stock — e.g. SEPC, Suzlon, Rail Vikas" value="${esc(S.q)}" autocomplete="off" aria-label="Search stocks"><span class="sb-cnt" id="sbCnt"></span><button class="sb-x" data-sb="close" aria-label="Close">×</button></div>
+    <div class="sb-chips">${chipsHtml()}</div><div class="sb-b" id="sbBody"></div></div>`;
+  drawTable();setTimeout(()=>{const i=$('#sbQ');if(i&&!S._focused){S._focused=1}},0)}
+function drawTable(){const b=$('#sbBody');if(!b)return;
+  if(S.loading){b.innerHTML='<div class="sb-empty">Loading…</div>';return}
+  if(S.err){b.innerHTML=`<div class="sb-empty">${esc(S.err)}</div>`;return}
+  const l=view(),pages=Math.max(1,Math.ceil(l.length/S.size));S.page=Math.min(S.page,pages-1);const part=l.slice(S.page*S.size,(S.page+1)*S.size);
+  const c=$('#sbCnt');if(c)c.textContent=l.length.toLocaleString('en-IN')+' stock'+(l.length===1?'':'s');
+  if(!part.length){b.innerHTML=`<div class="sb-empty">${S.q?'No stock matches “'+esc(S.q)+'”.':'No stocks in this list right now.'}</div>`;return}
+  const th=(k,label,r)=>`<th class="${r?'r':''}"><button class="sb-sort ${S.sort===k?'on':''}" data-sb="sort:${k}">${label}${S.sort===k?(S.asc?' ▲':' ▼'):''}</button></th>`;
+  const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-S.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
+  b.innerHTML=`<div class="sb-tw"><table><thead><tr>${th('sym','Stock')}${th('last','LTP',1)}${th('chg','Day %',1)}<th class="r">52W low – high</th>${th('x','× low',1)}<th class="r sb-act"></th></tr></thead><tbody>${part.map(r=>{const k=S.quotes[r.s]||{},ok=k.last>0,chg=ok&&k.prev>0?(k.last/k.prev-1)*100:null,x=ok&&k.yl>0?k.last/k.yl:null;
+      return`<tr><td><b>${esc(r.s)}</b><div class="sb-sub">${esc(r.n||'')}${r.industry?' · '+esc(r.industry):''}</div></td><td class="r num">${ok?fp(k.last):'—'}</td><td class="r num ${chg==null?'':chg>=0?'up':'down'}">${chg==null?'—':(chg>=0?'▲ +':'▼ −')+Math.abs(chg).toFixed(2)+'%'}</td><td class="r num sb-sub">${k.yl>0?fp(k.yl)+' – '+fp(k.yh):'—'}</td><td class="r num ${x>=2?'up':''}">${x?x.toFixed(2)+'×':'—'}</td>
+      <td class="r sb-act"><button class="sb-btn buy" data-sb="buy:${esc(r.s)}">Buy</button><button class="sb-btn sell" data-sb="sell:${esc(r.s)}">Sell</button><button class="sb-btn" data-sb="alert:${esc(r.s)}" title="Price alert">Alert</button><button class="sb-btn" data-sb="chart:${esc(r.s)}">Chart</button></td></tr>`}).join('')}</tbody></table></div>
+    <div class="sb-pg"><span class="sb-sub">Showing ${S.page*S.size+1}–${S.page*S.size+part.length} of ${l.length.toLocaleString('en-IN')}</span><span class="sb-pgb"><button class="sb-btn" data-sb="page:${S.page-1}" ${S.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="sb-sub">…</span>':`<button class="sb-btn ${i===S.page?'pri':''}" data-sb="page:${i}">${i+1}</button>`).join('')}<button class="sb-btn" data-sb="page:${S.page+1}" ${S.page>=pages-1?'disabled':''}>Next ›</button></span></div>`}
+
+function open(tab){if(!S.h)return;if(tab)S.tab=tab;draw();if(!S.rows.length||tab)loadTab();else fetchQuotes(true);
+  if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);if($('#sbMore'))$('.sb-chips').innerHTML=chipsHtml()}).catch(()=>{});
+  clearInterval(S.timer);S.timer=setInterval(()=>{if(!$('#sbPanel')){clearInterval(S.timer);return}fetchQuotes(false)},6000);
+  setTimeout(()=>{const i=$('#sbQ');if(i)i.focus()},50)}
+function close(){const p=$('#sbPanel');if(p)p.remove();clearInterval(S.timer)}
+async function act(kind,sym){const r=S.rows.find(x=>x.s===sym)||(await lookup(sym))||{s:sym,n:sym};close();
+  try{if(kind==='alert')S.h.alert(sym,r.n);else if(kind==='chart')S.h.chart(sym,r.n);else S.h.trade(sym,r.n,kind==='sell'?'SELL':'BUY')}catch(e){console.error(e)}}
+
+document.addEventListener('click',e=>{const bg=$('#sbPanel');if(bg&&e.target===bg){close();return}
+  const t=e.target.closest('[data-sb]');if(!t||!bg)return;const[k,a]=t.dataset.sb.split(':');
+  if(k==='close')close();else if(k==='tab'){S.tab=a;S.q='';loadTab()}
+  else if(k==='page'){S.page=Math.max(0,+a);drawTable();fetchQuotes(false)}
+  else if(k==='sort'){if(S.sort===a)S.asc=!S.asc;else{S.sort=a;S.asc=a==='sym'}drawTable();fetchQuotes(false)}
+  else if(k==='buy'||k==='sell'||k==='alert'||k==='chart')act(k,a)});
+document.addEventListener('input',e=>{if(e.target.id==='sbQ'){S.q=e.target.value;S.page=0;drawTable();clearTimeout(S._qt);S._qt=setTimeout(()=>fetchQuotes(false),250)}});
+document.addEventListener('change',e=>{if(e.target.id==='sbMore'&&e.target.value){S.tab=e.target.value;S.q='';loadTab()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#sbPanel')){close();e.preventDefault()}});
+
+const CSS=`.sb-bg{position:fixed;inset:0;z-index:360;background:rgba(0,0,0,.55);display:grid;place-items:start center;padding:3vh 10px;overflow:auto}
+.sb-box{width:min(1020px,100%);max-height:94vh;display:flex;flex-direction:column;background:var(--panel,#fff);color:var(--text,#0E1726);border:1px solid var(--line,#E2E6EC);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+.sb-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line,#E2E6EC);flex-wrap:wrap}
+.sb-h h2{font-size:16px;font-weight:700}
+.sb-h input{flex:1 1 220px;height:34px;border:1px solid var(--line,#E2E6EC);border-radius:8px;background:var(--panel,#fff);color:var(--text,#0E1726);padding:0 10px;font:inherit}
+.sb-cnt{font-size:12px;color:var(--text-2,#4A5568);white-space:nowrap}
+.sb-x{width:30px;height:30px;border-radius:8px;font-size:22px;color:var(--text-2,#4A5568)}.sb-x:hover{background:var(--panel-2,#F6F7FA)}
+.sb-chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line,#E2E6EC);align-items:center}
+.sb-chip{height:28px;padding:0 11px;border-radius:14px;border:1px solid var(--line,#E2E6EC);background:var(--panel-2,#F6F7FA);color:var(--text-2,#4A5568);font-size:12px;font-weight:600;white-space:nowrap}
+.sb-chip.on{background:var(--brand,#2a78d6);border-color:var(--brand,#2a78d6);color:#fff}
+.sb-sel{height:28px;border:1px solid var(--line,#E2E6EC);border-radius:14px;background:var(--panel,#fff);color:var(--text,#0E1726);padding:0 8px;font:inherit;font-size:12px}
+.sb-b{overflow:auto;flex:1}
+.sb-tw{overflow:auto}
+.sb-b table{width:100%;border-collapse:collapse;font-size:12.5px}
+.sb-b th{position:sticky;top:0;background:var(--panel,#fff);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-3,#8592A6);padding:8px 12px;border-bottom:1px solid var(--line,#E2E6EC);white-space:nowrap;z-index:1}
+.sb-b th.r,.sb-b td.r{text-align:right}
+.sb-b td{padding:8px 12px;border-bottom:1px solid var(--line,#E2E6EC);white-space:nowrap;vertical-align:middle}
+.sb-b tbody tr:hover td{background:var(--panel-2,#F6F7FA)}
+.sb-sub{font-size:11.5px;color:var(--text-2,#4A5568);max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.sb-sort{font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}.sb-sort.on{color:var(--brand,#2a78d6)}
+.sb-act{position:sticky;right:0;background:var(--panel,#fff);box-shadow:-8px 0 8px -8px rgba(0,0,0,.25)}
+.sb-b tbody tr:hover td.sb-act{background:var(--panel-2,#F6F7FA)}
+.sb-btn{height:26px;padding:0 9px;border-radius:7px;border:1px solid var(--line,#E2E6EC);background:var(--panel,#fff);color:var(--text-2,#4A5568);font-size:12px;font-weight:600;margin-left:4px}
+.sb-btn:hover{color:var(--text,#0E1726);border-color:var(--text-3,#8592A6)}.sb-btn:disabled{opacity:.45;cursor:not-allowed}.sb-btn.pri{background:var(--brand,#2a78d6);border-color:var(--brand,#2a78d6);color:#fff}
+.sb-btn.buy{border-color:var(--up,#0A8F6C);color:var(--up,#0A8F6C)}.sb-btn.sell{border-color:var(--down,#D93240);color:var(--down,#D93240)}
+.sb-empty{padding:40px 16px;text-align:center;color:var(--text-2,#4A5568)}
+.sb-pg{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px}
+.sb-pgb{display:flex;gap:2px;flex-wrap:wrap;align-items:center}
+@media(max-width:640px){.sb-bg{padding:0}.sb-box{max-height:100vh;border-radius:0;min-height:100vh}}`;
+function init(host){S.h=host;if(!document.getElementById('sbCss')){const s=document.createElement('style');s.id='sbCss';s.textContent=CSS;document.head.appendChild(s)}}
+global.SB={init,open,close,lookup,load:ensureAll,cached:()=>S.all};
+})(window);
+</script>
 <script>
 /* ===================== Notifications (Notifications-Feature-BRD) =====================
    In-app centre, toasts, browser push, price alerts, preferences, delivery log and audit log.
@@ -1683,22 +1796,21 @@ function selectSym(s,tf){
   updateSymbar();buildToolbar();buildTicket();
   if(!s.ikey)loadOptionChain(s.s);}
 
+async function ensureStockAsync(sym,name){sym=String(sym||'').trim().toUpperCase();let s=SYM(sym);if(s)return s;
+  if(!name){const r=await SB.lookup(sym);name=r?r.n:sym}
+  s=XSYM[sym]={s:sym,n:name,ex:'NSE',cls:'Stocks',sec:'',dp:2,vol:.02,vb:1e6,dvol:0,unit:'shares',last:0,prev:0,hi:0,lo:0,p:0,chg:0,chgPct:0};
+  try{const r=await api.get('/api/m/quotes?symbols='+encodeURIComponent(sym));applyStockQuote(s,(r.quotes||[]).find(x=>x.s===sym))}catch(e){}
+  return s}
 async function openStock(sym){
   sym=String(sym||'').trim().toUpperCase();if(!sym)return;
   let s=SYM(sym);
-  if(!s){
-    if(!scanState.uni)await loadScanUniverse();
-    const u=((scanState.uni&&scanState.uni.stocks)||[]).find(x=>x.s===sym);
-    if(!u){toast('Symbol not found: '+sym,'bad');return}
-    s=XSYM[sym]={s:sym,n:u.n||sym,ex:'NSE',cls:'Stocks',sec:u.sec||'',dp:2,vol:.02,vb:1e6,dvol:0,unit:'shares',last:0,prev:0,hi:0,lo:0,p:0,chg:0,chgPct:0};
-    try{const r=await api.get('/api/m/quotes?symbols='+encodeURIComponent(sym));applyStockQuote(s,(r.quotes||[]).find(x=>x.s===sym))}catch(e){}
-    if(!(s.last>0)){delete XSYM[sym];toast('No live price for '+sym+' right now','bad');return}}
+  if(!s){const u=await SB.lookup(sym);if(!u){toast('Symbol not found: '+sym,'bad');return}
+    s=await ensureStockAsync(sym,u.n);if(!(s.last>0)){delete XSYM[sym];toast('No live price for '+sym+' right now','bad');return}}
   ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')}
 function applyStockQuote(nm,x){if(!nm||!x||!(x.last>0))return;nm.last=x.last;nm.p=x.last;nm.prev=x.prev>0?x.prev:(nm.prev||x.last);nm.chg=nm.last-nm.prev;nm.chgPct=nm.prev?nm.chg/nm.prev*100:0;nm.hi=x.high||nm.last;nm.lo=x.low||nm.last;nm.open=x.open||nm.open;if(x.vol)nm.dvol=x.vol;nm.bid=x.bid;nm.ask=x.ask}
 /* live prices for everything held (and the active chart) that the built-in quote poll doesn't cover */
 function ensureStock(sym){if(SYM(sym)||ensureStock._p[sym])return;ensureStock._p[sym]=1;
-  (async()=>{try{if(!scanState.uni)await loadScanUniverse();const u=((scanState.uni&&scanState.uni.stocks)||[]).find(x=>x.s===sym);if(!u)return;
-    XSYM[sym]={s:sym,n:u.n||sym,ex:'NSE',cls:'Stocks',sec:u.sec||'',dp:2,vol:.02,vb:1e6,dvol:0,unit:'shares',last:0,prev:0,hi:0,lo:0,p:0,chg:0,chgPct:0}}catch(e){}finally{delete ensureStock._p[sym]}})()}
+  ensureStockAsync(sym).then(s=>{if(s&&!(s.last>0))delete XSYM[sym]}).catch(()=>{delete XSYM[sym]}).then(()=>{delete ensureStock._p[sym]})}
 ensureStock._p={};
 async function pollHeld(){
   const want=new Set([...PORT.positions.map(p=>p.sym),...PORT.pending.map(o=>o.sym),...RN.alertSyms()]);if(ACTIVE.sym)want.add(ACTIVE.sym.s);
@@ -2013,9 +2125,10 @@ function buildTicket(){
   fillFindList();tkSide(TK.side);tkType(TK.type);
   if(TK_PRE&&Date.now()-TK_PRE.t<5000){const a=$('#tkSl'),b=$('#tkTp');if(a&&TK_PRE.sl)a.value=TK_PRE.sl;if(b&&TK_PRE.tp)b.value=TK_PRE.tp}
   updTicketLive()}
-function fillFindList(){const dl=$('#tkFindList');if(!dl)return;const seen=new Set(),list=[...NSE_SYMS.map(x=>({s:x.s,n:x.n})),...((scanState.uni&&scanState.uni.stocks)||[])];
+function fillFindList(){const dl=$('#tkFindList');if(!dl)return;const seen=new Set(),list=[...NSE_SYMS.map(x=>({s:x.s,n:x.n})),...((scanState.uni&&scanState.uni.stocks)||[]),...((SB.cached()||[]).map(x=>({s:x[0],n:x[1]})))];
   dl.innerHTML=list.filter(x=>!seen.has(x.s)&&seen.add(x.s)).map(x=>`<option value="${esc(x.s)}">${esc(x.n||'')}</option>`).join('');
-  if(!scanState.uni&&!fillFindList._l){fillFindList._l=1;loadScanUniverse().then(fillFindList)}}
+  if(!fillFindList._l){fillFindList._l=1;SB.load().then(fillFindList).catch(()=>{})}
+  if(!scanState.uni&&!fillFindList._m){fillFindList._m=1;loadScanUniverse().then(fillFindList)}}
 function tkSide(side){TK.side=side;const b=$('#tkBuy'),s=$('#tkSell');if(b){b.className='buy'+(side==='BUY'?' on':'');s.className='sell'+(side==='SELL'?' on':'')}updTicketLive()}
 function tkType(t){TK.type=t;$$('#tkType button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));const w=$('#tkLimitW');
   if(w){w.style.display=t==='limit'?'':'none';const l=$('#tkLimit');if(t==='limit'&&l&&!l.value&&ACTIVE.sym&&ACTIVE.sym.last>0)l.value=ACTIVE.sym.last.toFixed(2)}updTicketLive()}
@@ -2319,10 +2432,16 @@ async function loadNewsBar(){try{const r=await api.get('/api/news');const items=
   updateThemeBtn(true);
   _initSettingsBtn();
   updateTokenStatus();
+  SB.init({get:p=>api.get(p),
+    async trade(sym,name,side){const s=await ensureStockAsync(sym,name);if(!(s.last>0)){toast('No live price for '+sym+' right now','bad');return}
+      TK.side=side;TK.type='market';TK_PRE={t:Date.now(),side,sl:null,tp:null};ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')},
+    async chart(sym,name){const s=await ensureStockAsync(sym,name);if(!(s.last>0)){toast('No live price for '+sym+' right now','bad');return}ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')},
+    async alert(sym,name){await ensureStockAsync(sym,name);RN.newAlert(sym)}});
+  SB.load().catch(()=>{});
   RN.init({bell:'#rnBell',
     price(sym){const s=SYM(sym);if(!s||!(s.last>0))return null;return{last:s.last,prev:s.prev,chgPct:isFinite(s.chgPct)&&s.chgPct!==0?s.chgPct:(s.prev>0?(s.last/s.prev-1)*100:0),market:s.tv?'GLOBAL':'NSE'}},
     marketOpen(){return window.MKT_OPEN!==false},
-    symbols(){const seen=new Set(),out=[];[...NSE_SYMS,...Object.values(XSYM),...((scanState.uni&&scanState.uni.stocks)||[])].forEach(x=>{if(x&&x.s&&!seen.has(x.s)){seen.add(x.s);out.push({s:x.s,n:x.n})}});return out},
+    symbols(){const seen=new Set(),out=[];[...NSE_SYMS,...Object.values(XSYM),...((scanState.uni&&scanState.uni.stocks)||[]),...((SB.cached()||[]).map(x=>({s:x[0],n:x[1]})))].forEach(x=>{if(x&&x.s&&!seen.has(x.s)){seen.add(x.s);out.push({s:x.s,n:x.n})}});return out},
     openLink(l){if(l.sym)selectSymAndSwitch(l.sym);else if(l.tab)switchTab(l.tab)},
     onAlerts(){if(CHART&&ACTIVE.sym)CHART.lines=buildOrderLines(ACTIVE.sym.s)}});
   switchTab('v-markets');
