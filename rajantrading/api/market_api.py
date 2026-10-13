@@ -214,6 +214,7 @@ def ensure_universe():
 
 
 _cache = {}
+_QLAST = {}   # last good quote payloads, served (flagged stale) when Upstox rate-limits us
 
 
 def _cached_ok(key, ttl, fn, short=15):
@@ -295,13 +296,26 @@ def quotes(symbols: str = ""):
                 "ask": _num(((q.get("depth") or {}).get("sell") or [{}])[0].get("price")),
                 "yh": _num(q.get("year_high")), "yl": _num(q.get("year_low")),
             })
+        if not out and keymap:
+            raise RuntimeError("Upstox returned no quotes")     # never cache an empty answer
         return out
 
+    ck = "q|" + ",".join(syms)
+    stale, why = False, ""
     try:
-        data = _cached("q|" + ",".join(syms), 0.8 if market_open() else 20, fetch)
+        data = _cached(ck, 3 if market_open() else 20, fetch)
+        _QLAST[ck] = (time.time(), data)
     except Exception as e:
-        raise HTTPException(502, f"Upstox quotes failed: {e}")
-    return {"quotes": data, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat()}
+        last = _QLAST.get(ck)
+        if last and time.time() - last[0] < 1800:
+            data, stale, why = last[1], True, str(e)[:160]
+        else:
+            raise HTTPException(503, f"Live prices are temporarily unavailable: {str(e)[:160]}")
+    out = {"quotes": data, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat(), "stale": stale}
+    if stale:
+        out["quotesAsOf"] = datetime.fromtimestamp(_QLAST[ck][0], IST).isoformat()
+        out["reason"] = why
+    return out
 
 
 # tf -> (kind, base interval minutes, history days, request window days, resample factor)

@@ -230,7 +230,10 @@ def _quote_rows(symbols: List[str]) -> Dict[str, dict]:
 @router.get("/stocks/quotes")
 def stocks_quotes(symbols: str = Query("")):
     syms = [x.strip().upper() for x in symbols.split(",") if x.strip()][:200]
-    q = _quote_rows(syms)
+    try:
+        q = _quote_rows(syms)
+    except Exception as e:      # rate limit / outage: let the page keep its last prices
+        return {"quotes": [], "stale": True, "reason": str(e)[:160]}
     return {"quotes": list(q.values())}
 
 
@@ -249,7 +252,12 @@ def multibaggers(min_x: float = 2.0, limit: int = 120):
             continue
     if not names:
         raise HTTPException(502, "Index lists are unavailable right now")
-    quotes = _quote_rows(list(names.keys()))
+    try:
+        quotes = _quote_rows(list(names.keys()))
+    except Exception as e:
+        if _multi["rows"]:
+            return {"stocks": _multi["rows"][:limit], "cached": True, "stale": True}
+        raise HTTPException(503, f"Live prices are temporarily unavailable: {str(e)[:120]}")
     rows = []
     for s, q in quotes.items():
         if q["last"] > 0 and q["yl"] > 0 and q["last"] / q["yl"] >= min_x:

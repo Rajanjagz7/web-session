@@ -530,6 +530,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pnl-chip{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pnl-chip[hidden]{display:none}.pnl-chip small{color:var(--text-3);font-weight:600}.pnl-chip.up{border-color:var(--up);background:var(--up-bg)}.pnl-chip.down{border-color:var(--down);background:var(--down-bg)}
 @media(max-width:560px){.pnl-chip small{display:none}}
+.jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -1812,7 +1813,9 @@ function stratCalc(m,d,x){const sym=App.sym.s,k=m.key+'|'+sym,n=d.length,out={};
     const lastOfDay=!intra||i===n-1||istDay(d[i+1].t)!==day;
     if(lastOfDay&&b.signal){const z=sigBias(b.signal);if(z>0)out._buy[i]=d[i].l*0.998;else if(z<0)out._sell[i]=d[i].h*1.002}}
   return out}
-function stBadge(r){const cl=r.bias==='bull'?'b-up':r.bias==='bear'?'b-down':'b-mute';return`<span class="badge ${cl}">${esc(r.signal==='NONE'?'No signal':String(r.signal).replace(/_/g,' '))}</span>`}
+function stBadge(r){const cl=r.bias==='bull'?'b-up':r.bias==='bear'?'b-down':'b-mute',raw=String(r.signal||'').replace(/_/g,' ');
+  const txt=r.signal==='NONE'||!r.signal?'No signal':r.stale?'Last '+raw:raw;
+  return`<span class="badge ${cl}" ${r.stale?'title="An older signal — not active now, so it is not counted"':''}>${esc(txt)}</span>`}
 function stVal(d){return typeof d.value==='number'?fmtP(d.value,Math.abs(d.value)<10?3:2):esc(d.value)}
 function stBody(m){const sym=ST.sym,r=ST.res[m.key+'|'+sym];
   if(m.kind==='optscan')return'<div class="muted st-note">Scans the live option chains for contracts that match — all indices, or indices plus 30 liquid stocks.</div>';
@@ -2053,9 +2056,11 @@ function tradePlan(d,o,tf,isOpt){const rd=computeReadings(d,o,tf);if(!d||d.lengt
   const why=rd.R.filter(r=>r.b!==0).sort((a,b)=>Math.abs(b.b)-Math.abs(a.b)).slice(0,3).map(r=>r.name.split(' (')[0]+': '+r.note.toLowerCase());
   return{sig,px,sl,t1,t2,rr:1.5,why,rd,tf:tf.k,label:isOpt?(sig==='BUY'?'BUY this option':sig==='SELL'?'SELL / EXIT this option':'WAIT'):(sig==='BUY'?'BUY':sig==='SELL'?'SELL / SHORT':'WAIT')}}
 function planHTML(p,isOpt){if(!p)return'';const open=localStorage.getItem(PLAN_STORE)==='1',cl=p.sig==='BUY'?'pl-buy':p.sig==='SELL'?'pl-sell':'pl-wait';
-  const where=p.sig==='BUY'?(isOpt?`Buy this option near <b>${fmtP(p.px)}</b>`:`Buy futures near <b>${fmtP(p.px)}</b> · or buy CE · or sell PE`):p.sig==='SELL'?(isOpt?`Sell (write) this option near <b>${fmtP(p.px)}</b> for premium decay, or exit if you hold it. Writing options carries large risk — keep the stop`:`Sell futures / short near <b>${fmtP(p.px)}</b> · or buy PE · or sell CE`):'No clean entry — wait for a signal';
+  const oside=isOpt&&OPT.sel?OPT.sel.side:null,V=isOpt&&oside?optVerdict(OPT.sym,oside):null,
+    clash=V&&V.ok!==null&&p.sig==='BUY'&&!V.ok?` <span class="down">⚠ The underlying's strategies disagree — higher risk.</span>`:'';
+  const where=p.sig==='BUY'?(isOpt?`This ${oside||'option'}'s premium momentum is rising — buy near <b>${fmtP(p.px)}</b> and exit at the target or stop.${clash}`:`Buy futures near <b>${fmtP(p.px)}</b> · or buy CE · or sell PE`):p.sig==='SELL'?(isOpt?`This ${oside||'option'}'s premium momentum is falling — <b>do not buy</b>; exit if you hold it (around <b>${fmtP(p.px)}</b>). Selling (writing) it earns the premium decay but carries large risk — only with a stop.`:`Sell futures / short near <b>${fmtP(p.px)}</b> · or buy PE · or sell CE`):(isOpt?'Premium indicators are not aligned — no clean entry, wait.':'No clean entry — wait for a signal');
   return`<div class="plan ${cl} ${open?'open':''}"><button class="plan-h" data-plan="toggle" aria-expanded="${open}"><span class="pl-sig">${p.label}</span><span class="pl-sum">${p.sig==='WAIT'?'No trade':'SL '+fmtP(p.sl)}</span><span class="pl-chev">▾</span></button>
-   <div class="plan-b"><div class="pl-row"><span>Where</span><span>${where}</span></div>${p.sig==='WAIT'?'':`<div class="pl-row"><span>Stop loss</span><b class="down num">${fmtP(p.sl)}</b></div><div class="pl-row"><span>Target 1</span><b class="up num">${fmtP(p.t1)}</b></div><div class="pl-row"><span>Target 2</span><b class="up num">${fmtP(p.t2)}</b></div><div class="pl-row"><span>Risk : reward</span><b class="num">1 : ${p.rr}</b></div>`}
+   <div class="plan-b"><div class="pl-row"><span>What it means</span><span>${where}</span></div>${V?`<div class="pl-row"><span>Underlying</span><span class="${V.cls}">${esc(V.txt)}</span></div>`:''}${p.sig==='WAIT'?'':`<div class="pl-row"><span>Stop loss</span><b class="down num">${fmtP(p.sl)}</b></div><div class="pl-row"><span>Target 1</span><b class="up num">${fmtP(p.t1)}</b></div><div class="pl-row"><span>Target 2</span><b class="up num">${fmtP(p.t2)}</b></div><div class="pl-row"><span>Risk : reward</span><b class="num">1 : ${p.rr}</b></div>`}
    <div class="pl-st"><small>Indicators on ${tfLabel(p.tf)} · ${p.rd.bias} (${p.rd.bu}↑ ${p.rd.be}↓)</small>${p.rd.R.filter(r=>r.b!==0).slice(0,6).map(r=>`<span class="pl-i ${r.b>0?'up':'down'}">${esc(r.name.split(' (')[0])}: ${esc(r.note)}</span>`).join('')}</div>
    <small class="muted">Rule-based from the indicators above — a screening aid, not advice.</small></div></div>`}
 let planTs=0;
@@ -2402,7 +2407,7 @@ function jBody(fills,trips,open){
     const days=Object.values(m).sort((x,y)=>y.day.localeCompare(x.day));if(!days.length)return'<div class="empty">No trades in this period.</div>';let cum=0;const withCum=days.slice().reverse().map(d=>({...d,cum:(cum+=d.gross-d.ch)})).reverse();
     return`<table><thead><tr><th>Date</th><th class="num">Fills</th><th class="num">Closed trades</th><th class="num">Win rate</th><th class="num">Gross</th><th class="num">Charges</th><th class="num">Net</th><th class="num">Cumulative</th></tr></thead><tbody>${withCum.map(d=>`<tr class="jr-row" data-jr="day:${d.day}"><td><b>${dLbl(d.day)}</b></td><td class="num">${d.fills}</td><td class="num">${d.trips}</td><td class="num">${d.trips?Math.round(d.wins/d.trips*100)+'%':'—'}</td><td class="num ${cls(d.gross)}">${smoney(d.gross)}</td><td class="num muted">${money(d.ch)}</td><td class="num ${cls(d.gross-d.ch)}"><b>${smoney(d.gross-d.ch)}</b></td><td class="num ${cls(d.cum)}">${smoney(d.cum)}</td></tr>`).join('')}</tbody></table>`}
   if(JR.tab==='open'){if(!App.positions.length)return'<div class="empty">No open positions. Orders you place on Trade or Options appear here.</div>';
-    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="num">Qty</th><th class="num">Avg price</th><th class="num">Last</th><th class="num">Unrealized P&L</th><th class="num">Return</th><th class="num">Stop-loss</th><th class="num">Target</th><th class="num">Trailing SL</th><th></th></tr></thead><tbody>${App.positions.map(p=>{const s=SYM(p.sym)||{last:p.avg,dp:2},u=p.q*(s.last-p.avg);return`<tr><td><b>${esc(p.sym)}</b><div class="muted" style="font-size:11px">${kindOf(s)}</div></td><td><span class="side-tag ${p.q>0?'up':'down'}">${p.q>0?'Long':'Short'}</span></td><td class="num">${qn(Math.abs(p.q))}</td><td class="num">${fmtP(p.avg)}</td><td class="num" data-px="${esc(p.sym)}">${fmtP(s.last)}</td><td class="num ${cls(u)}" data-pnl="${esc(p.sym)}">${smoney(u)}</td><td class="num ${cls(u)}" data-pnlp="${esc(p.sym)}">${pct((s.last/p.avg-1)*Math.sign(p.q))}</td><td class="num down">${p.sl?fmtP(p.sl):'—'}</td><td class="num up">${p.tp?fmtP(p.tp):'—'}</td><td class="num ${p.tsl?'down':'muted'}">${p.tsl?(p.tsl.u==='abs'?'₹'+fmtP(p.tsl.v):p.tsl.v+'%')+(p.peak?`<div class="muted" style="font-size:11px">peak ${fmtP(p.peak)}</div>`:''):'—'}</td><td><button class="btn-xs" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('')}</tbody></table>`}
+    return`<table><thead><tr><th>Instrument</th><th>Side</th><th class="num">Qty</th><th class="num">Avg price</th><th class="num">Last</th><th class="num">Unrealized P&L</th><th class="num">Return</th><th class="num">Stop-loss</th><th class="num">Target</th><th class="num">Trailing SL</th><th></th></tr></thead><tbody>${App.positions.map(p=>{const s=SYM(p.sym)||{last:p.avg,dp:2},u=p.q*(s.last-p.avg);return`<tr><td><b>${esc(p.sym)}</b><div class="muted" style="font-size:11px">${kindOf(s)}</div></td><td><span class="side-tag ${p.q>0?'up':'down'}">${p.q>0?'Long':'Short'}</span></td><td class="num">${qn(Math.abs(p.q))}</td><td class="num">${fmtP(p.avg)}</td><td class="num" data-px="${esc(p.sym)}">${fmtP(s.last)}</td><td class="num ${cls(u)}" data-pnl="${esc(p.sym)}">${smoney(u)}</td><td class="num ${cls(u)}" data-pnlp="${esc(p.sym)}">${pct((s.last/p.avg-1)*Math.sign(p.q))}</td><td class="num"><input class="inp jr-px" inputmode="decimal" data-jsl="${esc(p.sym)}" value="${p.sl||''}" placeholder="—" aria-label="Stop-loss for ${esc(p.sym)}"></td><td class="num"><input class="inp jr-px" inputmode="decimal" data-jtp="${esc(p.sym)}" value="${p.tp||''}" placeholder="—" aria-label="Target for ${esc(p.sym)}"></td><td class="num"><div class="jr-tsl"><input class="inp jr-px" inputmode="decimal" data-jtsl="${esc(p.sym)}" value="${p.tsl?p.tsl.v:''}" placeholder="—" aria-label="Trailing stop for ${esc(p.sym)}"><select class="inp jr-u" data-jtslu="${esc(p.sym)}" aria-label="Trailing stop unit"><option value="pct" ${!p.tsl||p.tsl.u!=='abs'?'selected':''}>%</option><option value="abs" ${p.tsl&&p.tsl.u==='abs'?'selected':''}>₹</option></select></div>${p.tsl&&p.peak?`<div class="muted" style="font-size:11px">peak ${fmtP(p.peak)} · stop ${fmtP(p.sl)}</div>`:''}</td><td><button class="btn-xs" data-close="${esc(p.sym)}">Close</button></td></tr>`}).join('')}</tbody></table>`}
   if(JR.tab==='trips'){const all=[...trips.slice().sort((a,b)=>b.close-a.close),...open.map(o=>({...o,openTrip:true}))].filter(t=>t.openTrip?(JR.range==='all'||JR.range==='today'||true):true);
     if(!all.length)return'<div class="empty">No completed round trips in this period. A round trip is a position opened and then fully closed.</div>';
     return`<table><thead><tr><th>Opened</th><th>Instrument</th><th>Dir</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">Exit</th><th class="num">SL</th><th class="num">Target</th><th class="num">TSL</th><th>Held</th><th class="num">Net P&L</th><th class="num">R</th></tr></thead><tbody>${all.map(t=>{const e=t.costIn/(t.qtyIn||1),x=t.qtyOut?t.valOut/t.qtyOut:null,risk=t.plan&&t.plan.sl?Math.abs(e-t.plan.sl)*t.qtyIn:0,R=!t.openTrip&&risk?t.net/risk:null;
@@ -2432,7 +2437,16 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-jr]');if(!
   else if(k==='day'){JR.range='day';JR.day=v;JR.page=0;if(JR.tab==='days')JR.tab='trades'}else if(k==='toggle'){if(e.target.closest('select,textarea,input'))return;JR.open[v]=!JR.open[v]}else if(k==='csv'){jCSV();return}
   renderJournal()});
 document.addEventListener('change',e=>{if(e.target.id==='jrDay'&&e.target.value){JR.range='day';JR.day=e.target.value;JR.page=0;renderJournal()}else if(e.target.id==='jrSize'){JR.size=+e.target.value;JR.page=0;renderJournal()}
-  else if(e.target.dataset&&e.target.dataset.jtag){const x=App.trades.find(t=>t.id==e.target.dataset.jtag);if(x){x.tag=e.target.value;saveTrades()}}});
+  else if(e.target.dataset&&e.target.dataset.jtag){const x=App.trades.find(t=>t.id==e.target.dataset.jtag);if(x){x.tag=e.target.value;saveTrades()}}
+  else if(e.target.dataset&&(e.target.dataset.jsl!=null||e.target.dataset.jtp!=null||e.target.dataset.jtsl!=null||e.target.dataset.jtslu!=null)){
+    const d=e.target.dataset,sym=d.jsl||d.jtp||d.jtsl||d.jtslu,p=posOf(sym);if(!p)return;const s=SYM(sym)||{last:p.avg,dp:2},L=p.q>0,v=parseFloat(e.target.value);
+    if(d.jsl!=null){if(v>0&&(L?v>=p.avg:v<=p.avg)){toast('Stop-loss must be '+(L?'below':'above')+' your average price','bad');e.target.value=p.sl||'';return}p.sl=v>0?v:null}
+    else if(d.jtp!=null){if(v>0&&(L?v<=p.avg:v>=p.avg)){toast('Target must be '+(L?'above':'below')+' your average price','bad');e.target.value=p.tp||'';return}p.tp=v>0?v:null}
+    else{const row=e.target.closest('tr'),inp=row.querySelector('[data-jtsl]'),sel=row.querySelector('[data-jtslu]'),tv=parseFloat(inp.value),u=sel.value==='abs'?'abs':'pct';
+      if(!(tv>0)){p.tsl=null;p.peak=null}
+      else{if(u==='pct'&&tv>50){toast('Trailing stop % must be 50 or less','bad');return}
+        p.tsl={u,v:tv};p.peak=s.last>0?s.last:p.avg;const dist=u==='abs'?tv:p.peak*tv/100,st=+(L?p.peak-dist:p.peak+dist).toFixed(s.dp||2);if(!(p.sl>0)||(L?st>p.sl:st<p.sl))p.sl=st}}
+    savePaper();setChartLines();toast('Risk levels updated for '+sym,'ok');if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();setTimeout(renderJournal,0)}});
 document.addEventListener('input',e=>{if(e.target.id==='jrQ'){JR.q=e.target.value;JR.page=0;renderJournal();const q=$('#jrQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}
   else if(e.target.dataset&&e.target.dataset.jnote){const x=App.trades.find(t=>t.id==e.target.dataset.jnote);if(x){x.note=e.target.value;saveTrades()}}});
 document.addEventListener('click',e=>{const c=e.target.closest('#v-journal [data-close]');if(c){closePos(c.dataset.close,'manual');renderJournal()}});
@@ -2465,20 +2479,32 @@ function loadOptInds(){try{return JSON.parse(localStorage.getItem(OIND_STORE)||'
 
 /* ---- strategy signals on the underlying, translated into what to do with this contract ---- */
 const OS={res:{},sym:null,token:0};
+/* what the underlying's active strategies mean for THIS contract: bullish supports a CE, bearish supports a PE */
+function optVerdict(und,side){let bu=0,be=0;
+  for(const [k,r] of Object.entries(OS.res)){if(!k.endsWith('|'+und)||k.startsWith('opt-')||!r||r.err||r.pending||r.stale)continue;if(r.bias==='bull')bu++;else if(r.bias==='bear')be++}
+  const tot=bu+be,nm=side==='CE'?'CE':'PE';let txt,cls,ok=null;
+  if(!tot){txt=`No active strategy signal on ${und} right now — wait for a setup`;cls='muted'}
+  else if(bu===be){txt=`Strategies are mixed on ${und} (${bu} bullish · ${be} bearish) — no clear edge`;cls='muted'}
+  else{const bull=bu>be;ok=bull===(side==='CE');
+    txt=bull?(ok?`${und} strategies lean bullish (${bu} vs ${be}) — supports buying this CE`:`${und} strategies lean bullish (${bu} vs ${be}) — this PE goes against them; a CE fits better`)
+            :(ok?`${und} strategies lean bearish (${be} vs ${bu}) — supports buying this PE`:`${und} strategies lean bearish (${be} vs ${bu}) — this CE goes against them; a PE fits better`);
+    cls=ok?'up':'down'}
+  return{bu,be,txt,cls,ok}}
 async function optStrats(){const box=$('#opStrat');if(!box||!OPT.sel)return;const und=OPT.sym;
   const meta=await loadStratMeta().catch(()=>null);if(!meta||!$('#opStrat'))return;
   const list=meta.strategies.filter(m=>!String(m.key).startsWith('opt-')&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
-  const draw=()=>{const bx=$('#opStrat');if(!bx||!OPT.sel)return;const side=OPT.sel.side,rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),done=rows.filter(x=>x.r&&!x.r.err&&!x.r.pending),
-      buys=done.filter(x=>x.r.signal==='BUY').length,sells=done.filter(x=>x.r.signal==='SELL').length;
-    const verdict=buys===sells?'Mixed — no clear edge':buys>sells?(side==='CE'?'Underlying looks bullish — supports buying this CE':'Underlying looks bullish — this PE goes against it'):(side==='PE'?'Underlying looks bearish — supports buying this PE':'Underlying looks bearish — this CE goes against it');
-    const vc=buys===sells?'muted':((buys>sells)===(side==='CE'))?'up':'down';
-    bx.innerHTML=`<div class="card-h"><h3>Strategy signals · ${esc(und)}</h3><span class="badge ${vc==='up'?'b-up':vc==='down'?'b-down':'b-mute'}">${buys} buy · ${sells} sell</span></div>
-     <div class="os-v ${vc}">${verdict}</div>
-     <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>What it shows</th></tr></thead><tbody>${rows.map(({m,r})=>{
-       if(!r||r.pending)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Loading…</td></tr>`;if(r.err)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Not available</td></tr>`;
-       const act=r.signal==='BUY'?(side==='CE'?'Buy CE':'Avoid CE · PE is against it'):r.signal==='SELL'?(side==='PE'?'Buy PE':'Avoid PE · CE is against it'):'';
-       return`<tr><td>${esc(m.name)}</td><td><span class="badge ${r.signal==='BUY'?'b-up':r.signal==='SELL'?'b-down':'b-mute'}">${r.signal==='NONE'?'No signal':r.signal}</span></td><td>${esc(r.headline||'')}${act?`<div class="${(r.signal==='BUY')===(side==='CE')?'up':'down'}" style="font-size:11.5px">${act}</div>`:''}${r.levels?`<div class="muted" style="font-size:11px">${Object.entries(r.levels).filter(([k,v])=>typeof v==='number').slice(0,4).map(([k,v])=>k+' '+fmtP(v)).join(' · ')}</div>`:''}</td></tr>`}).join('')}</tbody></table></div>
-     <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). They show the direction of the underlying; the plan above is built from the contract's own chart.</p>`};
+  const draw=()=>{const bx=$('#opStrat');if(!bx||!OPT.sel)return;const side=OPT.sel.side,rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side);
+    bx.innerHTML=`<div class="card-h"><h3>Strategy signals · ${esc(und)}</h3><span class="badge ${V.cls==='up'?'b-up':V.cls==='down'?'b-down':'b-mute'}">${V.bu} bullish · ${V.be} bearish</span></div>
+     <div class="os-v ${V.cls}">${esc(V.txt)}</div>
+     <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>What it means for this ${side}</th></tr></thead><tbody>${rows.map(({m,r})=>{
+       if(!r||r.pending)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Loading…</td></tr>`;if(r.err)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Not available for ${esc(und)}</td></tr>`;
+       let act='',ac='muted';
+       if(r.stale){act='Older signal — not active now, not counted'}
+       else if(r.bias==='bull'){act=side==='CE'?'Bullish — supports buying this CE':'Bullish — goes against this PE (a CE fits)';ac=side==='CE'?'up':'down'}
+       else if(r.bias==='bear'){act=side==='PE'?'Bearish — supports buying this PE':'Bearish — goes against this CE (a PE fits)';ac=side==='PE'?'up':'down'}
+       else{act='Neutral — no directional edge'}
+       return`<tr><td>${esc(m.name)}</td><td>${stBadge(r)}</td><td>${esc(r.headline||'')}<div class="${ac}" style="font-size:11.5px">${act}</div>${r.levels?`<div class="muted" style="font-size:11px">${Object.entries(r.levels).filter(([k,v])=>typeof v==='number').slice(0,4).map(([k,v])=>k+' '+fmtP(v)).join(' · ')}</div>`:''}</td></tr>`}).join('')}</tbody></table></div>
+     <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). Only active signals are counted — bullish favours a CE, bearish favours a PE. The plan above is built from the contract's own chart.</p>`;updateOptPlan()};
   if(OS.sym!==und){OS.sym=und;OS.token++}
   draw();
   const tk=OS.token,todo=list.filter(m=>{const r=OS.res[m.key+'|'+und];return !r||(!r.pending&&Date.now()-(r.ts||0)>90000)});
@@ -2489,6 +2515,7 @@ async function optStrats(){const box=$('#opStrat');if(!box||!OPT.sel)return;cons
 
 /* ======================= Live engine (real NSE quotes via Upstox) ======================= */
 function trig(s,pv){
+  if(MKT.err||MKT.stale)return;
   for(const a of App.alerts){if(!a.on||a.status!=='Active'||a.sym!==s.s)continue;const c=s.last/s.prev-1;
     if((a.cond==='above'&&pv<a.v&&s.last>=a.v)||(a.cond==='below'&&pv>a.v&&s.last<=a.v)||(a.cond==='up'&&c*100>=a.v)||(a.cond==='down'&&c*100<=-a.v)){a.status='Triggered';{const px=fmtP(s.last,s.dp),link={sym:s.s},key='alert|'+a.id+'|'+Date.now();
       if(a.cond==='above')RN.emit('N-09',{sym:s.s,level:fmtP(a.v,s.dp),price:px},{key,link});
@@ -2502,11 +2529,12 @@ function trig(s,pv){
         if(!(p.sl>0)||(L?st>p.sl:st<p.sl)){p.sl=st;savePaper();setChartLines()}}}
     if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){closePos(s.s,p.tsl?'TSL':'SL')}}}
 function setStatus(){const t=$('#liveTxt'),d=$('#liveDot');if(!t)return;
-  if(MKT.err){t.textContent='Data unavailable — retrying';d.style.background='var(--down)';return}
+  if(MKT.err){t.textContent='Live prices unavailable — retrying';d.style.background='var(--down)';return}
+  if(MKT.stale){t.textContent='Delayed — provider limit · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false});d.style.background='var(--warn)';return}
   t.textContent=MKT.open?'Live · '+new Date().toLocaleTimeString('en-IN',{hour12:false}):'Market closed · last close';d.style.background=MKT.open?'var(--up)':'var(--warn)'}
 let pollBusy=false,firstQuotes=false;
 async function pollQuotes(){if(pollBusy)return;pollBusy=true;
-  try{const r=await api(quotesURL());MKT.open=r.marketOpen;MKT.asOf=r.asOf;MKT.err=null;
+  try{const r=await api(quotesURL());MKT.open=r.marketOpen;MKT.asOf=r.asOf;MKT.err=null;MKT.stale=!!r.stale;MKT.staleAt=r.quotesAsOf||null;
     for(const q of r.quotes){const s=SYM(q.s);if(!s||!(q.last>0))continue;const pv=s.last;
       s.last=q.last;s.p=q.last;s.prev=q.prev>0?q.prev:(s.prev||q.last);s.hi=q.high||q.last;s.lo=q.low||q.last;s.open=q.open;
       const dv=Math.max(0,q.vol-(s.dvol||0));s.dvol=q.vol;s.turn=q.vol*q.last;s.bid=q.bid;s.ask=q.ask;s.vb=Math.max(200,(q.vol||0)/375);
@@ -2522,7 +2550,7 @@ function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
   liveUpdate()}
-function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?15000:MKT.open?1000:20000))}
+function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?15000:(MKT.err||MKT.stale)?10000:MKT.open?2000:20000))}
 async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
   if(App.view==='picks')renderPicks();renderWatchlist()}
 async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks()}

@@ -6,6 +6,7 @@ Rajan/Pavan Pine ports and the OH/OL setup) -- this file only normalises their
 output so the UI can chart, list and scan them uniformly.
 """
 import concurrent.futures
+import re
 import time
 from datetime import datetime
 
@@ -87,12 +88,23 @@ CORE_LINES = {
 _cache = {}
 
 
+_BULL = {"BUY", "LONG", "ABOVE", "BULL", "BULLISH", "UP", "UPTREND", "CALL", "SPURT"}
+_BEAR = {"SELL", "SHORT", "BELOW", "BEAR", "BEARISH", "DOWN", "DOWNTREND", "PUT"}
+
+
 def _bias(sig):
-    s = (sig or "").upper()
-    if any(x in s for x in ("SELL", "SHORT", "BELOW", "BEAR", "DOWN")):
-        return "bear"
-    if any(x in s for x in ("BUY", "LONG", "ABOVE", "BULL", "UP", "SPURT")):
+    """Direction of a signal string. Matches whole words (BREAK_BELOW, ORB BUY, DOWNTREND) so that
+    e.g. 'SUPPORT' is not read as 'UP' and one word cannot cancel the other."""
+    toks = set(re.findall(r"[A-Z]+", (sig or "").upper()))
+    if toks & {"CALL", "PUT"} and toks & {"BUY", "SELL"}:       # option phrases: buying a call / selling a put is bullish
+        long_ = ("BUY" in toks and "CALL" in toks) or ("SELL" in toks and "PUT" in toks)
+        short_ = ("BUY" in toks and "PUT" in toks) or ("SELL" in toks and "CALL" in toks)
+        return "bull" if long_ and not short_ else "bear" if short_ and not long_ else "neutral"
+    bull, bear = bool(toks & _BULL), bool(toks & _BEAR)
+    if bull and not bear:
         return "bull"
+    if bear and not bull:
+        return "bear"
     return "neutral"
 
 
@@ -251,7 +263,7 @@ def _raw_vwap_rsi(symbol):
     i = len(five) - 1
     return {"five": five, "vwap": vw[i], "upper": vw[i] + 1.5 * (dev[i] or 0), "lower": vw[i] - 1.5 * (dev[i] or 0), "rsi": rsi[i], "close": closes[i],
             "date": str(five[i]["day"]), "events": [{"date": five[k]["dt"].strftime("%d %b %H:%M"), "text": f"{sg} - close {closes[k]:,.2f}, RSI {rsi[k]:.0f}"} for k, sg in events][-12:],
-            "last": ({"signal": events[-1][1], "when": five[events[-1][0]]["dt"].strftime("%d %b %H:%M")} if events else None)}
+            "last": ({"signal": events[-1][1], "when": five[events[-1][0]]["dt"].strftime("%d %b %H:%M"), "day": str(five[events[-1][0]]["day"])} if events else None)}
 
 def _run_raw(key, symbol):
     symbol = symbol.upper()
@@ -297,7 +309,7 @@ def summarize(key, symbol, raw):
     meta = META[key]
     out = {"key": key, "symbol": symbol, "name": meta["name"], "group": meta["group"],
            "signal": "NONE", "bias": "neutral", "headline": "", "date": None, "close": None,
-           "details": [], "events": [], "lines": [], "bars": []}
+           "stale": False, "details": [], "events": [], "lines": [], "bars": []}
     bars = raw.get("bars") or []
     has_date = bool(bars) and "date" in bars[-1]
 
@@ -309,7 +321,9 @@ def summarize(key, symbol, raw):
         ev = _recent_event(bars)
         sig = cur.get("signal") or "NONE"
         out["signal"] = sig if sig not in ("NONE",) else (ev["signal"] if ev else "NONE")
-        out["bias"] = _bias(out["signal"])
+        live = sig not in ("NONE",)
+        out["stale"] = (not live) and bool(ev)
+        out["bias"] = _bias(out["signal"]) if live else "neutral"
         out["headline"] = (f"{out['signal']} signal today" if cur.get("signal") not in (None, "NONE")
                            else f"Last {ev['signal']} on {ev['date']}" if ev else "No active signal")
         if key == "vix-range":
@@ -331,6 +345,7 @@ def summarize(key, symbol, raw):
         out["signal"] = c.get("lastSignal") or "NONE"
         fresh = (c.get("barsSinceSignal") or 99) <= 3
         out["bias"] = _bias(out["signal"]) if fresh else "neutral"
+        out["stale"] = (not fresh) and out["signal"] != "NONE"
         out["headline"] = f"Last {c.get('lastSignal')} {c.get('barsSinceSignal')} bar(s) ago · channel {c.get('lower', 0):,.2f} – {c.get('upper', 0):,.2f}"
         out["details"] = _flat({k: v for k, v in c.items() if k != "date"})
         out["events"] = [{"date": r["date"], "text": r["signal"]} for r in bars if r.get("signal")][-12:]
@@ -413,7 +428,9 @@ def summarize(key, symbol, raw):
         out.update(date=raw["date"], close=raw["close"])
         l = raw["last"]
         out["signal"] = l["signal"] if l else "NONE"
-        out["bias"] = _bias(out["signal"])
+        live = bool(l) and l.get("day") == raw["date"]
+        out["bias"] = _bias(out["signal"]) if live else "neutral"
+        out["stale"] = bool(l) and not live
         out["headline"] = (f"Last {l['signal']} at {l['when']}" if l else "No mean-reversion signal in the last 5 sessions") + f" - RSI {raw['rsi']:.0f}, VWAP {raw['vwap']:,.2f}"
         out["details"] = _flat({"vwap": raw["vwap"], "upperBand": raw["upper"], "lowerBand": raw["lower"], "rsi": raw["rsi"]})
         out["events"] = raw["events"]
@@ -425,6 +442,7 @@ def summarize(key, symbol, raw):
         out["bias"] = "bull" if raw.get("doCall") else "bear" if raw.get("doPut") else "neutral"
         out["details"] = _flat(raw.get("index")) + _flat({"vix": raw.get("vix"), "vixTier": raw.get("vixTier")}) + _flat(raw.get("volumeSignal"))
 
+    out["dir"] = "BUY" if out["bias"] == "bull" else "SELL" if out["bias"] == "bear" else ""
     if key not in rp.RAJAN_PAVAN_KEYS and has_date:
         out["lines"] = meta["lines"]
     # compact bars for the chart overlay (daily-dated strategies only)

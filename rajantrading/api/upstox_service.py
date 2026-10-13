@@ -44,18 +44,33 @@ _BG = _threading.local()      # set while a background job (scan / screen) runs 
 _RL_TIMES = _collections.deque()
 
 
+class UpstoxRateLimited(RuntimeError):
+    """Upstox said 429 (or our own 30-minute budget is spent). Callers should serve cached prices."""
+
+
+_BLOCK_UNTIL = 0.0
+_RL_LONG = _collections.deque()      # call times in the last 30 minutes
+
+
 def _throttle(max_wait=8.0):
     """Blocks briefly instead of letting a burst trip Upstox's 429 limit."""
     start = time.time()
+    if time.time() < _BLOCK_UNTIL:
+        raise UpstoxRateLimited("Upstox is rate-limiting this app; serving the last known prices")
     while True:
         with _RL_LOCK:
             now = time.time()
+            while _RL_LONG and now - _RL_LONG[0] > 1800:
+                _RL_LONG.popleft()
+            if len(_RL_LONG) >= 1700:
+                raise UpstoxRateLimited("Upstox 30-minute request budget is used up; serving the last known prices")
             while _RL_TIMES and now - _RL_TIMES[0] > 60:
                 _RL_TIMES.popleft()
             last_second = sum(1 for t in _RL_TIMES if now - t < 1.0)
             limit = 300 if getattr(_BG, 'on', 0) > 0 else 455   # background jobs leave ~1/3 of the budget for charts
             if len(_RL_TIMES) < limit and last_second < 20:
                 _RL_TIMES.append(now)
+                _RL_LONG.append(now)
                 return
             wait = 0.06 if last_second >= 20 else max(0.1, 60 - (now - _RL_TIMES[0]))
         if time.time() - start + wait > max_wait:
@@ -127,7 +142,12 @@ class UpstoxService:
             )
             if response.status_code != 429:
                 break
-            time.sleep(1.5 * (attempt + 1))   # rate limited: back off, then retry
+            global _BLOCK_UNTIL
+            if attempt == 0:
+                time.sleep(0.8)               # one short retry, then give up fast
+                continue
+            _BLOCK_UNTIL = time.time() + 25   # circuit breaker: stop hammering Upstox for a bit
+            raise UpstoxRateLimited("Upstox HTTP 429: too many requests; serving the last known prices")
         if response.status_code >= 400:
             body = response.text[:1000]
             raise RuntimeError(
@@ -262,11 +282,15 @@ class UpstoxService:
                     params={"instrument_key": ",".join(batch)},
                     timeout=15,
                 )]
-            except Exception:
+            except UpstoxRateLimited:
+                raise
+            except Exception as exc:
                 # One invalid key (UDAPI1087) rejects the whole batch --
-                # retry per key and skip the bad ones.
+                # retry per key and skip the bad ones. Anything else is a real outage: report it.
+                if "UDAPI1087" not in str(exc) and "HTTP 400" not in str(exc):
+                    raise
                 payloads = []
-                for k in batch:
+                for k in batch[:60]:
                     try:
                         payloads.append(self._get(
                             f"{self.BASE_V3}/market-quote/quotes",

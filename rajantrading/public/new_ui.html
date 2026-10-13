@@ -1155,9 +1155,21 @@ function syncSeries(s,sym,tf){const ms=tf.sec*1000,now=Date.now();let lb=s[s.len
 function getSeries(sym,tf){const k=sym.s+'|'+tf.k;
   if(!CACHE[k]||!CACHE[k]._real){fetchReal(sym,tf).then(()=>{if(CHART&&ACTIVE.sym===sym&&ACTIVE.tf===tf&&CACHE[k]&&CACHE[k]._real)CHART.setData(getSeries(sym,tf),sym,tf,false)});return stubSeries(sym,tf)}
   return syncSeries(CACHE[k],sym,tf)}
+/* ---- feed health: never pretend simulated prices are live ---- */
+const LASTPX_KEY='rt-last-px-v1';
+function saveLastPx(){const now=Date.now();if(now-(saveLastPx._t||0)<5000)return;saveLastPx._t=now;
+  try{const m={};NSE_SYMS.forEach(s=>{if(s._live)m[s.s]=[s.last,s.prev,s.hi,s.lo,s.open||0]});localStorage.setItem(LASTPX_KEY,JSON.stringify({t:now,m}))}catch(e){}}
+function loadLastPx(){try{const d=JSON.parse(localStorage.getItem(LASTPX_KEY)||'null');if(!d||Date.now()-d.t>3*864e5)return;
+  NSE_SYMS.forEach(s=>{const v=d.m[s.s];if(v&&v[0]>0){s.last=v[0];s.p=v[0];s.prev=v[1]||v[0];s.hi=v[2]||v[0];s.lo=v[3]||v[0];s.chg=s.last-s.prev;s.chgPct=s.prev?s.chg/s.prev*100:0;s._cached=true}})}catch(e){}}
+function feedStatus(r,err){window.FEED_ERR=!!err;const bad=!!err||(r&&r.stale);let b=document.getElementById('feedBanner');
+  if(!bad){if(b)b.remove();return}
+  if(!b){b=document.createElement('div');b.id='feedBanner';b.setAttribute('role','status');b.style.cssText='padding:7px 14px;font-size:12.5px;background:var(--warn-bg);color:var(--warn);border-bottom:1px solid var(--line)';document.body.insertBefore(b,document.body.firstChild)}
+  b.textContent=err?'Live prices are unavailable right now (the data provider is rate-limiting). Showing the last known prices — new orders and stop-loss checks pause until live prices return.'
+    :'Live prices are delayed (data provider rate limit). Showing prices from '+new Date(r.quotesAsOf||Date.now()).toLocaleTimeString('en-IN')+'.'}
+const priceLive=s=>!s||s.tv||s.ikey||!NSE_SYMS.includes(s)||(s._live&&!window.FEED_ERR);
 async function pullQuotes(){try{const r=await api.get('/api/m/quotes?symbols='+NSE_SYMS.map(s=>s.s).join(','));window.MKT_OPEN=!!r.marketOpen;
-  for(const x of r.quotes||[]){const nm=SYM(x.s);if(!nm||!(x.last>0))continue;nm.last=x.last;nm.prev=x.prev>0?x.prev:nm.prev;nm.chg=nm.last-nm.prev;nm.chgPct=nm.prev?nm.chg/nm.prev*100:0;nm.hi=x.high||nm.last;nm.lo=x.low||nm.last;nm.open=x.open||nm.open;if(x.vol)nm.dvol=x.vol}
-  window.LIVE_OK=true;return true}catch(e){console.warn('quotes',e);return false}}
+  for(const x of r.quotes||[]){const nm=SYM(x.s);if(!nm||!(x.last>0))continue;nm.last=x.last;nm._live=true;nm.prev=x.prev>0?x.prev:nm.prev;nm.chg=nm.last-nm.prev;nm.chgPct=nm.prev?nm.chg/nm.prev*100:0;nm.hi=x.high||nm.last;nm.lo=x.low||nm.last;nm.open=x.open||nm.open;if(x.vol)nm.dvol=x.vol}
+  window.LIVE_OK=true;feedStatus(r);saveLastPx();return true}catch(e){console.warn('quotes',e);feedStatus(null,e);return false}}
 
 /* ===================== Indicator math ===================== */
 const NA=n=>new Array(n).fill(NaN);
@@ -1747,8 +1759,9 @@ let _tickTimer=null;
 
 function startTick(){
   if(_tickTimer)return;
-  const LIVE_INTERVAL=1000,SIM_INTERVAL=1000;
+  const LIVE_INTERVAL=2000,SIM_INTERVAL=2000;
   async function tick(){
+    if(window.FEED_ERR&&Date.now()-(tick._l||0)<10000)return;tick._l=Date.now();
     if(upstox.token){
       try{
         const ltp=await upstox.getLTP(NSE_SYMS.map(s=>s.s));
@@ -1822,12 +1835,13 @@ async function openStock(sym){
   if(!s){const u=await SB.lookup(sym);if(!u){toast('Symbol not found: '+sym,'bad');return}
     s=await ensureStockAsync(sym,u.n);if(!(s.last>0)){delete XSYM[sym];toast('No live price for '+sym+' right now','bad');return}}
   ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')}
-function applyStockQuote(nm,x){if(!nm||!x||!(x.last>0))return;nm.last=x.last;nm.p=x.last;nm.prev=x.prev>0?x.prev:(nm.prev||x.last);nm.chg=nm.last-nm.prev;nm.chgPct=nm.prev?nm.chg/nm.prev*100:0;nm.hi=x.high||nm.last;nm.lo=x.low||nm.last;nm.open=x.open||nm.open;if(x.vol)nm.dvol=x.vol;nm.bid=x.bid;nm.ask=x.ask}
+function applyStockQuote(nm,x){if(!nm||!x||!(x.last>0))return;nm.last=x.last;nm._live=true;nm.p=x.last;nm.prev=x.prev>0?x.prev:(nm.prev||x.last);nm.chg=nm.last-nm.prev;nm.chgPct=nm.prev?nm.chg/nm.prev*100:0;nm.hi=x.high||nm.last;nm.lo=x.low||nm.last;nm.open=x.open||nm.open;if(x.vol)nm.dvol=x.vol;nm.bid=x.bid;nm.ask=x.ask}
 /* live prices for everything held (and the active chart) that the built-in quote poll doesn't cover */
 function ensureStock(sym){if(SYM(sym)||ensureStock._p[sym])return;ensureStock._p[sym]=1;
   ensureStockAsync(sym).then(s=>{if(s&&!(s.last>0))delete XSYM[sym]}).catch(()=>{delete XSYM[sym]}).then(()=>{delete ensureStock._p[sym]})}
 ensureStock._p={};
 async function pollHeld(){
+  if(window.FEED_ERR&&Date.now()-(pollHeld._l||0)<10000)return;pollHeld._l=Date.now();
   const want=new Set([...PORT.positions.map(p=>p.sym),...PORT.pending.map(o=>o.sym),...RN.alertSyms()]);if(ACTIVE.sym)want.add(ACTIVE.sym.s);
   for(const k of want)if(!SYM(k))ensureStock(k);
   const stk=[],opt=[],glob=[];
@@ -2071,6 +2085,7 @@ function fillOrder(sym,side,qty,price,src,risk,otype){
   PORT.orders=PORT.orders.slice(0,200);savePORT();saveTrades();try{notifyFill(tr)}catch(e){console.error(e)}return tr}
 /* returns an error string, or null when the order is allowed */
 function orderError(sym,side,qty,price){const s=SYM(sym);if(!s||!(price>0))return'No live price for this instrument yet';
+  if(!priceLive(s))return'Live price is unavailable right now (data feed limit) — try again in a moment';
   const pos=PORT.positions.find(p=>p.sym===sym),q=pos?pos.qty:0,sg=side==='buy'?1:-1,value=qty*price,ch=calcCharges(side,value,kindOf(s)).total;
   if(q!==0&&sgn(q)!==sg){if(qty>Math.abs(q)+1e-9)return'You hold '+qn(Math.abs(q))+' — close that first or reduce the quantity'}
   else if(sg>0){if(value+ch>PORT.cash+1e-9)return'Insufficient cash: need '+money(value+ch,0)+', available '+money(PORT.cash,0)}
@@ -2099,7 +2114,7 @@ function notifyFill(tr){const px=fmtP(tr.price),pnl=tr.closeQty?smoney(tr.net):'
 function notifyReject(reason,sym,side,qty){RN.emit('N-05',{reason,sym,side,qty:qn(qty)},{link:sym?{sym}:null})}
 function checkExits(){
   let trailMoved=false;
-  for(const p of PORT.positions.slice()){const s=SYM(p.sym);if(!s||!(s.last>0))continue;const L=p.qty>0;
+  for(const p of PORT.positions.slice()){const s=SYM(p.sym);if(!s||!(s.last>0)||!priceLive(s))continue;const L=p.qty>0;
     if(p.tsl){   /* trailing stop: follows the best price, never moves back */
       const better=L?(!(p.peak>0)||s.last>p.peak):(!(p.peak>0)||s.last<p.peak);
       if(better){p.peak=s.last;const st=+(L?s.last-tslDist(p.tsl,s.last):s.last+tslDist(p.tsl,s.last)).toFixed(2);
@@ -2107,7 +2122,7 @@ function checkExits(){
     const hitSL=p.sl>0&&(L?s.last<=p.sl:s.last>=p.sl),hitTP=!hitSL&&p.tp>0&&(L?s.last>=p.tp:s.last<=p.tp);if(!hitSL&&!hitTP)continue;
     closePos(p.sym,hitSL?(p.tsl?'TSL':'SL'):'TP',s.last)}
   if(trailMoved){savePORT();if(CHART&&ACTIVE.sym)CHART.lines=buildOrderLines(ACTIVE.sym.s);if(bottomIsOrders())renderOrdersInBottom()}
-  for(const o of PORT.pending.slice()){const s=SYM(o.sym);if(!s||!(s.last>0))continue;
+  for(const o of PORT.pending.slice()){const s=SYM(o.sym);if(!s||!(s.last>0)||!priceLive(s))continue;
     const hit=o.side==='buy'?s.last<=o.limit:s.last>=o.limit;if(!hit)continue;
     PORT.pending=PORT.pending.filter(x=>x.id!==o.id);const price=o.side==='buy'?Math.min(o.limit,s.last):Math.max(o.limit,s.last),err=orderError(o.sym,o.side,o.qty,price);
     if(err){savePORT();notifyReject(err,o.sym,o.side,o.qty);RN.emit('N-04',{side:o.side,sym:o.sym,type:'limit'},{key:'cx|'+o.id});refreshTradeUI(o.sym);continue}
@@ -2448,6 +2463,7 @@ async function loadNewsBar(){try{const r=await api.get('/api/news');const items=
   updateThemeBtn(true);
   _initSettingsBtn();
   updateTokenStatus();
+  loadLastPx();
   SB.init({get:p=>api.get(p),goTab:t=>{switchTab('v-stocks')},
     async trade(sym,name,side,idx){const s=await ensureStockAsync(sym,name,idx);if(!(s.last>0)){toast('No live price for '+sym+' right now','bad');return}
       TK.side=side;TK.type='market';TK_PRE={t:Date.now(),side,sl:null,tp:null};ACTIVE.sym=s;if($('#v-chart.on'))selectSym(s);else switchTab('v-chart')},
