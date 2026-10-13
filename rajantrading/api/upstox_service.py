@@ -62,12 +62,12 @@ def _throttle(max_wait=8.0):
             now = time.time()
             while _RL_LONG and now - _RL_LONG[0] > 1800:
                 _RL_LONG.popleft()
-            if len(_RL_LONG) >= 1700:
+            if len(_RL_LONG) >= 1200:
                 raise UpstoxRateLimited("Upstox 30-minute request budget is used up; serving the last known prices")
             while _RL_TIMES and now - _RL_TIMES[0] > 60:
                 _RL_TIMES.popleft()
             last_second = sum(1 for t in _RL_TIMES if now - t < 1.0)
-            limit = 300 if getattr(_BG, 'on', 0) > 0 else 455   # background jobs leave ~1/3 of the budget for charts
+            limit = 150 if getattr(_BG, 'on', 0) > 0 else 240   # background jobs leave ~1/3 of the budget for charts
             if len(_RL_TIMES) < limit and last_second < 20:
                 _RL_TIMES.append(now)
                 _RL_LONG.append(now)

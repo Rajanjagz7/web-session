@@ -214,6 +214,7 @@ def ensure_universe():
 
 
 _cache = {}
+_QSYM = {}    # symbol -> (time, quote): requests with overlapping symbol sets share upstream calls
 _QLAST = {}   # last good quote payloads, served (flagged stale) when Upstox rate-limits us
 
 
@@ -271,9 +272,9 @@ def quotes(symbols: str = ""):
         [s for s, _ in INDICES] + [c for c, _n, _g, _k in MORE_INDICES] + [s for s, _, _ in STOCKS]
     syms = syms[:500]
 
-    def fetch():
+    def fetch(names):
         keymap = {}
-        for s in syms:
+        for s in names:
             try:
                 keymap[_key(s)] = s
             except Exception:
@@ -303,7 +304,24 @@ def quotes(symbols: str = ""):
     ck = "q|" + ",".join(syms)
     stale, why = False, ""
     try:
-        data = _cached(ck, 3 if market_open() else 20, fetch)
+        ttl = 5 if market_open() else 300          # market closed: prices cannot move, keep them for minutes
+        now = time.time()
+        have, missing = {}, []
+        for s in syms:
+            h = _QSYM.get(s)
+            if h and now - h[0] < ttl:
+                have[s] = h[1]
+            else:
+                missing.append(s)
+        if missing:
+            got = _cached("qf|" + ",".join(missing), 2, lambda: fetch(missing))
+            t0 = time.time()
+            for q in got:
+                _QSYM[q["s"]] = (t0, q)
+                have[q["s"]] = q
+        data = [have[s] for s in syms if s in have]
+        if not data and syms:
+            raise RuntimeError("no quotes available")
         _QLAST[ck] = (time.time(), data)
     except Exception as e:
         last = _QLAST.get(ck)
@@ -630,9 +648,9 @@ def oquote(keys: str):
     if not ks:
         raise HTTPException(400, "keys required")
     try:
-        raw = upstox_service._full_quotes(ks)
+        raw = _cached("oq|" + ",".join(sorted(ks)), 4 if market_open() else 120, lambda: upstox_service._full_quotes(ks))
     except Exception as e:
-        raise HTTPException(502, f"Upstox quotes failed: {e}")
+        raise HTTPException(503, f"Option prices are temporarily unavailable: {str(e)[:140]}")
     out = []
     for k, q in raw.items():
         o = q.get("ohlc") or {}

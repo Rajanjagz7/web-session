@@ -458,7 +458,7 @@ function open(tab){if(!S.h)return;if(S.h.goTab){S.h.goTab(tab);return}S.mode='ov
   if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);(r.indices||[]).forEach(i=>{S.nameKey[i.label.toLowerCase()]=i.key});if($('#sbMore'))$('#sbChips').innerHTML=chipsHtml();if($('#sbBody'))drawTable()}).catch(()=>{});
   startTimer();
   setTimeout(()=>{const i=$('#sbQ');if(i)i.focus()},50)}
-function startTimer(){clearInterval(S.timer);S.timer=setInterval(()=>{const p=panel();if(!p){clearInterval(S.timer);return}if(S.mode==='page'&&!p.offsetParent)return;fetchQuotes(false)},6000)}
+function startTimer(){clearInterval(S.timer);S.timer=setInterval(()=>{const p=panel();if(!p){clearInterval(S.timer);return}if(document.hidden||(S.mode==='page'&&!p.offsetParent))return;fetchQuotes(false)},15000)}
 function page(el,tab){if(!S.h||!el)return;S.mode='page';S.mountEl=el;if(tab)S.tab=tab;draw();if(!S.rows.length||tab)loadTab();else fetchQuotes(true);
   if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);(r.indices||[]).forEach(i=>{S.nameKey[i.label.toLowerCase()]=i.key});if($('#sbMore'))$('#sbChips').innerHTML=chipsHtml();if($('#sbBody'))drawTable()}).catch(()=>{});
   startTimer()}
@@ -1759,8 +1759,9 @@ let _tickTimer=null;
 
 function startTick(){
   if(_tickTimer)return;
-  const LIVE_INTERVAL=2000,SIM_INTERVAL=2000;
+  const LIVE_INTERVAL=4000,SIM_INTERVAL=4000;
   async function tick(){
+    if(document.hidden&&Date.now()-(tick._h||0)<30000)return;tick._h=Date.now();
     if(window.FEED_ERR&&Date.now()-(tick._l||0)<10000)return;tick._l=Date.now();
     if(upstox.token){
       try{
@@ -1841,6 +1842,7 @@ function ensureStock(sym){if(SYM(sym)||ensureStock._p[sym])return;ensureStock._p
   ensureStockAsync(sym).then(s=>{if(s&&!(s.last>0))delete XSYM[sym]}).catch(()=>{delete XSYM[sym]}).then(()=>{delete ensureStock._p[sym]})}
 ensureStock._p={};
 async function pollHeld(){
+  if(document.hidden&&Date.now()-(pollHeld._h||0)<30000)return;pollHeld._h=Date.now();
   if(window.FEED_ERR&&Date.now()-(pollHeld._l||0)<10000)return;pollHeld._l=Date.now();
   const want=new Set([...PORT.positions.map(p=>p.sym),...PORT.pending.map(o=>o.sym),...RN.alertSyms()]);if(ACTIVE.sym)want.add(ACTIVE.sym.s);
   for(const k of want)if(!SYM(k))ensureStock(k);
@@ -1851,7 +1853,7 @@ async function pollHeld(){
     for(const q of r.quotes||[]){const o=opt.find(y=>y.ikey===q.key);if(!o||!(q.last>0))continue;Object.assign(o,{last:q.last,p:q.last,prev:q.prev||o.prev,chg:q.last-(q.prev||q.last),chgPct:q.prev?(q.last/q.prev-1)*100:0,hi:q.high||o.hi,lo:q.low||o.lo,open:q.open||o.open,bid:q.bid,ask:q.ask})}}}catch(e){}
   if(glob.length&&DATA.global)for(const g of glob){const c=(DATA.global.commodities||[]).find(x=>x.id===g.tv);if(c&&c.price>0)Object.assign(g,{last:c.price,p:c.price,prev:c.price-c.chg,chg:c.chg,chgPct:c.chgPct})}
   checkExits();updTicketLive()}
-setInterval(pollHeld,2500);
+setInterval(pollHeld,6000);
 function selectSymAndSwitch(sym){
   const s=SYM(sym);if(!s){openStock(sym);return}
   ACTIVE.sym=s;
@@ -1904,7 +1906,7 @@ async function pollOpt(){const s=ACTIVE.sym;if(!s||!s.ikey)return;
   try{const r=await api.get('/api/m/oquote?keys='+encodeURIComponent(s.ikey)),q=r&&r.quotes&&r.quotes[0];
     if(q&&q.last>0&&ACTIVE.sym===s){Object.assign(s,{last:q.last,p:q.last,prev:q.prev||s.prev,chg:q.last-(q.prev||q.last),chgPct:q.prev?(q.last/q.prev-1)*100:0,hi:q.high,lo:q.low,open:q.open,bid:q.bid,ask:q.ask});
       const d=CACHE[s.s+'|'+ACTIVE.tf.k];if(d&&d.length&&CHART&&$('#v-chart.on')){const b=d[d.length-1];b.c=q.last;b.h=Math.max(b.h,q.last);b.l=Math.min(b.l,q.last);CHART.setData(d,s,ACTIVE.tf,true)}updateSymbar()}}catch(e){}}
-setInterval(pollOpt,2000);
+setInterval(()=>{if(!document.hidden)pollOpt()},5000);
 function _renderChainData(data,btab,panel){
   if(!data||!data.rows||!data.rows.length){
     if(btab)btab.innerHTML=`<div class="empty" style="font-size:12px;padding:16px">No chain data available.</div>`;return}
@@ -2481,7 +2483,7 @@ async function loadNewsBar(){try{const r=await api.get('/api/news');const items=
   pullQuotes().then(ok=>{if(ok){renderTicker();if($('#v-markets.on'))renderMarkets()}});
   const loadGlobal=()=>api.get('/api/market/global').then(g=>{if(g){DATA.global=g;renderTicker();if($('#v-markets.on'))renderMarkets()}}).catch(()=>{});loadGlobal();setInterval(loadGlobal,3000);
   await refreshData();
-  setInterval(refreshData,30000);
+  setInterval(refreshData,60000);
   checkTokenHealth();setInterval(checkTokenHealth,1800000);
   loadNewsBar();setInterval(loadNewsBar,600000);
 })();

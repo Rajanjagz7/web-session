@@ -662,7 +662,7 @@ function open(tab){if(!S.h)return;if(S.h.goTab){S.h.goTab(tab);return}S.mode='ov
   if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);(r.indices||[]).forEach(i=>{S.nameKey[i.label.toLowerCase()]=i.key});if($('#sbMore'))$('#sbChips').innerHTML=chipsHtml();if($('#sbBody'))drawTable()}).catch(()=>{});
   startTimer();
   setTimeout(()=>{const i=$('#sbQ');if(i)i.focus()},50)}
-function startTimer(){clearInterval(S.timer);S.timer=setInterval(()=>{const p=panel();if(!p){clearInterval(S.timer);return}if(S.mode==='page'&&!p.offsetParent)return;fetchQuotes(false)},6000)}
+function startTimer(){clearInterval(S.timer);S.timer=setInterval(()=>{const p=panel();if(!p){clearInterval(S.timer);return}if(document.hidden||(S.mode==='page'&&!p.offsetParent))return;fetchQuotes(false)},15000)}
 function page(el,tab){if(!S.h||!el)return;S.mode='page';S.mountEl=el;if(tab)S.tab=tab;draw();if(!S.rows.length||tab)loadTab();else fetchQuotes(true);
   if(!S.more.length)get('/api/m/index-stocks/list').then(r=>{const g={};(r.indices||[]).forEach(i=>{(g[i.group]=g[i.group]||[]).push(i)});S.more=Object.entries(g);(r.indices||[]).forEach(i=>{S.nameKey[i.label.toLowerCase()]=i.key});if($('#sbMore'))$('#sbChips').innerHTML=chipsHtml();if($('#sbBody'))drawTable()}).catch(()=>{});
   startTimer()}
@@ -1957,7 +1957,7 @@ function optStats(){const o=OPT.osym;if(!o)return;const ch=o.prev>0?o.last/o.pre
 const lastv=a=>{for(let i=a.length-1;i>=0;i--)if(isFinite(a[i]))return a[i];return NaN};
 function calcDef(k,d,tf){const df=DEFS[k],p={};df.params.forEach(x=>p[x.k]=x.v);return df.calc(d,p,{tf:tf.sec})}
 async function optTick(){if(OPT.ticking)return;OPT.ticking=true;
-  try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?5000:60000))await loadChain(true);
+  try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?15000:180000))await loadChain(true);
     if(OPT.sel&&OPT.osym){const r=await api('/api/m/oquote?keys='+encodeURIComponent(OPT.sel.key)),q=r.quotes&&r.quotes[0],o=OPT.osym;
       if(q&&q.last>0){o.last=q.last;o.prev=q.prev||o.prev;o.hi=q.high||o.hi;o.lo=q.low||o.lo;o.open=q.open||o.open;o.vol=q.vol;o.oi=q.oi;o.oiChg=q.oi-q.oiPrev;o.bid=q.bid;o.ask=q.ask;
         const k=o.s+'|'+OPT.tf.k;if(OPT.ochart&&CACHE[k]&&CACHE[k].length)OPT.ochart.setData(series(o,OPT.tf),o,OPT.tf,true);optStats();updOptTrade();optReadings(false)}}}
@@ -2550,7 +2550,7 @@ function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
   liveUpdate()}
-function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?15000:(MKT.err||MKT.stale)?10000:MKT.open?2000:20000))}
+function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:(MKT.err||MKT.stale)?20000:MKT.open?4000:60000))}
 async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
   if(App.view==='picks')renderPicks();renderWatchlist()}
 async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks()}
@@ -2646,7 +2646,7 @@ window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!==
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTheme();chart.req()});
 
 /* ======================= Boot ======================= */
-(async function boot(){loadPaper();loadTrades();rehydrateMeta();setInterval(pollOptPositions,3000);let th='dark';try{th=localStorage.getItem('mer-theme')||th}catch(e){}document.documentElement.dataset.theme=th;readTheme();
+(async function boot(){loadPaper();loadTrades();rehydrateMeta();setInterval(()=>{if(!document.hidden)pollOptPositions()},8000);let th='dark';try{th=localStorage.getItem('mer-theme')||th}catch(e){}document.documentElement.dataset.theme=th;readTheme();
   $('#logoI').innerHTML=I('trendup',16,2.4);$('#searchI').innerHTML=I('search',15);$('#themeBtn').innerHTML=I(th==='dark'?'sun':'moon');renderBell();renderNav();
   chart=new Chart($('#chart'),{onTool:()=>renderTools(),onLegend:(uid,a)=>{const i=chart.ind.findIndex(x=>x.uid===uid);if(i<0)return;
       if(a==='hide'){chart.ind[i].hidden=!chart.ind[i].hidden;chart.lgDirty=true;chart.req();saveInds()}else if(a==='rm'){const n=DEFS[chart.ind[i].key].name;chart.ind.splice(i,1);chart.indChanged();renderToolbar();toast(n+' removed')}else indSettings(uid)},
