@@ -1187,7 +1187,8 @@ function rsi(c,n){const o=NA(c.length);let g=0,l=0;for(let i=1;i<c.length;i++){c
 function psar(d,st,mx){const o=NA(d.length);if(d.length<3)return o;let up=true,af=st,ep=d[0].h,sar=d[0].l;
   for(let i=1;i<d.length;i++){sar=sar+af*(ep-sar);const p1=d[i-1],p2=d[Math.max(0,i-2)];
     if(up){sar=Math.min(sar,p1.l,p2.l);if(d[i].l<sar){up=false;sar=ep;ep=d[i].l;af=st}else if(d[i].h>ep){ep=d[i].h;af=Math.min(af+st,mx)}}
-    else{sar=Math.max(sar,p1.h,p2.h);if(d[i].h>sar){up=true;sar=ep;ep=d[i].h;af=st}else if(d[i].l<ep){ep=d[i].l;af=Math.min(af+st,mx)}}}return o}
+    else{sar=Math.max(sar,p1.h,p2.h);if(d[i].h>sar){up=true;sar=ep;ep=d[i].h;af=st}else if(d[i].l<ep){ep=d[i].l;af=Math.min(af+st,mx)}}
+    o[i]=sar}return o}
 
 const DEFS={
   vol:{name:'Volume',short:'Vol',pane:'vol',params:[],lines:[{k:'v',style:'vol'}],calc:d=>({v:Vv(d)}),fmt:'n'},
@@ -1510,7 +1511,11 @@ function renderCallCard(p){
     :dir==='BUY'?'Buy futures · or buy CE · or sell PE'
     :dir==='SELL'?'Sell futures · or buy PE · or sell CE':'No clean trade — wait';
   const sym=p.instrument||p.symbol||'—';
-  const entry=p.entry||0,t1=p.target1||p.target||(entry*1.09),sl=p.stopLoss||(entry*0.95);
+  const entry=p.entry||0;let t1=p.target1||p.target||0,sl=p.stopLoss||0;
+  /* stop and target must sit on the right side of the entry: below/above for a buy, above/below for a sell or option-writing call */
+  if(entry>0){const short=dir==='SELL';
+    if(short){if(!(sl>entry))sl=entry*1.05;if(!(t1>0&&t1<entry))t1=entry*0.91}
+    else{if(!(sl>0&&sl<entry))sl=entry*0.95;if(!(t1>entry))t1=entry*1.09}}
   const chg=p.changePct||0;
   const contract=p.contract||'';
   const isOptCall=!!(p.instrumentKey&&/CALL|PUT/.test(sg)),pre={side:dir==='SELL'?'SELL':'BUY',sl:+sl>0?+(+sl).toFixed(2):null,tp:+t1>0?+(+t1).toFixed(2):null};

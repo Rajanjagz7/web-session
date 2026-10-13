@@ -365,9 +365,28 @@ def summarize(key, symbol, raw):
         out.update(date=raw.get("lastDate"), close=raw.get("lastClose"))
         out["signal"] = u.get("lastSignal") or "NONE"
         out["bias"] = _bias(u.get("position"))
-        out["headline"] = f"UT {u.get('position')} · support {kl.get('support', 0):,.2f} · resistance {kl.get('resistance', 0):,.2f}"
-        out["details"] = _flat(kl) + _flat(raw.get("emaRibbon")) + _flat(u)
-        out["levels"] = {"support": kl.get("support"), "resistance": kl.get("resistance")}
+        plan = raw.get("plan")
+        out["headline"] = (f"UT {u.get('position')} · plan SL {plan['sl']:,.2f} · T1 {plan['tp1']:,.2f} · T2 {plan['tp2']:,.2f} (R:R 1:{plan['rr1']:g})"
+                           if plan else f"UT {u.get('position')} · no active direction") + \
+            f" · support {kl.get('support', 0):,.2f} · resistance {kl.get('resistance', 0):,.2f}"
+        bu, be = kl.get("bullish") or {}, kl.get("bearish") or {}
+        r2 = lambda v: round(v, 2) if isinstance(v, (int, float)) else v
+        det = []
+        if plan:
+            det += [{"label": f"Current {plan['side'].lower()} plan · entry", "value": r2(plan["entry"])},
+                    {"label": "Current plan · stop-loss", "value": r2(plan["sl"])},
+                    {"label": "Current plan · target 1", "value": r2(plan["tp1"])},
+                    {"label": "Current plan · target 2", "value": r2(plan["tp2"])},
+                    {"label": "Current plan · reward : risk (T1)", "value": f"1 : {plan['rr1']:g}"}]
+        det += [{"label": "Support", "value": r2(kl.get("support"))}, {"label": "Resistance", "value": r2(kl.get("resistance"))},
+                {"label": "ATR (14)", "value": r2(kl.get("atr"))},
+                {"label": "Support setup · stop-loss (only if price comes down to support)", "value": r2(bu.get("sl"))},
+                {"label": "Support setup · target 1", "value": r2(bu.get("tp1"))}, {"label": "Support setup · target 2", "value": r2(bu.get("tp2"))},
+                {"label": "Resistance setup · stop-loss (only if price rises to resistance)", "value": r2(be.get("sl"))},
+                {"label": "Resistance setup · target 1", "value": r2(be.get("tp1"))}, {"label": "Resistance setup · target 2", "value": r2(be.get("tp2"))}]
+        out["details"] = det + _flat(raw.get("emaRibbon")) + _flat(u)
+        out["levels"] = ({"planSL": plan["sl"], "planTP1": plan["tp1"], "planTP2": plan["tp2"]} if plan else {}) | \
+            {"support": kl.get("support"), "resistance": kl.get("resistance")}
 
     elif key in ("heikin-ashi-channel", "ha-dancing-trend"):
         ba, sa = raw.get("buyActive"), raw.get("sellActive")
@@ -376,8 +395,16 @@ def summarize(key, symbol, raw):
         if act:
             side = "BUY" if ba else "SELL"
             out["signal"], out["bias"] = side, _bias(side)
-            out["headline"] = f"Active {side.lower()} since {act.get('entryTime')} @ {act.get('entryPrice', 0):,.2f}"
+            ep, sl_, tg_ = act.get("entryPrice"), act.get("stopLoss"), act.get("target")
+            risk_ = abs(ep - sl_) if ep is not None and sl_ is not None else 0
+            rr_ = (abs(tg_ - ep) / risk_) if risk_ and tg_ is not None else None
+            out["headline"] = f"Active {side.lower()} since {act.get('entryTime')} @ {act.get('entryPrice', 0):,.2f}" + \
+                (f" · R:R 1:{rr_:.2f}" + (" ⚠ target is closer than the stop" if rr_ < 1 else "") if rr_ is not None else "")
             out["details"] = _flat(act)
+            if rr_ is not None:
+                sgn = 1 if side == "BUY" else -1
+                out["details"] += [{"label": "reward : risk", "value": f"1 : {rr_:.2f}"},
+                                   {"label": "target at 2R (alternative)", "value": round(ep + sgn * 2 * risk_, 2)}]
         else:
             evs = raw.get("events") or []
             out["headline"] = f"No active trade · last event {evs[-1].get('event')} {evs[-1].get('time')}" if evs else "No active trade"

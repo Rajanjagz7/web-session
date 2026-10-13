@@ -101,6 +101,16 @@ def quantum_matrix_scan(symbol, key_value=1.0, atr_period=10, lookback=20, lookb
     }
 
     last = bars[-1]
+    # Trade plan measured from the CURRENT price in the direction of the UT position, so the stop and targets
+    # always sit on the correct side of where the trade would be taken (the support/resistance setups above only
+    # apply when price actually reaches those levels).
+    plan = None
+    a_now = key_levels.get("atr") or 0
+    if a_now and ut_current["position"] in ("LONG", "SHORT"):
+        d = 1 if ut_current["position"] == "LONG" else -1
+        c = last["close"]
+        plan = {"side": ut_current["position"], "entry": c, "sl": c - d * 1.5 * a_now,
+                "tp1": c + d * 3.0 * a_now, "tp2": c + d * 4.0 * a_now, "rr1": 2.0, "rr2": round(4.0 / 1.5, 2)}
     prev_close = bars[-2]["close"] if len(bars) > 1 else None
     flags = {
         "openEqLow": last["open"] == last["low"],
@@ -115,6 +125,7 @@ def quantum_matrix_scan(symbol, key_value=1.0, atr_period=10, lookback=20, lookb
         "lastDate": last["date"],
         "lastClose": last["close"],
         "keyLevels": key_levels,
+        "plan": plan,
         "emaRibbon": ema_ribbon,
         "utSignal": ut_current,
         "flags": flags,
