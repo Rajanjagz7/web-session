@@ -1108,6 +1108,6 @@ def picks(refresh: bool = False):
     if refresh:
         _cache.pop("picks", None)
     try:
-        return _cached("picks", 300 if market_open() else 1800, build)
+        return _cached("picks", 900 if market_open() else 3600, build)
     except Exception as e:
         raise HTTPException(502, f"Picks failed: {e}")
