@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules/
+.vercel/
+.vercel
+.DS_Store
+.env
+.env.local
+.env.*.local
+api/data_cache/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+.vercel
+.env*
