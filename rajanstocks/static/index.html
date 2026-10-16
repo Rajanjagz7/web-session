@@ -2641,7 +2641,8 @@ const glHTML=()=>`<div class="gl-wrap"><div class="gl-h"><b>Global markets &amp;
 
 /* ======================= Global instrument charts, news bar, picks pagination ======================= */
 const EXTRA={};                                   // chart-only pseudo symbols (global futures / indices)
-const candleURL=(sym,tf)=>sym.tv?'/api/m/gcandles?id='+encodeURIComponent(sym.tv)+'&tf='+tf.k:'/api/m/candles?'+(sym.ikey?'ikey='+encodeURIComponent(sym.ikey):'symbol='+encodeURIComponent(sym.s))+'&tf='+tf.k+histQS(sym,tf);
+const tvCount=(tf)=>{const bpd=tf.sec>=86400?86400/tf.sec:22500/tf.sec;return Math.min(5000,Math.max(300,Math.ceil((App.span||1830)*bpd)+50))};
+const candleURL=(sym,tf)=>sym.tv?'/api/m/gcandles?id='+encodeURIComponent(sym.tv)+'&tf='+tf.k+'&count='+tvCount(tf):'/api/m/candles?'+(sym.ikey?'ikey='+encodeURIComponent(sym.ikey):'symbol='+encodeURIComponent(sym.s))+'&tf='+tf.k+histQS(sym,tf);
 function openGlobal(id){const it=GL.items&&GL.items.find(i=>i.id===id);if(!it)return;
   const e=EXTRA[it.name]||(EXTRA[it.name]={s:it.name,n:it.name+' · '+it.group,sec:'Global',cls:'Global',ex:it.group,tv:id,dp:it.price<100?3:2,qdp:0,vol:.01,vb:1e5,unit:'units',noTrade:true,dvol:0,turn:0,bid:0,ask:0});
   Object.assign(e,{last:it.price,prev:it.price-it.chg,hi:it.high||it.price,lo:it.low||it.price,open:it.open||it.price});
@@ -3115,7 +3116,7 @@ function rangeTo(days){
   App.span=days==null?null:want;
   const k=App.sym.s+'|'+App.tf.k,c=CACHE[k],need=Date.now()-want*864e5;
   const covers=c&&c.length&&c[0].t<=need+7*864e5,tried=c&&c._span>=want;
-  const refetch=!App.sym.ikey&&!App.sym.tv&&!covers&&!tried;
+  const refetch=!App.sym.ikey&&!covers&&!tried;
   if(refetch)delete CACHE[k];
   if(sw||refetch){App.pendingRange=days;if(sw)renderToolbar();loadChart(false)}else chart.showRange(days)}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-rng]');if(!t||!chart)return;rangeTo(t.dataset.rng===''?null:+t.dataset.rng)});
@@ -3136,7 +3137,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   await Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]);await Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))]);
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(VIEWS.some(v=>v[0]===h)?h:'picks');
-  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollQuotes()})})();
+  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
 </script>
 </body>
 </html>
