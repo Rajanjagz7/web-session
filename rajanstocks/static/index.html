@@ -627,6 +627,18 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 }
 @media (max-width:899px) and (min-width:600px){.opx[data-mtab="chart"] .opx-panel{display:flex}}
 @media (prefers-reduced-motion:reduce){.opx-skel i{animation:none}}
+.opx-ph{display:none}
+.opx-empty-s{min-height:0;display:flex;align-items:center;gap:14px;text-align:left;justify-content:flex-start;padding:16px 18px}
+.opx-empty-s svg{width:30px;height:30px;flex:none}.opx-empty-s p{max-width:none}
+.opx-sig{padding:0}
+#opStrat .tbl-wrap,#opRead .tbl-wrap{display:block;width:100%;overflow-x:auto}#opStrat table.rd,#opRead table.rd{width:100%!important;display:table!important}
+@media (max-width:899px){#opStrat table.rd thead{display:none}#opStrat table.rd,#opStrat table.rd tbody{display:block!important}#opStrat table.rd tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}#opStrat table.rd td{padding:0;border:0;display:block}#opStrat table.rd td:nth-child(3){grid-column:1/-1}#opStrat table.rd td[colspan]{grid-column:2}}
+@media (min-width:900px){
+  .opx-wtabs{display:none}.opx-ph{display:block;padding:12px 14px 0;font-weight:700;font-size:14px}
+  .opx-pane[hidden]{display:block!important}
+  .opx-panel #opRead,.opx-panel #opStrat{border-top:1px solid var(--line)}
+}
+@media (max-width:899px){.opx[data-mtab="chain"] .opx-work{display:none}.opx:not([data-mtab="chain"]) .opx-work .opx-sig{display:none}.opx[data-mtab="signals"] .opx-work .opx-sig{display:block}}
 </style>
 </head>
 <body>
@@ -2485,12 +2497,12 @@ function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]'
 function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
-  if(!OPT.sel){box.innerHTML=`<div class="opx-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain. Its live chart, order ticket and strategy signals open here, next to the chain.</p></div>`;OPT.shell=false;OPT.ochart=null;return}
+  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div id="opStrat"></div></div>`;OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
   if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
      <details class="opx-stats"><summary>Stats · OI · bid/ask</summary><div class="opt-stats" id="opStats"></div></details>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
-     <div class="opx-card opx-panel"><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
+     <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
        <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>`;
     OPT.shell=true;
     OPT.ochart=new Chart($('#ochart'),{onTool:()=>{},onLegend:(uid,a)=>{const x=OPT.ochart.ind.findIndex(i=>i.uid===uid);if(x<0)return;if(a==='hide'){OPT.ochart.ind[x].hidden=!OPT.ochart.ind[x].hidden;OPT.ochart.lgDirty=true;OPT.ochart.req()}else if(a==='rm'){OPT.ochart.ind.splice(x,1);OPT.ochart.indChanged();drawOptChips();saveOptInds()}}});
@@ -3087,21 +3099,25 @@ const tidyText=s=>String(s||'').replace(/\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b/g,m=>m.toL
 const headNoLvl=h=>tidyText(h).split(' · ').filter(p=>!/^(plan\s|T\d\s|SL\s|TP\s|support\s|resistance\s)/i.test(p)).join(' · ');
 function levelsLine(lv){if(!lv)return'';const parts=Object.entries(lv).filter(([k,v])=>typeof v==='number'&&isFinite(v)).slice(0,6).map(([k,v])=>`<span class="lvl"><small>${esc(lvlName(k))}</small> <b class="num">${fmtP(v)}</b></span>`);
   return parts.length?`<div class="lvls">${parts.join('')}</div>`:''}
-async function optStrats(){const box=$('#opStrat');if(!box||!OPT.sel)return;const und=OPT.sym;
+async function optStrats(){const box=$('#opStrat');if(!box)return;const und=OPT.sym;
   const meta=await loadStratMeta().catch(()=>null);if(!meta||!$('#opStrat'))return;
   const list=meta.strategies.filter(m=>!String(m.key).startsWith('opt-')&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
-  const draw=()=>{const bx=$('#opStrat');if(!bx||!OPT.sel)return;const side=OPT.sel.side,rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side);
-    bx.innerHTML=`<div class="card-h"><h3>Strategy signals · ${esc(und)}</h3><span class="badge ${V.cls==='up'?'b-up':V.cls==='down'?'b-down':'b-mute'}">${V.bu} bullish · ${V.be} bearish</span></div>
+  const draw=()=>{const bx=$('#opStrat');if(!bx)return;const side=OPT.sel?OPT.sel.side:null,rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side||'CE');
+    if(!side){V.txt=!(V.bu+V.be)?`No active signal on ${und} right now — wait for a setup`:V.bu===V.be?`${und} is mixed: ${V.bu} bullish · ${V.be} bearish`:V.bu>V.be?`${und} leans bullish (${V.bu} vs ${V.be}) — CE side favoured`:`${und} leans bearish (${V.be} vs ${V.bu}) — PE side favoured`;V.cls=V.bu===V.be?'muted':V.bu>V.be?'up':'down'}
+    const done=rows.filter(x=>x.r&&!x.r.pending).length;
+    bx.innerHTML=`<div class="card-h"><h3>All indicators · ${esc(und)} <small class="muted" style="font-weight:500">${done}/${rows.length} loaded</small></h3><span class="badge ${V.cls==='up'?'b-up':V.cls==='down'?'b-down':'b-mute'}">${V.bu} bullish · ${V.be} bearish</span></div>
      <div class="os-v ${V.cls}">${esc(V.txt)}</div>
-     <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>What it means for this ${side}</th></tr></thead><tbody>${rows.map(({m,r})=>{
+     <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>${side?'What it means for this '+side:'What it means'}</th></tr></thead><tbody>${rows.map(({m,r})=>{
        if(!r||r.pending)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Loading…</td></tr>`;if(r.err)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Not available for ${esc(und)}</td></tr>`;
        let act='',ac='muted';
        if(r.stale){act='Older signal — not counted'}
+       else if(!side&&r.bias==='bull'){act='▲ Bullish — favours a CE';ac='up'}
+       else if(!side&&r.bias==='bear'){act='▼ Bearish — favours a PE';ac='down'}
        else if(r.bias==='bull'){act=side==='CE'?'✓ Supports buying this CE':'✗ Goes against this PE — a CE fits better';ac=side==='CE'?'up':'down'}
        else if(r.bias==='bear'){act=side==='PE'?'✓ Supports buying this PE':'✗ Goes against this CE — a PE fits better';ac=side==='PE'?'up':'down'}
        else{act='No clear direction'}
        return`<tr><td><b>${esc(m.name)}</b></td><td>${stBadge(r)}</td><td><div>${esc(r.levels&&Object.keys(r.levels).length?headNoLvl(r.headline):tidyText(r.headline))}</div><div class="${ac}" style="font-size:12px;margin-top:2px">${act}</div>${levelsLine(r.levels)}</td></tr>`}).join('')}</tbody></table></div>
-     <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). Only active signals are counted — bullish favours a CE, bearish favours a PE. The plan above is built from the contract's own chart.</p>`;updateOptPlan()};
+     <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). Only active signals are counted — bullish favours a CE, bearish favours a PE. ${side?"The plan above is built from the contract's own chart.":'Pick a CE or PE in the chain to see what each signal means for that contract.'}</p>`;if(OPT.sel)updateOptPlan()};
   if(OS.sym!==und){OS.sym=und;OS.token++}
   draw();
   const tk=OS.token,todo=list.filter(m=>{const r=OS.res[m.key+'|'+und];return !r||(!r.pending&&Date.now()-(r.ts||0)>90000)});
