@@ -1759,7 +1759,7 @@ function liveUpdate(){
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['options','Options'],['journal','Journal'],['stocks','Stocks'],['indicators','Indicators']];
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['journal','Journal'],['stocks','Stocks'],['indicators','Indicators']];
 const PRIMARY=['picks','trade','markets','options'];
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${App.view===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${App.view===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${PRIMARY.includes(App.view)?'':'on'}" data-act="more"><span class="ni">${I('list',19)}</span><span>More</span></button>`}
 const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search'};
@@ -1803,7 +1803,7 @@ function drawOc(){if(!OC.open)return;let p=$('#ocPop');
       `<p class="muted oc-f">Tap a price to open that contract's chart with the order ticket. Lot ${d.lot||1}.</p>`}
   p.innerHTML=`<div class="oc-top"><b>${esc(OC.sym)} options</b><button class="rn-x" data-act="optchain" aria-label="Close option chain">×</button></div>${OC.busy&&d?'<div class="muted oc-f">Updating…</div>':''}${body}`}
 document.addEventListener('click',e=>{
-  const tg=e.target.closest('[data-act="optchain"]');if(tg){e.preventDefault();toggleOc();return}
+  const tg=e.target.closest('[data-act="optchain"]');if(tg){e.preventDefault();OPT.sym=App.sym.s;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;go('options');return}
   const q=e.target.closest('[data-ocq]');if(q){e.preventDefault();switchSym(q.dataset.ocq);setTimeout(()=>{if(!OC.open)toggleOc()},60);return}
   const c=e.target.closest('[data-oc]');if(c&&OC.data&&!OC.data.error){const [side,strike]=c.dataset.oc.split(':');const ex=OC.data.expiry,sym=OC.sym;closeOc();openOptionFromScan(sym,ex,parseFloat(strike),side);return}
   if(OC.open){const p=$('#ocPop');if(p&&!p.contains(e.target))closeOc()}});
@@ -2314,7 +2314,7 @@ async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const w
   OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}}}
 function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.tf=TFS.find(t=>t.k==='5m');
   el.innerHTML=`<div class="page opt-page">${pageHead('Option chain','Tap a CE or PE price to open its live chart and indicator readings.',
-    `<div class="opt-ctl"><select class="inp" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
+    `<button class="btn" data-view="trade">${I('back',15)} Back to chart</button><div class="opt-ctl"><select class="inp" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
      <select class="inp" id="optExp" aria-label="Expiry"></select>
      <select class="inp" id="optSpan" aria-label="Strikes shown">${[[5,'±5'],[10,'±10'],[20,'±20'],[0,'All']].map(x=>`<option value="${x[0]}" ${OPT.span===x[0]?'selected':''}>${x[1]} strikes</option>`).join('')}</select>
      <button class="btn" id="optRef">Refresh</button></div>`)}
