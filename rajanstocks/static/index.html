@@ -631,6 +631,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-empty-s{min-height:0;display:flex;align-items:center;gap:14px;text-align:left;justify-content:flex-start;padding:16px 18px}
 .opx-empty-s svg{width:30px;height:30px;flex:none}.opx-empty-s p{max-width:none}
 .opx-sig{padding:0}
+@media (max-width:899px){.opx-empty-s{display:none}}
 #opStrat .tbl-wrap,#opRead .tbl-wrap{display:block;width:100%;overflow-x:auto}#opStrat table.rd,#opRead table.rd{width:100%!important;display:table!important}
 @media (max-width:899px){#opStrat table.rd thead{display:none}#opStrat table.rd,#opStrat table.rd tbody{display:block!important}#opStrat table.rd tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}#opStrat table.rd td{padding:0;border:0;display:block}#opStrat table.rd td:nth-child(3){grid-column:1/-1}#opStrat table.rd td[colspan]{grid-column:2}}
 @media (min-width:900px){
@@ -639,6 +640,30 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   .opx-panel #opRead,.opx-panel #opStrat{border-top:1px solid var(--line)}
 }
 @media (max-width:899px){.opx[data-mtab="chain"] .opx-work{display:none}.opx:not([data-mtab="chain"]) .opx-work .opx-sig{display:none}.opx[data-mtab="signals"] .opx-work .opx-sig{display:block}}
+.opx-sigf{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px}.opx-sigf .opx-chip{height:28px;padding:0 10px;font-size:12px}.opx-sigf .opx-chip span{opacity:.7;margin-left:3px}
+.opx-sigpg{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid var(--line);font-size:12.5px}
+.opx-seg-s{display:inline-flex}.opx-seg-s button{flex:none;min-width:38px;height:26px;font-size:12px}
+.opx-pgb{display:flex;align-items:center;gap:8px}.opx-pgb b{font-size:12.5px;font-variant-numeric:tabular-nums}
+.opx-pb{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);font-size:15px;cursor:pointer}.opx-pb:disabled{opacity:.35;cursor:not-allowed}
+/* compact workspace */
+.opx{padding:8px 12px 10px;gap:8px}
+.opx-bar{padding:6px 10px;gap:10px;border-radius:10px}
+.opx-sel{height:32px}.opx-spot b{font-size:18px}.opx-chip{height:28px;padding:0 10px;font-size:12px}.opx-fbtn,.opx-ib{height:32px}.opx-ib{width:32px}
+.opx-sum{gap:6px}.opx-kpi{flex:0 0 auto;min-width:0;flex-direction:row;align-items:baseline;gap:6px;padding:4px 10px;border-radius:8px}.opx-kpi b{font-size:12.5px}.opx-kpi small{font-size:10px}
+.opx-grid{gap:8px}
+.opx-oc td{padding:4px 8px}.opx-oc td.ltp{line-height:1.1}.opx-oc td.ltp b{font-size:12.5px}.opx-oc td.ltp small{font-size:10px}.opx-oc th{padding:5px 8px}
+.opx-oc thead tr.opx-side th{padding:4px 8px}.opx-oc thead tr:nth-child(2) th{top:23px}
+.opx-card{padding:10px 12px;gap:6px;border-radius:10px}.opx-panel{padding:0}
+.opx-chartcard .opt-h .opt-name{font-size:14px}.opx-chartcard .opt-px b{font-size:18px}
+.opx-chartcard .opt-tools{gap:6px}.opx-chartcard .opt-tools .chip{height:26px;font-size:11.5px;padding:0 9px}
+@media (min-width:900px){
+  .opx-grid{align-items:stretch;min-height:0}
+  .opx-chain{position:static;display:flex;flex-direction:column;min-height:0}.opx-chain .oc-wrap{flex:1;max-height:none;min-height:0}
+  .opx-work{overflow-y:auto;min-height:0;padding-right:2px;scrollbar-width:thin}
+  .opx-work>*{flex-shrink:0}.opx-chain{align-self:start;max-height:100%}
+  .opx-chartcard .opt-chart{height:clamp(280px,calc(100vh - 360px),520px)}
+  .opx-empty-s{padding:10px 14px}
+}
 </style>
 </head>
 <body>
@@ -2415,10 +2440,10 @@ async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const w
   try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(OPT.expiry?'&expiry='+OPT.expiry:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null}
   catch(e){OPT.chain=null;OPT.err='The option chain is not available for '+want+' right now.'}
   OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}}}
-const OPXF_DEF={span:10,oi:true,chg:false,vol:true,bars:true,liquid:false};
-OPT.f=(()=>{try{return Object.assign({},OPXF_DEF,JSON.parse(localStorage.getItem('rs-opxf')||'{}'))}catch(e){return Object.assign({},OPXF_DEF)}})();
+const OPXF_DEF={span:5,oi:true,chg:false,vol:true,bars:true,liquid:false};
+OPT.f=(()=>{try{return Object.assign({},OPXF_DEF,JSON.parse(localStorage.getItem('rs-opxf2')||'{}'))}catch(e){return Object.assign({},OPXF_DEF)}})();
 OPT.span=OPT.f.span;OPT.mtab=OPT.mtab||'chain';OPT.wtab=OPT.wtab||'order';
-const opxSave=()=>{try{localStorage.setItem('rs-opxf',JSON.stringify(OPT.f))}catch(e){}};
+const opxSave=()=>{try{localStorage.setItem('rs-opxf2',JSON.stringify(OPT.f))}catch(e){}};
 const opxMobile=()=>innerWidth<900;
 function opxSeg(name,cur,opts){return`<div class="opx-seg" role="group">${opts.map(([v,l])=>`<button type="button" class="${String(cur)===String(v)?'on':''}" data-opx="${name}:${v}">${l}</button>`).join('')}</div>`}
 function opxFilterHtml(){const f=OPT.f,tg=(k,l,d)=>`<label class="opx-tog"><input type="checkbox" data-opxf="${k}" ${f[k]?'checked':''}><span></span><div><b>${l}</b>${d?`<small>${d}</small>`:''}</div></label>`;
@@ -2429,7 +2454,7 @@ function opxFilterHtml(){const f=OPT.f,tg=(k,l,d)=>`<label class="opx-tog"><inpu
     <div class="opx-fg"><label>Rows</label>${tg('bars','Shade OI bars','')}${tg('liquid','Hide untraded strikes','no volume today')}</div>
   </div>
   <div class="opx-fp-f"><button class="btn" data-opx="freset">Reset</button><button class="btn pri" data-opx="filters">Done</button></div>`}
-function opxActiveCount(){const f=OPT.f;return (f.span!==10?1:0)+(!f.oi?1:0)+(f.chg?1:0)+(!f.vol?1:0)+(!f.bars?1:0)+(f.liquid?1:0)}
+function opxActiveCount(){const f=OPT.f;return (f.span!==5?1:0)+(!f.oi?1:0)+(f.chg?1:0)+(!f.vol?1:0)+(!f.bars?1:0)+(f.liquid?1:0)}
 function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.tf=TFS.find(t=>t.k==='5m');
   el.innerHTML=`<div class="opx" data-mtab="${OPT.mtab}">
     <div class="opx-bar">
@@ -2448,7 +2473,7 @@ function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.t
   </div>`;
   OPT.shell=false;OPT.ochart=null;opxBadge();
   if(!OPT.chain||OPT.chain.symbol!==OPT.sym)loadChain(true);else drawChain();
-  drawDetail()}
+  drawDetail();requestAnimationFrame(opxFit)}
 function opxBadge(){const n=opxActiveCount(),b=$('#opxBadge');if(b){b.textContent=n;b.hidden=!n}const fb=$('#opxFbtn');if(fb)fb.classList.toggle('on',n>0)}
 function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
   rows.forEach(r=>{const a=r.ce?.oi||0,b=r.pe?.oi||0;ceOi+=a;peOi+=b;if(r.ce&&(!cw||a>cw.oi))cw={k:r.strike,oi:a};if(r.pe&&(!pw||b>pw.oi))pw={k:r.strike,oi:b}});
@@ -2519,6 +2544,11 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(
   else if(k==='wtab')opxWtab(a);
   else if(k==='dock'){const b=$(a==='buy'?'#opBuy':'#opSell');if(b)b.click()}});
 document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.opxf;if(!k)return;OPT.f[k]=e.target.checked;opxSave();opxBadge();drawChain()});
+document.addEventListener('click',e=>{const t=e.target.closest('[data-ossig]');if(!t)return;const [k,a]=t.dataset.ossig.split(':');
+  if(k==='flt'){OS.flt=a;OS.pg=0}else if(k==='size'){OS.size=+a;OS.pg=0}else if(k==='pg'){OS.pg=Math.max(0,+a)}
+  try{localStorage.setItem('rs-ossig',JSON.stringify({flt:OS.flt,size:OS.size}))}catch(x){}if(OS.redraw)OS.redraw()});
+function opxFit(){const g=$('.opx-grid');if(!g)return;if(opxMobile()){g.style.height='';return}const top=g.getBoundingClientRect().top+Math.min(0,-scrollY*0);g.style.height=Math.max(520,innerHeight-Math.max(0,top)-12)+'px'}
+addEventListener('resize',()=>{if(App.view==='options')opxFit()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const fp=$('#opxFp');if(fp&&!fp.hidden){fp.hidden=true;$('#opxScrim').hidden=true}}});
 function optAddInd(key,silent){const d=DEFS[key];if(!d||!OPT.ochart)return;const used=new Set(OPT.ochart.ind.filter(i=>DEFS[i.key].pane==='main').flatMap(i=>i.colors));let base=0;while(used.has(base)&&base<7)base++;
   const p={};d.params.forEach(x=>p[x.k]=x.v);OPT.ochart.ind.push({uid:++UID,key,params:p,colors:d.lines.map(l=>l.c??(d.pane==='main'?base:0)),hidden:false});if(!silent){OPT.ochart.indChanged()}}
@@ -3079,6 +3109,7 @@ function loadOptInds(){try{return JSON.parse(localStorage.getItem(OIND_STORE)||'
 
 /* ---- strategy signals on the underlying, translated into what to do with this contract ---- */
 const OS={res:{},sym:null,token:0};
+(()=>{let v={};try{v=JSON.parse(localStorage.getItem('rs-ossig')||'{}')}catch(e){}OS.flt=v.flt||'all';OS.size=v.size===undefined?5:v.size;OS.pg=0})();
 /* what the underlying's active strategies mean for THIS contract: bullish supports a CE, bearish supports a PE */
 function optVerdict(und,side){let bu=0,be=0;
   for(const [k,r] of Object.entries(OS.res)){if(!k.endsWith('|'+und)||k.startsWith('opt-')||!r||r.err||r.pending||r.stale)continue;if(r.bias==='bull')bu++;else if(r.bias==='bear')be++}
@@ -3105,9 +3136,16 @@ async function optStrats(){const box=$('#opStrat');if(!box)return;const und=OPT.
   const draw=()=>{const bx=$('#opStrat');if(!bx)return;const side=OPT.sel?OPT.sel.side:null,rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side||'CE');
     if(!side){V.txt=!(V.bu+V.be)?`No active signal on ${und} right now — wait for a setup`:V.bu===V.be?`${und} is mixed: ${V.bu} bullish · ${V.be} bearish`:V.bu>V.be?`${und} leans bullish (${V.bu} vs ${V.be}) — CE side favoured`:`${und} leans bearish (${V.be} vs ${V.bu}) — PE side favoured`;V.cls=V.bu===V.be?'muted':V.bu>V.be?'up':'down'}
     const done=rows.filter(x=>x.r&&!x.r.pending).length;
+    const live=x=>x.r&&!x.r.pending&&!x.r.err&&!x.r.stale;
+    const fr=rows.filter(x=>OS.flt==='all'?true:OS.flt==='active'?live(x)&&(x.r.bias==='bull'||x.r.bias==='bear'):live(x)&&x.r.bias===OS.flt);
+    const cnt={all:rows.length,active:rows.filter(x=>live(x)&&(x.r.bias==='bull'||x.r.bias==='bear')).length,bull:rows.filter(x=>live(x)&&x.r.bias==='bull').length,bear:rows.filter(x=>live(x)&&x.r.bias==='bear').length};
+    const size=OS.size||fr.length||1,pages=Math.max(1,Math.ceil(fr.length/size));OS.pg=Math.min(OS.pg||0,pages-1);const pr=fr.slice(OS.pg*size,(OS.pg+1)*size);
+    OS.redraw=draw;
     bx.innerHTML=`<div class="card-h"><h3>All indicators · ${esc(und)} <small class="muted" style="font-weight:500">${done}/${rows.length} loaded</small></h3><span class="badge ${V.cls==='up'?'b-up':V.cls==='down'?'b-down':'b-mute'}">${V.bu} bullish · ${V.be} bearish</span></div>
      <div class="os-v ${V.cls}">${esc(V.txt)}</div>
-     <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>${side?'What it means for this '+side:'What it means'}</th></tr></thead><tbody>${rows.map(({m,r})=>{
+     <div class="opx-sigf">${[['all','All'],['active','Active'],['bull','Bullish'],['bear','Bearish']].map(([k,l])=>`<button class="opx-chip ${OS.flt===k?'on':''}" data-ossig="flt:${k}">${l} <span>${cnt[k]}</span></button>`).join('')}</div>
+     ${pr.length?'':`<div class="empty" style="padding:22px">No ${OS.flt==='bull'?'bullish':OS.flt==='bear'?'bearish':'active'} signals on ${esc(und)} right now.</div>`}
+     <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>${side?'What it means for this '+side:'What it means'}</th></tr></thead><tbody>${pr.map(({m,r})=>{
        if(!r||r.pending)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Loading…</td></tr>`;if(r.err)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Not available for ${esc(und)}</td></tr>`;
        let act='',ac='muted';
        if(r.stale){act='Older signal — not counted'}
@@ -3117,6 +3155,9 @@ async function optStrats(){const box=$('#opStrat');if(!box)return;const und=OPT.
        else if(r.bias==='bear'){act=side==='PE'?'✓ Supports buying this PE':'✗ Goes against this CE — a PE fits better';ac=side==='PE'?'up':'down'}
        else{act='No clear direction'}
        return`<tr><td><b>${esc(m.name)}</b></td><td>${stBadge(r)}</td><td><div>${esc(r.levels&&Object.keys(r.levels).length?headNoLvl(r.headline):tidyText(r.headline))}</div><div class="${ac}" style="font-size:12px;margin-top:2px">${act}</div>${levelsLine(r.levels)}</td></tr>`}).join('')}</tbody></table></div>
+     <div class="opx-sigpg"><div class="opx-seg opx-seg-s">${[[5,'5'],[10,'10'],[20,'20'],[0,'All']].map(([n,l])=>`<button class="${(OS.size||0)===n?'on':''}" data-ossig="size:${n}">${l}</button>`).join('')}</div>
+       <span class="muted">${fr.length?`${OS.pg*size+1}–${OS.pg*size+pr.length} of ${fr.length}`:'0'}</span>
+       <span class="opx-pgb"><button class="opx-pb" data-ossig="pg:${OS.pg-1}" ${OS.pg<=0?'disabled':''} aria-label="Previous indicators">‹</button><b>${OS.pg+1} / ${pages}</b><button class="opx-pb" data-ossig="pg:${OS.pg+1}" ${OS.pg>=pages-1?'disabled':''} aria-label="Next indicators">›</button></span></div>
      <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). Only active signals are counted — bullish favours a CE, bearish favours a PE. ${side?"The plan above is built from the contract's own chart.":'Pick a CE or PE in the chain to see what each signal means for that contract.'}</p>`;if(OPT.sel)updateOptPlan()};
   if(OS.sym!==und){OS.sym=und;OS.token++}
   draw();
