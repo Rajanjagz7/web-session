@@ -1,9 +1,11 @@
-"""Market data + recommendations API for the Rajan Stocks UI.
+"""Market data + recommendations API for the Rajan Algo UI.
 
 All numbers come from Upstox (quotes, candles). Nothing is simulated.
 """
 import concurrent.futures
+import os
 import re
+import threading
 import time
 from datetime import date, datetime, timedelta, timezone
 
@@ -307,7 +309,7 @@ def quotes(symbols: str = ""):
     ck = "q|" + ",".join(syms)
     stale, why = False, ""
     try:
-        ttl = 5 if market_open() else 300          # market closed: prices cannot move, keep them for minutes
+        ttl = 4.0 if market_open() else 300        # live: 4s; Upstox allows ~66 calls/min in total, and every server instance has its own cache
         now = time.time()
         have, missing = {}, []
         for s in syms:
@@ -317,7 +319,7 @@ def quotes(symbols: str = ""):
             else:
                 missing.append(s)
         if missing:
-            got = _cached("qf|" + ",".join(missing), 2, lambda: fetch(missing))
+            got = _cached("qf|" + ",".join(missing), 3, lambda: fetch(missing))
             t0 = time.time()
             for q in got:
                 _QSYM[q["s"]] = (t0, q)
@@ -348,6 +350,8 @@ TF = {
     "1D": ("day", "1", 1830, 0, 1), "1W": ("day", "1", 1830, 0, 1), "1M": ("day", "1", 1830, 0, 1),
 }
 HIST_TTL = 6 * 3600
+_LAST_GOOD = {}     # last non-empty candle response per request, served if upstream fails
+MAX_HIST_DAYS = 14610     # 40 years: the longest chart history offered
 
 
 NATIVE_MIN = {1, 2, 3, 5, 10, 15, 30, 45, 60}   # intervals Upstox serves directly
@@ -539,16 +543,19 @@ def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("
             d_to = date.fromisoformat(to)
     except ValueError:
         raise HTTPException(400, "from / to must be YYYY-MM-DD")
-    if d_from and (d_from < date(1900, 1, 1) or d_from > date.today()):
-        raise HTTPException(400, "from must be between 1900-01-01 and today")
+    capped = False
+    if d_from and d_from > date.today():
+        raise HTTPException(400, "from must not be in the future")
+    if d_from and d_from < date.today() - timedelta(days=MAX_HIST_DAYS):
+        d_from, capped = date.today() - timedelta(days=MAX_HIST_DAYS), True   # history is capped at 40 years
     if d_to and d_from and d_to < d_from:
         raise HTTPException(400, "to must not be before from")
     if d_from and not ikey:
         need = (date.today() - d_from).days
         if kind == "day":
-            days = min(max(need, 30), 40000)
+            days = min(max(need, 30), MAX_HIST_DAYS)
         else:
-            cap = {"1": 180, "2": 180, "3": 180, "5": 365}.get(interval, 1830)   # intraday exists only from Jan 2022
+            cap = {"1": 365, "2": 365, "3": 365, "5": 730}.get(interval, 1830)   # intraday exists only from Jan 2022
             days = min(max(need, days), cap)
     span = 3600 if kind == "day" and days > 3650 else window
 
@@ -600,15 +607,42 @@ def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("
         bars = [tmap[k] for k in sorted(tmap)]
         if factor > 1:
             bars = _resample(bars, factor)
+        # honour the requested window exactly (it used to be ignored for intraday bars)
+        if d_from:
+            lo = _ist_midnight_ms(d_from)
+            bars = [b for b in bars if b["t"] >= lo]
+        if d_to:
+            hi = _ist_midnight_ms(d_to) + 86399000
+            bars = [b for b in bars if b["t"] <= hi]
         return bars
 
+    ckey = f"c|{sym}|{tf}|{frm}|{to}"
+
+    def fetch_checked():
+        b = fetch()
+        if not b and not ikey:
+            # an empty answer for a normal symbol is an upstream hiccup (rate limit at the open, a dropped chunk),
+            # never a real "no data" - raising keeps it out of the cache so the next request tries again
+            raise RuntimeError("Upstox returned no candles")
+        return b
+
     try:
-        bars = _cached(f"c|{sym}|{tf}|{frm}|{to}", 4 if market_open() else 60, fetch)
+        bars = _cached(ckey, 4 if market_open() else 60, fetch_checked)
+        if bars:
+            _LAST_GOOD[ckey] = bars
     except Exception as e:
-        raise HTTPException(502, f"Upstox candles failed: {e}")
+        bars = _LAST_GOOD.get(ckey)                  # serve the last good chart rather than a blank one
+        if not bars:
+            raise HTTPException(503, f"Candles are temporarily unavailable, retrying: {str(e)[:120]}")
     first = bars[0]["t"] if bars else None
-    return {"symbol": sym, "tf": tf, "bars": bars, "from": frm or None, "to": to or None, "first": first,
-            "note": ("Intraday history is available from Jan 2022 only." if d_from and kind == "min" and d_from < date(2022, 1, 1) else None)}
+    note = "Charts show at most 40 years of history; the start date was moved to " + d_from.isoformat() + "." if capped else None
+    if note:
+        pass
+    elif d_from and kind == "min" and d_from < date(2022, 1, 1):
+        note = "Intraday history is available from Jan 2022 only."
+    elif d_from and first and (first - _ist_midnight_ms(d_from)) > 7 * 86400000:
+        note = "History for this timeframe starts " + datetime.fromtimestamp(first / 1000, IST).strftime("%d %b %Y") + "; earlier data is not provided by the data source."
+    return {"symbol": sym, "tf": tf, "bars": bars, "from": frm or None, "to": to or None, "first": first, "note": note}
 
 
 # ----------------------------- Option chain -----------------------------
@@ -632,10 +666,12 @@ def chain(symbol: str = "NIFTY", expiry: str = ""):
         rows = [by[k] for k in sorted(by)]
         spot = data.get("spot") or 0
         atm = min(rows, key=lambda x: abs(x["strike"] - spot))["strike"] if rows and spot else None
-        try:
-            lot = int((nse_service.upstox.fo_universe().get("lots") or {}).get(sym) or 1)
-        except Exception:
-            lot = 1
+        lot = int(data.get("lotSize") or 0)          # straight from the contract list (also covers BSE: SENSEX)
+        if lot < 1:
+            try:
+                lot = int((nse_service.upstox.fo_universe().get("lots") or {}).get(sym) or 1)
+            except Exception:
+                lot = 1
         return {"symbol": sym, "lot": lot, "spot": spot, "expiry": data.get("targetExpiry"), "expiries": data.get("expiryDates") or [],
                 "atm": atm, "rows": rows, "provider": "Upstox", "asOf": datetime.now(IST).isoformat()}
 
@@ -1067,8 +1103,17 @@ def _pick(sym, q, rows):
     long_side = score >= 0
     sgn = 1 if long_side else -1
     entry = ltp
-    stop = ltp - sgn * 1.5 * atr
-    t1, t2 = ltp + sgn * 2 * atr, ltp + sgn * 3.5 * atr
+    # structure-aware stop: beyond the last 5 completed sessions' swing, but never tighter than
+    # 1.5 ATR nor wider than 3 ATR; targets are R-multiples of that real risk (1.5R / 2.5R)
+    prev5 = rows[-6:-1] or rows[-5:]
+    if long_side:
+        stop = min(ltp - 1.5 * atr, min(r["low"] for r in prev5) - 0.25 * atr)
+        stop = max(stop, ltp - 3 * atr)
+    else:
+        stop = max(ltp + 1.5 * atr, max(r["high"] for r in prev5) + 0.25 * atr)
+        stop = min(stop, ltp + 3 * atr)
+    risk = abs(entry - stop)
+    t1, t2 = entry + sgn * 1.5 * risk, entry + sgn * 2.5 * risk
     return {
         "s": sym, "n": NAME.get(sym, sym), "sec": SECTOR.get(sym, ""),
         "ltp": round(ltp, 2), "chg": round(chg, 2), "prev": round(prev, 2),
@@ -1078,57 +1123,381 @@ def _pick(sym, q, rows):
         "positional": {1: "Bullish", -1: "Bearish", 0: "Neutral"}[long_],
         "entry": round(entry, 2), "stop": round(stop, 2),
         "target": round(t1, 2), "target2": round(t2, 2),
-        "rr": round(abs(t1 - entry) / abs(entry - stop), 2) if stop != entry else 0,
+        "rr": 1.5, "risk": round(risk, 2),
         "rsi": round(rsi, 1) if rsi is not None else None,
         "volx": round(volx, 2), "atr": round(atr, 2), "reasons": reasons,
         "spark": [round(c, 2) for c in closes[-20:]],
     }
 
 
+PICK_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+CALL_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
+FLOW_MIN_PCT = 55.0          # one side must hold >= 55% of ATM-window option volume
+FLOW_WINDOW = 5             # strikes either side of ATM that count towards the flow
+OPT_T1, OPT_T2, OPT_SL = 1.09, 1.18, 0.95   # same +9% / +18% / -5% premium rule used across the app
+
+
+_PK = {"data": None, "t": 0.0, "busy": False, "partial": [], "total": 0,
+       "lock": threading.Lock(), "done": threading.Event()}
+
+
+def _picks_payload(res, universe, complete):
+    buys = sorted([r for r in res if r["signal"] == "BUY"], key=lambda r: (-r["score"], -r["volx"]))
+    sells = sorted([r for r in res if r["signal"] == "SELL"], key=lambda r: (r["score"], -r["volx"]))
+    return {
+        "picks": list(res), "buy": buys, "sell": sells, "complete": complete,
+        "count": len(res), "universe": universe, "marketOpen": market_open(),
+        "asOf": datetime.now(IST).isoformat(),
+        "note": "Rule-based screen on EMA trend, day-range position, volume and RSI. Not investment advice.",
+    }
+
+
+def _picks_compute(deadline_s, progress=None):
+    """Screen indices first, then the curated liquid stocks, then the rest. Rate-limited requests are
+    retried and swept again in a gentle second pass, so a symbol is never silently dropped."""
+    up = nse_service.upstox
+    keymap = {}
+    for s in list(PICK_INDICES) + [s for s, _, _ in STOCKS]:
+        try:
+            keymap[_key(s)] = s
+        except Exception:
+            pass
+    qs = up._full_quotes(list(keymap.keys()))
+    deadline = time.time() + deadline_s
+    _PK["total"] = len(keymap)
+
+    def daily(k):
+        return _cached(f"dc|{k}|{date.today().isoformat()}", 6 * 3600, lambda: up.get_candles(k, "day"))
+
+    failed = {}
+
+    @bg
+    def one(item):
+        k, sym = item
+        q = qs.get(k)
+        if not q:
+            return None
+        if time.time() > deadline:
+            failed[k] = sym
+            return None
+        rows = None
+        for attempt in range(3):
+            try:
+                rows = daily(k)
+                break
+            except Exception:
+                time.sleep(0.4 * (attempt + 1))
+        if rows is None:
+            failed[k] = sym
+            return None
+        r = _pick(sym, q, rows)
+        if r:
+            r["kind"] = "index" if sym in PICK_INDICES else "stock"
+        return r
+
+    res = []
+
+    def run(items, workers):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            for fut in concurrent.futures.as_completed([pool.submit(one, it) for it in items]):
+                r = fut.result()
+                if r:
+                    res.append(r)
+                    if progress and len(res) % 8 == 0:
+                        progress(res)
+
+    run(list(keymap.items()), 6)
+    for _ in range(2):
+        if not failed or time.time() > deadline:
+            break
+        retry = list(failed.items())
+        failed.clear()
+        time.sleep(1.0)
+        run(retry, 3)
+    if progress:
+        progress(res)
+    return _picks_payload(res, len(keymap), len(res) >= 0.95 * len(keymap))
+
+
+def _picks_run():
+    try:
+        data = _picks_compute(120, progress=lambda r: _PK.__setitem__("partial", list(r)))
+        if data["count"]:
+            _PK["data"], _PK["t"] = data, time.time()
+    except Exception as e:
+        print(f"[picks] background build failed: {e}")
+    finally:
+        _PK["busy"] = False
+        _PK["done"].set()
+
+
+def _picks_kick():
+    with _PK["lock"]:
+        if _PK["busy"]:
+            return
+        _PK["busy"] = True
+        _PK["done"].clear()
+        _PK["partial"] = []
+    threading.Thread(target=_picks_run, daemon=True, name="picks-build").start()
+
+
+def warm_picks():
+    """Called at server start so the first user request finds the screen ready."""
+    try:
+        ensure_universe()
+    except Exception:
+        pass
+    _picks_kick()
+
+
 @router.get("/picks")
 def picks(refresh: bool = False):
     ensure_universe()
+    if os.environ.get("VERCEL"):
+        # serverless freezes background threads after the response: build inline within the 30s cap
+        if refresh:
+            _cache.pop("picks", None)
+
+        def build_ok():
+            v = _picks_compute(22)
+            return v, v["complete"]
+        try:
+            return _cached_ok("picks", 900 if market_open() else 3600, build_ok, short=20)
+        except Exception as e:
+            raise HTTPException(502, f"Picks failed: {e}")
+
+    ttl = 900 if market_open() else 3600
+    d = _PK["data"]
+    if d is None or refresh or time.time() - _PK["t"] > ttl:
+        _picks_kick()                              # stale-while-revalidate: a refresh never blocks the user
+    if d is not None:
+        return {**d, "refreshing": _PK["busy"]}
+    _PK["done"].wait(timeout=20)                   # very first load: wait for the full screen, else show what is ready
+    if _PK["data"] is not None:
+        return {**_PK["data"], "refreshing": False}
+    return {**_picks_payload(_PK["partial"], _PK["total"], False), "refreshing": True}
+
+
+# ----------------------------- Index F&O calls (Recommendation for the Day) -----------------------------
+def _index_call(sym, tech):
+    """One index -> one decision. A BUY CALL / BUY PUT is only issued when the daily-chart signal
+    (EMA trend, range position, volume, RSI) AND the live option-chain flow point the same way;
+    a single-sided read is shown as WATCH and anything else as NO SIGNAL."""
+    ch = chain(sym, "")
+    rows = ch.get("rows") or []
+    atm = ch.get("atm")
+    if not rows or atm is None:
+        return {"instrument": sym, "signal": "NO SIGNAL", "reason": "Option chain not available right now"}
+    ai = min(range(len(rows)), key=lambda i: abs(rows[i]["strike"] - atm))
+    win = rows[max(0, ai - FLOW_WINDOW): ai + FLOW_WINDOW + 1]
+    cv = sum((r.get("ce") or {}).get("vol") or 0 for r in win)
+    pv = sum((r.get("pe") or {}).get("vol") or 0 for r in win)
+    tot = cv + pv
+    call_pct = cv / tot * 100 if tot else None
+    put_pct = 100 - call_pct if call_pct is not None else None
+    flow = "NEUTRAL"
+    if call_pct is not None:
+        if call_pct >= FLOW_MIN_PCT:
+            flow = "BULLISH"
+        elif put_pct >= FLOW_MIN_PCT:
+            flow = "BEARISH"
+    tsig = (tech or {}).get("signal", "NEUTRAL")
+    want = "BUY CALL" if (tsig == "BUY" and flow == "BULLISH") else "BUY PUT" if (tsig == "SELL" and flow == "BEARISH") else None
+    basis, confidence = "daily chart and option flow agree", "high"
+    pct = max(call_pct or 0, put_pct or 0)
+    if not want and tsig == "NEUTRAL" and flow in ("BULLISH", "BEARISH") and pct >= 60:
+        # flow-led: the chart has no view, the option market is clearly one-sided (never taken against the chart)
+        want = "BUY CALL" if flow == "BULLISH" else "BUY PUT"
+        basis, confidence = f"option flow {pct:.0f}% one-sided, chart neutral", "medium"
+    out = {
+        "instrument": sym, "kind": "index", "tech": tsig, "flow": flow,
+        "callPct": round(call_pct, 1) if call_pct is not None else None,
+        "putPct": round(put_pct, 1) if put_pct is not None else None,
+        "spot": ch.get("spot"), "expiry": ch.get("expiry"), "lot": ch.get("lot"),
+        "marketOpen": market_open(),
+    }
+    if not want:
+        if tsig in ("BUY", "SELL") and flow != "NEUTRAL":
+            out.update(signal="WATCH", reason=f"Chart says {tsig} but option flow is {flow.lower()} -- no agreement, stay out")
+        elif tsig in ("BUY", "SELL"):
+            out.update(signal="WATCH", reason=f"Chart says {tsig}; option volume is balanced so there is no flow confirmation yet")
+        elif flow != "NEUTRAL":
+            out.update(signal="WATCH", reason=f"Option flow is {flow.lower()} but the chart trend is neutral")
+        else:
+            out.update(signal="NO SIGNAL", reason="Chart trend and option flow are both neutral -- rangebound")
+        return out
+    side = "ce" if want == "BUY CALL" else "pe"
+    leg = (rows[ai].get(side) or {})
+    if not (leg.get("ltp") or 0) > 0:
+        out.update(signal="NO SIGNAL", reason="ATM contract has no traded price yet")
+        return out
+    entry = float(leg["ltp"])
+    out.update(
+        signal=want, contract=f"{sym} {int(rows[ai]['strike'])} {'CE' if side == 'ce' else 'PE'}",
+        strike=rows[ai]["strike"], key=leg.get("key"), entry=round(entry, 2),
+        target1=round(entry * OPT_T1, 2), target2=round(entry * OPT_T2, 2), stopLoss=round(entry * OPT_SL, 2),
+        underlying={"entry": tech.get("entry"), "stop": tech.get("stop"), "target": tech.get("target"), "target2": tech.get("target2")},
+        strength=tech.get("strength") if confidence == "high" else round(pct / 2), basis=basis, confidence=confidence, opening915=_opening_levels(leg.get("key")) if leg.get("key") else None,
+        reasons=(tech.get("reasons") or [])[:3] + [f"Option volume near ATM: {call_pct:.0f}% calls / {put_pct:.0f}% puts"],
+    )
+    return out
+
+
+@router.get("/day-calls")
+def day_calls(refresh: bool = False):
+    ensure_universe()
+    try:
+        P = picks(refresh)
+    except HTTPException:
+        P = {"picks": []}
+    tech = {p["s"]: p for p in P.get("picks", []) if p.get("kind") == "index"}
 
     def build():
-        up = nse_service.upstox
-        keymap = {}
-        for s, _, _ in STOCKS:
-            try:
-                keymap[_key(s)] = s
-            except Exception:
-                pass
-        qs = up._full_quotes(list(keymap.keys()))
-        deadline = time.time() + 22          # stay well inside the serverless time limit
-
-        def daily(k):
-            return _cached(f"dc|{k}|{date.today().isoformat()}", 6 * 3600, lambda: up.get_candles(k, "day"))
-
-        @bg
-        def one(item):
-            k, sym = item
-            q = qs.get(k)
-            if not q or time.time() > deadline:
-                return None
-            try:
-                rows = daily(k)
-            except Exception:
-                return None
-            return _pick(sym, q, rows)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
-            res = [r for r in pool.map(one, keymap.items()) if r]
-        buys = sorted([r for r in res if r["signal"] == "BUY"], key=lambda r: (-r["score"], -r["volx"]))
-        sells = sorted([r for r in res if r["signal"] == "SELL"], key=lambda r: (r["score"], -r["volx"]))
-        return {
-            "picks": res, "buy": buys, "sell": sells,
-            "count": len(res), "universe": len(keymap), "marketOpen": market_open(),
-            "asOf": datetime.now(IST).isoformat(),
-            "note": "Rule-based screen on EMA trend, day-range position, volume and RSI. Not investment advice.",
-        }
+        res = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+            futs = {sym: pool.submit(_index_call, sym, tech.get(sym) or {}) for sym in CALL_INDICES}
+            for sym, f in futs.items():
+                try:
+                    res.append(f.result())
+                except Exception as e:
+                    res.append({"instrument": sym, "signal": "NO SIGNAL", "reason": f"Data unavailable: {str(e)[:120]}"})
+        order = {"BUY CALL": 0, "BUY PUT": 0, "WATCH": 1, "NO SIGNAL": 2}
+        res.sort(key=lambda r: (order.get(r["signal"], 3), -(r.get("strength") or 0)))
+        return {"calls": res, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat(),
+                "rule": f"Call/Put only when the daily chart signal and ATM±{FLOW_WINDOW} option-volume flow (>= {FLOW_MIN_PCT:.0f}%) agree. "
+                        "Premium levels: T1 +9%, T2 +18%, SL -5%. Paper-trading aid, not advice."}
 
     if refresh:
-        _cache.pop("picks", None)
+        _cache.pop("daycalls", None)
+
+    def build_ok():
+        v = build()
+        return v, all(sym in tech for sym in CALL_INDICES)   # not cached for long if the index charts were not ready
+    return _cached_ok("daycalls", 20 if market_open() else 300, build_ok, short=5)
+
+
+# ----------------------------- Option Scanner: low range + Open=Low / Open=High -----------------------------
+@router.get("/option-low-range")
+def option_low_range(symbol: str = "NIFTY", expiry: str = "", lowFrom: float = 5.80, lowTo: float = 8.45,
+                     usePrev: bool = True, prevFrom: float = 38.0, prevTo: float = 48.0, tol: float = 0.0,
+                     each: int = 8, show: str = "all"):
+    """Port of the 'Option Scanner - Low Range + Open=Low / Open=High' Pine script on live Upstox chain data.
+    A contract MATCHES when its day low is inside [lowFrom, lowTo] and (if usePrev) the previous close is
+    inside [prevFrom, prevTo]. O=L / O=H flag contracts whose open equals the day low / high (within tol)."""
+    each = max(1, min(int(each), 12))
+    ch = chain(symbol, expiry)
+    rows = ch.get("rows") or []
+    atm = ch.get("atm")
+    if not rows or atm is None:
+        raise HTTPException(502, "Option chain not available right now")
+    ai = min(range(len(rows)), key=lambda i: abs(rows[i]["strike"] - atm))
+    win = rows[max(0, ai - each): ai + each + 1]
+
+    def side(leg):
+        if not leg:
+            return None
+        o, h, l, pc = leg.get("open"), leg.get("high"), leg.get("low"), leg.get("prev")
+        has = l is not None and l > 0
+        match = has and lowFrom <= l <= lowTo and (not usePrev or (pc is not None and prevFrom <= pc <= prevTo))
+        ol = bool(o) and has and abs(o - l) <= tol
+        oh = bool(o) and bool(h) and abs(o - h) <= tol
+        return {"ltp": leg.get("ltp"), "open": o, "high": h, "low": l, "prev": pc, "vol": leg.get("vol"),
+                "match": bool(match), "ol": ol, "oh": oh, "key": leg.get("key"),
+                "signal": "O=L=H" if ol and oh else "O=L" if ol else "O=H" if oh else ""}
+
+    out, lists = [], {"match": [], "ol": [], "oh": []}
+    for r in win:
+        ce, pe = side(r.get("ce")), side(r.get("pe"))
+        for tag, d in (("CE", ce), ("PE", pe)):
+            if not d:
+                continue
+            name = f"{int(r['strike'])}{tag}"
+            for k in ("match", "ol", "oh"):
+                if d[k]:
+                    lists[k].append(name)
+        keep = {"all": True, "matches": bool((ce and ce["match"]) or (pe and pe["match"])),
+                "ol": bool((ce and ce["ol"]) or (pe and pe["ol"])), "oh": bool((ce and ce["oh"]) or (pe and pe["oh"])),
+                "any": any(d and (d["match"] or d["ol"] or d["oh"]) for d in (ce, pe))}.get(show, True)
+        if keep:
+            out.append({"strike": r["strike"], "atm": r["strike"] == atm, "ce": ce, "pe": pe})
+    return {"symbol": ch["symbol"], "spot": ch.get("spot"), "expiry": ch.get("expiry"), "expiries": ch.get("expiries"),
+            "atm": atm, "lot": ch.get("lot"), "rows": out, "match": lists["match"], "openLow": lists["ol"],
+            "openHigh": lists["oh"], "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat(),
+            "params": {"lowFrom": lowFrom, "lowTo": lowTo, "usePrev": usePrev, "prevFrom": prevFrom, "prevTo": prevTo, "tol": tol}}
+
+
+def _opening_levels(key):
+    """High/Low of the 09:15-09:30 candle of an option contract (today) divided by 2 / 3 / 4 -
+    the HL/2/3/4 levels of the RJ Best script, which are meant for option premiums."""
     try:
-        return _cached("picks", 900 if market_open() else 3600, build)
-    except Exception as e:
-        raise HTTPException(502, f"Picks failed: {e}")
+        mins = nse_service.upstox.fetch_intraday_candles(key, "minutes", "1")
+    except Exception:
+        return None
+    first = []
+    for c in mins:
+        try:
+            dt = datetime.fromisoformat(c["time"]).astimezone(IST)
+        except Exception:
+            continue
+        if dt.date() == datetime.now(IST).date() and 9 * 60 + 15 <= dt.hour * 60 + dt.minute < 9 * 60 + 30:
+            first.append(c)
+    if not first:
+        return None
+    h, l = max(c["high"] for c in first), min(c["low"] for c in first)
+    return {"high": round(h, 2), "low": round(l, 2),
+            "h2": round(h / 2, 2), "h3": round(h / 3, 2), "h4": round(h / 4, 2),
+            "l2": round(l / 2, 2), "l3": round(l / 3, 2), "l4": round(l / 4, 2)}
+
+
+# ----------------------------- fast screens for the auto trader -----------------------------
+def quick_screen(symbols, deadline_s=12):
+    """Same scoring as /picks but only for the given symbols, so it finishes in a few seconds."""
+    ensure_universe()
+    up = nse_service.upstox
+    keymap = {}
+    for s in symbols:
+        try:
+            keymap[_key(s)] = s
+        except Exception:
+            pass
+    if not keymap:
+        return []
+    qs = up._full_quotes(list(keymap))
+    end = time.time() + deadline_s
+
+    @bg
+    def one(item):
+        k, sym = item
+        q = qs.get(k)
+        if not q or time.time() > end:
+            return None
+        try:
+            rows = _cached(f"dc|{k}|{date.today().isoformat()}", 6 * 3600, lambda: up.get_candles(k, "day"))
+        except Exception:
+            return None
+        r = _pick(sym, q, rows)
+        if r:
+            r["kind"] = "index" if sym in PICK_INDICES else "stock"
+        return r
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+        return [r for r in pool.map(one, keymap.items()) if r]
+
+
+def quick_index_calls(deadline_s=8):
+    """Index CALL / PUT ideas (daily chart and ATM option flow agree) without screening all 218 symbols."""
+    tech = {p["s"]: p for p in quick_screen(list(CALL_INDICES), deadline_s)}
+    out = []
+    for sym in CALL_INDICES:
+        try:
+            out.append(_index_call(sym, tech.get(sym) or {}))
+        except Exception as e:
+            out.append({"instrument": sym, "signal": "NO SIGNAL", "reason": str(e)[:80]})
+    return out
+
+
+@router.get("/budget")
+def budget():
+    """How much of the shared Upstox request budget is in use right now."""
+    from upstox_service import budget_usage
+    return budget_usage()

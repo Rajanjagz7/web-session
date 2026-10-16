@@ -1,0 +1,383 @@
+=== Dashboard dims=A1:H18
+A1: PAPER TRADING • STRATEGY PERFORMANCE
+A2: SIMULATED RESULTS ONLY — no broker connection, live orders, or return guarantees.
+A4: Starting Capital
+C4: Closed Trades
+E4: Net P&L
+G4: Virtual Equity
+A5: =Settings!B3
+C5: =COUNT('Trade Journal'!AG3:AG502)
+E5: =SUM('Trade Journal'!AG3:AG502)
+G5: =A5+E5
+A7: Win Rate
+C7: Average R
+E7: Profit Factor
+G7: Trades Today
+A8: =IFERROR(COUNTIF('Trade Journal'!AG3:AG502,">0")/COUNT('Trade Journal'!AG3:AG502),0)
+C8: =IFERROR(AVERAGE('Trade Journal'!AH3:AH502),0)
+E8: =IFERROR(SUMIF('Trade Journal'!AG3:AG502,">0",'Trade Journal'!AG3:AG502)/ABS(SUMIF('Trade Journal'!AG3:AG502,"<0",'Trade Journal'!AG3:AG502)),0)
+G8: =COUNTIFS('Trade Journal'!B3:B502,TODAY(),'Trade Journal'!L3:L502,">0")
+A10: Daily Trade Limit
+C10: Risk Budget / Trade
+E10: T1 tagged
+G10: T2 tagged
+A11: =Settings!B4
+C11: =Settings!B3*Settings!B5
+E11: =COUNTIF('Trade Journal'!AB3:AB502,"*T1*")
+G11: =COUNTIF('Trade Journal'!AB3:AB502,"*T2*")
+A13: T3 tagged
+C13: TSL exits
+E13: SL exits
+A14: =COUNTIF('Trade Journal'!AB3:AB502,"*T3*")
+C14: =COUNTIF('Trade Journal'!AC3:AC502,"TSL")
+E14: =COUNTIF('Trade Journal'!AC3:AC502,"SL")
+A16: How to read
+A17: Use Trade Journal for one row per trade. Blue/yellow cells on Settings are editable. Formula cells calculate risk, planned R:R, gross/net P&L and R mu
+A18: Important: Dashboard is a summary, not an order-management tool. Daily trade lockout is a procedural rule in this workbook; it does not technically pr
+=== Settings dims=A1:D14
+A1: CONFIGURATION • EDIT BLUE VALUES
+A2: Parameter
+B2: Value
+C2: Description
+A3: Starting Virtual Capital
+B3: 1000000
+C3: ₹ virtual starting balance
+A4: Max Trades Per Day
+B4: 5
+C4: Each entry/re-entry counts as one trade
+A5: Risk Per Trade (%)
+B5: 0.005
+C5: 0.50% = ₹5,000 risk on ₹10,00,000
+A6: Daily Loss Limit (%)
+B6: 0.02
+C6: Lockout threshold; include open P&L operationally
+A7: Max Open Positions
+B7: 1
+C7: Default conservative setting
+A8: Minimum Planned R:R
+B8: 2
+C8: Warning threshold, not a profit guarantee
+A9: Estimated Cost per Unit
+B9: 0
+C9: Optional cost assumption per unit; edit for instrument
+A10: Slippage per Unit
+B10: 0
+C10: Optional price slippage assumption per unit
+A11: Default T1 (R)
+B11: 1
+C11: Target milestone
+A12: Default T2 (R)
+B12: 2
+C12: Target milestone
+A13: Default T3 (R)
+B13: 3
+C13: Target milestone
+A14: Account Label
+B14: PAPER • SIMULATED
+C14: Not connected to broker/live trading
+=== Trade Journal dims=A1:AL502
+A1: TRADE JOURNAL • PAPER TRADING ONLY
+A2: Trade ID
+B2: Date
+C2: Entry Time
+D2: Exit Time
+E2: Market Type
+F2: Instrument
+G2: Symbol / Contract
+H2: Direction
+I2: Strategy / Setup
+J2: Timeframe
+K2: Indicator(s) / Values
+L2: Entry Price
+M2: Initial SL
+N2: T1 Price
+O2: T2 Price
+P2: T3 Price
+Q2: Exit Price (avg)
+R2: Quantity
+S2: Lot/Contract Multiplier
+T2: Risk Budget (₹)
+U2: Initial Risk (₹)
+V2: Planned R:R (T2)
+W2: TSL Mode
+X2: TSL Trigger (R)
+Y2: Trail Distance (price)
+Z2: Highest Favourable Price
+AA2: Lowest Favourable Price
+AB2: Target Hit (T1/T2/T3)
+AC2: Exit Type
+AD2: Gross P&L (₹)
+AE2: Costs (₹)
+AF2: Slippage (₹)
+AG2: Net P&L (₹)
+AH2: R Multiple
+AI2: Rule Followed?
+AJ2: Emotion / State
+AK2: Post-trade Lesson
+AL2: Screenshot / Reference
+A3: =IF(B3="","","TR-"&TEXT(ROW()-2,"0000"))
+T3: =IF(OR(L3="",M3=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U3: =IF(OR(L3="",M3="",R3=""),"",ABS(L3-M3)*R3*IF(S3="",1,S3))
+V3: =IFERROR(ABS(N3-L3)/ABS(L3-M3),"")
+AD3: =IF(OR(L3="",Q3="",R3=""),"",IF(H3="Long",(Q3-L3)*R3*IF(S3="",1,S3),(L3-Q3)*R3*IF(S3="",1,S3)))
+AG3: =IF(AD3="","",AD3-IF(AE3="",0,AE3)-IF(AF3="",0,AF3))
+AH3: =IFERROR(AG3/U3,"")
+A4: =IF(B4="","","TR-"&TEXT(ROW()-2,"0000"))
+T4: =IF(OR(L4="",M4=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U4: =IF(OR(L4="",M4="",R4=""),"",ABS(L4-M4)*R4*IF(S4="",1,S4))
+V4: =IFERROR(ABS(N4-L4)/ABS(L4-M4),"")
+AD4: =IF(OR(L4="",Q4="",R4=""),"",IF(H4="Long",(Q4-L4)*R4*IF(S4="",1,S4),(L4-Q4)*R4*IF(S4="",1,S4)))
+AG4: =IF(AD4="","",AD4-IF(AE4="",0,AE4)-IF(AF4="",0,AF4))
+AH4: =IFERROR(AG4/U4,"")
+A5: =IF(B5="","","TR-"&TEXT(ROW()-2,"0000"))
+T5: =IF(OR(L5="",M5=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U5: =IF(OR(L5="",M5="",R5=""),"",ABS(L5-M5)*R5*IF(S5="",1,S5))
+V5: =IFERROR(ABS(N5-L5)/ABS(L5-M5),"")
+AD5: =IF(OR(L5="",Q5="",R5=""),"",IF(H5="Long",(Q5-L5)*R5*IF(S5="",1,S5),(L5-Q5)*R5*IF(S5="",1,S5)))
+AG5: =IF(AD5="","",AD5-IF(AE5="",0,AE5)-IF(AF5="",0,AF5))
+AH5: =IFERROR(AG5/U5,"")
+A6: =IF(B6="","","TR-"&TEXT(ROW()-2,"0000"))
+T6: =IF(OR(L6="",M6=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U6: =IF(OR(L6="",M6="",R6=""),"",ABS(L6-M6)*R6*IF(S6="",1,S6))
+V6: =IFERROR(ABS(N6-L6)/ABS(L6-M6),"")
+AD6: =IF(OR(L6="",Q6="",R6=""),"",IF(H6="Long",(Q6-L6)*R6*IF(S6="",1,S6),(L6-Q6)*R6*IF(S6="",1,S6)))
+AG6: =IF(AD6="","",AD6-IF(AE6="",0,AE6)-IF(AF6="",0,AF6))
+AH6: =IFERROR(AG6/U6,"")
+A7: =IF(B7="","","TR-"&TEXT(ROW()-2,"0000"))
+T7: =IF(OR(L7="",M7=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U7: =IF(OR(L7="",M7="",R7=""),"",ABS(L7-M7)*R7*IF(S7="",1,S7))
+V7: =IFERROR(ABS(N7-L7)/ABS(L7-M7),"")
+AD7: =IF(OR(L7="",Q7="",R7=""),"",IF(H7="Long",(Q7-L7)*R7*IF(S7="",1,S7),(L7-Q7)*R7*IF(S7="",1,S7)))
+AG7: =IF(AD7="","",AD7-IF(AE7="",0,AE7)-IF(AF7="",0,AF7))
+AH7: =IFERROR(AG7/U7,"")
+A8: =IF(B8="","","TR-"&TEXT(ROW()-2,"0000"))
+T8: =IF(OR(L8="",M8=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U8: =IF(OR(L8="",M8="",R8=""),"",ABS(L8-M8)*R8*IF(S8="",1,S8))
+V8: =IFERROR(ABS(N8-L8)/ABS(L8-M8),"")
+AD8: =IF(OR(L8="",Q8="",R8=""),"",IF(H8="Long",(Q8-L8)*R8*IF(S8="",1,S8),(L8-Q8)*R8*IF(S8="",1,S8)))
+AG8: =IF(AD8="","",AD8-IF(AE8="",0,AE8)-IF(AF8="",0,AF8))
+AH8: =IFERROR(AG8/U8,"")
+A9: =IF(B9="","","TR-"&TEXT(ROW()-2,"0000"))
+T9: =IF(OR(L9="",M9=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U9: =IF(OR(L9="",M9="",R9=""),"",ABS(L9-M9)*R9*IF(S9="",1,S9))
+V9: =IFERROR(ABS(N9-L9)/ABS(L9-M9),"")
+AD9: =IF(OR(L9="",Q9="",R9=""),"",IF(H9="Long",(Q9-L9)*R9*IF(S9="",1,S9),(L9-Q9)*R9*IF(S9="",1,S9)))
+AG9: =IF(AD9="","",AD9-IF(AE9="",0,AE9)-IF(AF9="",0,AF9))
+AH9: =IFERROR(AG9/U9,"")
+A10: =IF(B10="","","TR-"&TEXT(ROW()-2,"0000"))
+T10: =IF(OR(L10="",M10=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U10: =IF(OR(L10="",M10="",R10=""),"",ABS(L10-M10)*R10*IF(S10="",1,S10))
+V10: =IFERROR(ABS(N10-L10)/ABS(L10-M10),"")
+AD10: =IF(OR(L10="",Q10="",R10=""),"",IF(H10="Long",(Q10-L10)*R10*IF(S10="",1,S10),(L10-Q10)*R10*IF(S10="",1,S10)))
+AG10: =IF(AD10="","",AD10-IF(AE10="",0,AE10)-IF(AF10="",0,AF10))
+AH10: =IFERROR(AG10/U10,"")
+A11: =IF(B11="","","TR-"&TEXT(ROW()-2,"0000"))
+T11: =IF(OR(L11="",M11=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U11: =IF(OR(L11="",M11="",R11=""),"",ABS(L11-M11)*R11*IF(S11="",1,S11))
+V11: =IFERROR(ABS(N11-L11)/ABS(L11-M11),"")
+AD11: =IF(OR(L11="",Q11="",R11=""),"",IF(H11="Long",(Q11-L11)*R11*IF(S11="",1,S11),(L11-Q11)*R11*IF(S11="",1,S11)))
+AG11: =IF(AD11="","",AD11-IF(AE11="",0,AE11)-IF(AF11="",0,AF11))
+AH11: =IFERROR(AG11/U11,"")
+A12: =IF(B12="","","TR-"&TEXT(ROW()-2,"0000"))
+T12: =IF(OR(L12="",M12=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U12: =IF(OR(L12="",M12="",R12=""),"",ABS(L12-M12)*R12*IF(S12="",1,S12))
+V12: =IFERROR(ABS(N12-L12)/ABS(L12-M12),"")
+AD12: =IF(OR(L12="",Q12="",R12=""),"",IF(H12="Long",(Q12-L12)*R12*IF(S12="",1,S12),(L12-Q12)*R12*IF(S12="",1,S12)))
+AG12: =IF(AD12="","",AD12-IF(AE12="",0,AE12)-IF(AF12="",0,AF12))
+AH12: =IFERROR(AG12/U12,"")
+A13: =IF(B13="","","TR-"&TEXT(ROW()-2,"0000"))
+T13: =IF(OR(L13="",M13=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U13: =IF(OR(L13="",M13="",R13=""),"",ABS(L13-M13)*R13*IF(S13="",1,S13))
+V13: =IFERROR(ABS(N13-L13)/ABS(L13-M13),"")
+AD13: =IF(OR(L13="",Q13="",R13=""),"",IF(H13="Long",(Q13-L13)*R13*IF(S13="",1,S13),(L13-Q13)*R13*IF(S13="",1,S13)))
+AG13: =IF(AD13="","",AD13-IF(AE13="",0,AE13)-IF(AF13="",0,AF13))
+AH13: =IFERROR(AG13/U13,"")
+A14: =IF(B14="","","TR-"&TEXT(ROW()-2,"0000"))
+T14: =IF(OR(L14="",M14=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U14: =IF(OR(L14="",M14="",R14=""),"",ABS(L14-M14)*R14*IF(S14="",1,S14))
+V14: =IFERROR(ABS(N14-L14)/ABS(L14-M14),"")
+AD14: =IF(OR(L14="",Q14="",R14=""),"",IF(H14="Long",(Q14-L14)*R14*IF(S14="",1,S14),(L14-Q14)*R14*IF(S14="",1,S14)))
+AG14: =IF(AD14="","",AD14-IF(AE14="",0,AE14)-IF(AF14="",0,AF14))
+AH14: =IFERROR(AG14/U14,"")
+A15: =IF(B15="","","TR-"&TEXT(ROW()-2,"0000"))
+T15: =IF(OR(L15="",M15=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U15: =IF(OR(L15="",M15="",R15=""),"",ABS(L15-M15)*R15*IF(S15="",1,S15))
+V15: =IFERROR(ABS(N15-L15)/ABS(L15-M15),"")
+AD15: =IF(OR(L15="",Q15="",R15=""),"",IF(H15="Long",(Q15-L15)*R15*IF(S15="",1,S15),(L15-Q15)*R15*IF(S15="",1,S15)))
+AG15: =IF(AD15="","",AD15-IF(AE15="",0,AE15)-IF(AF15="",0,AF15))
+AH15: =IFERROR(AG15/U15,"")
+A16: =IF(B16="","","TR-"&TEXT(ROW()-2,"0000"))
+T16: =IF(OR(L16="",M16=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U16: =IF(OR(L16="",M16="",R16=""),"",ABS(L16-M16)*R16*IF(S16="",1,S16))
+V16: =IFERROR(ABS(N16-L16)/ABS(L16-M16),"")
+AD16: =IF(OR(L16="",Q16="",R16=""),"",IF(H16="Long",(Q16-L16)*R16*IF(S16="",1,S16),(L16-Q16)*R16*IF(S16="",1,S16)))
+AG16: =IF(AD16="","",AD16-IF(AE16="",0,AE16)-IF(AF16="",0,AF16))
+AH16: =IFERROR(AG16/U16,"")
+A17: =IF(B17="","","TR-"&TEXT(ROW()-2,"0000"))
+T17: =IF(OR(L17="",M17=""),"",IFERROR(Settings!$B$3*Settings!$B$5,0))
+U17: =IF(OR(L17="",M17="",R17=""),"",ABS(L17-M17)*R17*IF(S17="",1,S17))
+=== TSL Lab dims=A1:T302
+A1: TSL LAB • COMPARE EXIT RULES
+A2: Trade ID
+B2: Date
+C2: Instrument
+D2: Direction
+E2: Entry
+F2: Initial SL
+G2: Initial Risk / Unit
+H2: Favourable Extreme
+I2: Fixed SL Exit
+J2: Breakeven Exit
+K2: Step Trail Exit
+L2: Distance Trail Exit
+M2: T1 Hit?
+N2: T2 Hit?
+O2: T3 Hit?
+P2: Fixed P&L
+Q2: BE P&L
+R2: Step P&L
+S2: Distance P&L
+T2: Notes
+A3: =IF(B3="","","TSL-"&TEXT(ROW()-2,"0000"))
+G3: =IF(OR(E3="",F3=""),"",ABS(E3-F3))
+A4: =IF(B4="","","TSL-"&TEXT(ROW()-2,"0000"))
+G4: =IF(OR(E4="",F4=""),"",ABS(E4-F4))
+A5: =IF(B5="","","TSL-"&TEXT(ROW()-2,"0000"))
+G5: =IF(OR(E5="",F5=""),"",ABS(E5-F5))
+A6: =IF(B6="","","TSL-"&TEXT(ROW()-2,"0000"))
+G6: =IF(OR(E6="",F6=""),"",ABS(E6-F6))
+A7: =IF(B7="","","TSL-"&TEXT(ROW()-2,"0000"))
+G7: =IF(OR(E7="",F7=""),"",ABS(E7-F7))
+A8: =IF(B8="","","TSL-"&TEXT(ROW()-2,"0000"))
+G8: =IF(OR(E8="",F8=""),"",ABS(E8-F8))
+A9: =IF(B9="","","TSL-"&TEXT(ROW()-2,"0000"))
+G9: =IF(OR(E9="",F9=""),"",ABS(E9-F9))
+A10: =IF(B10="","","TSL-"&TEXT(ROW()-2,"0000"))
+G10: =IF(OR(E10="",F10=""),"",ABS(E10-F10))
+A11: =IF(B11="","","TSL-"&TEXT(ROW()-2,"0000"))
+G11: =IF(OR(E11="",F11=""),"",ABS(E11-F11))
+A12: =IF(B12="","","TSL-"&TEXT(ROW()-2,"0000"))
+G12: =IF(OR(E12="",F12=""),"",ABS(E12-F12))
+A13: =IF(B13="","","TSL-"&TEXT(ROW()-2,"0000"))
+G13: =IF(OR(E13="",F13=""),"",ABS(E13-F13))
+A14: =IF(B14="","","TSL-"&TEXT(ROW()-2,"0000"))
+G14: =IF(OR(E14="",F14=""),"",ABS(E14-F14))
+A15: =IF(B15="","","TSL-"&TEXT(ROW()-2,"0000"))
+G15: =IF(OR(E15="",F15=""),"",ABS(E15-F15))
+A16: =IF(B16="","","TSL-"&TEXT(ROW()-2,"0000"))
+G16: =IF(OR(E16="",F16=""),"",ABS(E16-F16))
+A17: =IF(B17="","","TSL-"&TEXT(ROW()-2,"0000"))
+G17: =IF(OR(E17="",F17=""),"",ABS(E17-F17))
+A18: =IF(B18="","","TSL-"&TEXT(ROW()-2,"0000"))
+G18: =IF(OR(E18="",F18=""),"",ABS(E18-F18))
+A19: =IF(B19="","","TSL-"&TEXT(ROW()-2,"0000"))
+G19: =IF(OR(E19="",F19=""),"",ABS(E19-F19))
+A20: =IF(B20="","","TSL-"&TEXT(ROW()-2,"0000"))
+G20: =IF(OR(E20="",F20=""),"",ABS(E20-F20))
+A21: =IF(B21="","","TSL-"&TEXT(ROW()-2,"0000"))
+G21: =IF(OR(E21="",F21=""),"",ABS(E21-F21))
+A22: =IF(B22="","","TSL-"&TEXT(ROW()-2,"0000"))
+G22: =IF(OR(E22="",F22=""),"",ABS(E22-F22))
+A23: =IF(B23="","","TSL-"&TEXT(ROW()-2,"0000"))
+G23: =IF(OR(E23="",F23=""),"",ABS(E23-F23))
+A24: =IF(B24="","","TSL-"&TEXT(ROW()-2,"0000"))
+G24: =IF(OR(E24="",F24=""),"",ABS(E24-F24))
+A25: =IF(B25="","","TSL-"&TEXT(ROW()-2,"0000"))
+G25: =IF(OR(E25="",F25=""),"",ABS(E25-F25))
+A26: =IF(B26="","","TSL-"&TEXT(ROW()-2,"0000"))
+G26: =IF(OR(E26="",F26=""),"",ABS(E26-F26))
+A27: =IF(B27="","","TSL-"&TEXT(ROW()-2,"0000"))
+G27: =IF(OR(E27="",F27=""),"",ABS(E27-F27))
+A28: =IF(B28="","","TSL-"&TEXT(ROW()-2,"0000"))
+G28: =IF(OR(E28="",F28=""),"",ABS(E28-F28))
+A29: =IF(B29="","","TSL-"&TEXT(ROW()-2,"0000"))
+G29: =IF(OR(E29="",F29=""),"",ABS(E29-F29))
+A30: =IF(B30="","","TSL-"&TEXT(ROW()-2,"0000"))
+G30: =IF(OR(E30="",F30=""),"",ABS(E30-F30))
+A31: =IF(B31="","","TSL-"&TEXT(ROW()-2,"0000"))
+G31: =IF(OR(E31="",F31=""),"",ABS(E31-F31))
+A32: =IF(B32="","","TSL-"&TEXT(ROW()-2,"0000"))
+G32: =IF(OR(E32="",F32=""),"",ABS(E32-F32))
+A33: =IF(B33="","","TSL-"&TEXT(ROW()-2,"0000"))
+G33: =IF(OR(E33="",F33=""),"",ABS(E33-F33))
+A34: =IF(B34="","","TSL-"&TEXT(ROW()-2,"0000"))
+G34: =IF(OR(E34="",F34=""),"",ABS(E34-F34))
+A35: =IF(B35="","","TSL-"&TEXT(ROW()-2,"0000"))
+G35: =IF(OR(E35="",F35=""),"",ABS(E35-F35))
+A36: =IF(B36="","","TSL-"&TEXT(ROW()-2,"0000"))
+G36: =IF(OR(E36="",F36=""),"",ABS(E36-F36))
+A37: =IF(B37="","","TSL-"&TEXT(ROW()-2,"0000"))
+G37: =IF(OR(E37="",F37=""),"",ABS(E37-F37))
+A38: =IF(B38="","","TSL-"&TEXT(ROW()-2,"0000"))
+G38: =IF(OR(E38="",F38=""),"",ABS(E38-F38))
+A39: =IF(B39="","","TSL-"&TEXT(ROW()-2,"0000"))
+G39: =IF(OR(E39="",F39=""),"",ABS(E39-F39))
+A40: =IF(B40="","","TSL-"&TEXT(ROW()-2,"0000"))
+G40: =IF(OR(E40="",F40=""),"",ABS(E40-F40))
+A41: =IF(B41="","","TSL-"&TEXT(ROW()-2,"0000"))
+G41: =IF(OR(E41="",F41=""),"",ABS(E41-F41))
+A42: =IF(B42="","","TSL-"&TEXT(ROW()-2,"0000"))
+G42: =IF(OR(E42="",F42=""),"",ABS(E42-F42))
+A43: =IF(B43="","","TSL-"&TEXT(ROW()-2,"0000"))
+G43: =IF(OR(E43="",F43=""),"",ABS(E43-F43))
+A44: =IF(B44="","","TSL-"&TEXT(ROW()-2,"0000"))
+G44: =IF(OR(E44="",F44=""),"",ABS(E44-F44))
+A45: =IF(B45="","","TSL-"&TEXT(ROW()-2,"0000"))
+G45: =IF(OR(E45="",F45=""),"",ABS(E45-F45))
+A46: =IF(B46="","","TSL-"&TEXT(ROW()-2,"0000"))
+G46: =IF(OR(E46="",F46=""),"",ABS(E46-F46))
+A47: =IF(B47="","","TSL-"&TEXT(ROW()-2,"0000"))
+G47: =IF(OR(E47="",F47=""),"",ABS(E47-F47))
+A48: =IF(B48="","","TSL-"&TEXT(ROW()-2,"0000"))
+G48: =IF(OR(E48="",F48=""),"",ABS(E48-F48))
+A49: =IF(B49="","","TSL-"&TEXT(ROW()-2,"0000"))
+G49: =IF(OR(E49="",F49=""),"",ABS(E49-F49))
+A50: =IF(B50="","","TSL-"&TEXT(ROW()-2,"0000"))
+G50: =IF(OR(E50="",F50=""),"",ABS(E50-F50))
+A51: =IF(B51="","","TSL-"&TEXT(ROW()-2,"0000"))
+G51: =IF(OR(E51="",F51=""),"",ABS(E51-F51))
+A52: =IF(B52="","","TSL-"&TEXT(ROW()-2,"0000"))
+G52: =IF(OR(E52="",F52=""),"",ABS(E52-F52))
+A53: =IF(B53="","","TSL-"&TEXT(ROW()-2,"0000"))
+G53: =IF(OR(E53="",F53=""),"",ABS(E53-F53))
+A54: =IF(B54="","","TSL-"&TEXT(ROW()-2,"0000"))
+G54: =IF(OR(E54="",F54=""),"",ABS(E54-F54))
+A55: =IF(B55="","","TSL-"&TEXT(ROW()-2,"0000"))
+G55: =IF(OR(E55="",F55=""),"",ABS(E55-F55))
+A56: =IF(B56="","","TSL-"&TEXT(ROW()-2,"0000"))
+G56: =IF(OR(E56="",F56=""),"",ABS(E56-F56))
+A57: =IF(B57="","","TSL-"&TEXT(ROW()-2,"0000"))
+G57: =IF(OR(E57="",F57=""),"",ABS(E57-F57))
+A58: =IF(B58="","","TSL-"&TEXT(ROW()-2,"0000"))
+G58: =IF(OR(E58="",F58=""),"",ABS(E58-F58))
+A59: =IF(B59="","","TSL-"&TEXT(ROW()-2,"0000"))
+G59: =IF(OR(E59="",F59=""),"",ABS(E59-F59))
+A60: =IF(B60="","","TSL-"&TEXT(ROW()-2,"0000"))
+G60: =IF(OR(E60="",F60=""),"",ABS(E60-F60))
+A61: =IF(B61="","","TSL-"&TEXT(ROW()-2,"0000"))
+G61: =IF(OR(E61="",F61=""),"",ABS(E61-F61))
+A62: =IF(B62="","","TSL-"&TEXT(ROW()-2,"0000"))
+=== Read Me dims=A1:D12
+A1: START HERE • PAPER JOURNAL GUIDE
+A2: Topic
+B2: Instructions
+A3: Purpose
+B3: A structured journal to validate setups and indicator behaviour in simulation. It does not send orders.
+A4: Step 1 — Settings
+B4: Set virtual capital, risk per trade, daily loss limit, max entries/day, costs and slippage assumptions.
+A5: Step 2 — Trade plan
+B5: Before entry, record setup, indicator values, direction, entry, initial SL, targets, TSL method and reason.
+A6: Step 3 — Size
+B6: Use the risk budget and initial entry-to-SL distance to determine a quantity that fits the cap. Round down to valid lot size.
+A7: Step 4 — Manage
+B7: Record target hits, partial exits, every TSL move and the actual exit type. Never loosen SL to increase planned risk.
+A8: Step 5 — Review
+B8: Record net P&L, R multiple, rule adherence, emotion, screenshot/reference and lesson.
+A9: TSL models
+B9: Fixed SL; breakeven after configured R trigger; step trail; distance trail. Keep same sample when comparing methods.
+A10: Ambiguous candles
+B10: If a candle touches both stop and target and intrabar sequence is unknown, mark Ambiguous; do not assume the better result.
+A11: Risk warning
+B11: Default values are examples, not recommendations. Paper fills can differ from live execution due to spread, slippage, gaps and liquidity.
+A12: Workbook limits
+B12: Dashboard uses formulas and updates in Excel. Some formulas may not recalculate in preview applications; open in Microsoft Excel or compatible softwar

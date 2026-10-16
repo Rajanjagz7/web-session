@@ -1,0 +1,35 @@
+TradeLab — Web App UI Specification
+Companion specification for Trading Strategy & Indicator Validation BRD. Visual direction: professional trading terminal with dark and light themes, responsive layout, strong risk visibility, and persistent paper-trading disclaimers.
+1. Information Architecture
+Overview dashboard
+New Trade / Trade Details
+Trade Journal
+TSL Lab
+Strategy & Indicator Lab
+Reports / Export
+Settings
+2. Visual System
+Dark theme: deep navy background (#0B1220), layered panels (#121C2D / #172338), teal accent (#37D6C0), blue secondary accent (#6EA8FE), muted slate text. Light theme: cool near-white background, white cards, dark navy text, teal accent. Positive/negative outcomes use green/red but are always paired with labels and signs.
+3. Overview Dashboard
+Top bar: page title, date-range selector, theme toggle, quick action to log a trade.
+Persistent warning banner: PAPER TRADING — SIMULATED RESULTS ONLY.
+KPI cards: virtual equity, net P&L, trades used today / 5, win rate, expectancy (R), profit factor, T1 hit rate, TSL exits.
+Charts: cumulative P&L/equity curve, drawdown, daily P&L, outcome mix, target hit distribution.
+Tables: recent trades, open paper positions, rule compliance and missing reviews.
+4. New Trade Form
+Sections: Setup; Entry & Risk; Targets; TSL rules; Indicator evidence; Trade rationale. Responsive 3-column desktop layout collapses to one column on mobile.
+Mandatory fields: date, market type, instrument, direction, entry, initial SL, quantity, strategy/setup.
+Optional fields: T1/T2/T3, timeframe, indicator values, screenshot/reference, notes, TSL mode and trail parameters.
+Live calculations: risk budget, initial risk, position size guidance, planned R:R and warnings.
+Validation: SL must be on the loss side of entry; risk budget breaches warn/block; fifth trade is allowed but sixth is blocked by default; daily loss limit lockout in production.
+5. Trade Journal
+Filter by date, market, instrument, strategy, indicator, direction, exit type, target hit and rule adherence. Table columns: ID, date/time, symbol, direction, setup, entry, initial SL, targets, quantity, exit, net P&L, R multiple, exit reason, TSL mode, review status. Selecting a row opens a detail panel with all stop changes and partial exits.
+6. TSL Lab
+Compare fixed SL, breakeven, step trail and distance/ATR-style trail against the same trades and identical assumptions. Metrics: net P&L, expectancy (R), max drawdown, profit factor, early exit rate, T1/T2/T3 capture and number of trails that exited before a later target. Unknown intrabar order must be labelled ambiguous.
+7. Settings
+Editable: starting capital (default ₹10,00,000), max entries/day (5), risk/trade %, daily loss limit %, max open positions, minimum planned R:R, costs, slippage, target R levels, lot/contract multiplier defaults, timezone and session reset.
+8. Production Readiness Notes
+Prototype HTML demonstrates visual direction and front-end interactions only; it is not production storage.
+Production must persist data securely, authenticate users, validate risk rules server-side, record audit history, support export/backup and handle timezone/session boundaries.
+Use a consistent calculation engine for long/short, partial exits, lot multipliers, fees, slippage, open P&L, and daily lockout.
+Do not claim the TSL method or indicator is best until tested on a sufficiently large, representative sample with realistic costs and out-of-sample validation.

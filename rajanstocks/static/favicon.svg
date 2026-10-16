@@ -1,9 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#0b0e14"/>
-  <line x1="8" y1="5" x2="8" y2="27" stroke="#35d07f" stroke-width="2.2" stroke-linecap="round"/>
-  <rect x="5.2" y="13" width="5.6" height="9" rx="1" fill="#35d07f"/>
-  <line x1="16" y1="4" x2="16" y2="23" stroke="#ff6b81" stroke-width="2.2" stroke-linecap="round"/>
-  <rect x="13.2" y="8" width="5.6" height="8" rx="1" fill="#ff6b81"/>
-  <line x1="24" y1="3" x2="24" y2="28" stroke="#35d07f" stroke-width="2.2" stroke-linecap="round"/>
-  <rect x="21.2" y="13" width="5.6" height="11" rx="1" fill="#35d07f"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#3730a3"/>
+    </linearGradient>
+    <linearGradient id="up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6ee7b7"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="dn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fda4af"/>
+      <stop offset="1" stop-color="#f43f5e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <path d="M7 50 L24 38 L33 43 L52 17" fill="none" stroke="#fbbf24" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M42.5 15.5 L53.5 14.5 L52 25.5 Z" fill="#fbbf24"/>
+  <g stroke-linecap="round">
+    <line x1="17" y1="33" x2="17" y2="53" stroke="#f43f5e" stroke-width="2.6"/>
+    <rect x="12.5" y="38" width="9" height="10" rx="2" fill="url(#dn)"/>
+    <line x1="32" y1="26" x2="32" y2="50" stroke="#10b981" stroke-width="2.6"/>
+    <rect x="27.5" y="31" width="9" height="13" rx="2" fill="url(#up)"/>
+    <line x1="47" y1="30" x2="47" y2="56" stroke="#10b981" stroke-width="2.6"/>
+    <rect x="42.5" y="36" width="9" height="14" rx="2" fill="url(#up)"/>
+  </g>
 </svg>

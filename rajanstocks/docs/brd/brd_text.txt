@@ -1,0 +1,222 @@
+TRADING STRATEGY & INDICATOR VALIDATION
+Business Requirements Document (BRD) + Paper-Trading Journal Specification
+Version 1.0  |  14 October 2026  |  Status: Draft for review
+1. Executive Summary
+This document defines a configurable paper-trading system for testing trading strategies and technical indicators across equity intraday and options instruments. The system starts with ₹10,00,000 in virtual capital, supports no more than five trades per trading day by default, requires a stop-loss on every trade, records planned and actual reward-to-risk, and evaluates fixed targets versus trailing stop-loss (TSL) behaviour. It is intended for simulation, journaling, and evidence-based strategy validation—not for live execution or a promise of returns.
+2. Business Objectives
+Standardise how each setup, indicator signal, entry, stop-loss, target, exit, and trade review is recorded.
+Calculate position size from configurable risk limits rather than selecting quantity by intuition.
+Compare fixed-target exits with configurable trailing-stop rules using consistent metrics.
+Track target milestones (T1/T2/T3), partial exits, SL/TSL exits, missed entries, and rule violations.
+Produce daily, weekly, monthly, setup-level, indicator-level, and instrument-level performance analytics.
+Keep simulated outcomes clearly separated from live trading, brokerage, taxes, liquidity, and execution realities.
+3. Scope
+3.1 In scope
+Configurable instruments: equity, index, futures, options, and user-defined symbols; instrument-specific fields may be enabled/disabled.
+Trade planning and paper-trade logging with mandatory SL and optional multi-target plan.
+Capital, risk-per-trade, daily loss limit, maximum trades/day, max open positions, and position-sizing calculations.
+TSL modes: off/fixed SL, move to breakeven, step-based trailing, and distance/ATR-style trailing (manual or formula-assisted).
+Trade lifecycle: planned → entered → partially exited → closed; cancelled/invalidated plans are journalled separately.
+Analytics: win rate, average win/loss, expectancy, profit factor, realised P&L, drawdown, R-multiples, target hits, TSL outcomes, and rule compliance.
+Dark/light web dashboard specification and spreadsheet journal for offline entry.
+3.2 Out of scope
+Broker connectivity, live order placement, automated trade execution, investment recommendations, or real-money account access.
+Guaranteed signals, guaranteed returns, or claims that a particular indicator/TSL method is profitable.
+Tax/accounting advice; instrument-specific exchange or broker charges must be entered as assumptions and independently verified.
+Automatic market-data feeds in version 1.0; manual paper-trade entry is the baseline.
+4. Users and Roles
+Role
+Responsibilities
+Permissions
+Trader / Researcher
+Defines setups, logs trades, reviews execution discipline
+Create/edit own plans and trades; view analytics
+Reviewer / Mentor
+Reviews journal quality and strategy evidence
+Read-only access; annotate review notes
+Administrator (optional)
+Maintains default risk settings and templates
+Manage configuration and reference lists
+5. Default Configuration (all values editable)
+Parameter
+Default
+Rule / Notes
+Starting virtual capital
+₹10,00,000
+Initial balance for a new paper-trading account
+Maximum trades per day
+5
+Hard stop on new entries after five counted entries; configurable
+Risk per trade
+0.50% of current equity (₹5,000 at ₹10L)
+Illustrative default only; configurable; quantity must respect risk cap
+Daily loss limit
+2.00% of start-of-day equity (₹20,000 at ₹10L)
+Configurable; block new simulated entries when reached
+Max open positions
+1
+Conservative default; configurable
+Minimum planned reward:risk
+2.0:1
+Warning if below threshold; may be overridden with reason
+Mandatory stop-loss
+Yes
+Trade cannot be marked entered without SL
+Target milestones
+T1 = 1R, T2 = 2R, T3 = 3R
+Configurable per strategy; not a prediction
+Costs / slippage
+0 by default, editable
+Zero is only a placeholder; enter realistic assumptions for analysis
+Trade counting
+Every filled paper entry counts
+Partial exits do not count as new trades; re-entry counts as another trade
+6. Functional Requirements
+ID
+Area
+Requirement
+FR-01
+Configuration
+User can set virtual capital, risk %, max trades/day, daily loss limit, max open positions, minimum R:R, costs, slippage and target levels.
+FR-02
+Trade plan
+Capture date/time, instrument, market type, direction, strategy/setup, indicator values, timeframe, entry, SL, T1/T2/T3, planned R:R and rationale.
+FR-03
+Mandatory SL
+Reject/flag any entered trade without a valid stop-loss on the loss side of entry.
+FR-04
+Position sizing
+Calculate risk budget and suggested quantity from entry-to-SL distance, lot/contract multiplier and estimated per-unit costs where configured.
+FR-05
+Trade limits
+Warn/block new entries when daily trade count or daily loss cap is reached; log any admin override.
+FR-06
+Trade lifecycle
+Record fills, partial exits, final exit, exit type, quantity, timestamp, fees, slippage, notes and screenshots/link references.
+FR-07
+Target tracking
+Record whether T1/T2/T3 were hit, hit order, quantity exited at each level and whether targets were touched before SL/TSL.
+FR-08
+TSL testing
+Store TSL mode, activation threshold, trail distance/step, breakeven trigger, highest/lowest favourable price, current trail and exit reason.
+FR-09
+Analytics
+Compute net P&L, R-multiple, win rate, average win/loss, expectancy, profit factor, drawdown, target-hit rate and TSL outcome distributions.
+FR-10
+Review & discipline
+Capture rule adherence, emotional state, entry quality, mistake tags, post-trade lesson and reviewer notes.
+FR-11
+Theme
+Web UI supports dark and light themes with persistent user preference in the application.
+FR-12
+Export
+Allow export of trades and summaries to CSV/XLSX; provide date and instrument filters.
+FR-13
+Auditability
+Keep original plan and final exit details distinguishable; edits to closed trades should be visibly marked.
+FR-14
+Paper-trading banner
+Display a persistent label: PAPER TRADING — SIMULATED RESULTS; no broker orders are sent.
+7. Core Calculation Rules
+7.1 Risk budget and position size
+Risk budget = current equity × risk-per-trade %. For a ₹10,00,000 account at 0.50%, the initial risk budget is ₹5,000.
+Per-unit risk = absolute(entry − stop-loss) × contract/lot multiplier + estimated per-unit costs, where applicable. Suggested quantity = floor(risk budget ÷ per-unit risk), rounded down to a valid lot size. If quantity is zero, the trade is not permitted at that stop distance.
+Options require special care: premium movement, lot size, expiry, contract multiplier, and the option's own stop price must be used consistently. Do not calculate quantity from the underlying index's point distance when the stop is on the option premium.
+7.2 P&L and R multiple
+Gross P&L for a single entry/exit leg = (exit price − entry price) × quantity × multiplier for long positions; reverse the sign for short positions. Net P&L = gross P&L − fees − estimated slippage. For partial exits, sum the P&L of all exit legs.
+R multiple = net P&L ÷ initial planned rupee risk. Keep initial risk frozen for R-multiple reporting so moving a stop does not rewrite the original risk denominator.
+7.3 Trailing stop-loss models
+Fixed SL: original stop remains unchanged until exit.
+Breakeven: after price reaches a configured trigger (e.g., +1R), move stop to entry plus/minus a configurable cost buffer.
+Step trail: after each configured favourable move, raise the long stop or lower the short stop by a configured step; never loosen the stop.
+Distance trail: long stop = highest favourable price since entry − trail distance; short stop = lowest favourable price since entry + trail distance. Optional ATR-based distance can be logged if ATR is manually supplied.
+Backtest caveat: if candle data touches both target and stop in the same bar and intrabar order is unknown, mark the outcome ambiguous or use lower-timeframe data; do not assume the favourable order.
+8. Dashboard and UI Requirements
+8.1 Navigation
+Overview · New Trade · Trade Journal · Strategy Lab · TSL Lab · Reports · Settings
+8.2 Overview screen
+Top banner: PAPER TRADING — SIMULATED RESULTS; selected account and date range.
+KPI cards: virtual equity, today’s net P&L, trades used / 5, win rate, expectancy (R), max drawdown.
+Equity curve and daily P&L chart with drawdown overlay.
+Target outcomes: T1/T2/T3 hit rates, SL exits, TSL exits, breakeven exits.
+Rule compliance: entries with SL, daily trade-cap violations, risk-budget breaches, missing reviews.
+Recent trades table with status, instrument, setup, risk, R multiple, exit type and review status.
+8.3 New Trade / trade detail
+Use a two-column form on desktop and single-column on mobile. Group fields into Setup, Entry & Risk, Targets, TSL Rules, Indicators, and Review. Show calculated quantity, rupee risk, planned R:R and warning messages live. Require confirmation before recording an entry.
+8.4 TSL Lab
+Compare exit simulations for fixed SL, breakeven, step trail, and distance trail on the same trade set. Report net P&L, average R, max drawdown, profit factor, target capture, early-exit rate, and trades where a trail exited before T2/T3. Do not compare methods on different samples without clearly labelling the sample mismatch.
+8.5 Theme and accessibility
+Provide dark and light modes, high contrast for positive/negative values, keyboard navigation, clear focus indicators, responsive tables, and labels/icons in addition to red/green colour.
+9. Non-Functional Requirements
+Accuracy: formulas must be testable against hand-calculated examples; all monetary calculations use consistent decimal precision.
+Usability: a standard trade can be logged in under two minutes once setup templates exist.
+Reliability: validation errors are explicit; no silent data loss on theme changes or navigation.
+Privacy: personal journal data is private by default; exports contain only user-selected fields.
+Performance: dashboard filters should update promptly for at least 10,000 journal records.
+Portability: spreadsheet should work in current Microsoft Excel; formula compatibility with other spreadsheet apps may vary.
+10. Acceptance Criteria
+A new account starts at ₹10,00,000 virtual capital and the starting balance is editable.
+The fifth daily entry is accepted; a sixth is blocked by default and the reason is displayed.
+A trade cannot be marked entered without an SL and a valid positive stop distance.
+Position size rounds down to valid whole shares/contracts/lots and does not exceed the configured risk budget under the configured assumptions.
+Target milestones and target-hit order can be recorded independently from final exit type.
+TSL fields capture activation, stop changes, and whether the trail exited before a later target.
+Dashboard totals reconcile to the journal rows for the selected date range.
+Closed-trade analytics show both net rupee P&L and R multiple; costs are included when configured.
+Dark and light themes preserve content, labels, and status visibility.
+All screens identify the product as paper trading and make no live-trading or profitability claims.
+11. Risks, Assumptions & Decisions
+The default risk settings are illustrative guardrails, not personal financial advice; users must choose and validate settings.
+Paper fills may be materially better than live fills due to latency, spread, liquidity, slippage, gaps, and emotional effects.
+Options and futures need contract-specific multiplier/lot size and expiry handling; default multipliers must not be guessed.
+Define whether daily loss includes open/unrealised P&L; recommended default is realised + unrealised net P&L for the lockout check.
+Define the candle conflict policy when both SL and target are touched in the same bar.
+Define whether the trade limit counts entries, not completed positions; this BRD counts each entry/re-entry.
+12. Suggested Test Scenarios
+Test ID
+Scenario
+Expected Result
+BRD-T01
+Valid long trade with SL
+Quantity and risk budget calculate correctly; entry can be recorded.
+BRD-T02
+No SL supplied
+Entry blocked with actionable validation.
+BRD-T03
+SL equals entry
+Entry blocked because stop distance is zero.
+BRD-T04
+Sixth trade on same day
+Blocked when max daily trades is five.
+BRD-T05
+Daily loss limit reached
+New entries blocked until next configured trading day/reset.
+BRD-T06
+Partial exit at T1, remainder exits by TSL
+Both exit legs and target hit are captured; net P&L reconciles.
+BRD-T07
+TSL activation and trail update
+Long stop never decreases; short stop never increases.
+BRD-T08
+Costs/slippage enabled
+Net P&L decreases by configured costs/slippage.
+BRD-T09
+Options lot sizing
+Quantity is rounded down to whole lots and multiplier is applied once.
+BRD-T10
+Both target and stop touched in one candle
+Trade marked ambiguous or resolved by defined lower-timeframe policy.
+BRD-T11
+Theme toggle
+Theme changes without changing journal values.
+BRD-T12
+Date/instrument filter
+KPIs and trade table use the same filtered dataset.
+Appendix A — Recommended Daily Workflow
+Before market: confirm instrument, session, setups allowed, max trades, risk budget, daily loss limit and no-trade conditions.
+Before entry: capture indicator readings, setup reason, entry, SL, target plan, quantity and planned R:R.
+During trade: record target touches, partial exits, TSL activation and every stop update; do not widen the stop to increase risk.
+After exit: record exit type, net P&L assumptions, screenshot/reference, emotion, rule adherence and one lesson.
+End of day: stop at five entries or daily loss limit; review mistakes and avoid changing strategy rules mid-sample.
+Weekly: analyse at least a meaningful sample of trades and segment by setup/market condition; avoid drawing conclusions from a handful of trades.
+Disclaimer: This document describes a simulation and record-keeping tool. It is not financial advice, a signal service, or a recommendation to trade any instrument.

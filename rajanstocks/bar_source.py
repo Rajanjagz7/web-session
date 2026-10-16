@@ -47,10 +47,28 @@ def _market_started(now):
     return now.weekday() < 5 and now.hour * 60 + now.minute >= 9 * 60 + 15
 
 
+FULL_DAYS = 1900     # one shared fetch per symbol; every strategy slices what it needs from it
+_tl = threading.local()
+
+
+def completed_only(on=True):
+    """Per-thread switch for scanners that only need COMPLETED sessions: history is cached for an hour and the
+    extra intraday request for today's forming bar is skipped (about 2 upstream calls fewer per symbol)."""
+    _tl.co = bool(on)
+
+
 def daily_bars(symbol, lookback_days=180):
     """[{date, open, high, low, close, volume}] oldest -> newest, incl. today's
-    forming session when the market has opened."""
+    forming session when the market has opened. The upstream history is fetched ONCE per symbol
+    (not once per strategy / look-back), which is what keeps the Upstox request budget healthy."""
     symbol = symbol.upper()
+    full = _full_daily(symbol, getattr(_tl, "co", False))
+    cut = (date.today() - timedelta(days=int(lookback_days))).isoformat()
+    return [b for b in full if b["date"] >= cut]
+
+
+def _full_daily(symbol, completed=False):
+    lookback_days = FULL_DAYS
 
     def fetch():
         up = _up()
@@ -65,7 +83,9 @@ def daily_bars(symbol, lookback_days=180):
                       "close": c["close"], "volume": c["volume"]}
         now = datetime.now(IST)
         today = now.date().isoformat()
-        if today not in out and _market_started(now):
+        if completed:
+            out = {k: v for k, v in out.items() if k < today}
+        elif today not in out and _market_started(now):
             try:
                 mins = sorted(up.fetch_intraday_candles(key, "minutes", "1"), key=lambda c: c["time"])
             except Exception:
@@ -76,7 +96,7 @@ def daily_bars(symbol, lookback_days=180):
                               "volume": sum(m["volume"] for m in mins)}
         return [out[k] for k in sorted(out)]
 
-    return _cached(f"d|{symbol}|{lookback_days}", 60, fetch)
+    return _cached(f"dfull{'c' if completed else ''}|{symbol}", 3600 if completed else 60, fetch)
 
 
 def bars_1m(symbol, days=5):

@@ -31,16 +31,40 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 # Bumped on every deploy so the frontend's update-check banner can detect a
 # newer build is live and prompt the user to refresh instead of silently
 # running stale cached JS.
-APP_VERSION = "2026.10.08-1"
+APP_VERSION = "2026.10.14-merged"
 
 app = FastAPI(title="Bhavcopy & Live Option Scanner")
+
+
+@app.on_event("startup")
+def _warm_on_start():
+    import threading
+    threading.Timer(3.0, market_api.warm_picks).start()
+    push_signals.start_watcher()
+    auto_trader.start_watcher()
 
 app.include_router(market_api.router)
 app.include_router(strategies_api.router)
 import push_api  # noqa: E402
 app.include_router(push_api.router)
+import push_signals  # noqa: E402
+app.include_router(push_signals.router)
+import backtest  # noqa: E402
+app.include_router(backtest.router)
+import auto_trader  # noqa: E402
+app.include_router(auto_trader.router)
 import stocks_api  # noqa: E402
 app.include_router(stocks_api.router)
+
+@app.middleware("http")
+async def _no_stale_assets(request, call_next):
+    """HTML / JS / CSS / manifest are revalidated on every load, so a phone never keeps running an old build."""
+    resp = await call_next(request)
+    p = request.url.path
+    if p == "/" or p.endswith((".html", ".js", ".css", ".webmanifest")) or p.startswith("/static/"):
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -73,6 +97,21 @@ def web_manifest():
 @app.get("/icon-192.png")
 def app_icon():
     return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"), media_type="image/png")
+
+
+@app.get("/favicon.svg")
+def favicon_svg():
+    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml")
+
+
+@app.get("/favicon-32.png")
+def favicon_png():
+    return FileResponse(os.path.join(STATIC_DIR, "favicon-32.png"), media_type="image/png")
+
+
+@app.get("/icon-512.png")
+def icon_512():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-512.png"), media_type="image/png")
 
 
 @app.get("/favicon.ico")

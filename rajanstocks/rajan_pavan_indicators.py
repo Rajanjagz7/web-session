@@ -1283,3 +1283,10 @@ def build_kwargs(key, raw):
         if val is not None:
             out[py_name] = val
     return out
+
+
+# Strategies added after the original 15 (Trend Target Ribbon, Dual-Phase Reversal).
+import rajan_extra_indicators as _extra  # noqa: E402
+
+RAJAN_PAVAN_KEYS.update(_extra.KEYS)
+PARAM_MAP.update(_extra.PARAM_MAP)

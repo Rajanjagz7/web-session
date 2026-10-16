@@ -1,6 +1,8 @@
+import json
 import os
 import math
 import time
+import urllib.request
 from datetime import datetime, date, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -51,6 +53,91 @@ class UpstoxRateLimited(RuntimeError):
 _BLOCK_UNTIL = 0.0
 _RL_LONG = _collections.deque()      # call times in the last 30 minutes
 
+# ── shared budget ──────────────────────────────────────────────────────────────────────────────
+# Vercel runs several instances at once and each used to count only its own calls, so together they
+# overshot Upstox's real limits (50/s, 500/min, 2000/30 min) and every instance then saw 429s.
+# Instances now "lease" small blocks of permits from counters kept in Upstash Redis, which all of them share.
+# Sliding windows are built from small buckets: 3 x 20 s for the minute limit, 3 x 10 min for the 30-minute limit.
+LEASE_N, GLOBAL_PER_MIN, GLOBAL_PER_30M = 5, 360, 1700
+_LS = {"left": 0, "exp": 0.0, "deny": 0.0, "b20": None, "b10": None}
+_LS_LOCK = _threading.Lock()
+
+
+def _redis_creds():
+    url = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
+    tok = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
+    return (url, tok) if url and tok else None
+
+
+def _redis_pipe(cmds, timeout=2.5):
+    url, tok = _redis_creds()
+    req = urllib.request.Request(url.rstrip("/") + "/pipeline", data=json.dumps(cmds).encode(), method="POST",
+                                 headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
+
+
+def _lease_permit():
+    """Take one permit from this instance's lease, renewing the lease from the shared counters when it runs out."""
+    if not _redis_creds():
+        return
+    with _LS_LOCK:
+        now = time.time()
+        if _LS["left"] > 0 and now < _LS["exp"]:
+            _LS["left"] -= 1
+            return
+        if now < _LS["deny"]:
+            raise UpstoxRateLimited("The shared Upstox request budget is used up for the moment; serving the last known prices")
+        n, b20, b10 = LEASE_N, int(now // 20), int(now // 600)
+        cmds = []
+        if _LS["left"] > 0 and _LS["b20"] is not None:       # the previous lease ran out of time: hand back what was not used
+            cmds += [["DECRBY", f"rl2:a:{_LS['b20']}", _LS["left"]], ["DECRBY", f"rl2:b:{_LS['b10']}", _LS["left"]]]
+        _LS["left"] = 0
+        k = len(cmds)
+        cmds += [["INCRBY", f"rl2:a:{b20}", n], ["EXPIRE", f"rl2:a:{b20}", 130], ["GET", f"rl2:a:{b20 - 1}"], ["GET", f"rl2:a:{b20 - 2}"],
+                 ["INCRBY", f"rl2:b:{b10}", n], ["EXPIRE", f"rl2:b:{b10}", 2400], ["GET", f"rl2:b:{b10 - 1}"], ["GET", f"rl2:b:{b10 - 2}"],
+                 ["GET", "rl2:block"]]
+        try:
+            res = _redis_pipe(cmds)[k:]
+        except Exception:
+            _LS.update(left=LEASE_N - 1, exp=now + 8, b20=None, b10=None)      # Redis unreachable: fail open on the local limits
+            return
+        v = lambda i: int(res[i].get("result") or 0)
+        s20, s10, blocked = v(0) + v(2) + v(3), v(4) + v(6) + v(7), res[8].get("result")
+        if blocked or s20 > GLOBAL_PER_MIN or s10 > GLOBAL_PER_30M:
+            try:
+                _redis_pipe([["DECRBY", f"rl2:a:{b20}", n], ["DECRBY", f"rl2:b:{b10}", n]])      # give the permits back
+            except Exception:
+                pass
+            _LS["deny"] = now + 3                                                          # do not hammer Redis while over the limit
+            raise UpstoxRateLimited("The shared Upstox request budget is used up for the moment; serving the last known prices")
+        _LS.update(left=n - 1, exp=now + 8, b20=b20, b10=b10)
+
+
+def _global_block(seconds=8):
+    """A real 429 from Upstox pauses every instance, not just the one that saw it."""
+    if _redis_creds():
+        try:
+            _redis_pipe([["SETEX", "rl2:block", int(seconds), "1"]])
+        except Exception:
+            pass
+
+
+def budget_usage():
+    """Current shared usage (read only) for the diagnostics endpoint."""
+    if not _redis_creds():
+        return {"shared": False}
+    now = time.time()
+    b20, b10 = int(now // 20), int(now // 600)
+    try:
+        r = _redis_pipe([["GET", f"rl2:a:{b20}"], ["GET", f"rl2:a:{b20 - 1}"], ["GET", f"rl2:a:{b20 - 2}"],
+                         ["GET", f"rl2:b:{b10}"], ["GET", f"rl2:b:{b10 - 1}"], ["GET", f"rl2:b:{b10 - 2}"], ["GET", "rl2:block"]])
+        v = lambda i: int(r[i].get("result") or 0)
+        return {"shared": True, "last60s": v(0) + v(1) + v(2), "limit60s": GLOBAL_PER_MIN, "last30min": v(3) + v(4) + v(5),
+                "limit30min": GLOBAL_PER_30M, "blocked": bool(r[6].get("result"))}
+    except Exception as e:
+        return {"shared": True, "error": str(e)[:80]}
+
 
 def _throttle(max_wait=8.0):
     """Blocks briefly instead of letting a burst trip Upstox's 429 limit."""
@@ -62,20 +149,21 @@ def _throttle(max_wait=8.0):
             now = time.time()
             while _RL_LONG and now - _RL_LONG[0] > 1800:
                 _RL_LONG.popleft()
-            if len(_RL_LONG) >= 1200:
+            if len(_RL_LONG) >= 1900:          # Upstox allows 2000 per 30 minutes
                 raise UpstoxRateLimited("Upstox 30-minute request budget is used up; serving the last known prices")
             while _RL_TIMES and now - _RL_TIMES[0] > 60:
                 _RL_TIMES.popleft()
             last_second = sum(1 for t in _RL_TIMES if now - t < 1.0)
-            limit = 150 if getattr(_BG, 'on', 0) > 0 else 240   # background jobs leave ~1/3 of the budget for charts
-            if len(_RL_TIMES) < limit and last_second < 20:
+            limit = 260 if getattr(_BG, 'on', 0) > 0 else 420   # background jobs leave ~1/3 of the budget for charts
+            if len(_RL_TIMES) < limit and last_second < 35:
                 _RL_TIMES.append(now)
                 _RL_LONG.append(now)
-                return
-            wait = 0.06 if last_second >= 20 else max(0.1, 60 - (now - _RL_TIMES[0]))
+                break
+            wait = 0.06 if last_second >= 35 else max(0.1, 60 - (now - _RL_TIMES[0]))
         if time.time() - start + wait > max_wait:
             raise RuntimeError("Upstox request budget is used up for this minute; retrying shortly")
         time.sleep(min(wait, 0.5))
+    _lease_permit()
 
 
 class UpstoxService:
@@ -146,7 +234,8 @@ class UpstoxService:
             if attempt == 0:
                 time.sleep(0.8)               # one short retry, then give up fast
                 continue
-            _BLOCK_UNTIL = time.time() + 25   # circuit breaker: stop hammering Upstox for a bit
+            _BLOCK_UNTIL = time.time() + 8    # circuit breaker: stop hammering Upstox for a bit
+            _global_block(8)
             raise UpstoxRateLimited("Upstox HTTP 429: too many requests; serving the last known prices")
         if response.status_code >= 400:
             body = response.text[:1000]
@@ -330,38 +419,30 @@ class UpstoxService:
 
         underlying_key, is_index = self._resolve_underlying(symbol)
 
-        # Fast path: skip _get_contracts (saves one round-trip) by guessing
-        # the nearest NSE expiry locally. If the chain comes back empty,
-        # fall back to the full _get_contracts → _resolve_expiry flow.
-        guessed = expiry or self._guess_nearest_expiry(is_index)
-        chain_rows = []
-        expiry_dates = []
-        target_expiry = guessed
-        if guessed:
-            try:
-                fast_chain = self._get(
-                    f"{self.BASE_V2}/option/chain",
-                    params={"instrument_key": underlying_key, "expiry_date": guessed},
-                )
-                chain_rows = fast_chain.get("data", [])
-                if chain_rows:
-                    expiry_dates = sorted({
-                        self._normal_expiry(item.get("expiry"))
-                        for item in chain_rows
-                        if self._normal_expiry(item.get("expiry"))
-                    })
-            except Exception:
-                chain_rows = []
-
-        if not chain_rows:
-            # Guessed expiry failed — fetch contracts to find the real expiry.
+        # The expiry list comes from Upstox itself (cached 10 minutes). Guessing "the next Thursday" skipped the
+        # contract that expires TODAY (SENSEX on a Thursday) and hid every other expiry.
+        ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        today_iso = ist_now.date().isoformat()
+        ex_hit = self.cache.get(f"EXPIRIES|{underlying_key}")
+        if ex_hit and now - ex_hit[0] < 600:
+            expiry_dates, lot_size = ex_hit[1], ex_hit[2]
+        else:
             contracts = self._get_contracts(underlying_key)
-            target_expiry, expiry_dates = self._resolve_expiry(contracts, expiry)
-            chain = self._get(
-                f"{self.BASE_V2}/option/chain",
-                params={"instrument_key": underlying_key, "expiry_date": target_expiry},
-            )
-            chain_rows = chain.get("data", [])
+            _, expiry_dates = self._resolve_expiry(contracts, None)
+            lots = [int(x.get("lot_size") or 0) for x in contracts if x.get("lot_size")]
+            lot_size = max(set(lots), key=lots.count) if lots else 0
+            self.cache[f"EXPIRIES|{underlying_key}"] = (now, expiry_dates, lot_size)
+        target_expiry = expiry
+        if not target_expiry:
+            live = [d for d in expiry_dates if d > today_iso or (d == today_iso and ist_now.hour * 60 + ist_now.minute < 15 * 60 + 30)]
+            target_expiry = (live or expiry_dates or [None])[0]
+        if not target_expiry:
+            raise RuntimeError(f"Upstox returned no option expiry dates for {symbol}")
+        chain = self._get(
+            f"{self.BASE_V2}/option/chain",
+            params={"instrument_key": underlying_key, "expiry_date": target_expiry},
+        )
+        chain_rows = chain.get("data", [])
 
         instrument_keys = []
         for item in chain_rows:
@@ -457,6 +538,7 @@ class UpstoxService:
             "spot": spot_val,
             "targetExpiry": target_expiry,
             "expiryDates": expiry_dates,
+            "lotSize": lot_size,
             "rows": rows,
             "timestamp": datetime.now().strftime("%H:%M:%S"),
             "provider": "Upstox",

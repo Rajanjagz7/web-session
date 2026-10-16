@@ -55,6 +55,8 @@ CATALOG = [
     ("orb-15m", "15-Min Opening Range Breakout", "Intraday", "High and low of the 09:15-09:30 candle range with breakout status and 0.5x / 1.0x extension targets.", "core"),
     ("vwap-rsi", "VWAP + RSI Mean Reversion", "Intraday", "VWAP with 1.5 standard-deviation bands on 5-minute bars; buys a bounce off the lower band with RSI < 40, sells a rejection at the upper band with RSI > 60.", "core"),
 ]
+import rajan_extra_indicators as _extra
+CATALOG.extend(_extra.CATALOG)
 # Price-scale fields drawn on the chart per strategy (daily-dated results only).
 CHART_LINES = {
     "ut-bot": [("trailingStop", "UT trail")], "trade-predictor": [("trail", "Trail"), ("emaTrend", "EMA trend")],
@@ -72,6 +74,7 @@ CHART_LINES = {
     "volume-buzzer-daily": [], "rsi-divergence": [],
     "supertrend-mtf": [("supertrend", "Supertrend")], "candle-oh-ol": [], "volume-spurt": [],
 }
+CHART_LINES.update(_extra.CHART_LINES)
 NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "oh-ol", "orb-15m", "vwap-rsi"}
 META = {k: {"key": k, "name": n, "group": g, "desc": d, "indexOnly": src == "oh",
             "chart": k not in NO_CHART, "lines": [{"k": f, "label": l} for f, l in CHART_LINES.get(k, [])]}
