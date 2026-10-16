@@ -58,7 +58,7 @@ _RL_LONG = _collections.deque()      # call times in the last 30 minutes
 # overshot Upstox's real limits (50/s, 500/min, 2000/30 min) and every instance then saw 429s.
 # Instances now "lease" small blocks of permits from counters kept in Upstash Redis, which all of them share.
 # Sliding windows are built from small buckets: 3 x 20 s for the minute limit, 3 x 10 min for the 30-minute limit.
-LEASE_N, GLOBAL_PER_MIN, GLOBAL_PER_30M = 5, 360, 1700
+LEASE_N, GLOBAL_PER_MIN, GLOBAL_PER_30M = 10, 360, 1800
 _LS = {"left": 0, "exp": 0.0, "deny": 0.0, "b20": None, "b10": None}
 _LS_LOCK = _threading.Lock()
 

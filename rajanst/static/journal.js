@@ -23,7 +23,7 @@
   /* Automated trades (server side) are mirrored into the journal with every field filled in: plan, indicator evidence,
      exit, costs, R multiple and review. They are read-only and do not count toward the manual 5-a-day / loss limits. */
   const AUTO = { list: [], ts: 0, busy: false };
-  const EXIT_MAP = { STOP: 'SL', TARGET: 'T2', TIME: 'Time Exit', EXPIRY: 'Time Exit', REVERSE: 'Manual Exit', 'SQUARE-OFF': 'Time Exit' };
+  const EXIT_MAP = { STOP: 'SL', TSL: 'TSL', MANUAL: 'Manual Exit', TARGET: 'T2', TIME: 'Time Exit', EXPIRY: 'Time Exit', REVERSE: 'Manual Exit', 'SQUARE-OFF': 'Time Exit' };
   function mapAuto(a) {
     const d = a.openedAt ? new Date(a.openedAt) : new Date(a.date + 'T09:20:00+05:30');
     const delta = 0.5, riskP = Math.max(0.05, Math.min(delta * (a.riskU || 0), 0.9 * a.entry));   // premium at risk per unit: delta 0.5 x underlying stop, never more than the premium itself
@@ -35,7 +35,8 @@
       setup: a.source || a.strategy, tf: '1D', ind: inds.join(', '), entry: a.entry,
       sl: +(a.entry - riskP).toFixed(2), sl0: +(a.entry - riskP).toFixed(2),
       t1: +(a.entry + riskP).toFixed(2), t2: +(a.entry + 2 * riskP).toFixed(2), t3: +(a.entry + 3 * riskP).toFixed(2),
-      qty: a.lots, mult: a.lot, initRisk: a.initialRisk, tsl: a.variant === 'trail' ? 'Distance Trail' : 'Off / Fixed SL',
+      qty: a.lots, mult: a.lot, initRisk: a.initialRisk, raw: a,
+      tsl: a.tsl ? ({ trail: 'Distance Trail', breakeven: 'Breakeven', step: 'Step Trail' }[a.tsl.mode] || 'Off / Fixed SL') : (a.variant === 'trail' ? 'Distance Trail' : 'Off / Fixed SL'),
       why: `Auto-executed ${a.side === 'BUY' ? 'call' : 'put'} on ${a.sym}: ${inds.length} indicator(s) — ${inds.join(', ')}. ` +
            `Underlying entry ${a.entryU}, stop ${a.stopU}${a.targetU ? ', target ' + a.targetU : ', trailing exit'}.`,
       status: closed ? 'Closed' : 'Open', exits: [], hits: [], hitOrder: [], stops: [{ at: a.openedAt || d.toISOString(), from: null, to: a.stopU, note: 'underlying stop at entry' }],
@@ -71,6 +72,13 @@
     AUTO.busy = false;
   }
   const allTrades = () => T.concat(AUTO.list);
+  async function jpost(url, body) {
+    try {
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+      const d = await r.json().catch(() => ({}));
+      return r.ok ? { ok: true, d } : { ok: false, err: d.detail || ('Request failed (' + r.status + ')') };
+    } catch (e) { return { ok: false, err: 'No internet connection.' }; }
+  }
   const ui = { tab: 'overview', f: { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }, sel: null, lab: null, labBusy: false };
 
   /* ---------- helpers ---------- */
@@ -406,7 +414,8 @@
     const c = calc(t), st = statusOf(t), u = unrealised(t), rem = t.qty - c.qx;
     const legs = (t.exits || []).map((l, i) => `<tr><td>${i + 1}</td><td>${l.date} ${l.time || ''}</td><td>${E(l.type)}</td><td>${l.qty}</td><td>${px(l.price)}</td><td class="num ${cc(dirOf(t) * (l.price - t.entry))}">${sinr(dirOf(t) * (l.price - t.entry) * l.qty * units(t))}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No exits yet</td></tr>';
     const stops = (t.stops || []).map(s => `<li>${new Date(s.at).toLocaleString('en-IN')} — ${s.from == null ? 'set' : px(s.from) + ' → '}${px(s.to)} <small>${E(s.note || '')}</small></li>`).join('');
-    const lock = t.auto ? '<p class="muted">Recorded automatically by the auto trader — plan, exit, costs, R multiple and review are filled in for you. Premium levels are estimates (delta 0.5); the stop and target that actually drive the trade are on the underlying.</p>'
+    const lock = t.auto ? `<p class="muted">Recorded automatically by the auto trader — plan, exit, costs, R multiple and review are filled in for you. Premium levels are estimates (delta 0.5); the stop and target that actually drive the trade are on the underlying.</p>
+      ${t.raw && statusOf(t) !== 'Closed' ? `<p><b>Underlying stop now ${px(t.raw.stopU)}</b>${t.raw.targetU ? ' · target ' + px(t.raw.targetU) : ' · trailing exit'}${t.raw.tsl ? ' · your TSL: ' + E(t.raw.tsl.mode) + (t.raw.tsl.trail ? ' ' + t.raw.tsl.trail + ' pts' : '') + (t.raw.tsl.step ? ' step ' + t.raw.tsl.step + ' pts' : '') + (t.raw.tsl.trigger ? ' after ' + t.raw.tsl.trigger + 'R' : '') : ''}. You can exit now, add a trailing stop, or tighten the stop; a stop can never be loosened.</p>` : ''}`
       : st === 'Closed' ? '<p class="warn">Closed trade — edits are marked on the record and the original plan is preserved.</p>' : '';
     const body = `<div class="jv-detail">
       <div class="jv-calc-grid">
@@ -429,8 +438,8 @@
         <label class="fld wide"><span>Reviewer notes</span><textarea class="inp" id="jd-rev" rows="2">${E(t.reviewer)}</textarea></label></div>
       ${t.why ? `<p class="muted"><b>Plan rationale:</b> ${E(t.why)}</p>` : ''}${t.override ? `<p class="warn"><b>Override:</b> ${E(t.override)}</p>` : ''}
     </div>`;
-    const foot = t.auto ? '<button class="btn" data-jv="cancelmodal">Close</button>' : ((t.status === 'Planned' ? `<button class="btn pri" data-jv="enterplan" data-id="${t.id}">Record entry now</button><button class="btn" data-jv="cancelplan" data-id="${t.id}">Cancel plan</button>` :
-      st !== 'Closed' && t.status !== 'Cancelled' ? `<button class="btn" data-jv="movesl" data-id="${t.id}">Move stop</button><button class="btn pri" data-jv="addexit" data-id="${t.id}">Add exit</button>` : '') +
+    const foot = t.auto ? ((st !== 'Closed' ? `<button class="btn pri" data-jv="autoexit" data-id="${t.id}">Exit now</button><button class="btn" data-jv="autotsl" data-id="${t.id}">Set TSL</button><button class="btn" data-jv="autostop" data-id="${t.id}">Move stop</button>` : '') + '<button class="btn" data-jv="cancelmodal">Close</button>') : ((t.status === 'Planned' ? `<button class="btn pri" data-jv="enterplan" data-id="${t.id}">Record entry now</button><button class="btn" data-jv="cancelplan" data-id="${t.id}">Cancel plan</button>` :
+      st !== 'Closed' && t.status !== 'Cancelled' ? `<button class="btn" data-jv="movesl" data-id="${t.id}">Move stop</button><button class="btn" data-jv="settsl" data-id="${t.id}">Set TSL</button><button class="btn" data-jv="mktexit" data-id="${t.id}">Exit at market</button><button class="btn pri" data-jv="addexit" data-id="${t.id}">Add exit</button>` : '') +
       `<button class="btn" data-jv="savereview" data-id="${t.id}">Save review</button>`);
     window.modal ? window.modal(`${t.id} · ${E(t.symbol || t.instrument)} ${t.dir}`, body, { foot, wide: true }) : alert('Detail unavailable');
   }
@@ -472,6 +481,78 @@
         t.stops.push({ at: new Date().toISOString(), from: t.sl, to: v, note: 'moved' }); t.sl = v;
         persist(); window.closeModal(); render(); openDetail(id);
       });
+  }
+  function autoExit(id) {
+    const t = AUTO.list.find(x => x.id === id); if (!t) return;
+    smallForm('Exit now · ' + t.id, `<p>Close <b>${E(t.symbol)}</b> at the live bid? This ends the paper trade; you can't undo it.</p>`, 'Exit now', () => {
+      const ok = document.getElementById('jvFormOk'); ok.disabled = true; ok.textContent = 'Exiting…';
+      jpost('/api/auto/trade/' + encodeURIComponent(id) + '/exit').then(async r => {
+        ok.disabled = false; ok.textContent = 'Exit now';
+        if (!r.ok) { const er = document.getElementById('jvFormErr'); er.textContent = r.err; er.hidden = false; return; }
+        window.closeModal(); await syncAuto(true); render(); toast_(`Exited ${t.id} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
+      });
+      return null;
+    });
+  }
+  function autoTsl(id) {
+    const t = AUTO.list.find(x => x.id === id); if (!t || !t.raw) return;
+    const a = t.raw, cur = a.tsl || {}, risk = a.riskU || 0;
+    smallForm('Trailing stop · ' + t.id, `<p class="muted">Works on the underlying (${E(a.sym)}, now stop ${px(a.stopU)}). It only ever tightens the stop. Checked on every auto-trader cycle (about every 5 minutes in market hours).</p>
+      <div class="jv-form"><label class="fld"><span>Mode</span><select class="inp" id="jt-mode">
+        ${[['trail', 'Distance trail — stop follows the best price'], ['breakeven', 'Breakeven — move the stop to entry after a gain'], ['step', 'Step trail — raise the stop in steps'], ['off', 'Off — remove my trailing stop']].map(([k, l]) => `<option value="${k}" ${cur.mode === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label class="fld"><span>Trail distance (underlying points)</span><input class="inp" id="jt-trail" type="number" step="any" value="${cur.trail || Math.round(risk)}"></label>
+        <label class="fld"><span>Breakeven trigger (R)</span><input class="inp" id="jt-trig" type="number" step="any" value="${cur.trigger || 1}"></label>
+        <label class="fld"><span>Step size (underlying points)</span><input class="inp" id="jt-step" type="number" step="any" value="${cur.step || Math.round(risk / 2)}"></label></div>`,
+      'Save TSL', () => {
+        const mode = document.getElementById('jt-mode').value, ok = document.getElementById('jvFormOk');
+        ok.disabled = true;
+        jpost('/api/auto/trade/' + encodeURIComponent(id) + '/tsl', { mode, trail: num(document.getElementById('jt-trail').value), trigger: num(document.getElementById('jt-trig').value), step: num(document.getElementById('jt-step').value) }).then(async r => {
+          ok.disabled = false;
+          if (!r.ok) { const er = document.getElementById('jvFormErr'); er.textContent = r.err; er.hidden = false; return; }
+          window.closeModal(); await syncAuto(true); render(); toast_(mode === 'off' ? 'Trailing stop removed' : 'Trailing stop set', 'ok');
+        });
+        return null;
+      });
+  }
+  function autoStop(id) {
+    const t = AUTO.list.find(x => x.id === id); if (!t || !t.raw) return;
+    const a = t.raw;
+    smallForm('Move stop · ' + t.id, `<p class="muted">Underlying ${E(a.sym)} stop is ${px(a.stopU)}. A ${a.side === 'BUY' ? 'long' : 'short'} stop can only move ${a.side === 'BUY' ? 'up' : 'down'}.</p>
+      <div class="jv-form"><label class="fld"><span>New underlying stop</span><input class="inp" id="js-stop" type="number" step="any" value="${a.stopU}"></label></div>`,
+      'Move stop', () => {
+        const ok = document.getElementById('jvFormOk'); ok.disabled = true;
+        jpost('/api/auto/trade/' + encodeURIComponent(id) + '/stop', { stopU: num(document.getElementById('js-stop').value) }).then(async r => {
+          ok.disabled = false;
+          if (!r.ok) { const er = document.getElementById('jvFormErr'); er.textContent = r.err; er.hidden = false; return; }
+          window.closeModal(); await syncAuto(true); render(); toast_('Stop moved to ' + px(r.d.stopU), 'ok');
+        });
+        return null;
+      });
+  }
+  function setManualTsl(id) {
+    const t = T.find(x => x.id === id); if (!t) return;
+    const r0 = Math.abs(t.entry - t.sl0);
+    smallForm('Trailing stop · ' + t.id, `<p class="muted">Follows the live price of ${E(t.symbol || t.instrument)} while this page is open, only ever tightens the stop, and exits the rest of the position if the stop is reached. For contracts without a live price here, use "Move stop" and "Add exit" instead.</p>
+      <div class="jv-form"><label class="fld"><span>Mode</span><select class="inp" id="jt-mode">${TSL_MODES.map(m => `<option ${t.tsl === m ? 'selected' : ''}>${E(m)}</option>`).join('')}</select></label>
+        <label class="fld"><span>Activation / breakeven trigger (R)</span><input class="inp" id="jt-trig" type="number" step="any" value="${t.tslTrig == null ? 1 : t.tslTrig}"></label>
+        <label class="fld"><span>Trail distance (price)</span><input class="inp" id="jt-trail" type="number" step="any" value="${t.trail || +r0.toFixed(2)}"></label>
+        <label class="fld"><span>Step size (price)</span><input class="inp" id="jt-step" type="number" step="any" value="${t.step || +(r0 / 2).toFixed(2)}"></label></div>`,
+      'Save TSL', () => {
+        t.tsl = document.getElementById('jt-mode').value; t.tslTrig = num(document.getElementById('jt-trig').value);
+        t.trail = num(document.getElementById('jt-trail').value); t.step = num(document.getElementById('jt-step').value);
+        persist(); window.closeModal(); toast_('Trailing stop saved', 'ok'); applyManualTsl(); render(); return null;
+      });
+  }
+  function marketExit(id) {
+    const t = T.find(x => x.id === id); if (!t) return;
+    const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);
+    if (l == null) { toast_('No live price for this instrument here. Use "Add exit" and enter the price.', 'warn'); return; }
+    smallForm('Exit at market · ' + t.id, `<p>Exit the remaining <b>${rem}</b> of <b>${E(t.symbol || t.instrument)}</b> at the live price <b>${px(l)}</b>?</p>`, 'Exit now', () => {
+      const now = new Date();
+      t.exits.push({ qty: rem, price: +l.toFixed(2), type: 'Manual Exit', date: istDay(now), time: istTime(now) });
+      t.exitType = 'Manual Exit'; t.status = 'Closed'; t.closedAt = now.toISOString();
+      persist(); window.closeModal(); toast_('Exited at ' + px(l), 'ok'); render(); return null;
+    });
   }
   function saveReview(id) {
     const t = T.find(x => x.id === id); if (!t) return; const g = k => document.getElementById(k).value;
@@ -710,6 +791,36 @@
       <div class="card"><div class="card-h"><h3>Activity</h3></div><ul class="jv-stops" style="padding:0 14px 12px 30px">${A.log.length ? A.log.map(l => `<li>${new Date(l.at).toLocaleString('en-IN')} — ${E(l.msg)}</li>`).join('') : '<li>No activity yet. The first entries are made from 09:15 IST on the next trading day.</li>'}</ul></div>`;
   }
 
+  /* ---------- your own trailing stop on MANUAL trades: ratchets with the live price while the journal is open ---------- */
+  function applyManualTsl() {
+    let changed = false;
+    T.forEach(t => {
+      if (!entered(t) || statusOf(t) === 'Closed') return;
+      const mode = t.tsl; if (!mode || mode === 'Off / Fixed SL') return;
+      const l = live(t.symbol || t.instrument); if (l == null) return;
+      const d = dirOf(t), r0 = Math.abs(t.entry - t.sl0);
+      if (d > 0) t.hi = Math.max(t.hi == null ? t.entry : t.hi, l); else t.lo = Math.min(t.lo == null ? t.entry : t.lo, l);
+      const ext = d > 0 ? t.hi : t.lo, fav = d * (ext - t.entry);
+      let ns = null;
+      if (mode === 'Breakeven') { if (fav >= (t.tslTrig == null ? 1 : t.tslTrig) * r0) ns = t.entry; }
+      else if (mode === 'Step Trail') { const st = t.step || r0 / 2, k = Math.floor(fav / st); if (k >= 1) ns = t.entry + d * (k - 1) * st; }
+      else { const tr = t.trail || r0; if (fav >= (t.tslTrig == null ? 0 : t.tslTrig) * r0) ns = ext - d * tr; }
+      if (ns != null && d * (ns - t.sl) > 0 && d * (l - ns) > 0) {                // only tighten, and only behind the price
+        t.stops.push({ at: new Date().toISOString(), from: t.sl, to: +ns.toFixed(2), note: 'TSL' }); t.sl = +ns.toFixed(2); changed = true;
+      }
+      if (d * (l - t.sl) <= 0) {                                                    // stop reached: exit what is left at the live price
+        const rem = t.qty - exitedQty(t);
+        if (rem > 0) {
+          const now = new Date(), type = t.sl === t.sl0 ? 'SL' : 'TSL';
+          t.exits.push({ qty: rem, price: +l.toFixed(2), type, date: istDay(now), time: istTime(now) });
+          t.exitType = type; t.status = 'Closed'; t.closedAt = now.toISOString(); changed = true;
+          toast_(`${t.id}: ${type} hit — exited ${rem} at ${px(l)}`, 'warn');
+        }
+      }
+    });
+    if (changed) { persist(); if (document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render(); }
+  }
+
   /* ---------- summary strip: the same headline numbers at the top of every tab ---------- */
   function topStrip() {
     const all = allTrades(), m = metrics(all), day = today();
@@ -731,6 +842,7 @@
   function render() {
     const el = document.getElementById('v-journal'); if (!el) return;
     syncAuto(false);
+    applyManualTsl();
     const head = `<div class="page-h"><div style="flex:1"><h1>Journal</h1><p>Plan, log and review paper trades — portfolio, risk rules and analytics in one place.</p></div></div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}">${l}</button>`).join('')}</div>`;
     const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true)}</div>`, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
@@ -759,6 +871,11 @@
     else if (a === 'resetform') { ui.draft = null; render(); }
     else if (a === 'cancelmodal') window.closeModal && window.closeModal();
     else if (a === 'addexit') addExit(id);
+    else if (a === 'autoexit') autoExit(id);
+    else if (a === 'autotsl') autoTsl(id);
+    else if (a === 'autostop') autoStop(id);
+    else if (a === 'settsl') setManualTsl(id);
+    else if (a === 'mktexit') marketExit(id);
     else if (a === 'movesl') moveSL(id);
     else if (a === 'savereview') saveReview(id);
     else if (a === 'enterplan') { const t = T.find(x => x.id === id); if (t) { ui.draft = Object.assign({}, t, { instrument: t.instrument, why: t.why, entry: t.entry, sl: t.sl0 }); T = T.filter(x => x.id !== id); persist(); window.closeModal && window.closeModal(); ui.tab = 'new'; render(); } }
@@ -817,6 +934,7 @@
   @media (max-width:600px){.jv-kpis{grid-template-columns:1fr 1fr}.jv-form{grid-template-columns:1fr}form.jv-form fieldset{grid-template-columns:1fr}}`;
   document.head.appendChild(st);
 
+  setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) syncAuto(true); }, 60000);
   window.JV = { render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate };
 })();

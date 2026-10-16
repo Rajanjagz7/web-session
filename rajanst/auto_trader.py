@@ -11,12 +11,14 @@ Rules (identical to the backtest in backtest.py, so results are comparable):
   * Stock picks are chosen automatically: proven-strategy signal agreeing with the stock's screen score.
 """
 import json
+import math
 import os
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
 
 import requests
+import shared_cache
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -448,9 +450,30 @@ def manage(st, now):
         if variant == "trail":                       # 2 ATR stop trailing the best underlying price since entry
             t["bestU"] = max(t.get("bestU", t["entryU"]), und_px) if d > 0 else min(t.get("bestU", t["entryU"]), und_px)
             t["stopU"] = round(max(t["stopU"], t["bestU"] - t["riskU"]) if d > 0 else min(t["stopU"], t["bestU"] + t["riskU"]), 2)
+        tsl = t.get("tsl")
+        if tsl and tsl.get("mode") in ("trail", "breakeven", "step"):
+            best = t.get("bestU", t["entryU"])
+            best = max(best, und_px) if d > 0 else min(best, und_px)
+            t["bestU"] = round(best, 2)
+            fav = d * (best - t["entryU"])
+            ns = None
+            if tsl["mode"] == "trail" and tsl.get("trail"):
+                ns = best - d * float(tsl["trail"])
+            elif tsl["mode"] == "breakeven":
+                if fav >= float(tsl.get("trigger") or 1.0) * t["riskU"]:
+                    ns = t["entryU"]
+            elif tsl["mode"] == "step" and tsl.get("step"):
+                k = math.floor(fav / float(tsl["step"]))
+                if k >= 1:
+                    ns = t["entryU"] + d * (k - 1) * float(tsl["step"])        # one full step of cushion is kept
+            if ns is not None:
+                new = max(t["stopU"], ns) if d > 0 else min(t["stopU"], ns)    # never loosen
+                if new != t["stopU"]:
+                    t["stopU"] = round(new, 2)
+                    t["stopMoved"] = _now().isoformat()
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if d * (und_px - t["stopU"]) <= 0:
-            why = "STOP"
+            why = "TSL" if (tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) else "STOP"
         elif t.get("targetU") is not None and d * (und_px - t["targetU"]) >= 0:
             why = "TARGET"
         elif (date.fromisoformat(t["expiry"]) - date.fromisoformat(today)).days <= 1:
@@ -480,6 +503,16 @@ def _reversed(t, today):
 
 def run_cycle(force=False, dry=False):
     now = _now()
+    if not dry and not shared_cache.lock("auto-cycle", 45):
+        return {"ran": False, "reason": "another cycle is already running"}
+    try:
+        return _run_cycle(now, force, dry)
+    finally:
+        if not dry:
+            shared_cache.unlock("auto-cycle")
+
+
+def _run_cycle(now, force, dry):
     with _lock:
         st = _load()
         cfg = st["cfg"]
@@ -537,6 +570,98 @@ class Cfg(BaseModel):
     researchMode: bool | None = None
     riskPct: float | None = None
     maxPerDay: int | None = None
+
+
+class TslBody(BaseModel):
+    mode: str
+    trail: float | None = None        # underlying points behind the best price
+    trigger: float | None = None      # breakeven trigger, in R (multiples of the initial underlying risk)
+    step: float | None = None         # underlying points per step
+
+
+class StopBody(BaseModel):
+    stopU: float
+
+
+def _open_trade(st, tid):
+    t = next((x for x in st["trades"] if x["id"] == tid), None)
+    if not t:
+        raise HTTPException(404, "Trade not found")
+    if t["status"] != "OPEN":
+        raise HTTPException(400, "This trade is already closed")
+    return t
+
+
+def _und_price(t):
+    import market_api
+    q = _quotes({market_api._key(t["sym"])})
+    return _last(q.get(market_api._key(t["sym"])))
+
+
+@router.post("/trade/{tid}/exit")
+def manual_exit(tid: str):
+    """Close an open automated paper trade right now at the live bid."""
+    with _lock:
+        st = _load()
+        t = _open_trade(st, tid)
+        try:
+            q = _quotes([t["key"]]).get(t["key"]) or {}
+        except Exception as e:
+            raise HTTPException(503, f"Live price unavailable right now, try again in a moment ({str(e)[:80]})")
+        bid = float((((q or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
+        px = bid if bid > 0 else _last(q)
+        if px <= 0:
+            raise HTTPException(503, "No live price for this contract right now, try again in a moment")
+        _close(st, t, px, "MANUAL")
+        _save(st)
+        return {"ok": True, "exit": t["exit"], "net": t["net"], "R": t["R"]}
+
+
+@router.post("/trade/{tid}/tsl")
+def set_tsl(tid: str, b: TslBody):
+    """Attach (or remove) your own trailing stop. It only ever tightens the stop."""
+    mode = (b.mode or "").lower()
+    if mode not in ("off", "trail", "breakeven", "step"):
+        raise HTTPException(400, "mode must be off, trail, breakeven or step")
+    with _lock:
+        st = _load()
+        t = _open_trade(st, tid)
+        if mode == "off":
+            t["tsl"] = None
+        elif mode == "trail":
+            if not (b.trail and b.trail > 0):
+                raise HTTPException(400, "Enter the trail distance (underlying points)")
+            t["tsl"] = {"mode": "trail", "trail": b.trail}
+        elif mode == "breakeven":
+            t["tsl"] = {"mode": "breakeven", "trigger": b.trigger if (b.trigger and b.trigger > 0) else 1.0}
+        else:
+            if not (b.step and b.step > 0):
+                raise HTTPException(400, "Enter the step size (underlying points)")
+            t["tsl"] = {"mode": "step", "step": b.step}
+        st["log"].append({"at": _now().isoformat(), "msg": f"TSL {mode} set on {t['sym']} {t['strike']:.0f}{t['opt']} by user"})
+        _save(st)
+        return {"ok": True, "tsl": t["tsl"], "stopU": t["stopU"]}
+
+
+@router.post("/trade/{tid}/stop")
+def tighten_stop(tid: str, b: StopBody):
+    with _lock:
+        st = _load()
+        t = _open_trade(st, tid)
+        d = 1 if t["side"] == "BUY" else -1
+        try:
+            und = _und_price(t)
+        except Exception as e:
+            raise HTTPException(503, f"Live price unavailable right now, try again in a moment ({str(e)[:80]})")
+        if d * (b.stopU - t["stopU"]) <= 0:
+            raise HTTPException(400, f"A stop can only be tightened: it is {t['stopU']} now")
+        if und > 0 and d * (und - b.stopU) <= 0:
+            raise HTTPException(400, f"That stop is already beyond the current price ({und}); use Exit now instead")
+        t["stopU"] = round(b.stopU, 2)
+        t["stopMoved"] = _now().isoformat()
+        st["log"].append({"at": _now().isoformat(), "msg": f"Stop moved to {t['stopU']} on {t['sym']} {t['strike']:.0f}{t['opt']} by user"})
+        _save(st)
+        return {"ok": True, "stopU": t["stopU"]}
 
 
 @router.get("/status")

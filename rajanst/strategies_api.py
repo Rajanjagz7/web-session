@@ -18,6 +18,7 @@ import ha_dancing_trend
 import heikin_ashi
 import indicators
 import quantum_matrix
+import rajan_new_indicators as newind
 import rajan_pavan_indicators as rp
 import trade_predictor
 import ut_bot
@@ -57,6 +58,7 @@ CATALOG = [
 ]
 import rajan_extra_indicators as _extra
 CATALOG.extend(_extra.CATALOG)
+CATALOG.extend(newind.NEW_CATALOG)
 # Price-scale fields drawn on the chart per strategy (daily-dated results only).
 CHART_LINES = {
     "ut-bot": [("trailingStop", "UT trail")], "trade-predictor": [("trail", "Trail"), ("emaTrend", "EMA trend")],
@@ -75,10 +77,13 @@ CHART_LINES = {
     "supertrend-mtf": [("supertrend", "Supertrend")], "candle-oh-ol": [], "volume-spurt": [],
 }
 CHART_LINES.update(_extra.CHART_LINES)
-NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "oh-ol", "orb-15m", "vwap-rsi"}
+CHART_LINES.update(newind.NEW_CHART_LINES)
+NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "oh-ol", "orb-15m", "vwap-rsi"} | newind.NO_CHART_NEW
 META = {k: {"key": k, "name": n, "group": g, "desc": d, "indexOnly": src == "oh",
-            "chart": k not in NO_CHART, "lines": [{"k": f, "label": l} for f, l in CHART_LINES.get(k, [])]}
+            "chart": k not in NO_CHART, "lines": [{"k": f, "label": l} for f, l in CHART_LINES.get(k, [])],
+            "gen": "new" if k in newind.NEW_KEYS_SET else "old"}
         for k, n, g, d, src in CATALOG}
+META["rajan-ohol-options"]["indexOnly"] = True
 INDEX_SET = {s for s, _ in market_api.INDICES} | {c for c, _n, _g, _k in market_api.MORE_INDICES}
 
 # bar fields to draw on the price chart (daily bars). rp strategies expose theirs via "columns".
@@ -296,6 +301,8 @@ def _run_raw(key, symbol):
         return _raw_vwap_rsi(symbol)
     if key in rp.RAJAN_PAVAN_KEYS:
         return rp.RAJAN_PAVAN_KEYS[key](symbol)
+    if key in newind.NEW_KEYS:
+        return newind.NEW_KEYS[key](symbol)
     raise HTTPException(400, f"Unknown strategy '{key}'")
 
 
@@ -316,7 +323,7 @@ def summarize(key, symbol, raw):
     bars = raw.get("bars") or []
     has_date = bool(bars) and "date" in bars[-1]
 
-    if key in rp.RAJAN_PAVAN_KEYS:
+    if key in rp.RAJAN_PAVAN_KEYS or key in newind.NEW_KEYS:
         cur = raw.get("current") or {}
         out["date"], out["close"] = cur.get("date"), cur.get("close")
         out["lines"] = meta["lines"]
@@ -329,6 +336,22 @@ def summarize(key, symbol, raw):
         out["bias"] = _bias(out["signal"]) if live else "neutral"
         out["headline"] = (f"{out['signal']} signal today" if cur.get("signal") not in (None, "NONE")
                            else f"Last {ev['signal']} on {ev['date']}" if ev else "No active signal")
+        # indicators that report only on the bar a position opens must still show the position that is open now
+        if out["signal"] == "NONE" or out["stale"]:
+            side = None
+            if cur.get("positionStatus") == "ACTIVE" and cur.get("positionSide") in ("LONG", "SHORT"):
+                side = cur["positionSide"]
+                bits = [f"entry {cur.get('entry'):,.2f}" if cur.get("entry") else "", f"stop {cur.get('stopLoss'):,.2f}" if cur.get("stopLoss") else "",
+                        f"T1 {cur.get('target1'):,.2f}" if cur.get("target1") else ""]
+                out["headline"] = f"{side.title()} position open since {cur.get('entryDate')} · " + " · ".join(b for b in bits if b)
+            elif key == "rj-best" and cur.get("utPosition") in ("LONG", "SHORT"):
+                side = cur["utPosition"]
+                bits = [f"UT stop {cur.get('utStop'):,.2f}" if cur.get("utStop") else "", f"SL {cur.get('slLevel'):,.2f}" if cur.get("slLevel") else "",
+                        f"TP1 {cur.get('tp1'):,.2f}" if cur.get("tp1") else ""]
+                out["headline"] = f"UT Bot is {side} · " + " · ".join(b for b in bits if b)
+            if side:
+                out["signal"], out["stale"] = side, False
+                out["bias"] = "bull" if side == "LONG" else "bear"
         if key == "vix-range":
             out["headline"] = f"Expected range {cur.get('lowerRange', 0):,.2f} – {cur.get('upperRange', 0):,.2f} (VIX {cur.get('vix')})"
         out["events"] = [{"date": e["date"], "text": e["signal"] + (f" · {e['note']}" if e.get("note") else "")} for e in raw.get("events", [])][-12:]
@@ -473,7 +496,7 @@ def summarize(key, symbol, raw):
         out["details"] = _flat(raw.get("index")) + _flat({"vix": raw.get("vix"), "vixTier": raw.get("vixTier")}) + _flat(raw.get("volumeSignal"))
 
     out["dir"] = "BUY" if out["bias"] == "bull" else "SELL" if out["bias"] == "bear" else ""
-    if key not in rp.RAJAN_PAVAN_KEYS and has_date:
+    if key not in rp.RAJAN_PAVAN_KEYS and key not in newind.NEW_KEYS and has_date:
         out["lines"] = meta["lines"]
     # compact bars for the chart overlay (daily-dated strategies only)
     if has_date:

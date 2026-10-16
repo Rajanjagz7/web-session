@@ -1,0 +1,412 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Rajan — Rajan Premium Levels
+// Option premium support at Base ÷2 / ÷4 (normal day, Open = High) and ÷6.5 / ÷10 (expiry day); 10-pt SL, 2× / 2.5× targets, peak-% trailing SL.
+//@version=6
+indicator("Rajan Premium Levels", shorttitle="RAJAN Premium Levels", overlay=true, max_labels_count=500, max_lines_count=100)
+
+// ═════════════════ Risk & position size ═════════════════
+grpR       = "① Risk & position size"
+capital    = input.float(100000, "Capital (₹)", minval=1, group=grpR)
+riskPct    = input.float(1.0, "Risk per trade (%)", minval=0.1, maxval=10, step=0.1, group=grpR)
+lotSize    = input.int(75, "Lot size", minval=1, group=grpR)
+strikeStep = 50.0
+optDelta   = 1.0
+isOptMode  = false
+
+grpT = "② Targets & trailing stop"
+beAfterT1    = input.bool(true, "Move SL to entry (breakeven) after T1", group=grpT)
+lockAfterT2  = input.bool(true, "Move SL to T1 after T2", group=grpT)
+trailStart   = input.string("After T1", "Trailing SL starts", options=["Immediately", "After T1", "Off"], group=grpT)
+exitAtT3     = input.bool(false, "Exit fully at T3", group=grpT)
+allowReverse = input.bool(true, "Reverse on opposite signal", group=grpT)
+
+// ═════════════════ Intraday session ═════════════════
+grpX     = "③ Intraday session (IST)"
+useSess  = input.bool(true, "Take entries only inside window", group=grpX)
+sess     = input.session("0920-1500", "Entry window", group=grpX)
+useSqOff = input.bool(true, "Square off open trade at", inline="sq", group=grpX)
+sqH      = input.int(15, "", minval=9, maxval=15, inline="sq", group=grpX)
+sqM      = input.int(20, ":", minval=0, maxval=59, inline="sq", group=grpX)
+
+// ═════════════════ Display ═════════════════
+grpD       = "④ Display"
+showDash   = input.bool(true, "Show trade dashboard", group=grpD)
+dashLoc    = input.string("Top Right", "Dashboard position", options=["Top Right", "Bottom Right", "Top Left", "Bottom Left"], group=grpD)
+dashSizeIn = input.string("Small", "Dashboard text size", options=["Tiny", "Small", "Normal"], group=grpD)
+showLevels = input.bool(true, "Show entry / SL / target lines", group=grpD)
+showLabels = input.bool(true, "Show signal & event labels", group=grpD)
+
+tz       = "Asia/Kolkata"
+isIntra  = timeframe.isintraday
+inSess   = not useSess or not isIntra or not na(time(timeframe.period, sess, tz))
+barMin   = hour(time_close, tz) * 60 + minute(time_close, tz)
+sqOffNow = useSqOff and isIntra and barMin >= sqH * 60 + sqM
+
+fmt(float x) => na(x) ? "—" : str.tostring(x, format.mintick)
+
+// Colours (one palette for every Rajan indicator)
+cBull  = #26a69a
+cBear  = #ef5350
+cGold  = #f5b942
+cMuted = #8b98a9
+cText  = #e6edf3
+cPanel = #10161d
+cEdge  = #2a3441
+
+// ═════════════════ Setup: premium support at Base ÷ 2 / 4 / 6.5 / 10 ═════════════════
+grpS     = "⑤ Setup — apply on an OPTION chart (CE or PE), 1m to 5m"
+baseSrc  = input.string("Previous close", "Base premium", options=["Previous close", "Previous day high", "Higher of the two"], group=grpS)
+expMode  = input.string("Auto (weekday)", "Expiry day", options=["Auto (weekday)", "Yes — today is expiry", "No"], group=grpS)
+expDay   = input.string("Tuesday", "Weekly expiry weekday", options=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], group=grpS, tooltip="NIFTY weekly expiry = Tuesday, SENSEX = Thursday. Change it if the exchange moves the expiry day or for a holiday-shifted expiry.")
+needOH   = input.bool(true, "Only when premium Open = High (falling from open)", group=grpS)
+ohTol    = input.float(0.5, "Open = High tolerance (pts)", minval=0, step=0.05, group=grpS)
+touchBuf = input.float(2.0, "Counts as a touch within (pts) above level", minval=0, step=0.5, group=grpS)
+maxAbove = input.float(10, "Skip if candle closes more than (pts) above level", minval=0, step=0.5, group=grpS)
+grpE     = "⑥ Stop & targets"
+slPts    = input.float(10, "Stop loss (pts below entry)", minval=0.5, step=0.5, group=grpE)
+t1x      = input.float(2.0, "Target 1 (× entry premium)", minval=1.1, step=0.1, group=grpE)
+t2x      = input.float(2.5, "Target 2 (× entry premium)", minval=1.1, step=0.1, group=grpE)
+t3x      = input.float(3.0, "Target 3 (× entry premium)", minval=1.1, step=0.1, group=grpE)
+peakTrailPct = input.float(15, "Trailing SL: % below premium peak", minval=1, step=0.5, group=grpE)
+
+prevC = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+prevH = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
+base  = baseSrc == "Previous close" ? prevC : baseSrc == "Previous day high" ? prevH : math.max(prevC, prevH)
+L2    = base / 2
+L4    = base / 4
+L65   = base / 6.5
+L10   = base / 10
+
+wdNum = switch expDay
+    "Monday"    => dayofweek.monday
+    "Tuesday"   => dayofweek.tuesday
+    "Wednesday" => dayofweek.wednesday
+    "Thursday"  => dayofweek.thursday
+    => dayofweek.friday
+isExpiry = expMode == "Yes — today is expiry" or (expMode == "Auto (weekday)" and dayofweek(time, tz) == wdNum)
+
+newDay = timeframe.change("D")
+var float cO    = na
+var float cH    = na
+var bool  tookP = false
+var bool  tookL = false
+if newDay
+    cO    := open
+    cH    := high
+    tookP := false
+    tookL := false
+else
+    cH := math.max(cH, high)
+isOH = not na(cO) and cH - cO <= ohTol
+
+primary = isExpiry ? L65 : L2
+lastSup = isExpiry ? L10 : L4
+touchP  = low <= primary + touchBuf and close >= primary and close <= primary + maxAbove
+touchL  = low <= lastSup + touchBuf and close >= lastSup and close <= lastSup + maxAbove
+okOH    = not needOH or isOH
+
+sigP = isIntra and okOH and touchP and not tookP
+sigL = isIntra and okOH and touchL and not tookL and not sigP
+rawLong   = sigP or sigL
+rawShort  = false
+longExit  = false
+shortExit = false
+if barstate.isconfirmed
+    if sigP
+        tookP := true
+    if sigL
+        tookL := true
+
+longSLcalc  = math.max(close - slPts, syminfo.mintick)
+longT1c     = close * t1x
+longT2c     = close * t2x
+longT3c     = close * t3x
+shortSLcalc = float(na)
+shortT1c    = float(na)
+shortT2c    = float(na)
+shortT3c    = float(na)
+longTrail   = float(na)
+shortTrail  = float(na)
+usePeakTrail = true
+
+trendTxt    = isExpiry ? "EXPIRY day — support ÷6.5, last ÷10" : "Normal day — support ÷2, last ÷4"
+trendCol    = isExpiry ? cGold : cText
+strengthTxt = "O=H " + (isOH ? "yes ✓" : "no") + " · base " + fmt(base) + " · S1 " + fmt(primary) + " · S2 " + fmt(lastSup)
+
+cOn  = color.new(#5b9cf6, 0)
+cOff = color.new(cMuted, 75)
+plot(newDay ? na : base, "Base (prev close / high)", color=color.new(cGold, 40), style=plot.style_linebr)
+plot(newDay ? na : L2,  "Base ÷ 2",   color=isExpiry ? cOff : cOn, style=plot.style_linebr, linewidth=isExpiry ? 1 : 2)
+plot(newDay ? na : L4,  "Base ÷ 4",   color=isExpiry ? cOff : color.new(cBear, 10), style=plot.style_linebr, linewidth=isExpiry ? 1 : 2)
+plot(newDay ? na : L65, "Base ÷ 6.5", color=isExpiry ? cOn : cOff, style=plot.style_linebr, linewidth=isExpiry ? 2 : 1)
+plot(newDay ? na : L10, "Base ÷ 10",  color=isExpiry ? color.new(cBear, 10) : cOff, style=plot.style_linebr, linewidth=isExpiry ? 2 : 1)
+bgcolor(isIntra and okOH and (low <= primary + touchBuf or low <= lastSup + touchBuf) ? color.new(#5b9cf6, 92) : na, title="Price at support zone")
+
+var label lb2  = na
+var label lb4  = na
+var label lb65 = na
+var label lb10 = na
+if barstate.islast and showLevels
+    label.delete(lb2)
+    label.delete(lb4)
+    label.delete(lb65)
+    label.delete(lb10)
+    lb2  := label.new(bar_index + 2, L2,  "÷2  " + fmt(L2) + (isExpiry ? "" : "  S1"),  style=label.style_label_left, color=color.new(cPanel, 10), textcolor=isExpiry ? cMuted : #5b9cf6, size=size.small)
+    lb4  := label.new(bar_index + 2, L4,  "÷4  " + fmt(L4) + (isExpiry ? "" : "  last"), style=label.style_label_left, color=color.new(cPanel, 10), textcolor=isExpiry ? cMuted : cBear, size=size.small)
+    lb65 := label.new(bar_index + 2, L65, "÷6.5  " + fmt(L65) + (isExpiry ? "  S1" : ""), style=label.style_label_left, color=color.new(cPanel, 10), textcolor=isExpiry ? #5b9cf6 : cMuted, size=size.small)
+    lb10 := label.new(bar_index + 2, L10, "÷10  " + fmt(L10) + (isExpiry ? "  last" : ""), style=label.style_label_left, color=color.new(cPanel, 10), textcolor=isExpiry ? cBear : cMuted, size=size.small)
+
+// ═════════════════ Trade engine — evaluated on candle close (non-repainting) ═════════════════
+var int    pos      = 0
+var float  entryPx  = na
+var float  initSL   = na
+var float  stopPx   = na
+var float  tgt1     = na
+var float  tgt2     = na
+var float  tgt3     = na
+var bool   hit1     = false
+var bool   hit2     = false
+var bool   hit3     = false
+var int    entryBar = na
+var float  peak     = na
+var string lastRes  = "—"
+var int    nTrades  = 0
+var int    nWins    = 0
+var float  sumR     = 0.0
+
+bool   evEntryL = false
+bool   evEntryS = false
+bool   evT1     = false
+bool   evT2     = false
+bool   evT3     = false
+bool   evBE     = false
+bool   evExit   = false
+int    exitSide = 0
+string exitWhy  = ""
+float  exitPx   = na
+float  exitR    = na
+
+exitL = longExit or rawShort
+exitS = shortExit or rawLong
+
+if barstate.isconfirmed
+    // 1 ─ manage the open trade (stop is checked before targets: conservative)
+    if pos != 0 and bar_index > entryBar
+        if pos == 1
+            peak := math.max(nz(peak, high), high)
+            if low <= stopPx
+                evExit := true
+                exitPx := math.min(open, stopPx)
+            else
+                if not hit1 and high >= tgt1
+                    hit1 := true
+                    evT1 := true
+                if not hit2 and high >= tgt2
+                    hit2 := true
+                    evT2 := true
+                if not hit3 and high >= tgt3
+                    hit3 := true
+                    evT3 := true
+                    if exitAtT3
+                        evExit  := true
+                        exitPx  := tgt3
+                        exitWhy := "T3 BOOKED"
+        else
+            peak := math.min(nz(peak, low), low)
+            if high >= stopPx
+                evExit := true
+                exitPx := math.max(open, stopPx)
+            else
+                if not hit1 and low <= tgt1
+                    hit1 := true
+                    evT1 := true
+                if not hit2 and low <= tgt2
+                    hit2 := true
+                    evT2 := true
+                if not hit3 and low <= tgt3
+                    hit3 := true
+                    evT3 := true
+                    if exitAtT3
+                        evExit  := true
+                        exitPx  := tgt3
+                        exitWhy := "T3 BOOKED"
+        if not evExit and ((pos == 1 and exitL) or (pos == -1 and exitS))
+            evExit  := true
+            exitPx  := close
+            exitWhy := "EXIT SIGNAL"
+        if not evExit and sqOffNow
+            evExit  := true
+            exitPx  := close
+            exitWhy := "EOD SQUARE-OFF"
+        if evExit
+            float riskU = math.abs(entryPx - initSL)
+            exitR := riskU > 0 ? pos * (exitPx - entryPx) / riskU : 0.0
+            if exitWhy == ""
+                exitWhy := math.abs(exitPx - entryPx) <= syminfo.mintick ? "BREAKEVEN EXIT" : pos * (exitPx - entryPx) > 0 ? "TRAILING SL HIT" : "STOP LOSS HIT"
+            nTrades  += 1
+            nWins    += exitR > 0 ? 1 : 0
+            sumR     += exitR
+            lastRes  := exitWhy + "  " + (exitR >= 0 ? "+" : "") + str.tostring(exitR, "#.##") + "R"
+            exitSide := pos
+            pos      := 0
+        else
+            // 2 ─ ratchet the stop for the next candle (it only ever moves in your favour)
+            bool  trailOn = trailStart == "Immediately" or (trailStart == "After T1" and hit1)
+            float cand    = na
+            if trailOn
+                if usePeakTrail
+                    cand := pos == 1 ? peak * (1 - peakTrailPct / 100) : peak * (1 + peakTrailPct / 100)
+                else
+                    cand := pos == 1 ? longTrail : shortTrail
+            float newStop = stopPx
+            if pos == 1
+                if not na(cand) and cand < close
+                    newStop := math.max(newStop, cand)
+                if beAfterT1 and hit1
+                    newStop := math.max(newStop, entryPx)
+                if lockAfterT2 and hit2
+                    newStop := math.max(newStop, tgt1)
+                evBE := stopPx < entryPx and newStop >= entryPx
+            else
+                if not na(cand) and cand > close
+                    newStop := math.min(newStop, cand)
+                if beAfterT1 and hit1
+                    newStop := math.min(newStop, entryPx)
+                if lockAfterT2 and hit2
+                    newStop := math.min(newStop, tgt1)
+                evBE := stopPx > entryPx and newStop <= entryPx
+            stopPx := newStop
+
+    // 3 ─ new entries
+    if pos == 0 and inSess and not sqOffNow and (not evExit or allowReverse)
+        if rawLong and not na(longSLcalc) and longSLcalc < close and not na(longT1c)
+            pos      := 1
+            entryPx  := close
+            initSL   := longSLcalc
+            stopPx   := longSLcalc
+            tgt1     := longT1c
+            tgt2     := longT2c
+            tgt3     := longT3c
+            hit1     := false
+            hit2     := false
+            hit3     := false
+            entryBar := bar_index
+            peak     := close
+            evEntryL := true
+        else if rawShort and not na(shortSLcalc) and shortSLcalc > close and not na(shortT1c)
+            pos      := -1
+            entryPx  := close
+            initSL   := shortSLcalc
+            stopPx   := shortSLcalc
+            tgt1     := shortT1c
+            tgt2     := shortT2c
+            tgt3     := shortT3c
+            hit1     := false
+            hit2     := false
+            hit3     := false
+            entryBar := bar_index
+            peak     := close
+            evEntryS := true
+
+// ═════════════════ Chart levels ═════════════════
+active = pos != 0 and showLevels
+pE  = plot(active ? entryPx : na, "Entry", color=color.new(cMuted, 0), style=plot.style_linebr, linewidth=1)
+pSL = plot(active ? stopPx : na, "Stop loss / trailing SL", color=cBear, style=plot.style_linebr, linewidth=2)
+pT1 = plot(active ? tgt1 : na, "Target 1", color=color.new(cBull, hit1 ? 60 : 0), style=plot.style_linebr, linewidth=1)
+plot(active ? tgt2 : na, "Target 2", color=color.new(cBull, hit2 ? 60 : 0), style=plot.style_linebr, linewidth=1)
+plot(active ? tgt3 : na, "Target 3", color=color.new(cBull, hit3 ? 60 : 0), style=plot.style_linebr, linewidth=1)
+fill(pE, pSL, color.new(cBear, 88), "Risk zone")
+fill(pE, pT1, color.new(cBull, 90), "Reward zone")
+
+instTxt(int side, float px) =>
+    string t = ""
+    if isOptMode
+        float strike = math.round(px / strikeStep) * strikeStep
+        t := "BUY " + syminfo.root + " " + str.tostring(strike, "#") + (side == 1 ? " CE" : " PE")
+    else
+        t := side == 1 ? "BUY " + syminfo.ticker : "SELL " + syminfo.ticker
+    t
+
+if showLabels
+    if evEntryL
+        label.new(bar_index, low, "BUY ▲\n" + fmt(entryPx) + "\nSL " + fmt(initSL), yloc=yloc.belowbar, style=label.style_label_up, color=cBull, textcolor=color.white, size=size.small)
+    if evEntryS
+        label.new(bar_index, high, "SELL ▼\n" + fmt(entryPx) + "\nSL " + fmt(initSL), yloc=yloc.abovebar, style=label.style_label_down, color=cBear, textcolor=color.white, size=size.small)
+    if evT1
+        label.new(bar_index, tgt1, "T1 ✓", style=label.style_label_left, color=color.new(cBull, 100), textcolor=cBull, size=size.tiny)
+    if evT2
+        label.new(bar_index, tgt2, "T2 ✓", style=label.style_label_left, color=color.new(cBull, 100), textcolor=cBull, size=size.tiny)
+    if evT3
+        label.new(bar_index, tgt3, "T3 ✓", style=label.style_label_left, color=color.new(cBull, 100), textcolor=cBull, size=size.tiny)
+    if evBE
+        label.new(bar_index, entryPx, "SL → cost", style=label.style_label_left, color=color.new(cGold, 100), textcolor=cGold, size=size.tiny)
+    if evExit
+        label.new(bar_index, exitPx, exitWhy + "\n" + (exitR >= 0 ? "+" : "") + str.tostring(exitR, "#.##") + "R", style=exitSide == 1 ? label.style_label_down : label.style_label_up, color=exitR >= 0 ? color.new(cBull, 30) : color.new(cBear, 30), textcolor=color.white, size=size.tiny)
+
+// ═════════════════ Dashboard ═════════════════
+dashPos = switch dashLoc
+    "Top Right"    => position.top_right
+    "Bottom Right" => position.bottom_right
+    "Top Left"     => position.top_left
+    => position.bottom_left
+tSize = switch dashSizeIn
+    "Tiny"   => size.tiny
+    "Normal" => size.normal
+    => size.small
+
+var table dash = table.new(dashPos, 2, 17, bgcolor=cPanel, frame_color=cEdge, frame_width=1, border_color=color.new(cEdge, 40), border_width=1)
+
+row(table t, int r, string k, string v, color vc, string tsz) =>
+    table.cell(t, 0, r, k, text_color=cMuted, text_size=tsz, text_halign=text.align_left)
+    table.cell(t, 1, r, v, text_color=vc, text_size=tsz, text_halign=text.align_right)
+
+if showDash and barstate.islast
+    bool  inTrade = pos != 0
+    float riskPts = inTrade ? math.abs(entryPx - initSL) : na
+    float unitR   = inTrade ? (isOptMode ? riskPts * optDelta : riskPts) : na
+    int   lots    = inTrade and unitR > 0 ? int(math.floor(capital * riskPct / 100 / (unitR * lotSize))) : 0
+    float liveR   = inTrade and riskPts > 0 ? pos * (close - entryPx) / riskPts : na
+    color sideCol = pos == 1 ? cBull : pos == -1 ? cBear : cMuted
+    string sigTxt = evEntryL ? "▲ BUY NOW" : evEntryS ? "▼ SELL NOW" : pos == 1 ? "LONG — holding" : pos == -1 ? "SHORT — holding" : "WAIT — no setup"
+    string stTxt  = not inTrade ? "Flat" : (hit3 ? "T3 ✓  " : hit2 ? "T2 ✓  " : hit1 ? "T1 ✓  " : "Running  ") + (liveR >= 0 ? "+" : "") + str.tostring(liveR, "#.##") + "R"
+    string winTxt = nTrades > 0 ? str.tostring(nTrades) + " trades · " + str.tostring(100.0 * nWins / nTrades, "#") + "% win · " + (sumR >= 0 ? "+" : "") + str.tostring(sumR, "#.#") + "R" : "No closed trades yet"
+
+    table.cell(dash, 0, 0, "RAJAN Premium Levels", text_color=cGold, text_size=tSize, text_halign=text.align_left)
+    table.cell(dash, 1, 0, syminfo.ticker + " · " + timeframe.period, text_color=cMuted, text_size=tSize, text_halign=text.align_right)
+    row(dash, 1,  "Signal",        sigTxt, sideCol, tSize)
+    row(dash, 2,  "What to trade", inTrade ? instTxt(pos, entryPx) : "—", inTrade ? cText : cMuted, tSize)
+    row(dash, 3,  "Entry",         inTrade ? fmt(entryPx) : "—", cText, tSize)
+    row(dash, 4,  "Stop loss",     inTrade ? fmt(initSL) + "  (" + str.tostring(riskPts, "#.##") + " pts)" : "—", cBear, tSize)
+    row(dash, 5,  "Trailing SL",   inTrade ? fmt(stopPx) + (stopPx != initSL ? "  ↑ moved" : "") : "—", cGold, tSize)
+    row(dash, 6,  "Target 1",      inTrade ? fmt(tgt1) + (hit1 ? "  ✓" : "") : "—", cBull, tSize)
+    row(dash, 7,  "Target 2",      inTrade ? fmt(tgt2) + (hit2 ? "  ✓" : "") : "—", cBull, tSize)
+    row(dash, 8,  "Target 3",      inTrade ? fmt(tgt3) + (hit3 ? "  ✓" : "") : "—", cBull, tSize)
+    row(dash, 9,  "Risk : reward", inTrade and riskPts > 0 ? "1 : " + str.tostring(math.abs(tgt3 - entryPx) / riskPts, "#.#") : "—", cText, tSize)
+    row(dash, 10, "Option SL est.", inTrade and isOptMode ? "≈ " + str.tostring(riskPts * optDelta, "#.#") + " pts premium" : "—", cMuted, tSize)
+    row(dash, 11, "Position size", inTrade ? (lots > 0 ? str.tostring(lots) + " lot(s) · risk ₹" + str.tostring(lots * unitR * lotSize, "#,###") : "0 — stop too wide for risk %") : "—", cText, tSize)
+    row(dash, 12, "Status",        stTxt, sideCol, tSize)
+    row(dash, 13, "Trend",         trendTxt, trendCol, tSize)
+    row(dash, 14, "Strength",      strengthTxt, cText, tSize)
+    row(dash, 15, "Last trade",    lastRes, cMuted, tSize)
+    row(dash, 16, "On this chart", winTxt, cMuted, tSize)
+
+// ═════════════════ Alerts ═════════════════
+// Create ONE alert → Condition: this indicator → "Any alert() function call" to get every message below.
+planTxt = " @ " + fmt(entryPx) + " | SL " + fmt(initSL) + " | T1 " + fmt(tgt1) + " | T2 " + fmt(tgt2) + " | T3 " + fmt(tgt3)
+if evEntryL
+    alert("RAJAN PL ▲ BUY " + syminfo.ticker + planTxt + " | " + instTxt(1, entryPx), alert.freq_once_per_bar_close)
+if evEntryS
+    alert("RAJAN PL ▼ SELL " + syminfo.ticker + planTxt + " | " + instTxt(-1, entryPx), alert.freq_once_per_bar_close)
+if evT1
+    alert("RAJAN PL " + syminfo.ticker + " T1 hit " + fmt(tgt1) + (beAfterT1 ? " — move SL to cost " + fmt(entryPx) : ""), alert.freq_once_per_bar_close)
+if evT2
+    alert("RAJAN PL " + syminfo.ticker + " T2 hit " + fmt(tgt2), alert.freq_once_per_bar_close)
+if evT3
+    alert("RAJAN PL " + syminfo.ticker + " T3 hit " + fmt(tgt3), alert.freq_once_per_bar_close)
+if evExit
+    alert("RAJAN PL " + syminfo.ticker + " EXIT — " + exitWhy + " @ " + fmt(exitPx) + " (" + str.tostring(exitR, "#.##") + "R)", alert.freq_once_per_bar_close)
+
+alertcondition(evEntryL, "BUY signal", "RAJAN PL BUY {{ticker}} at {{close}}")
+alertcondition(evEntryS, "SELL signal", "RAJAN PL SELL {{ticker}} at {{close}}")
+alertcondition(evExit, "Trade exit", "RAJAN PL exit on {{ticker}} at {{close}}")
+alertcondition(evT1, "Target 1 hit", "RAJAN PL T1 hit on {{ticker}}")

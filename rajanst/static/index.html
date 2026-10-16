@@ -828,7 +828,7 @@ async function pushOff(){const reg=await swReg(),sub=reg&&await reg.pushManager.
 /* While the app is open (any tab, even in the background) and push is enabled, nudge the server to evaluate
    fresh BUY/SELL ideas every 5 minutes in market hours. The server de-duplicates and caps at 5 pushes/day/device. */
 async function signalTick(){try{if(!localStorage.getItem('rn_push_sub'))return;const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})),m=n.getHours()*60+n.getMinutes();
-  if(n.getDay()===0||n.getDay()===6||m<555||m>930)return;await fetch('/api/cron/signal-push');fetch('/api/auto/run').catch(()=>{})}catch(e){}}
+  if(n.getDay()===0||n.getDay()===6||m<555||m>930)return;await fetch('/api/cron/signal-push')}catch(e){}}
 setInterval(signalTick,300000);setTimeout(signalTick,20000);
 async function pushTest(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)throw new Error('Enable push on this device first');
   const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),title:'Test push',body:'Delivered by the push server — this works even when the app is closed.',url:'/',tag:'rn-test-'+Date.now()})});

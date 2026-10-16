@@ -7,6 +7,8 @@ import os
 import re
 import threading
 import time
+
+import shared_cache
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Query
@@ -567,7 +569,16 @@ def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("
                 n0 = len(_HIST_FAILS)
                 rows = _dedupe(_hist_rows(key, "days", "1", days, span if kind == "day" else 0))
                 return rows, len(_HIST_FAILS) == n0 and bool(rows)
-            hist = _cached_ok(f"hd|{ikey or sym}|{days}|{today}", HIST_TTL, _dh)
+            def _dh_shared():
+                k2 = f"hd|{ikey or sym}|{days}|{today}"
+                got = shared_cache.get(k2)
+                if got:
+                    return got, True
+                rows, ok = _dh()
+                if ok and rows:
+                    shared_cache.set(k2, rows, 20 * 3600)
+                return rows, ok
+            hist = _cached_ok(f"hd|{ikey or sym}|{days}|{today}", HIST_TTL, _dh_shared)
             bars = list(hist)
             tb = None if (d_to and d_to < date.today()) else _today_daily_bar(key)
             if tb and (not bars or _bar_date(bars[-1]) < _bar_date(tb)):
@@ -596,7 +607,16 @@ def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("
             n0 = len(_HIST_FAILS)
             rows = _dedupe(_hist_rows(key, "minutes", interval, days, window))
             return rows, len(_HIST_FAILS) == n0
-        hist = _cached_ok(f"hm|{ikey or sym}|{interval}|{days}|{today}", HIST_TTL, _mh)
+        def _mh_shared():
+            k2 = f"hm|{ikey or sym}|{interval}|{days}|{today}"
+            got = shared_cache.get(k2)
+            if got:
+                return got, True
+            rows, ok = _mh()
+            if ok and rows:
+                shared_cache.set(k2, rows, 20 * 3600)
+            return rows, ok
+        hist = _cached_ok(f"hm|{ikey or sym}|{interval}|{days}|{today}", HIST_TTL, _mh_shared)
         try:
             live = _dedupe(upstox_service.fetch_intraday_candles(key, "minutes", interval))
         except Exception:
@@ -1166,8 +1186,17 @@ def _picks_compute(deadline_s, progress=None):
     deadline = time.time() + deadline_s
     _PK["total"] = len(keymap)
 
+    today_s = date.today().isoformat()
+    pre = shared_cache.get_many([f"dc|{k}|{today_s}" for k in keymap])       # ONE Redis command for every symbol
+
     def daily(k):
-        return _cached(f"dc|{k}|{date.today().isoformat()}", 6 * 3600, lambda: up.get_candles(k, "day"))
+        key = f"dc|{k}|{today_s}"
+        if key in pre:
+            return pre[key]
+        rows = _cached(key, 6 * 3600, lambda: up.get_candles(k, "day"))
+        if rows:
+            shared_cache.set(key, rows, 20 * 3600)
+        return rows
 
     failed = {}
 
@@ -1258,11 +1287,28 @@ def picks(refresh: bool = False):
         if refresh:
             _cache.pop("picks", None)
 
+        ttl_s = 600 if market_open() else 3600
+        sk = "picks|" + date.today().isoformat()
+
         def build_ok():
+            got = shared_cache.get(sk)                                  # another instance already built it
+            if got and not refresh and time.time() - got.get("_t", 0) < ttl_s:
+                return got, True
+            if not shared_cache.lock("picks-build", 40):                # someone else is building: serve what exists
+                if got:
+                    return got, True
+                time.sleep(4)
+                got = shared_cache.get(sk)
+                if got:
+                    return got, True
             v = _picks_compute(22)
+            if v["complete"]:
+                v["_t"] = time.time()
+                shared_cache.set(sk, v, 20 * 3600)
+            shared_cache.unlock("picks-build")
             return v, v["complete"]
         try:
-            return _cached_ok("picks", 900 if market_open() else 3600, build_ok, short=20)
+            return _cached_ok("picks", 120 if market_open() else 3600, build_ok, short=20)
         except Exception as e:
             raise HTTPException(502, f"Picks failed: {e}")
 
@@ -1347,10 +1393,9 @@ def _index_call(sym, tech):
 def day_calls(refresh: bool = False):
     ensure_universe()
     try:
-        P = picks(refresh)
-    except HTTPException:
-        P = {"picks": []}
-    tech = {p["s"]: p for p in P.get("picks", []) if p.get("kind") == "index"}
+        tech = {p["s"]: p for p in quick_screen(list(CALL_INDICES), 8)}     # 5 symbols, candles come from the shared cache
+    except Exception:
+        tech = {}
 
     def build():
         res = []
@@ -1472,7 +1517,7 @@ def quick_screen(symbols, deadline_s=12):
         if not q or time.time() > end:
             return None
         try:
-            rows = _cached(f"dc|{k}|{date.today().isoformat()}", 6 * 3600, lambda: up.get_candles(k, "day"))
+            rows = shared_cache.fetch(f"dc|{k}|{date.today().isoformat()}", 20 * 3600, lambda: up.get_candles(k, "day"))
         except Exception:
             return None
         r = _pick(sym, q, rows)

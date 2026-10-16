@@ -7,6 +7,8 @@ in the app's universe, using the same real Upstox candles as the charts.
 """
 import threading
 import time
+
+import shared_cache
 from datetime import date, datetime, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -75,7 +77,12 @@ def _full_daily(symbol, completed=False):
         key, _ = up._resolve_underlying(symbol)
         to_d = date.today().isoformat()
         from_d = (date.today() - timedelta(days=int(lookback_days))).isoformat()
-        rows = up.fetch_historical_candles(key, "days", "1", to_d, from_d)
+        hist_key = f"dfull|{symbol}|{date.today().isoformat()}"
+        rows = shared_cache.get(hist_key)
+        if rows is None:
+            rows = up.fetch_historical_candles(key, "days", "1", to_d, from_d)
+            if rows:
+                shared_cache.set(hist_key, rows, 20 * 3600)
         out = {}
         for c in rows:
             d = c["time"][:10]
