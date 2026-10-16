@@ -16,7 +16,6 @@ import bar_source
 import donchian
 import ha_dancing_trend
 import heikin_ashi
-import indicators
 import quantum_matrix
 import rajan_new_indicators as newind
 import rajan_pavan_indicators as rp
@@ -49,7 +48,6 @@ CATALOG = [
     ("bottom-reversal", "Bottom Reversal Confluence", "Reversal", "Multi-condition bottoming setup: EMA, RSI, MACD and 50-SMA confirmation.", "rp"),
     ("confluence", "9/15 + Hammer + W Confluence", "Reversal", "Fires when the 9/15 EMA setup coincides with a hammer or W pattern at support.", "rp"),
     ("vix-range", "India VIX Next-Day Range", "Volatility", "Indicative next-day range = close ± (India VIX ÷ 1600) × close.", "rp"),
-    ("oh-ol", "Open = High / Open = Low", "Options", "Index Open=High / Open=Low with VIX tier and call/put volume confirmation. Indices only.", "oh"),
     ("supertrend-mtf", "Supertrend Multi-Timeframe", "Trend", "Supertrend (10, 3) with higher-timeframe confirmation. Buy / Sell on a direction flip; shows whether the weekly trend agrees (daily-bar adaptation of the 15-minute rule).", "core"),
     ("candle-oh-ol", "Open = High / Open = Low Candles", "Reversal", "Flags days that opened exactly at the low (bullish demand drive) or at the high (bearish supply drive).", "core"),
     ("volume-spurt", "Volume Spurt", "Volume", "Volume more than 2x its 20-bar average on a bullish candle - an abnormal institutional spurt.", "core"),
@@ -78,12 +76,11 @@ CHART_LINES = {
 }
 CHART_LINES.update(_extra.CHART_LINES)
 CHART_LINES.update(newind.NEW_CHART_LINES)
-NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "oh-ol", "orb-15m", "vwap-rsi"} | newind.NO_CHART_NEW
+NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "orb-15m", "vwap-rsi"} | newind.NO_CHART_NEW
 META = {k: {"key": k, "name": n, "group": g, "desc": d, "indexOnly": src == "oh",
             "chart": k not in NO_CHART, "lines": [{"k": f, "label": l} for f, l in CHART_LINES.get(k, [])],
             "gen": "new" if k in newind.NEW_KEYS_SET else "old"}
         for k, n, g, d, src in CATALOG}
-META["rajan-ohol-options"]["indexOnly"] = True
 INDEX_SET = {s for s, _ in market_api.INDICES} | {c for c, _n, _g, _k in market_api.MORE_INDICES}
 
 # bar fields to draw on the price chart (daily bars). rp strategies expose theirs via "columns".
@@ -287,8 +284,6 @@ def _run_raw(key, symbol):
         return heikin_ashi.dancing_channel_scan(symbol)
     if key == "ha-dancing-trend":
         return ha_dancing_trend.ha_dancing_trend_scan(symbol)
-    if key == "oh-ol":
-        return indicators.oh_ol_setup(symbol, {})
     if key == "supertrend-mtf":
         return _raw_supertrend_mtf(symbol)
     if key == "candle-oh-ol":
@@ -487,13 +482,6 @@ def summarize(key, symbol, raw):
         out["headline"] = (f"Last {l['signal']} at {l['when']}" if l else "No mean-reversion signal in the last 5 sessions") + f" - RSI {raw['rsi']:.0f}, VWAP {raw['vwap']:,.2f}"
         out["details"] = _flat({"vwap": raw["vwap"], "upperBand": raw["upper"], "lowerBand": raw["lower"], "rsi": raw["rsi"]})
         out["events"] = raw["events"]
-
-    elif key == "oh-ol":
-        out.update(close=(raw.get("index") or {}).get("last"))
-        out["headline"] = raw.get("indexSignal", "")
-        out["signal"] = "CALL" if raw.get("doCall") else "PUT" if raw.get("doPut") else "NONE"
-        out["bias"] = "bull" if raw.get("doCall") else "bear" if raw.get("doPut") else "neutral"
-        out["details"] = _flat(raw.get("index")) + _flat({"vix": raw.get("vix"), "vixTier": raw.get("vixTier")}) + _flat(raw.get("volumeSignal"))
 
     out["dir"] = "BUY" if out["bias"] == "bull" else "SELL" if out["bias"] == "bear" else ""
     if key not in rp.RAJAN_PAVAN_KEYS and key not in newind.NEW_KEYS and has_date:
