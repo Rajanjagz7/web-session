@@ -545,7 +545,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
   <div class="hdr-r">
     <span class="live"><i id="liveDot"></i><span id="liveTxt">Connecting…</span></span>
-    <button class="pnl-chip" id="pnlChip" data-view="portfolio" hidden title="Total paper P&L (realized + unrealized)"></button>
+    <button class="pnl-chip" id="pnlChip" data-view="journal" hidden title="Total paper P&L (realized + unrealized)"></button>
     <div class="eq"><small>Equity</small><b data-eq></b></div>
     <button class="ibtn" id="bellBtn" aria-label="Notifications"></button>
     <button class="ibtn" id="themeBtn" aria-label="Toggle theme"></button>
@@ -1759,7 +1759,7 @@ function liveUpdate(){
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['options','Options'],['portfolio','Portfolio'],['journal','Journal'],['stocks','Stocks'],['orders','Orders'],['indicators','Indicators']];
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['options','Options'],['journal','Journal'],['stocks','Stocks'],['indicators','Indicators']];
 const PRIMARY=['picks','trade','markets','options'];
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${App.view===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${App.view===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${PRIMARY.includes(App.view)?'':'on'}" data-act="more"><span class="ni">${I('list',19)}</span><span>More</span></button>`}
 const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search'};
