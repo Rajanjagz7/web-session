@@ -536,6 +536,98 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
 <script src="/static/journal.js?v=20261014b"></script>
+<style id="opxCss">
+.opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
+.opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.opx-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.opx-und{display:flex;align-items:center;gap:12px;min-width:0}
+.opx-sel{height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--text);padding:0 10px;font:inherit;font-weight:700;font-size:14px}
+.opx-spot{display:flex;align-items:baseline;gap:8px;white-space:nowrap}.opx-spot b{font-size:20px}.opx-spot span{font-size:13px;font-weight:600}.opx-spot small{font-size:11.5px;color:var(--text-3)}
+.opx-exp{display:flex;align-items:center;gap:8px;min-width:0;flex:1}.opx-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}
+.opx-expc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.opx-expc::-webkit-scrollbar{display:none}
+.opx-chip{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--text-2);font:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+.opx-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.opx-expsel{height:30px;font-weight:500;font-size:12.5px;max-width:130px}
+.opx-act{display:flex;gap:6px;margin-left:auto}
+.opx-fbtn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.opx-fbtn.on{border-color:var(--brand);color:var(--brand)}.opx-fbtn i{font-style:normal;min-width:18px;height:18px;border-radius:9px;background:var(--brand);color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 4px}
+.opx-ib{width:36px;height:36px;display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text-2);font-size:16px;cursor:pointer}
+.opx-ib:hover,.opx-fbtn:hover{border-color:var(--text-3)}
+.opx-sum{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.opx-sum::-webkit-scrollbar{display:none}.opx-sum:empty{display:none}
+.opx-kpi{flex:1 0 auto;min-width:96px;display:flex;flex-direction:column;gap:2px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.opx-kpi small{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}.opx-kpi b{font-size:14px}.opx-kpi .up{color:var(--up)}.opx-kpi .down{color:var(--down)}
+.opx-mtabs{display:none}
+.opx-grid{display:grid;grid-template-columns:fit-content(64%) minmax(460px,1fr);gap:12px;align-items:start}
+.opx-chain{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:calc(var(--nb,0px) + 60px)}
+.opx-chain .oc-wrap{max-height:calc(100vh - var(--nb,0px) - 200px);min-height:420px}
+.opx-oc th{padding:7px 8px}.opx-oc thead tr.opx-side th{position:sticky;top:0;font-size:10.5px;letter-spacing:.08em;padding:6px 8px;text-align:center;font-weight:700}
+.opx-oc thead tr:nth-child(2) th{top:27px}.opx-oc th.ce-h{color:var(--up)}.opx-oc th.pe-h{color:var(--down)}.opx-oc th.k{text-align:center}
+.opx-oc td{padding:7px 8px}.opx-oc td span{position:relative}.opx-oc td.up{color:var(--up)}.opx-oc td.down{color:var(--down)}.opx-dim{color:var(--text-2)}
+.opx-oc td.k{min-width:76px}.opx-oc td.k em{display:block;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--brand)}
+.opx-oc td.ltp b{font-size:13px}.opx-oc td.ltp .bs{opacity:0;transition:opacity .12s;margin:0 6px 0 0}
+.opx-oc tr:hover td.ltp .bs,.opx-oc td.ltp.sel .bs{opacity:1}
+@media (hover:none){.opx-oc td.ltp .bs{opacity:1}}
+.opx-spotrow td{padding:0!important;border-top:0!important;height:22px;cursor:default;text-align:center!important;background:linear-gradient(var(--brand),var(--brand)) center/100% 2px no-repeat}
+.opx-spotrow span{display:inline-block;background:var(--brand);color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.opx-work{display:flex;flex-direction:column;gap:12px;min-width:0}
+.opx-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.opx-chartcard .opt-chart{height:clamp(360px,52vh,560px)}
+.opx-stats summary{cursor:pointer;font-size:12px;color:var(--text-3);list-style:none;user-select:none}.opx-stats summary::before{content:"▸ "}.opx-stats[open] summary::before{content:"▾ "}
+.opx-stats[open] .opt-stats{margin-top:8px}
+.opx-panel{padding:0;gap:0}
+.opx-wtabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.opx-wtabs button,.opx-mtabs button{height:42px;padding:0 14px;border:0;background:none;color:var(--text-3);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.opx-wtabs button.on,.opx-mtabs button.on{color:var(--text);border-bottom-color:var(--brand)}
+.opx-pane{padding:14px;min-width:0;overflow-x:auto}.opx-pane[hidden]{display:none}#opStrat.opx-pane,#opRead.opx-pane{padding:0}
+.opx-empty{min-height:420px;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:24px;color:var(--text-2)}
+.opx-empty svg{width:40px;height:40px;color:var(--brand)}.opx-empty b{font-size:16px;color:var(--text)}.opx-empty p{max-width:360px;margin:0;font-size:13px}
+.opx-skel{display:grid;gap:10px;padding:16px}.opx-skel i{height:22px;border-radius:6px;background:linear-gradient(90deg,var(--panel-2),var(--line),var(--panel-2));background-size:200% 100%;animation:opxsk 1.2s linear infinite}
+@keyframes opxsk{to{background-position:-200% 0}}
+.opx-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35)}.opx-scrim[hidden]{display:none}
+.opx-fp{position:fixed;z-index:71;top:calc(var(--nb,0px) + 110px);right:max(16px,calc((100vw - 1800px)/2 + 16px));width:340px;max-height:calc(100vh - 140px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.opx-fp[hidden]{display:none}
+.opx-fp-h{display:flex;justify-content:space-between;align-items:center;padding:12px 12px 6px 16px;font-size:14px}.opx-fp-h .opx-ib{width:30px;height:30px;border:0}
+.opx-fp-b{padding:6px 16px 12px;display:grid;gap:16px;overflow:auto}
+.opx-fg{display:grid;gap:8px}.opx-fg>label:not(.opx-tog){font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}
+.opx-seg{display:flex;padding:3px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line)}
+.opx-seg button{flex:1;height:30px;border:0;border-radius:7px;background:none;color:var(--text-2);font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.opx-seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.opx-tog{display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0}.opx-tog input{position:absolute;opacity:0}
+.opx-tog span{width:34px;height:20px;border-radius:10px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.opx-tog span::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.opx-tog input:checked+span{background:var(--brand)}.opx-tog input:checked+span::after{transform:translateX(14px)}
+.opx-tog input:focus-visible+span{outline:2px solid var(--brand);outline-offset:2px}
+.opx-tog div{display:flex;flex-direction:column}.opx-tog b{font-size:13px;font-weight:600}.opx-tog small{font-size:11.5px;color:var(--text-3)}
+.opx-fp-f{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}.opx-fp-f .btn{flex:1}
+.opx-dock{display:none}
+@media (max-width:1180px){.opx-grid{grid-template-columns:fit-content(58%) minmax(400px,1fr)}}
+@media (max-width:899px){
+  .opx{padding:8px 10px 90px;gap:8px}
+  .opx-bar{padding:8px 10px;gap:8px}.opx-und{width:100%;justify-content:space-between}.opx-spot b{font-size:17px}
+  .opx-exp{width:auto}.opx-lbl{display:none}.opx-expsel{display:none}.opx-act{margin-left:0}
+  .opx-und{order:1;flex:1 1 100%}.opx-exp{order:2;flex:1 1 0;min-width:0;width:auto}.opx-act{order:3}.opx-spot small{display:none}.opx-fbtn span{display:none}.opx-sel{max-width:55%}
+  .opx-kpi{min-width:84px;padding:6px 10px}
+  .opx-mtabs{display:flex;position:sticky;top:calc(var(--nb,0px) + 52px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+  .opx-mtabs button{flex:1;padding:0}
+  .opx-grid{display:block}
+  .opx-chain{position:static}.opx-chain .oc-wrap{max-height:none;min-height:0}
+  .opx[data-mtab="chain"] .opx-work{display:none}
+  .opx:not([data-mtab="chain"]) .opx-chain{display:none}
+  .opx[data-mtab="chart"] .opx-panel{display:none}
+  .opx[data-mtab="order"] .opx-chartcard,.opx[data-mtab="signals"] .opx-chartcard{display:none}
+  .opx[data-mtab="order"] .opx-wtabs,.opx[data-mtab="signals"] .opx-wtabs{display:none}
+  .opx-chartcard .opt-chart{height:58vh}
+  .opx-oc td,.opx-oc th{padding:7px 6px;font-size:12px}.opx-oc td.k{min-width:58px}.opx-oc .bs{display:none!important}.opx-oc td.ltp b{font-size:12.5px}
+  .opx-oc thead tr:nth-child(2) th{top:25px}
+  .opx-fp{inset:auto 0 0 0;width:auto;max-height:85vh;border-radius:18px 18px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+  .opx-dock:not([hidden]){display:flex;position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));z-index:55;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.25)}
+  .opx-dk-i{flex:1;min-width:0;display:flex;flex-direction:column}.opx-dk-i b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.opx-dk-i span{font-size:15px;font-weight:700}
+  .opx-dk-b,.opx-dk-s{height:40px;min-width:84px;font-weight:700}
+  .opx-dk-b{background:var(--up)!important;border-color:var(--up)!important;color:#fff!important}.opx-dk-s{background:var(--down)!important;border-color:var(--down)!important;color:#fff!important}
+}
+@media (max-width:899px) and (min-width:600px){.opx[data-mtab="chart"] .opx-panel{display:flex}}
+@media (prefers-reduced-motion:reduce){.opx-skel i{animation:none}}
+</style>
 </head>
 <body>
 <div class="newsbar" id="newsBar" hidden></div>
@@ -2311,52 +2403,111 @@ async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const w
   try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(OPT.expiry?'&expiry='+OPT.expiry:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null}
   catch(e){OPT.chain=null;OPT.err='The option chain is not available for '+want+' right now.'}
   OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}}}
+const OPXF_DEF={span:10,oi:true,chg:false,vol:true,bars:true,liquid:false};
+OPT.f=(()=>{try{return Object.assign({},OPXF_DEF,JSON.parse(localStorage.getItem('rs-opxf')||'{}'))}catch(e){return Object.assign({},OPXF_DEF)}})();
+OPT.span=OPT.f.span;OPT.mtab=OPT.mtab||'chain';OPT.wtab=OPT.wtab||'order';
+const opxSave=()=>{try{localStorage.setItem('rs-opxf',JSON.stringify(OPT.f))}catch(e){}};
+const opxMobile=()=>innerWidth<900;
+function opxSeg(name,cur,opts){return`<div class="opx-seg" role="group">${opts.map(([v,l])=>`<button type="button" class="${String(cur)===String(v)?'on':''}" data-opx="${name}:${v}">${l}</button>`).join('')}</div>`}
+function opxFilterHtml(){const f=OPT.f,tg=(k,l,d)=>`<label class="opx-tog"><input type="checkbox" data-opxf="${k}" ${f[k]?'checked':''}><span></span><div><b>${l}</b>${d?`<small>${d}</small>`:''}</div></label>`;
+  return`<div class="opx-fp-h"><b>Chain filters</b><button class="opx-ib" data-opx="filters" aria-label="Close filters">✕</button></div>
+  <div class="opx-fp-b">
+    <div class="opx-fg"><label>Strikes around ATM</label>${opxSeg('span',f.span,[[5,'±5'],[10,'±10'],[20,'±20'],[0,'All']])}</div>
+    <div class="opx-fg"><label>Columns</label>${tg('oi','Open interest','with OI bars')}${tg('chg','OI change','build-up vs unwinding')}${tg('vol','Volume','')}</div>
+    <div class="opx-fg"><label>Rows</label>${tg('bars','Shade OI bars','')}${tg('liquid','Hide untraded strikes','no volume today')}</div>
+  </div>
+  <div class="opx-fp-f"><button class="btn" data-opx="freset">Reset</button><button class="btn pri" data-opx="filters">Done</button></div>`}
+function opxActiveCount(){const f=OPT.f;return (f.span!==10?1:0)+(!f.oi?1:0)+(f.chg?1:0)+(!f.vol?1:0)+(!f.bars?1:0)+(f.liquid?1:0)}
 function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.tf=TFS.find(t=>t.k==='5m');
-  el.innerHTML=`<div class="page opt-page">${pageHead('Option chain','Tap a CE or PE price to open its live chart and indicator readings.',
-    `<div class="opt-ctl"><select class="inp" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
-     <select class="inp" id="optExp" aria-label="Expiry"></select>
-     <select class="inp" id="optSpan" aria-label="Strikes shown">${[[5,'±5'],[10,'±10'],[20,'±20'],[0,'All']].map(x=>`<option value="${x[0]}" ${OPT.span===x[0]?'selected':''}>${x[1]} strikes</option>`).join('')}</select>
-     <button class="btn" id="optRef">Refresh</button></div>`)}
-    <div class="opt-grid"><div class="card opt-chain" id="optChain"></div><div class="opt-detail" id="optDetail"></div></div></div>`;
-  OPT.shell=false;OPT.ochart=null;
+  el.innerHTML=`<div class="opx" data-mtab="${OPT.mtab}">
+    <div class="opx-bar">
+      <div class="opx-und"><select class="opx-sel" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
+        <div class="opx-spot" id="opxSpot"></div></div>
+      <div class="opx-exp"><span class="opx-lbl">Expiry</span><div class="opx-expc" id="opxExp"></div><select class="opx-sel opx-expsel" id="optExp" aria-label="All expiries"></select></div>
+      <div class="opx-act"><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
+        <button class="opx-ib" id="optRef" title="Refresh chain" aria-label="Refresh chain">↻</button></div>
+    </div>
+    <div class="opx-sum" id="opxSum"></div>
+    <div class="opx-mtabs" role="tablist">${[['chain','Chain'],['chart','Chart'],['order','Order'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="mtab:${k}" class="${OPT.mtab===k?'on':''}">${l}</button>`).join('')}</div>
+    <div class="opx-scrim" id="opxScrim" data-opx="filters" hidden></div>
+    <div class="opx-fp" id="opxFp" role="dialog" aria-label="Chain filters" hidden></div>
+    <div class="opx-grid"><section class="opx-chain" id="optChain"></section><section class="opx-work" id="optDetail"></section></div>
+    <div class="opx-dock" id="opxDock" hidden></div>
+  </div>`;
+  OPT.shell=false;OPT.ochart=null;opxBadge();
   if(!OPT.chain||OPT.chain.symbol!==OPT.sym)loadChain(true);else drawChain();
   drawDetail()}
-function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain;
-  if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}</div>`:'<div class="empty">Loading option chain…</div>';return}
+function opxBadge(){const n=opxActiveCount(),b=$('#opxBadge');if(b){b.textContent=n;b.hidden=!n}const fb=$('#opxFbtn');if(fb)fb.classList.toggle('on',n>0)}
+function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
+  rows.forEach(r=>{const a=r.ce?.oi||0,b=r.pe?.oi||0;ceOi+=a;peOi+=b;if(r.ce&&(!cw||a>cw.oi))cw={k:r.strike,oi:a};if(r.pe&&(!pw||b>pw.oi))pw={k:r.strike,oi:b}});
+  let mp=null,best=Infinity;rows.forEach(K=>{let p=0;rows.forEach(r=>{p+=(r.ce?.oi||0)*Math.max(0,K.strike-r.strike)+(r.pe?.oi||0)*Math.max(0,r.strike-K.strike)});if(p<best){best=p;mp=K.strike}});
+  return{pcr:ceOi>0?peOi/ceOi:null,mp,cw,pw,ceOi,peOi}}
+function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
+  if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
   const xs=$('#optExp');if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('');
-  const i=Math.max(0,c.rows.findIndex(r=>r.strike===c.atm)),lo=OPT.span?Math.max(0,i-OPT.span):0,hi=OPT.span?i+OPT.span+1:c.rows.length,rows=c.rows.slice(lo,hi);
-  const mx=Math.max(1,...rows.flatMap(r=>[r.ce?.oi||0,r.pe?.oi||0]));const spot=c.spot;
-  const cell=(leg,side,strike)=>{if(!leg)return'<td class="ltp">—</td><td class="oc-vol">—</td><td>—</td>';const ch=leg.prev>0?(leg.ltp/leg.prev-1):0,sel=OPT.sel&&OPT.sel.key===leg.key;
-    const cls_=`${sel?'sel':''} ${(side==='CE'?strike<spot:strike>spot)?'itm':''}`;
-    return{ltp:`<td class="ltp ${cls_}" data-opt="${side}:${strike}"><b class="num">${fmtP(leg.ltp)}</b><small class="num ${cls(ch)}">${pct(ch)}</small><span class="bs"><button class="bs-b" data-optbs="buy:${side}:${strike}" title="Buy ${side}">B</button><button class="bs-s" data-optbs="sell:${side}:${strike}" title="Sell (write) ${side}">S</button></span></td>`,
-      vol:`<td class="oc-vol num ${cls_}" data-opt="${side}:${strike}">${fmtN(leg.vol)}</td>`,
-      oi:`<td class="num ${cls_}" data-opt="${side}:${strike}"><i class="ob ${side==='CE'?'ceb':'peb'}" style="width:${(leg.oi/mx*100).toFixed(0)}%"></i>${fmtN(leg.oi)}</td>`}};
-  const body=rows.map(r=>{const ce=cell(r.ce,'CE',r.strike),pe=cell(r.pe,'PE',r.strike);
-    return`<tr class="${r.strike===c.atm?'atm':''}">${r.ce?ce.oi+ce.vol+ce.ltp:'<td>—</td><td class="oc-vol">—</td><td>—</td>'}<td class="k">${fmtP(r.strike,r.strike%1?2:0)}</td>${r.pe?pe.ltp+pe.vol+pe.oi:'<td>—</td><td class="oc-vol">—</td><td>—</td>'}</tr>`}).join('');
+  const xc=$('#opxExp');if(xc)xc.innerHTML=c.expiries.slice(0,4).map(e=>`<button class="opx-chip ${e===c.expiry?'on':''}" data-opx="exp:${e}">${fmtExp(e)}</button>`).join('');
+  const und=SYMS.find(x=>x.s===c.symbol),uch=und&&und.prev>0?und.last/und.prev-1:null,sp=$('#opxSpot');
+  if(sp)sp.innerHTML=`<b class="num">${fmtP(c.spot)}</b>${uch==null?'':`<span class="num ${cls(uch)}">${pct(uch)}</span>`}<small>${MKT.open?'Live':'Last session'} · ${new Date(c.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</small>`;
+  const S=opxSummary(c),sm=$('#opxSum');
+  if(sm)sm.innerHTML=[['PCR (OI)',S.pcr==null?'—':S.pcr.toFixed(2),S.pcr==null?'':S.pcr>=1.2?'up':S.pcr<=0.7?'down':'','Put OI ÷ Call OI. Above 1.2 leans bullish, below 0.7 bearish.'],
+    ['ATM',fmtP(c.atm||0,0),'',''],['Max pain',S.mp==null?'—':fmtP(S.mp,0),'','Strike where option buyers lose the most at expiry.'],
+    ['Call wall',S.cw?fmtP(S.cw.k,0):'—','down','Highest call OI: likely resistance.'],['Put wall',S.pw?fmtP(S.pw.k,0):'—','up','Highest put OI: likely support.'],
+    ['Lot',fmtN(c.lot||0),'','']].map(([k,v,cl,t])=>`<span class="opx-kpi" ${t?`title="${t}"`:''}><small>${k}</small><b class="num ${cl}">${v}</b></span>`).join('');
+  const i=Math.max(0,c.rows.findIndex(r=>r.strike===c.atm)),lo=f.span?Math.max(0,i-f.span):0,hi=f.span?i+f.span+1:c.rows.length;
+  let rows=c.rows.slice(lo,hi);if(f.liquid)rows=rows.filter(r=>(r.ce?.vol||0)+(r.pe?.vol||0)>0||r.strike===c.atm);
+  const mx=Math.max(1,...rows.flatMap(r=>[r.ce?.oi||0,r.pe?.oi||0])),spot=c.spot;
+  const cols=['oi','chg','vol'].filter(k=>f[k]&&(!opxMobile()||k==='oi')),ncol=cols.length*2+3;
+  const hd=k=>({oi:'OI',chg:'OI chg',vol:'Volume'})[k];
+  const cell=(leg,side,strike,k)=>{const itm=(side==='CE'?strike<spot:strike>spot)?'itm':'',sel=OPT.sel&&leg&&OPT.sel.key===leg.key?'sel':'';
+    if(!leg)return`<td class="${itm}">—</td>`;
+    if(k==='oi')return`<td class="num ${itm} ${sel}" data-opt="${side}:${strike}">${f.bars?`<i class="ob ${side==='CE'?'ceb':'peb'}" style="width:${(leg.oi/mx*100).toFixed(0)}%"></i>`:''}<span>${fmtN(leg.oi)}</span></td>`;
+    if(k==='chg'){const v=leg.oiChg;return`<td class="num ${itm} ${sel} ${v>0?'up':v<0?'down':''}" data-opt="${side}:${strike}">${isFinite(v)&&v!==null?(v>0?'+':v<0?'−':'')+fmtN(Math.abs(v)):'—'}</td>`}
+    return`<td class="num opx-dim ${itm} ${sel}" data-opt="${side}:${strike}">${fmtN(leg.vol)}</td>`};
+  const ltp=(leg,side,strike)=>{const itm=(side==='CE'?strike<spot:strike>spot)?'itm':'';if(!leg)return`<td class="ltp ${itm}">—</td>`;const ch=leg.prev>0?(leg.ltp/leg.prev-1):0,sel=OPT.sel&&OPT.sel.key===leg.key?'sel':'';
+    return`<td class="ltp ${itm} ${sel}" data-opt="${side}:${strike}"><span class="bs"><button class="bs-b" data-optbs="buy:${side}:${strike}" title="Buy ${side} ${strike}" aria-label="Buy ${side} ${strike}">B</button><button class="bs-s" data-optbs="sell:${side}:${strike}" title="Sell ${side} ${strike}" aria-label="Sell ${side} ${strike}">S</button></span><b class="num">${fmtP(leg.ltp)}</b><small class="num ${cls(ch)}">${pct(ch)}</small></td>`};
+  let spotDone=false;
+  const body=rows.map((r,ix)=>{let pre='';if(!spotDone&&r.strike>spot){spotDone=true;pre=`<tr class="opx-spotrow"><td colspan="${ncol}"><span>${esc(c.symbol)} ${fmtP(spot)}</span></td></tr>`}
+    const ceCells=cols.map(k=>cell(r.ce,'CE',r.strike,k)).join('')+ltp(r.ce,'CE',r.strike),peCells=ltp(r.pe,'PE',r.strike)+cols.slice().reverse().map(k=>cell(r.pe,'PE',r.strike,k)).join('');
+    return pre+`<tr class="${r.strike===c.atm?'atm':''}">${ceCells}<td class="k">${fmtP(r.strike,r.strike%1?2:0)}${r.strike===c.atm?'<em>ATM</em>':''}</td>${peCells}</tr>`}).join('');
   const prev=box.querySelector('.oc-wrap'),st=prev?prev.scrollTop:null;
-  box.innerHTML=`<div class="opt-meta"><span><b>${esc(c.symbol)}</b> ${fmtP(c.spot)}</span><span>ATM <b>${fmtP(c.atm||0,0)}</b></span><span>Expiry <b>${fmtExp(c.expiry)}</b></span><span class="muted">${MKT.open?'Live':'Last session'} · ${new Date(c.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span></div>
-   <div class="oc-wrap"><table class="oc"><thead><tr><th>CE OI</th><th class="oc-vol">Vol</th><th>CE LTP</th><th>Strike</th><th>PE LTP</th><th class="oc-vol">Vol</th><th>PE OI</th></tr></thead><tbody>${body}</tbody></table></div>`;
-  const w=box.querySelector('.oc-wrap');if(w){if(st!=null)w.scrollTop=st;else{const a=w.querySelector('tr.atm');if(a)w.scrollTop=a.offsetTop-w.clientHeight/2+a.clientHeight}}}
+  box.innerHTML=`<div class="oc-wrap"><table class="oc opx-oc"><thead><tr class="opx-side"><th colspan="${cols.length+1}" class="ce-h">CALLS</th><th></th><th colspan="${cols.length+1}" class="pe-h">PUTS</th></tr>
+    <tr>${cols.map(k=>`<th>${hd(k)}</th>`).join('')}<th>LTP</th><th class="k">Strike</th><th>LTP</th>${cols.slice().reverse().map(k=>`<th>${hd(k)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+  const w=box.querySelector('.oc-wrap');if(w){if(st!=null)w.scrollTop=st;else{const a=w.querySelector('.opx-spotrow')||w.querySelector('tr.atm');if(a)w.scrollTop=a.offsetTop-w.clientHeight/2}}}
 function selectOption(side,strike){const c=OPT.chain;if(!c)return;const row=c.rows.find(r=>r.strike===strike),leg=row&&row[side.toLowerCase()];if(!leg)return;
   const label=`${c.symbol} ${fmtP(strike,strike%1?2:0)} ${side} ${fmtExp(c.expiry)}`;
   OPT.sel={side,strike,key:leg.key,label};
   OPT.osym={s:label,n:label,ikey:leg.key,dp:2,qdp:0,ex:'NFO',cls:'Options',sec:'Options',last:leg.ltp,prev:leg.prev||leg.ltp,open:leg.open,hi:leg.high,lo:leg.low,vol:leg.vol,oi:leg.oi,oiChg:leg.oiChg,bid:leg.bid,ask:leg.ask};
-  drawChain();drawDetail();if(innerWidth<1000){const d=$('#optDetail');d&&d.scrollIntoView({behavior:'smooth',block:'start'})}}
-function drawDetail(){const box=$('#optDetail');if(!box)return;
-  if(!OPT.sel){box.innerHTML='<div class="card opt-hint"><div class="empty">Select any <b>CE</b> or <b>PE</b> price in the chain to see its live chart, indicators and readings here.</div></div>';OPT.shell=false;OPT.ochart=null;return}
-  if(!OPT.shell){box.innerHTML=`<div class="card opt-card"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
-     <div class="opt-stats" id="opStats"></div>
+  drawChain();drawDetail();if(opxMobile())opxTab('chart')}
+function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
+  if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
+function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
+  const map={order:'#opTrade',read:'#opRead',signals:'#opStrat'};Object.entries(map).forEach(([k,sel])=>{const e=$(sel);if(e)e.hidden=k!==t})}
+function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
+  d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
+function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
+  if(!OPT.sel){box.innerHTML=`<div class="opx-empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain. Its live chart, order ticket and strategy signals open here, next to the chain.</p></div>`;OPT.shell=false;OPT.ochart=null;return}
+  if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
+     <details class="opx-stats"><summary>Stats · OI · bid/ask</summary><div class="opt-stats" id="opStats"></div></details>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
-     <div class="card opt-card" id="opTrade" style="padding:14px"></div>
-     <div class="card" id="opRead"></div>
-     <div class="card" id="opStrat"></div>`;
+     <div class="opx-card opx-panel"><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
+       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>`;
     OPT.shell=true;
     OPT.ochart=new Chart($('#ochart'),{onTool:()=>{},onLegend:(uid,a)=>{const x=OPT.ochart.ind.findIndex(i=>i.uid===uid);if(x<0)return;if(a==='hide'){OPT.ochart.ind[x].hidden=!OPT.ochart.ind[x].hidden;OPT.ochart.lgDirty=true;OPT.ochart.req()}else if(a==='rm'){OPT.ochart.ind.splice(x,1);OPT.ochart.indChanged();drawOptChips();saveOptInds()}}});
-    loadOptInds().forEach(k=>optAddInd(k,true));OPT.ochart.indChanged();drawOptChips();$('#ozoom').innerHTML=zoomBtns()}
+    loadOptInds().forEach(k=>optAddInd(k,true));OPT.ochart.indChanged();drawOptChips();$('#ozoom').innerHTML=zoomBtns();opxWtab(OPT.wtab)}
   $('#opName').textContent=OPT.sel.label;$('#opSub').textContent=` · ${OPT.sel.side==='CE'?'Call':'Put'} · spot ${fmtP(OPT.chain?OPT.chain.spot:0)}`;
   drawOptTf();drawOptTrade();
   optStats();optLoad(false)}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(!t||!t.closest('.opx'))return;const v=t.dataset.opx,i=v.indexOf(':'),k=i<0?v:v.slice(0,i),a=i<0?'':v.slice(i+1);
+  if(k==='filters'){const fp=$('#opxFp'),open=fp.hidden;if(open){fp.innerHTML=opxFilterHtml();const fb=$('#opxFbtn');if(fb&&!opxMobile()){const rc=fb.getBoundingClientRect();fp.style.top=Math.max(8,rc.bottom+8)+'px';fp.style.right=Math.max(8,innerWidth-rc.right)+'px'}else{fp.style.top='';fp.style.right=''}}fp.hidden=!open;$('#opxScrim').hidden=!open}
+  else if(k==='span'){OPT.f.span=+a;OPT.span=+a;opxSave();opxBadge();$('#opxFp').innerHTML=opxFilterHtml();drawChain()}
+  else if(k==='freset'){OPT.f=Object.assign({},OPXF_DEF);OPT.span=OPT.f.span;opxSave();opxBadge();$('#opxFp').innerHTML=opxFilterHtml();drawChain()}
+  else if(k==='exp'){if(OPT.chain&&a===OPT.chain.expiry)return;OPT.expiry=a;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
+  else if(k==='mtab')opxTab(a);
+  else if(k==='wtab')opxWtab(a);
+  else if(k==='dock'){const b=$(a==='buy'?'#opBuy':'#opSell');if(b)b.click()}});
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.opxf;if(!k)return;OPT.f[k]=e.target.checked;opxSave();opxBadge();drawChain()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const fp=$('#opxFp');if(fp&&!fp.hidden){fp.hidden=true;$('#opxScrim').hidden=true}}});
 function optAddInd(key,silent){const d=DEFS[key];if(!d||!OPT.ochart)return;const used=new Set(OPT.ochart.ind.filter(i=>DEFS[i.key].pane==='main').flatMap(i=>i.colors));let base=0;while(used.has(base)&&base<7)base++;
   const p={};d.params.forEach(x=>p[x.k]=x.v);OPT.ochart.ind.push({uid:++UID,key,params:p,colors:d.lines.map(l=>l.c??(d.pane==='main'?base:0)),hidden:false});if(!silent){OPT.ochart.indChanged()}}
 function drawOptChips(){const b=$('#opInds');if(!b||!OPT.ochart)return;b.innerHTML=OPT_INDS.map(([k,l])=>`<button class="chip ${OPT.ochart.ind.some(i=>i.key===k)?'on':''}" data-oind="${k}">${l}</button>`).join('')+OPT.ochart.ind.filter(i=>!OPT_INDS.some(o=>o[0]===i.key)).map(i=>`<button class="chip on" data-oind="${i.key}" title="Remove">${esc(DEFS[i.key].short||DEFS[i.key].name)}</button>`).join('')+`<button class="chip" data-act="oindall" aria-label="All indicators">${I('plus',13,2.4)} All indicators</button>`}
@@ -2374,7 +2525,7 @@ async function optTick(){if(OPT.ticking)return;OPT.ticking=true;
   try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?15000:180000))await loadChain(true);
     if(OPT.sel&&OPT.osym){const r=await api('/api/m/oquote?keys='+encodeURIComponent(OPT.sel.key)),q=r.quotes&&r.quotes[0],o=OPT.osym;
       if(q&&q.last>0){o.last=q.last;o.prev=q.prev||o.prev;o.hi=q.high||o.hi;o.lo=q.low||o.lo;o.open=q.open||o.open;o.vol=q.vol;o.oi=q.oi;o.oiChg=q.oi-q.oiPrev;o.bid=q.bid;o.ask=q.ask;
-        const k=o.s+'|'+OPT.tf.k;if(OPT.ochart&&CACHE[k]&&CACHE[k].length)OPT.ochart.setData(series(o,OPT.tf),o,OPT.tf,true);optStats();updOptTrade();optReadings(false)}}}
+        const k=o.s+'|'+OPT.tf.k;if(OPT.ochart&&CACHE[k]&&CACHE[k].length)OPT.ochart.setData(series(o,OPT.tf),o,OPT.tf,true);optStats();updOptTrade();optReadings(false);opxDock()}}}
   catch(e){}OPT.ticking=false}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-opt]');if(t){const [s,k]=t.dataset.opt.split(':');selectOption(s,parseFloat(k));return}
   const f=e.target.closest('[data-otf]');if(f){OPT.tf=TFS.find(x=>x.k===f.dataset.otf);try{localStorage.setItem('rs-otf',OPT.tf.k)}catch(x){}drawOptTf();optLoad(false);return}
