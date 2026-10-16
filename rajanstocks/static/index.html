@@ -601,7 +601,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 'use strict';
 const CHIPS=[['IDX','All Nifty indices'],['ALL','All NSE stocks'],['multi','Multibaggers (≥2× 52W low)'],['nifty50','Nifty 50'],['sensex','BSE Sensex 30'],['niftynext50','Next 50'],['midcap150','Midcap 150'],['smallcap250','Smallcap 250'],['microcap250','Microcap 250'],['infra','Nifty Infra']];
 const GROUPS=['ALL','Main','Broad market','Midcap','Smallcap and microcap','Sectoral','Thematic','Strategy','BSE'];
-const SIZES=[5,15,30,100];
+const SIZES=[10,15,30,100,500,1000];
 const savedSize=(()=>{try{const v=+localStorage.getItem('sbSize');return SIZES.includes(v)?v:15}catch(e){return 15}})();
 const S={h:null,all:null,allP:null,idxAll:null,nameKey:{},grp:'ALL',tab:'IDX',q:'',page:0,size:savedSize,f:{mv:'all',pmin:'',pmax:'',near:false},fOpen:false,sort:'sym',asc:true,rows:[],quotes:{},loading:false,err:'',more:[],timer:0,tok:0};
 const $=(s,r)=>(r||document).querySelector(s);
@@ -1709,7 +1709,7 @@ function countdown(ms){if(ms<0)ms=0;const s=Math.floor(ms/1000),h=Math.floor(s/3
 /* ======================= App state ======================= */
 const App={view:'picks',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000000,positions:[],orders:[],history:[],alerts:[],notes:[],unread:0,
   btab:'positions',book:'book',tape:[],tk:{side:'buy',type:'market',qty:10,price:'',tp:false,tpPx:'',sl:false,slPx:'',tsl:false,tslV:'',tslU:'pct',tif:'Day'},
-  mk:{q:'',cls:'All',sort:'vol',dir:-1},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',sort:'strength',size:24,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
+  mk:{q:'',cls:'All',sort:'vol',dir:-1},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
 async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path+' '+r.status);return r.json()}
@@ -1968,7 +1968,7 @@ function bindAlertForm(){const hint=()=>{const s=SYM($('#alSym').value),c=$('#al
 
 /* ======================= Other views ======================= */
 function pageHead(t,p,extra=''){return`<div class="page-h"><div style="flex:1"><h1>${t}</h1><p>${p}</p></div>${extra}</div>`}
-function renderMarkets(){const mk=App.mk;mk.page=mk.page||0;mk.size=mk.size||25;mk.sec=mk.sec||'All';mk.mode=mk.mode||'all';
+function renderMarkets(){const mk=App.mk;mk.page=mk.page||0;mk.size=mk.size||15;mk.sec=mk.sec||'All';mk.mode=mk.mode||'all';
   const all=SYMS.slice(),chg=s=>s.last/s.prev-1,stocks=all.filter(s=>s.cls==='Stocks');
   const gain=stocks.filter(s=>s.last>0&&s.prev>0).sort((a,b)=>chg(b)-chg(a)),act=stocks.slice().sort((a,b)=>b.turn-a.turn);
   const secs=['All',...new Set(stocks.map(s=>s.sec).filter(Boolean))].sort((x,y)=>x==='All'?-1:y==='All'?1:x.localeCompare(y));
@@ -1981,7 +1981,7 @@ function renderMarkets(){const mk=App.mk;mk.page=mk.page||0;mk.size=mk.size||25;
      <div class="chips" id="mkcls">${['All','Indices','Stocks'].map(c=>`<button class="chip ${mk.cls===c?'on':''}" data-mkcls="${c}">${c}</button>`).join('')}</div>
      <div class="chips">${[['all','Any'],['up','Gainers'],['down','Losers'],['act','Most active'],['watch','Watchlist']].map(([k,l])=>`<button class="chip ${mk.mode===k?'on':''}" data-mkmode="${k}">${l}</button>`).join('')}</div>
      <select class="inp" id="mksec" aria-label="Sector">${secs.map(x=>`<option ${mk.sec===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-     <select class="inp" id="mksize" aria-label="Rows per page">${[15,25,50,100].map(n=>`<option value="${n}" ${mk.size===n?'selected':''}>${n} / page</option>`).join('')}</select>
+     <select class="inp" id="mksize" aria-label="Rows per page">${[10,15,30,100,500,1000].map(n=>`<option value="${n}" ${mk.size===n?'selected':''}>${n} / page</option>`).join('')}</select>
      <button class="btn-xs ${mk.heat?'pri':''}" data-mkmode="heat">Heatmap</button></div>
     ${mk.heat?`<div class="heat" style="margin:8px 12px">${heat.map(s=>`<button class="tile" data-sym="${esc(s.s)}" data-heat="${esc(s.s)}" style="flex:${Math.sqrt(s.turn/1e8).toFixed(2)} 1 ${Math.max(70,Math.sqrt(s.turn/1e8)*30).toFixed(0)}px" aria-label="${esc(s.s)}"><b>${esc(s.s)}</b><span></span></button>`).join('')}<span style="flex:1000 1 0" aria-hidden="true"></span></div>`:''}
     <div class="tbl-wrap mk-wrap" id="mktbl"></div><div class="pager mk-pager" id="mkPager"></div></div></div>`;
@@ -2156,7 +2156,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     <div class="pchart" id="ovChart" style="height:240px;margin:0"></div>
     <div class="seg" style="display:flex;margin:8px 12px 12px">${OVR.map(([l],i)=>`<button style="flex:1" class="${OV.rng===i?'on':''}" data-ovr="${i}">${l}</button>`).join('')}</div></div>
    <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>
-   <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[12,'12 per page'],[24,'24 per page'],[48,'48 per page'],[100,'100 per page'],[0,'Show all']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    ${f.kind!=='STOCK'?`<div class="card" style="margin:10px 0"><div class="card-h"><h3>Index F&amp;O calls for the day</h3><span class="muted" style="font-size:12px">${App.calls&&App.calls.asOf?'as of '+new Date(App.calls.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="padding:10px">${callsBlock()}</div></div>`:''}
    ${body}
    <p class="disc">Rule-based screen of liquid NSE F&amp;O stocks using trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI. Levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
@@ -2797,7 +2797,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-optbs]');i
 document.addEventListener('input',e=>{if(e.target.id==='opLots'){OPT.lots=Math.max(1,parseInt(e.target.value)||1);updOptTrade()}});
 
 /* ---- journal ---- */
-const JR={range:'today',day:null,kind:'ALL',side:'ALL',q:'',tab:'trades',page:0,size:25,open:{}};
+const JR={range:'today',day:null,kind:'ALL',side:'ALL',q:'',tab:'trades',page:0,size:15,open:{}};
 const START_CASH=1000000;
 const jDay=(d,n)=>istDay(new Date(d+'T12:00:00+05:30').getTime()+n*864e5);
 function jBounds(){const t=istDay(Date.now());switch(JR.range){case'today':return[t,t];case'yday':return[jDay(t,-1),jDay(t,-1)];case'7d':return[jDay(t,-6),t];case'30d':return[jDay(t,-29),t];case'day':return[JR.day||t,JR.day||t];default:return['0000-00-00','9999-99-99']}}
@@ -2856,7 +2856,7 @@ function jBody(fills,trips,open){
   const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-JR.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
   return`<table class="jr-t"><thead><tr><th>Time</th><th>Instrument</th><th>Side</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Stop-loss</th><th class="num">Target</th><th class="num">TSL</th><th class="num">Value</th><th class="num">Charges</th><th class="num">P&L (gross)</th><th class="num">Net</th><th class="num">Position</th><th>Source</th></tr></thead><tbody>${part.map(x=>{const op=JR.open[x.id];
     return`<tr class="jr-row ${op?'open':''}" data-jr="toggle:${x.id}"><td class="muted num">${dLbl(x.day).split(',')[0]} ${tAt(x.t)}</td><td><b>${esc(x.sym)}</b><span class="badge b-mute" style="margin-left:6px">${x.kind}</span></td><td><span class="side-tag ${x.side==='buy'?'up':'down'}">${x.side==='buy'?'Buy':'Sell'}</span></td><td class="num">${qn(x.qty)}</td><td class="num">${fmtP(x.price)}</td>${riskTds(x.sym,x.risk,latestFill[x.sym]===x.id)}<td class="num">${money(x.value,0)}</td><td class="num muted">${money(x.charges)}</td><td class="num ${x.closeQty?cls(x.realized):'muted'}">${x.closeQty?smoney(x.realized):'—'}</td><td class="num ${cls(x.net)}"><b>${smoney(x.net)}</b></td><td class="num">${x.posAfter?qn(x.posAfter):'Flat'}</td><td>${esc(src[x.src]||x.src)}${x.note?' <span class="jr-note" title="Has a note">✎</span>':''}</td></tr>${op?`<tr class="jr-det"><td colspan="14">${jDetail(x)}</td></tr>`:''}`}).join('')}</tbody></table>
-   <div class="jr-pager"><span class="muted">${rows.length} fill${rows.length===1?'':'s'} · showing ${JR.page*JR.size+1}–${JR.page*JR.size+part.length}</span><div class="pager" style="margin:0"><button class="btn-xs" data-jr="page:${JR.page-1}" ${JR.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===JR.page?'pri':''}" data-jr="page:${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-jr="page:${JR.page+1}" ${JR.page>=pages-1?'disabled':''}>Next ›</button></div><select class="inp" id="jrSize" style="width:auto;height:32px" aria-label="Rows per page">${[10,25,50,100].map(n=>`<option ${JR.size===n?'selected':''}>${n}</option>`).join('')}</select></div>`}
+   <div class="jr-pager"><span class="muted">${rows.length} fill${rows.length===1?'':'s'} · showing ${JR.page*JR.size+1}–${JR.page*JR.size+part.length}</span><div class="pager" style="margin:0"><button class="btn-xs" data-jr="page:${JR.page-1}" ${JR.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===JR.page?'pri':''}" data-jr="page:${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-jr="page:${JR.page+1}" ${JR.page>=pages-1?'disabled':''}>Next ›</button></div><select class="inp" id="jrSize" style="width:auto;height:32px" aria-label="Rows per page">${[10,15,30,100,500,1000].map(n=>`<option ${JR.size===n?'selected':''}>${n}</option>`).join('')}</select></div>`}
 function jDetail(x){const c=x.chg||{},pl=x.plan;
   return`<div class="jr-d"><div><h5>Order</h5><p>ID <b>#${x.id}</b> · ${esc(x.otype)} order${x.meta?` · ${x.meta.side} ${fmtP(x.meta.strike,0)} · expiry ${esc(x.meta.expiry||'')} · lot ${x.meta.lot}`:''}</p><p>Avg cost before: <b class="num">${x.closeQty?fmtP(x.avgBefore):'—'}</b></p><p class="num">Risk: <span class="down">SL ${x.risk&&x.risk.sl?fmtP(x.risk.sl):'—'}</span> · <span class="up">Target ${x.risk&&x.risk.tp?fmtP(x.risk.tp):'—'}</span> · <span class="down">TSL ${x.risk&&x.risk.tsl?(x.risk.tsl.u==='abs'?'₹'+fmtP(x.risk.tsl.v):x.risk.tsl.v+'%'):'—'}</span></p>${x.src==='TSL'?'<p class="down">Closed automatically: trailing stop hit.</p>':x.src==='SL'?'<p class="down">Closed automatically: stop-loss hit.</p>':x.src==='TP'?'<p class="up">Closed automatically: target hit.</p>':''}</div>
    <div><h5>Estimated charges</h5><p class="num">Brokerage ${money(c.brk||0)} · STT ${money(c.stt||0)} · Exchange ${money(c.txn||0)}<br>SEBI ${money(c.sebi||0)} · Stamp ${money(c.stamp||0)} · GST ${money(c.gst||0)}<br><b>Total ${money(x.charges)}</b></p></div>
