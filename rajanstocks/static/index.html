@@ -716,6 +716,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <section class="view" id="v-orders"></section>
   <section class="view" id="v-alerts"></section>
   <section class="view" id="v-indicators"></section>
+  <section class="view" id="v-vedic"></section>
   <section class="view" id="v-mobile"></section>
 </main>
 <div id="boot"><div class="spin"></div><b>Rajan Algo</b><small>Loading live NSE data…</small></div>
@@ -1888,10 +1889,10 @@ function liveUpdate(){
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['journal','Journal'],['stocks','Stocks'],['indicators','Indicators']];
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['journal','Journal'],['stocks','Stocks'],['indicators','Indicators'],['vedic','Vedic Astro']];
 const PRIMARY=['picks','trade','markets','options'];
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${App.view===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${App.view===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${PRIMARY.includes(App.view)?'':'on'}" data-act="more"><span class="ni">${I('list',19)}</span><span>More</span></button>`}
-const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search'};
+const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
 function closeOverlays(){
   try{RN.closeAll()}catch(e){}try{closeOc()}catch(e){}try{closeTfPop()}catch(e){}try{closeModal()}catch(e){}
@@ -1899,7 +1900,7 @@ function closeOverlays(){
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
 function go(v){closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
-  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,stocks:()=>SB.page($('#v-stocks')),orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,mobile:renderMobile})[v]?.();liveUpdate();window.scrollTo(0,0)}
+  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,stocks:()=>SB.page($('#v-stocks')),orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,mobile:renderMobile})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
 /* ======================= Trade view ======================= */
@@ -2181,6 +2182,51 @@ function renderAlerts(){$('#v-alerts').innerHTML=`<div class="page">${pageHead('
    <div class="two" style="grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)"><div class="card"><div class="card-h"><h3>New alert</h3></div><div class="form">${alertForm(App.sym)}<button class="btn pri" id="alOk" style="justify-content:center;height:38px">Create alert</button></div></div>
    <div class="card"><div class="card-h"><h3>Your alerts</h3><span class="muted" style="font-size:12px">${App.alerts.length} total</span></div>${App.alerts.map(a=>`<div class="al-row"><div class="t"><b>${esc(a.sym)}</b> <span class="m2">${condText(a)}</span><div class="muted" style="font-size:12px">Last <span class="num" data-px="${esc(a.sym)}"></span> · <span data-chg="${esc(a.sym)}"></span> today</div></div><span class="badge ${a.status==='Triggered'?'b-warn':a.on?'b-info':'b-mute'}">${a.on?a.status:'Paused'}</span><button class="toggle ${a.on?'on':''}" data-altog="${a.id}" aria-label="${a.on?'Pause':'Resume'} alert" aria-pressed="${a.on}"></button><button class="ibtn" data-aldel="${a.id}" aria-label="Delete alert">${I('trash',16)}</button></div>`).join('')||'<div class="empty">No alerts yet.</div>'}</div></div></div>`;bindAlertForm()}
 
+/* ======================= Vedic Astro (Panchang / Rahu Kaal) view ======================= */
+let VD={data:null,busy:false,err:null};
+async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
+  try{VD.data=await api('/api/vedic/report'+(refresh?'?refresh=true':''))}
+  catch(e){VD.err='Could not load the Vedic Astro report. Try again in a moment.'}
+  VD.busy=false}
+function vdField(label,f,fmt){if(!f)return'';
+  const v=f.available?(fmt?fmt(f.value):esc(f.value)):`<span class="muted" title="${esc(f.reason||'Not available')}">N/A</span>`;
+  return `<span><small>${esc(label)}</small><b class="num">${v}</b></span>`}
+function vdWindowCard(w){return `<div class="card st-card"><div class="st-h"><h4>${esc(w.label)}</h4><span class="badge b-mute">${esc(w.window_ist||'—')}</span></div>
+  <p class="st-d"><b>${esc(w.focus)}</b></p>
+  <div class="st-kv" style="grid-template-columns:1fr"><span><small>Bullish case</small><b style="font-size:13px;line-height:1.4;white-space:normal">${esc(w.bullish)}</b></span>
+  <span><small>Bearish case</small><b style="font-size:13px;line-height:1.4;white-space:normal">${esc(w.bearish)}</b></span>
+  <span><small>No-trade</small><b style="font-size:13px;line-height:1.4;white-space:normal">${esc(w.no_trade)}</b></span></div>
+  <div class="filters" style="margin-top:8px"><div class="chips">${(w.key_checks||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div></div>
+  ${w.astrology_note?`<p class="muted st-note" style="margin-top:8px">${esc(w.astrology_note)}</p>`:''}</div>`}
+function vdPaint(){const el=$('#v-vedic');if(!el)return;
+  if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','Panchang, Rahu Kaal and sidereal planetary positions — informational context only, never a BUY/SELL signal by itself.')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
+  const r=VD.data;if(!r){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','')}<div class="empty">Loading…</div></div>`;return}
+  const h=r.header,mc=r.market_context,p=r.panchang,planets=r.sidereal_positions.planets_deg,stocks=r.stocks_to_watch;
+  el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch',`${esc(h.report_date)} · generated ${esc(h.report_generated_ist)}`,
+    `<button class="btn-xs" data-act="vedic-retry">${I('reset',14)} Refresh</button>`)}
+    <div class="card"><div class="card-h"><h3>Session</h3><span class="badge b-mute">${esc(h.session_phase)}</span></div>
+      <div class="st-kv">${vdField('Trading day',h.nse_trading_day)}${vdField('NSE holiday check',h.nse_holiday_check)}<span><small>Session</small><b>${esc(h.session)}</b></span></div></div>
+    <div class="card"><div class="card-h"><h3>Market context</h3><span class="muted" style="font-size:12px">${mc.quotes_as_of.available?'as of '+esc(mc.quotes_as_of.value):''}</span></div>
+      <div class="st-kv">${vdField('NIFTY last',mc.nifty_last,v=>fmtP(v,2))}${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('Market open',mc.market_open,v=>v?'Yes':'No')}${vdField('GIFT Nifty',mc.gift_nifty)}${vdField('Crude oil',mc.crude_oil)}${vdField('FPI flow',mc.fpi_flow)}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}</div></div>
+    <div class="card"><div class="card-h"><h3>Panchang</h3><span class="badge b-info">${esc(p.day)}</span></div>
+      <div class="st-kv"><span><small>Tithi</small><b>${esc(p.tithi)}</b></span><span><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></span><span><small>Moon sign</small><b>${esc(p.moon_sign)}</b></span>
+      <span><small>Sunrise</small><b>${esc(p.sunrise_ist||'—')} IST</b></span><span><small>Sunset</small><b>${esc(p.sunset_ist||'—')} IST</b></span>
+      <span><small>Mumbai Rahu Kaal</small><b class="num" style="color:var(--down)">${esc(p.mumbai_rahu_kaal_ist)} IST</b></span></div>
+      <p class="muted st-note" style="margin-top:8px">${esc(p.ayanamsa)} · ${esc(p.node_type)}</p></div>
+    <div class="card"><div class="card-h"><h3>Sidereal planetary positions</h3><span class="muted" style="font-size:12px">${esc(r.sidereal_positions.reference_time_ist)}</span></div>
+      <div class="st-kv">${Object.entries(planets).map(([n,d])=>`<span><small>${esc(n)}</small><b class="num">${d}°</b></span>`).join('')}</div>
+      <p class="muted st-note" style="margin-top:8px">${esc(r.sidereal_positions.source)}</p></div>
+    <h3 style="margin:18px 0 10px">Intraday watch windows</h3>
+    <div class="st-grid">${r.watch_windows.map(vdWindowCard).join('')}</div>
+    <h3 style="margin:18px 0 10px">Stocks to watch</h3>
+    <div class="card">${stocks.available?stocks.value.map(s=>`<div class="st-card" style="margin-bottom:8px"><div class="st-h"><h4>${esc(s.symbol)} <span class="muted" style="font-weight:500">${esc(s.name)}</span></h4><span class="badge ${s.bias==='bullish'?'b-up':s.bias==='bearish'?'b-down':'b-mute'}">${esc(s.bias)}</span></div><p class="st-d">${esc(s.reason)} — ${esc(s.idea)}</p><div class="st-kv"><span><small>LTP</small><b class="num">${fmtP(s.ltp,2)}</b></span><span><small>Prev close</small><b class="num">${fmtP(s.prev,2)}</b></span><span><small>Chg%</small><b class="num ${s.chg_pct>=0?'up':'down'}">${pct(s.chg_pct/100)}</b></span></div></div>`).join(''):`<div class="empty">${esc(stocks.reason||'Not available')}</div>`}</div>
+    <h3 style="margin:18px 0 10px">Risk management</h3>
+    <div class="card"><ul style="margin:0;padding-left:18px;line-height:1.7">${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    <p class="muted st-note" style="margin:14px 0 4px">${esc(r.disclaimer)}</p></div>`}
+async function renderVedic(){const el=$('#v-vedic');if(!el)return;
+  if(!VD.data&&!VD.err){vdPaint();await loadVedic(false)}
+  vdPaint()}
+document.addEventListener('click',e=>{const vr=e.target.closest('[data-act="vedic-retry"]');if(vr){VD.err=null;loadVedic(true).then(vdPaint);vdPaint()}});
 function indPreview(key){const d=DEFS[key],s=SYM('NIFTY'),data=series(s,TFS[5]).slice(-220),ind={params:{},colors:d.lines.map(l=>l.c??0)};d.params.forEach(p=>ind.params[p.k]=p.v);const out=d.calc(data,ind.params,{tf:86400}),N=120,st=data.length-N,W=280,H=84;
   const slice=a=>a.slice(st),px=slice(C(data));let lines=d.lines.map((ln,j)=>({a:slice(out[ln.k]),c:T.s[ind.colors[j]],st:ln.style}));
   let all=d.pane==='sub'||d.pane==='vol'?lines.flatMap(l=>l.a):[...px,...lines.flatMap(l=>l.a)];all=all.filter(isFinite);if(d.range)all.push(...d.range);let lo=Math.min(...all),hi=Math.max(...all);if(d.zero){lo=Math.min(lo,0);hi=Math.max(hi,0)}const r=hi-lo||1;
