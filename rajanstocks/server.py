@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Body, FastAPI, HTTPException, UploadFile, File, Form
@@ -119,6 +119,21 @@ def icon_512():
 @app.get("/favicon.ico")
 def favicon():
     return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml")
+
+
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+@app.get("/api/cache-version")
+def cache_version():
+    """Drives the client's auto cache-clear: a version string that flips exactly
+    twice a day (08:30 IST, before market open; 15:45 IST, after market close) so
+    stale cached pages/assets get dropped around those two boundaries without
+    needing a cron job - it's just a pure function of the current IST time."""
+    now = datetime.now(_IST)
+    mins = now.hour * 60 + now.minute
+    bucket = "pre" if mins < 8 * 60 + 30 else "open" if mins < 15 * 60 + 45 else "post"
+    return {"version": f"{now.date().isoformat()}-{bucket}"}
 
 
 @app.get("/api/status")

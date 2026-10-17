@@ -3349,6 +3349,19 @@ function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
   liveUpdate()}
 function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:(MKT.err||MKT.stale)?20000:MKT.open?5000:60000))}
+/* Auto cache-clear: /api/cache-version flips twice a day (before market open, after market close).
+   When it changes, drop every cache this origin holds and reload once so nobody is ever stuck
+   on a stale build across those boundaries. */
+async function checkCacheVersion(){
+  let version;try{version=(await(await fetch('/api/cache-version',{cache:'no-store'})).json()).version}catch(e){return}
+  let last;try{last=localStorage.getItem('cacheVer')}catch(e){}
+  if(!last){try{localStorage.setItem('cacheVer',version)}catch(e){}return}
+  if(last===version)return;
+  try{localStorage.setItem('cacheVer',version)}catch(e){}
+  try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}
+  try{const reg=await navigator.serviceWorker.getRegistration();reg&&reg.update()}catch(e){}
+  toast('Updating to the latest version…','ok');
+  setTimeout(()=>location.reload(),1200)}
 async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
   if(App.view==='picks')renderPicks();renderWatchlist();
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
@@ -3475,7 +3488,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   await Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]);await Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))]);
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(VIEWS.some(v=>v[0]===h)?h:'vedic');
-  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
+  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
 </script>
 </body>
 </html>
