@@ -232,6 +232,44 @@
   const cc = n => (n > 0 ? 'up' : n < 0 ? 'down' : '');
   function banner() { return `<div class="jv-banner" role="note"><b>PAPER TRADING — SIMULATED RESULTS</b><span>No broker orders are sent. Virtual capital ${inr(S.capital, 0)}.</span></div>`; }
 
+  /* Live P&L: equity and P&L include open positions (marked to market), and the
+     overview refreshes on its own while it is on screen. */
+  function liveTotals(day) {
+    const autoReal = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
+    const booked = realised() + autoReal;
+    const unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
+    const autoToday = AUTO.list.reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
+    return { booked, unr, autoToday, eq: S.capital + booked + unr };
+  }
+  function kpiBlock(m, ds, day) {
+    const L = liveTotals(day), todayBooked = ds.pnl + L.autoToday, todayAll = todayBooked + L.unr;
+    const openN = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length;
+    return `${kpi('Virtual equity', inr(L.eq, 0), 'booked ' + sinr(L.booked) + ' · open ' + sinr(L.unr), cc(L.eq - S.capital))}
+      ${kpi('Net P&L', sinr(L.booked + L.unr), m.n + ' closed · ' + openN + ' open (' + sinr(L.unr) + ')', cc(L.booked + L.unr))}
+      ${kpi('Today net P&L', sinr(todayAll), 'booked today ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll))}
+      ${kpi('Trades used today', ds.entries + ' / ' + S.maxTrades, 'manual · automated: ' + AUTO.list.filter(t => t.date === day).length, ds.entries >= S.maxTrades ? 'down' : '')}
+      ${kpi('Win rate', (m.winRate * 100).toFixed(1) + '%', 'avg win ' + inr(m.avgWin, 0) + ' · avg loss ' + inr(m.avgLoss, 0))}
+      ${kpi('Expectancy', rr(m.expR), '', cc(m.expR))}
+      ${kpi('Profit factor', m.pf === Infinity ? '∞' : m.pf.toFixed(2))}
+      ${kpi('Max drawdown', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '')}
+      ${kpi('T1 hit rate', (m.t1 * 100).toFixed(0) + '%', 'T2 ' + (m.t2 * 100).toFixed(0) + '% · T3 ' + (m.t3 * 100).toFixed(0) + '%')}
+      ${kpi('Exit mix', `SL ${m.slExits} · TSL ${m.tslExits} · BE ${m.beExits}`)}`;
+  }
+  function refreshLive() {
+    const host = document.getElementById('v-journal');
+    if (!host || !host.offsetParent || ui.tab !== 'overview' || document.querySelector('.modal-bg') || document.hidden) return;
+    const k = document.getElementById('jvKpis'); if (!k) return;
+    const day = today();
+    k.innerHTML = kpiBlock(metrics(filtered()), dayStats(day), day);
+    const o = document.getElementById('jvOpen');
+    if (o) { const w = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild, x = w ? w.scrollLeft : 0;
+      o.innerHTML = tradeTable(allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), true);
+      const w2 = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild; if (w2) w2.scrollLeft = x; }
+    const ts = document.getElementById('jvLiveTs'); if (ts) ts.textContent = 'live · updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  setInterval(() => { refreshLive(); }, 5000);
+  setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 15000);
+
   function viewOverview() {
     const L = filtered(), m = metrics(L), day = today(), ds = dayStats(day);
     const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0), eq = equity() + autoNet, unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
@@ -243,18 +281,7 @@
     const missing = closedTrades().filter(t => !t.reviewed).length;
     const recent = L.slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))).slice(0, 8);
     return `${filterBar(false)}
-    <div class="jv-kpis">
-      ${kpi('Virtual equity', inr(eq, 0), unr ? 'open ' + sinr(unr) : '')}
-      ${kpi('Net P&L', sinr(m.net), m.n + ' closed trades', cc(m.net))}
-      ${kpi('Today net P&L', sinr(ds.pnl), '', cc(ds.pnl))}
-      ${kpi('Trades used today', ds.entries + ' / ' + S.maxTrades, 'manual · automated: ' + AUTO.list.filter(t => t.date === day).length, ds.entries >= S.maxTrades ? 'down' : '')}
-      ${kpi('Win rate', (m.winRate * 100).toFixed(1) + '%', 'avg win ' + inr(m.avgWin, 0) + ' · avg loss ' + inr(m.avgLoss, 0))}
-      ${kpi('Expectancy', rr(m.expR), '', cc(m.expR))}
-      ${kpi('Profit factor', m.pf === Infinity ? '∞' : m.pf.toFixed(2))}
-      ${kpi('Max drawdown', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '')}
-      ${kpi('T1 hit rate', (m.t1 * 100).toFixed(0) + '%', 'T2 ' + (m.t2 * 100).toFixed(0) + '% · T3 ' + (m.t3 * 100).toFixed(0) + '%')}
-      ${kpi('Exit mix', `SL ${m.slExits} · TSL ${m.tslExits} · BE ${m.beExits}`)}
-    </div>
+    <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
     <div class="jv-grid">
       <div class="card"><div class="card-h"><h3>Equity curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
       <div class="card"><div class="card-h"><h3>Drawdown</h3></div><canvas class="jv-cv" id="jvDd"></canvas></div>
@@ -265,7 +292,7 @@
         <div><span>Closed trades missing a review</span><b class="${missing ? 'down' : 'up'}">${missing}</b></div>
         <div><span>Trades today / limit</span><b>${ds.entries} / ${S.maxTrades}</b></div></div></div>
     </div>
-    <div class="card"><div class="card-h"><h3>Open paper positions</h3></div>${tradeTable(open, true)}</div>
+    <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="muted" style="font-size:12px" id="jvLiveTs">live</span></div><div id="jvOpen">${tradeTable(open, true)}</div></div>
     <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, false)}</div>
     <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
   }
@@ -836,7 +863,7 @@
     const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
     const openAuto = open.filter(t => t.auto).length, ds = dayStats(day), autoToday = AUTO.list.filter(t => t.date === day).length;
     return `<div class="jv-kpis jv-top" aria-label="Journal summary">
-      ${kpi('Equity', inr(equity() + autoNet, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', unr ? cc(unr) : '')}
+      ${kpi('Equity', inr(equity() + autoNet + unr, 0), unr ? 'incl. open ' + sinr(unr) : 'no open P&L', cc(autoNet + realised() + unr))}
       ${kpi('Net P&L (closed)', sinr(m.net), m.n + ' closed trades', cc(m.net))}
       ${kpi('Open positions', open.length, openAuto + ' automated · ' + (open.length - openAuto) + ' manual')}
       ${kpi('Entries today', (ds.entries + autoToday) + '', 'manual ' + ds.entries + '/' + S.maxTrades + ' · automated ' + autoToday + '/5', (ds.entries >= S.maxTrades) ? 'down' : '')}
