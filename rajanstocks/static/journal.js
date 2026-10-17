@@ -13,8 +13,11 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-  const TABS = [['overview', 'Overview'], ['new', 'New Trade'], ['journal', 'Trade Journal'], ['orders', 'Orders'], ['strategy', 'Strategy Lab'],
-                ['tsl', 'TSL Lab'], ['auto', 'Auto Trader'], ['backtest', 'Backtest'], ['reports', 'Reports'], ['settings', 'Settings']];
+  const TABS = [['overview', 'Overview'], ['new', 'New'], ['journal', 'Trades'], ['orders', 'Orders'], ['strategy', 'Strategy'],
+                ['tsl', 'TSL'], ['auto', 'Auto'], ['backtest', 'Backtest'], ['reports', 'Reports'], ['settings', 'Settings']];
+  const TAB_TIPS = { overview: 'Equity, P&L, open positions and recent trades', new: 'Plan and log a new paper trade', journal: 'Every trade, with filters',
+    orders: 'Open, filled and cancelled orders', strategy: 'Strategy Lab: results by setup', tsl: 'TSL Lab: compare trailing-stop methods',
+    auto: 'Auto Trader: automated trades and settings', backtest: 'Run and review backtests', reports: 'Exports and summary reports', settings: 'Capital, risk and rule settings' };
 
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -228,9 +231,9 @@
   }
 
   /* ---------- screens ---------- */
-  const kpi = (l, v, sub, c) => `<div class="jv-kpi"><small>${l}</small><b class="${c || ''}">${v}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
+  const kpi = (l, v, sub, c, tip) => `<div class="jv-kpi" title="${E((tip ? tip + (sub ? ' — ' : '') : '') + (sub ? String(sub).replace(/<[^>]+>/g, '') : ''))}"><small>${l}</small><b class="${c || ''}">${v}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
   const cc = n => (n > 0 ? 'up' : n < 0 ? 'down' : '');
-  function banner() { return `<div class="jv-banner" role="note"><b>PAPER TRADING — SIMULATED RESULTS</b><span>No broker orders are sent. Virtual capital ${inr(S.capital, 0)}.</span></div>`; }
+  function banner() { return `<span class="jv-paper" role="note" title="Paper trading: simulated results, no broker orders are sent. Virtual capital ${inr(S.capital, 0)}.">PAPER · ${inr(S.capital, 0)}</span>`; }
 
   /* Live P&L: equity and P&L include open positions (marked to market), and the
      overview refreshes on its own while it is on screen. */
@@ -244,16 +247,16 @@
   function kpiBlock(m, ds, day) {
     const L = liveTotals(day), todayBooked = ds.pnl + L.autoToday, todayAll = todayBooked + L.unr;
     const openN = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length;
-    return `${kpi('Virtual equity', inr(L.eq, 0), 'booked ' + sinr(L.booked) + ' · open ' + sinr(L.unr), cc(L.eq - S.capital))}
-      ${kpi('Net P&L', sinr(L.booked + L.unr), m.n + ' closed · ' + openN + ' open (' + sinr(L.unr) + ')', cc(L.booked + L.unr))}
-      ${kpi('Today net P&L', sinr(todayAll), 'booked today ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll))}
-      ${kpi('Trades used today', ds.entries + ' / ' + S.maxTrades, 'manual · automated: ' + AUTO.list.filter(t => t.date === day).length, ds.entries >= S.maxTrades ? 'down' : '')}
-      ${kpi('Win rate', (m.winRate * 100).toFixed(1) + '%', 'avg win ' + inr(m.avgWin, 0) + ' · avg loss ' + inr(m.avgLoss, 0))}
-      ${kpi('Expectancy', rr(m.expR), '', cc(m.expR))}
-      ${kpi('Profit factor', m.pf === Infinity ? '∞' : m.pf.toFixed(2))}
-      ${kpi('Max drawdown', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '')}
-      ${kpi('T1 hit rate', (m.t1 * 100).toFixed(0) + '%', 'T2 ' + (m.t2 * 100).toFixed(0) + '% · T3 ' + (m.t3 * 100).toFixed(0) + '%')}
-      ${kpi('Exit mix', `SL ${m.slExits} · TSL ${m.tslExits} · BE ${m.beExits}`)}`;
+    return `${kpi('Equity', inr(L.eq, 0), 'booked ' + sinr(L.booked) + ' · open ' + sinr(L.unr), cc(L.eq - S.capital), 'Virtual equity = capital + booked P&L + open (marked-to-market) P&L')}
+      ${kpi('Net P&L', sinr(L.booked + L.unr), m.n + ' closed · ' + openN + ' open', cc(L.booked + L.unr), 'Total P&L: closed trades plus open positions at live prices')}
+      ${kpi('Today', sinr(todayAll), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll), "Today's net P&L: booked today plus open positions at live prices")}
+      ${kpi('Trades', ds.entries + '/' + S.maxTrades, 'auto ' + AUTO.list.filter(t => t.date === day).length, ds.entries >= S.maxTrades ? 'down' : '', 'Manual entries used today out of your daily limit, plus automated entries')}
+      ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Win rate of closed trades, with average win and average loss')}
+      ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R (multiples of initial risk)')}
+      ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss. Above 1.5 is healthy')}
+      ${kpi('Max DD', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '', 'Maximum drawdown: largest fall from an equity peak')}
+      ${kpi('T1 hit', (m.t1 * 100).toFixed(0) + '%', 'T2 ' + (m.t2 * 100).toFixed(0) + '% · T3 ' + (m.t3 * 100).toFixed(0) + '%', '', 'Share of closed trades that reached target 1, 2 and 3')}
+      ${kpi('Exits', `${m.slExits}/${m.tslExits}/${m.beExits}`, 'SL / TSL / BE', '', 'How trades ended: stop-loss, trailing stop-loss, breakeven')}`;
   }
   function refreshLive() {
     const host = document.getElementById('v-journal');
@@ -263,7 +266,7 @@
     k.innerHTML = kpiBlock(metrics(filtered()), dayStats(day), day);
     const o = document.getElementById('jvOpen');
     if (o) { const w = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild, x = w ? w.scrollLeft : 0;
-      o.innerHTML = tradeTable(allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), true);
+      o.innerHTML = tradeTable(allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), true, 'open');
       const w2 = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild; if (w2) w2.scrollLeft = x; }
     const ts = document.getElementById('jvLiveTs'); if (ts) ts.textContent = 'live · updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
@@ -279,9 +282,11 @@
     const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
     const noSL = T.filter(t => entered(t) && !(t.sl0 > 0)).length, overrides = T.filter(t => t.override).length;
     const missing = closedTrades().filter(t => !t.reviewed).length;
-    const recent = L.slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))).slice(0, 8);
+    const recent = L.slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
     return `${filterBar(false)}
     <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
+    <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="muted" style="font-size:12px" id="jvLiveTs">live</span></div><div id="jvOpen">${tradeTable(open, true, 'open')}</div></div>
+    <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, false, 'recent')}</div>
     <div class="jv-grid">
       <div class="card"><div class="card-h"><h3>Equity curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
       <div class="card"><div class="card-h"><h3>Drawdown</h3></div><canvas class="jv-cv" id="jvDd"></canvas></div>
@@ -292,8 +297,6 @@
         <div><span>Closed trades missing a review</span><b class="${missing ? 'down' : 'up'}">${missing}</b></div>
         <div><span>Trades today / limit</span><b>${ds.entries} / ${S.maxTrades}</b></div></div></div>
     </div>
-    <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="muted" style="font-size:12px" id="jvLiveTs">live</span></div><div id="jvOpen">${tradeTable(open, true)}</div></div>
-    <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, false)}</div>
     <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
   }
 
@@ -304,30 +307,67 @@
     return `<div class="card"><div class="filters"><div class="seg" id="jvOrdSeg">${['Open', 'Filled', 'Cancelled', 'All'].map(s => `<button class="${f === s ? 'on' : ''}" data-jvord="${s}">${s} <span class="muted">${s === 'All' ? all.length : all.filter(o => o.status === s).length}</span></button>`).join('')}</div></div><div class="tbl-wrap">${window.ordTable(list, f === 'Open')}</div></div>`;
   }
 
+  function istShift(days) { const d = new Date(Date.now() + 5.5 * 3600e3 - days * 864e5); return d.toISOString().slice(0, 10); }
+  function datePreset() { const f = ui.f, t = today(); if (!f.from && !f.to) return 'all'; if (f.from === t && (!f.to || f.to === t)) return 'today';
+    if (!f.to && f.from === istShift(6)) return '7d'; if (!f.to && f.from === istShift(29)) return '30d'; return 'custom'; }
+  function moreCount() { const f = ui.f; return ['market', 'setup', 'dir', 'exit', 'rule'].filter(k => f[k]).length + (datePreset() === 'custom' ? 1 : 0); }
   function filterBar() {
-    const f = ui.f, setups = [...new Set(T.map(t => t.setup).filter(Boolean))];
+    const f = ui.f, setups = [...new Set(allTrades().map(t => t.setup).filter(Boolean))], dp = datePreset(), mc = moreCount();
     const opt = (arr, cur, all) => `<option value="">${all}</option>` + arr.map(x => `<option ${cur === x ? 'selected' : ''}>${E(x)}</option>`).join('');
-    return `<div class="jv-filters">
+    const seg = (name, cur, opts) => `<div class="jv-seg">${opts.map(([v, l, tip]) => `<button class="${cur === v ? 'on' : ''}" data-jvq="${name}:${v}" ${tip ? `title="${tip}"` : ''}>${l}</button>`).join('')}</div>`;
+    const chips = [];
+    if (dp === 'custom') chips.push(['date', (f.from || '…') + ' → ' + (f.to || 'now')]);
+    [['market', 'Market'], ['setup', 'Setup'], ['dir', 'Side'], ['exit', 'Exit'], ['rule', 'Rule']].forEach(([k, l]) => { if (f[k]) chips.push([k, l + ': ' + f[k]]); });
+    if (f.inst) chips.push(['inst', '“' + f.inst + '”']);
+    return `<div class="jv-fb">
+      ${seg('d', dp, [['today', 'Today'], ['7d', '7D', 'Last 7 days'], ['30d', '30D', 'Last 30 days'], ['all', 'All', 'All dates']])}
+      <label class="jv-search" title="Search by instrument or symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" data-jf="inst" value="${E(f.inst)}" placeholder="Search symbol" aria-label="Search symbol"></label>
+      ${seg('src', f.src || '', [['', 'All'], ['manual', 'Manual', 'Trades you logged'], ['auto', 'Auto', 'Trades placed by the auto trader']])}
+      <button class="jv-fbtn ${mc || ui.moreF ? 'on' : ''}" data-jv="moref" aria-expanded="${!!ui.moreF}" title="More filters: market, setup, side, exit, rule, custom dates">Filters${mc ? ` <i>${mc}</i>` : ''}</button>
+    </div>
+    ${ui.moreF ? `<div class="jv-more">
       <label>From<input type="date" class="inp" data-jf="from" value="${f.from}"></label><label>To<input type="date" class="inp" data-jf="to" value="${f.to}"></label>
       <label>Market<select class="inp" data-jf="market">${opt(MARKETS, f.market, 'All')}</select></label>
-      <label>Instrument<input class="inp" data-jf="inst" value="${E(f.inst)}" placeholder="any"></label>
       <label>Setup<select class="inp" data-jf="setup">${opt(setups, f.setup, 'All')}</select></label>
-      <label>Direction<select class="inp" data-jf="dir">${opt(['Long', 'Short'], f.dir, 'All')}</select></label>
+      <label>Side<select class="inp" data-jf="dir">${opt(['Long', 'Short'], f.dir, 'All')}</select></label>
       <label>Exit<select class="inp" data-jf="exit">${opt(EXIT_TYPES, f.exit, 'All')}</select></label>
-      <label>Rule followed<select class="inp" data-jf="rule">${opt(['Yes', 'No', 'Partial'], f.rule, 'All')}</select></label>
-      <label>Source<select class="inp" data-jf="src"><option value="">All</option><option value="manual" ${f.src === 'manual' ? 'selected' : ''}>Manual</option><option value="auto" ${f.src === 'auto' ? 'selected' : ''}>Automated</option></select></label>
-      <button class="btn-xs" data-jv="clearf">Clear</button></div>`;
+      <label title="Did the trade follow your rules?">Rule<select class="inp" data-jf="rule">${opt(['Yes', 'No', 'Partial'], f.rule, 'All')}</select></label>
+      <button class="btn-xs" data-jv="clearf">Clear all</button></div>` : ''}
+    ${chips.length ? `<div class="jv-chips">${chips.map(([k, l]) => `<button class="jv-chip" data-jvclr="${k}" title="Remove this filter">${E(l)} ✕</button>`).join('')}</div>` : ''}`;
   }
 
-  function tradeTable(list, withUnr) {
-    if (!list.length) return '<div class="empty">No trades match.</div>';
-    return `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>ID</th><th>Date</th><th>Symbol</th><th>Dir</th><th>Setup</th><th>Entry</th><th>SL</th><th>T1/T2/T3</th><th>Qty</th><th>Status</th><th>Net P&amp;L</th><th>R</th><th>Exit</th><th>TSL</th><th>Review</th></tr></thead><tbody>` +
-      list.map(t => {
-        const c = calc(t), st = statusOf(t), u = withUnr ? unrealised(t) : null;
-        const pnl = st === 'Closed' || c.qx ? sinr(c.net) : (u != null ? sinr(u) + ' open' : '—');
-        const v = st === 'Closed' || c.qx ? c.net : (u || 0);
-        return `<tr data-jv="open" data-id="${t.id}" tabindex="0"><td>${t.id}${t.auto ? ' <span class="badge b-mute" title="Recorded automatically by the auto trader">AUTO</span>' : ''}${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td><td>${t.date}</td><td>${E(t.symbol || t.instrument)}</td><td>${t.dir}</td><td>${E(t.setup)}</td><td>${px(t.entry)}</td><td>${px(t.sl)}${t.sl !== t.sl0 ? ' <small>(was ' + px(t.sl0) + ')</small>' : ''}</td><td>${[t.t1, t.t2, t.t3].map(x => x ? px(x) : '–').join(' / ')}</td><td>${t.qty}</td><td><span class="badge ${st === 'Closed' ? 'b-mute' : st === 'Open' || st === 'Partial' ? 'b-up' : 'b-mute'}">${st}</span></td><td class="num ${cc(v)}">${pnl}</td><td class="num ${cc(c.R)}">${rr(c.R)}</td><td>${E(t.exitType || '—')}</td><td>${E(t.tsl || '—')}</td><td>${t.reviewed ? '✓' : (st === 'Closed' ? 'Pending' : '—')}</td></tr>`;
-      }).join('') + '</tbody></table></div>';
+  const PG_SIZES = [10, 15, 30, 100];
+  function tradeTable(list, withUnr, key) {
+    key = key || 'tbl'; ui.tbl = ui.tbl || {}; ui.pg = ui.pg || {}; ui.tbl[key] = { list, withUnr };
+    const pg = ui.pg[key] || (ui.pg[key] = { p: 0, s: 10 });
+    if (!list.length) return `<div class="jv-tw" data-jvt="${key}"><div class="empty">No trades match.</div></div>`;
+    const pages = Math.max(1, Math.ceil(list.length / pg.s)); pg.p = Math.min(pg.p, pages - 1);
+    const part = list.slice(pg.p * pg.s, (pg.p + 1) * pg.s);
+    const th = (l, tip, cls) => `<th class="${cls || ''}" title="${tip}">${l}</th>`;
+    const rows = part.map(t => {
+      const c = calc(t), st = statusOf(t), u = withUnr ? unrealised(t) : null, closedish = st === 'Closed' || c.qx;
+      const v = closedish ? c.net : (u || 0), pnl = closedish ? sinr(c.net) : (u != null ? sinr(u) : '—');
+      const stCls = st === 'Open' || st === 'Partial' ? 'b-up' : 'b-mute';
+      const tips = [`Setup: ${t.setup || '—'}`, t.tf ? `TF ${t.tf}` : '', t.ind ? `Indicators: ${t.ind}` : ''].filter(Boolean).join(' · ');
+      return `<tr data-jv="open" data-id="${t.id}" tabindex="0" title="Click for full details">
+        <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${String(t.id).replace(/^A-\d{4}/, 'A-')}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
+        <td title="${t.date} ${t.time || ''}">${String(t.date).slice(5)}</td>
+        <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small title="${E(tips)}">${E(t.setup || '')}</small></td>
+        <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'S' : 'L'}</span></td>
+        <td class="num">${px(t.entry)}</td>
+        <td class="num" title="${t.sl !== t.sl0 ? 'Initial SL ' + px(t.sl0) + ' · ' : ''}Trailing: ${E(t.tsl || 'off')}">${px(t.sl)}${t.sl !== t.sl0 ? ' <small class="up">↑</small>' : ''}</td>
+        <td class="num jv-tg" title="Targets T1 / T2 / T3">${[t.t1, t.t2, t.t3].map(x => x ? px(x) : '–').join(' · ')}</td>
+        <td class="num">${t.qty}</td>
+        <td class="num ${cc(v)}" title="${closedish ? 'Booked P&L after costs' : 'Open P&L at live price'}"><b>${pnl}</b></td>
+        <td class="num ${cc(c.R)}">${rr(c.R)}</td>
+        <td><span class="badge ${stCls}">${st}</span></td>
+        <td title="${E(t.exitType || '')}">${E(t.exitType || '—')}</td>
+        <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
+    }).join('');
+    const pager = list.length > PG_SIZES[0] ? `<div class="jv-pg"><div class="jv-seg jv-seg-s" title="Rows per page">${PG_SIZES.map(n => `<button class="${pg.s === n ? 'on' : ''}" data-jvps="${key}:${n}">${n}</button>`).join('')}</div>
+      <span class="muted">${pg.p * pg.s + 1}–${pg.p * pg.s + part.length} of ${list.length}</span>
+      <span class="jv-pgb"><button data-jvpg="${key}:${pg.p - 1}" ${pg.p <= 0 ? 'disabled' : ''} aria-label="Previous page">‹</button><b>${pg.p + 1}/${pages}</b><button data-jvpg="${key}:${pg.p + 1}" ${pg.p >= pages - 1 ? 'disabled' : ''} aria-label="Next page">›</button></span></div>` : '';
+    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date (MM-DD)')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Exit', 'How the trade ended')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
   }
 
   function viewNew() {
@@ -863,12 +903,12 @@
     const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
     const openAuto = open.filter(t => t.auto).length, ds = dayStats(day), autoToday = AUTO.list.filter(t => t.date === day).length;
     return `<div class="jv-kpis jv-top" aria-label="Journal summary">
-      ${kpi('Equity', inr(equity() + autoNet + unr, 0), unr ? 'incl. open ' + sinr(unr) : 'no open P&L', cc(autoNet + realised() + unr))}
-      ${kpi('Net P&L (closed)', sinr(m.net), m.n + ' closed trades', cc(m.net))}
-      ${kpi('Open positions', open.length, openAuto + ' automated · ' + (open.length - openAuto) + ' manual')}
-      ${kpi('Entries today', (ds.entries + autoToday) + '', 'manual ' + ds.entries + '/' + S.maxTrades + ' · automated ' + autoToday + '/5', (ds.entries >= S.maxTrades) ? 'down' : '')}
-      ${kpi('Win rate', (m.winRate * 100).toFixed(0) + '%', 'PF ' + (m.pf === Infinity ? '∞' : m.pf.toFixed(2)))}
-      ${kpi('Expectancy', rr(m.expR), 'max DD ' + inr(m.maxDD, 0), cc(m.expR))}
+      ${kpi('Equity', inr(equity() + autoNet + unr, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', cc(autoNet + realised() + unr), 'Capital + booked P&L + open P&L at live prices')}
+      ${kpi('Closed P&L', sinr(m.net), m.n + ' trades', cc(m.net), 'Net P&L of closed trades only')}
+      ${kpi('Open', open.length, openAuto + ' auto · ' + (open.length - openAuto) + ' manual', '', 'Open positions')}
+      ${kpi('Today', (ds.entries + autoToday) + '', 'manual ' + ds.entries + '/' + S.maxTrades + ' · auto ' + autoToday, (ds.entries >= S.maxTrades) ? 'down' : '', 'Entries taken today against your limits')}
+      ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'PF ' + (m.pf === Infinity ? '∞' : m.pf.toFixed(2)), '', 'Win rate and profit factor')}
+      ${kpi('Exp.', rr(m.expR), 'DD ' + inr(m.maxDD, 0), cc(m.expR), 'Expectancy in R, and maximum drawdown')}
     </div>`;
   }
 
@@ -877,10 +917,10 @@
     const el = document.getElementById('v-journal'); if (!el) return;
     syncAuto(false);
     applyManualTsl();
-    const head = `<div class="page-h"><div style="flex:1"><h1>Journal</h1><p>Plan, log and review paper trades — portfolio, risk rules and analytics in one place.</p></div></div>`;
-    const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}">${l}</button>`).join('')}</div>`;
-    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true)}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
-    el.innerHTML = `<div class="page jv">${head}${banner()}${ui.tab === 'overview' ? '' : topStrip()}${tabs}${(bodies[ui.tab] || viewOverview)()}</div>`;
+    const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
+    const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
+    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true, 'journal')}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
+    el.innerHTML = `<div class="page jv">${head}${tabs}${ui.tab === 'overview' ? '' : topStrip()}${(bodies[ui.tab] || viewOverview)()}</div>`;
     if (ui.tab === 'overview') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
       try { d = JSON.parse(dEl.textContent); } catch (e) { }
@@ -945,6 +985,21 @@
   document.addEventListener('input', e => { if (e.target.closest('#jvForm')) renderCalc(); if (e.target.matches('[data-jf="inst"]')) { ui.f.inst = e.target.value; } });
   document.addEventListener('keydown', e => { const r = e.target.closest && e.target.closest('tr[data-jv="open"]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDetail(r.dataset.id); } });
 
+  document.addEventListener('click', e => {
+    const q = e.target.closest('[data-jvq]'), c = e.target.closest('[data-jvclr]'), pg = e.target.closest('[data-jvpg]'), ps = e.target.closest('[data-jvps]'), mf = e.target.closest('[data-jv="moref"]');
+    if (!(q || c || pg || ps || mf) || !e.target.closest('#v-journal')) return;
+    e.preventDefault(); e.stopPropagation();
+    if (mf) { ui.moreF = !ui.moreF; render(); return; }
+    if (q) { const [k, v] = q.dataset.jvq.split(':'); if (k === 'src') ui.f.src = v;
+      else if (k === 'd') { const t = today(); if (v === 'all') { ui.f.from = ''; ui.f.to = ''; } else if (v === 'today') { ui.f.from = t; ui.f.to = t; } else { ui.f.from = istShift(v === '7d' ? 6 : 29); ui.f.to = ''; } }
+      Object.values(ui.pg || {}).forEach(x => x.p = 0); render(); return; }
+    if (c) { const k = c.dataset.jvclr; if (k === 'date') { ui.f.from = ''; ui.f.to = ''; } else ui.f[k] = ''; render(); return; }
+    const [key, val] = (pg || ps).dataset[pg ? 'jvpg' : 'jvps'].split(':'), st = (ui.pg[key] = ui.pg[key] || { p: 0, s: 10 });
+    if (pg) st.p = Math.max(0, +val); else { st.s = +val; st.p = 0; }
+    const host = document.querySelector(`.jv-tw[data-jvt="${key}"]`), reg = ui.tbl && ui.tbl[key];
+    if (host && reg) host.outerHTML = tradeTable(reg.list, reg.withUnr, key); else render();
+  }, true);
+
   /* ---------- styles ---------- */
   const st = document.createElement('style');
   st.textContent = `
@@ -971,7 +1026,45 @@
   .jv-actions{display:flex;flex-wrap:wrap;gap:8px;padding:6px 14px 12px}
   .jv-detail h4{margin:14px 0 6px}.jv-rev{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 12px}
   .jv-s{width:110px;display:inline-block}.jv-chk{margin-right:10px}.jv-stops{margin:0;padding-left:18px;font-size:12.5px}
-  @media (max-width:600px){.jv-kpis{grid-template-columns:1fr 1fr}.jv-form{grid-template-columns:1fr}form.jv-form fieldset{grid-template-columns:1fr}}`;
+  @media (max-width:600px){.jv-kpis{grid-template-columns:1fr 1fr}.jv-form{grid-template-columns:1fr}form.jv-form fieldset{grid-template-columns:1fr}}
+  /* ---- compact journal ---- */
+  .jv svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+  .jv-head{display:flex;align-items:center;gap:10px;margin:2px 0 6px}.jv-head h1{font-size:20px;margin:0}
+  .jv-paper{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:6px;color:var(--warn,#c9922c);background:color-mix(in srgb,var(--warn,#c9922c) 14%,transparent);cursor:help}
+  .jv-tabs{gap:0;margin:0 0 10px;border-bottom:1px solid var(--line)}
+  .jv-tabs button{border:0;border-radius:0;background:none;padding:8px 12px;font-size:13px;font-weight:600;color:var(--text-3,#8a93a6);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .jv-tabs button.on{background:none;color:var(--text);border-bottom-color:var(--brand,#4f8ef7)}
+  .jv-kpis{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin-bottom:10px}
+  .jv-kpi{padding:7px 10px;border-radius:9px;gap:1px;cursor:help;min-width:0}
+  .jv-kpi small{font-size:10px;text-transform:uppercase;letter-spacing:.05em}.jv-kpi b{font-size:15px}
+  .jv-kpi span{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .jv-top{margin:0 0 8px}.jv-top .jv-kpi{padding:6px 10px}.jv-top .jv-kpi b{font-size:14px}
+  .jv-fb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+  .jv-seg{display:inline-flex;padding:2px;border-radius:8px;background:var(--panel-2,rgba(255,255,255,.04));border:1px solid var(--line)}
+  .jv-seg button{height:26px;padding:0 10px;border:0;border-radius:6px;background:none;color:var(--text-2,inherit);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .jv-seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .jv-seg-s button{padding:0 8px;min-width:30px}
+  .jv-search{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text-3,#8a93a6);flex:1 1 160px;max-width:260px}
+  .jv-search .inp{border:0;background:none;height:28px;padding:0;min-width:0;width:100%;box-shadow:none}
+  .jv-fbtn{height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer}
+  .jv-fbtn.on{border-color:var(--brand,#4f8ef7);color:var(--brand,#4f8ef7)}.jv-fbtn i{font-style:normal;background:var(--brand,#4f8ef7);color:#fff;border-radius:8px;padding:0 6px;font-size:11px;margin-left:4px}
+  .jv-more{display:flex;flex-wrap:wrap;gap:8px;align-items:end;padding:10px;margin-bottom:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  .jv-more label{display:flex;flex-direction:column;font-size:10.5px;gap:3px;color:var(--text-3,#8a93a6);text-transform:uppercase;letter-spacing:.04em}.jv-more .inp{min-width:110px;height:32px}
+  .jv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .jv-chip{height:24px;padding:0 9px;border-radius:12px;border:0;background:var(--brand-2,rgba(79,142,247,.15));color:var(--brand,#4f8ef7);font-size:11.5px;font-weight:600;cursor:pointer}
+  .jv .card{margin-bottom:10px}.jv .card-h{padding:8px 12px}.jv .card-h h3{font-size:13.5px}
+  .jv-t{font-size:12.5px}.jv-t th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;cursor:help;padding:6px 8px;position:sticky;top:0;background:var(--panel)}
+  .jv-t td{padding:5px 8px;vertical-align:middle}.jv-t td.num,.jv-t th.num{text-align:right}
+  .jv-sym b{display:block;font-size:12.5px;max-width:230px;overflow:hidden;text-overflow:ellipsis}.jv-sym small{display:block;font-size:10.5px;color:var(--text-3,#8a93a6);max-width:230px;overflow:hidden;text-overflow:ellipsis}
+  .jv-tag{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:4px;font-size:9.5px;font-weight:800;margin-right:5px;background:color-mix(in srgb,var(--brand,#4f8ef7) 20%,transparent);color:var(--brand,#4f8ef7)}
+  .jv-tag.m{background:var(--panel-2,rgba(255,255,255,.06));color:var(--text-3,#8a93a6)}
+  .jv-side{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:800}.jv-side.l{background:color-mix(in srgb,var(--up,#22ab94) 18%,transparent);color:var(--up,#22ab94)}.jv-side.s{background:color-mix(in srgb,var(--down,#f7525f) 18%,transparent);color:var(--down,#f7525f)}
+  .jv-tg{color:var(--text-2,inherit);font-size:11.5px}
+  .jv-pg{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line);font-size:12px}
+  .jv-pgb{display:flex;align-items:center;gap:6px}.jv-pgb button{width:28px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);cursor:pointer;font-size:14px}.jv-pgb button:disabled{opacity:.35;cursor:not-allowed}.jv-pgb b{font-variant-numeric:tabular-nums}
+  .jv-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.jv-cv{height:120px}
+  .jv-list>div{padding:7px 12px;font-size:12.5px}
+  @media (max-width:600px){.jv-kpis{grid-template-columns:repeat(3,1fr)}.jv-kpi b{font-size:13.5px}.jv-search{max-width:none;order:5;flex-basis:100%}.jv-tabs{overflow-x:auto}.jv-more{display:grid;grid-template-columns:1fr 1fr}.jv-more .inp{min-width:0;width:100%}.jv-t .jv-tg,.jv-t th[title^="T1"]{display:none}}`;
   document.head.appendChild(st);
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
