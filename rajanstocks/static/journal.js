@@ -301,10 +301,10 @@
   }
 
   function viewOrders() {
-    if (!window.App || !window.ordTable) return '<div class="empty">Orders are not available right now.</div>';
-    const A = window.App, f = A.ord || 'Open', all = [...(A.orders || []), ...(A.history || [])].sort((a, b) => b.t - a.t);
+    if (typeof App === 'undefined' || typeof ordTable === 'undefined') return '<div class="empty">Orders are not available right now.</div>';
+    const A = App, f = A.ord || 'Open', all = [...(A.orders || []), ...(A.history || [])].sort((a, b) => b.t - a.t);
     const list = f === 'All' ? all : all.filter(o => o.status === f);
-    return `<div class="card"><div class="filters"><div class="seg" id="jvOrdSeg">${['Open', 'Filled', 'Cancelled', 'All'].map(s => `<button class="${f === s ? 'on' : ''}" data-jvord="${s}">${s} <span class="muted">${s === 'All' ? all.length : all.filter(o => o.status === s).length}</span></button>`).join('')}</div></div><div class="tbl-wrap">${window.ordTable(list, f === 'Open')}</div></div>`;
+    return `<div class="card"><div class="filters"><div class="seg" id="jvOrdSeg">${['Open', 'Filled', 'Cancelled', 'All'].map(s => `<button class="${f === s ? 'on' : ''}" data-jvord="${s}">${s} <span class="muted">${s === 'All' ? all.length : all.filter(o => o.status === s).length}</span></button>`).join('')}</div></div><div class="tbl-wrap">${ordTable(list, f === 'Open')}</div></div>`;
   }
 
   function istShift(days) { const d = new Date(Date.now() + 5.5 * 3600e3 - days * 864e5); return d.toISOString().slice(0, 10); }
@@ -956,7 +956,7 @@
 
   document.addEventListener('click', e => {
     const o = e.target.closest('[data-jvord]'); if (!o) return;
-    if (window.App) window.App.ord = o.dataset.jvord;
+    if (typeof App !== 'undefined') App.ord = o.dataset.jvord;
     render();
   });
 
