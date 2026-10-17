@@ -22,9 +22,14 @@ import threading
 import time
 from datetime import date, datetime, timedelta, timezone
 
+import shared_cache
+
 IST = timezone(timedelta(hours=5, minutes=30))
 HERE = os.path.dirname(__file__)
-OUT_FILE = os.path.join(HERE, "static", "backtest_result.json")   # bundled with the deploy, so the live site can read it
+OUT_FILE = os.path.join(HERE, "static", "backtest_result.json")   # local-dev fallback only - read-only on Vercel
+CACHE_KEY = "backtest_result"
+CACHE_TTL = 48 * 3600   # Vercel runs several instances with their own /tmp and a read-only static/ -
+                        # shared_cache (Upstash) is what actually makes a fresh run visible to every instance
 
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
 STOCK_SYMS = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "BHARTIARTL", "ITC", "KOTAKBANK", "LT",
@@ -356,6 +361,10 @@ def _worker():
         with _lock:
             _state["result"], _state["error"] = r, None
         try:
+            shared_cache.set(CACHE_KEY, r, CACHE_TTL)
+        except Exception:
+            pass
+        try:
             with open(OUT_FILE, "w", encoding="utf-8") as f:
                 json.dump(r, f)
         except Exception:
@@ -379,6 +388,11 @@ def start(force=False):
 
 
 def get():
+    if _state["result"] is None:
+        try:
+            _state["result"] = shared_cache.get(CACHE_KEY)
+        except Exception:
+            pass
     if _state["result"] is None:
         try:
             with open(OUT_FILE, encoding="utf-8") as f:
