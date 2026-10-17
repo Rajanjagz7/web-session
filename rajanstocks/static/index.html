@@ -3485,7 +3485,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   $('#zoom').addEventListener('click',e=>{const z=e.target.closest('[data-z]')?.dataset.z;if(z==='in')chart.zoom(1.25);if(z==='out')chart.zoom(0.8);if(z==='reset'){chart.resetView();chart.req()}});
   restoreInds();restoreTfLast();
   await loadUniverse();
-  await Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]);await Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))]);
+  await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])]);
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(VIEWS.some(v=>v[0]===h)?h:'vedic');
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();

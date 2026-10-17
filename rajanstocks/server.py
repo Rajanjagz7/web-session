@@ -96,29 +96,32 @@ def web_manifest():
     return FileResponse(os.path.join(STATIC_DIR, "manifest.webmanifest"), media_type="application/manifest+json")
 
 
+_ICON_CACHE = {"Cache-Control": "public, max-age=604800"}   # 7 days - these only change on an explicit icon edit
+
+
 @app.get("/icon-192.png")
 def app_icon():
-    return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"), media_type="image/png")
+    return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"), media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/favicon.svg")
 def favicon_svg():
-    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml")
+    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml", headers=_ICON_CACHE)
 
 
 @app.get("/favicon-32.png")
 def favicon_png():
-    return FileResponse(os.path.join(STATIC_DIR, "favicon-32.png"), media_type="image/png")
+    return FileResponse(os.path.join(STATIC_DIR, "favicon-32.png"), media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/icon-512.png")
 def icon_512():
-    return FileResponse(os.path.join(STATIC_DIR, "icon-512.png"), media_type="image/png")
+    return FileResponse(os.path.join(STATIC_DIR, "icon-512.png"), media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/favicon.ico")
 def favicon():
-    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml")
+    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml", headers=_ICON_CACHE)
 
 
 _IST = timezone(timedelta(hours=5, minutes=30))
