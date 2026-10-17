@@ -3,13 +3,17 @@
 Real ephemeris math via Skyfield (JPL DE421), not fabricated. Degrees given are
 geocentric apparent ecliptic longitudes with the Lahiri ayanamsa subtracted.
 
-Honesty note: Rahu/Ketu here are the MEAN lunar node (a standard closed-form
-IAU formula), not the true/osculating node. True-node longitude needs the
-Moon's instantaneous orbital-plane geometry (position x velocity vectors),
-which isn't implemented here - don't present this as "true node" output.
+Rahu/Ketu are the TRUE (osculating) lunar node by default: the ascending node
+of the Moon's instantaneous orbital plane, derived from its position x
+velocity vectors (angular momentum vector crossed with the ecliptic pole).
+This is the standard definition used by Vedic ephemeris software and differs
+from the MEAN node (a smoothed closed-form IAU formula, still available via
+mean_lunar_node_longitude()) by roughly 0-1.5 degrees at any given time.
 """
+import math
 import os
 from datetime import datetime, timedelta
+from skyfield import framelib
 from skyfield.api import Loader, wgs84
 
 # Vercel's filesystem is read-only except /tmp - the default skyfield.api.load
@@ -81,6 +85,23 @@ def mean_lunar_node_longitude(t) -> float:
     return omega % 360.0
 
 
+def true_lunar_node_longitude(eph, earth, t) -> float:
+    """True (osculating) ascending node of the Moon's orbit (degrees, tropical ecliptic-of-date).
+
+    Derived from the Moon's instantaneous position x velocity vectors: the
+    angular momentum vector h = r x v is normal to the Moon's orbital plane,
+    and the ascending node is where that plane crosses the ecliptic, i.e.
+    the direction of (ecliptic pole) x h.
+    """
+    astrometric = earth.at(t).observe(eph['moon'])
+    pos, vel = astrometric.frame_xyz_and_velocity(framelib.ecliptic_frame)
+    rx, ry, rz = pos.au
+    vx, vy, vz = vel.au_per_d
+    hx = ry * vz - rz * vy
+    hy = rz * vx - rx * vz
+    return math.degrees(math.atan2(hx, -hy)) % 360.0
+
+
 def _sidereal_lon(eph, earth, body, t, ayanamsa):
     apparent = earth.at(t).observe(eph[body]).apparent()
     lon, _, _ = apparent.ecliptic_latlon()
@@ -114,14 +135,14 @@ def compute_panchang(dt_utc: datetime, lat: float = MUMBAI_LAT, lon: float = MUM
 
     rashi = RASHIS[int(moon_lon / 30.0) % 12]
 
-    rahu_mean = mean_lunar_node_longitude(t)
-    ketu_mean = (rahu_mean + 180.0) % 360.0
+    rahu_true = (true_lunar_node_longitude(eph, earth, t) - ayanamsa) % 360.0
+    ketu_true = (rahu_true + 180.0) % 360.0
 
     planets = {}
     for name, key in _PLANETS:
         planets[name] = round(_sidereal_lon(eph, earth, key, t, ayanamsa), 2)
-    planets["Rahu (mean node)"] = round(rahu_mean, 2)
-    planets["Ketu (mean node)"] = round(ketu_mean, 2)
+    planets["Rahu (true node)"] = round(rahu_true, 2)
+    planets["Ketu (true node)"] = round(ketu_true, 2)
 
     topos = wgs84.latlon(lat, lon)
     observer = earth + topos
@@ -149,7 +170,7 @@ def compute_panchang(dt_utc: datetime, lat: float = MUMBAI_LAT, lon: float = MUM
         "moon_rashi": rashi,
         "weekday_sanskrit": WEEKDAY_SANSKRIT[dt_utc.weekday()],
         "planets_sidereal_deg": planets,
-        "node_type": "mean",  # honesty flag - NOT true node
+        "node_type": "true",  # osculating node from position x velocity - see true_lunar_node_longitude()
         "sunrise_utc": sunrise.utc_iso() if sunrise is not None else None,
         "sunset_utc": sunset.utc_iso() if sunset is not None else None,
     }

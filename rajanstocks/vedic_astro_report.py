@@ -76,6 +76,31 @@ RISK_MANAGEMENT = [
     "Stay disciplined.",
 ]
 
+# NSE equity-segment trading holidays. Compiled from public holiday listings
+# cross-checked against each other (NSE's own site blocks automated
+# fetches), not pulled live from an official feed - update this list each
+# year and verify independently before relying on it for anything beyond
+# informational display. Year -> {iso date: holiday name}.
+NSE_HOLIDAYS = {
+    2026: {
+        "2026-01-26": "Republic Day",
+        "2026-03-03": "Holi",
+        "2026-03-26": "Shri Ram Navami",
+        "2026-03-31": "Shri Mahavir Jayanti",
+        "2026-04-03": "Good Friday",
+        "2026-04-14": "Dr. Baba Saheb Ambedkar Jayanti",
+        "2026-05-01": "Maharashtra Day",
+        "2026-05-28": "Bakri Id",
+        "2026-06-26": "Muharram",
+        "2026-09-14": "Ganesh Chaturthi",
+        "2026-10-02": "Mahatma Gandhi Jayanti",
+        "2026-10-20": "Dussehra",
+        "2026-11-10": "Diwali-Balipratipada",
+        "2026-11-24": "Guru Nanak Jayanti",
+        "2026-12-25": "Christmas",
+    },
+}
+
 DISCLAIMER = (
     "Market data must be verified against current sources. Astronomical positions are ephemeris "
     "calculations; Panchang and Rahu Kaal are traditional astrological conventions. Astrology is not "
@@ -172,7 +197,23 @@ def generate_report(now_utc: datetime | None = None) -> dict:
             w["window_ist"] = f"{rk_start_ist}-{rk_end_ist}" if rk_start_ist else "NOT AVAILABLE"
         windows.append(w)
 
-    is_weekday = now_ist.weekday() < 5  # Mon-Fri; NOT a holiday calendar check - flagged below
+    today_iso = now_ist.date().isoformat()
+    is_weekday = now_ist.weekday() < 5
+    holiday_name = NSE_HOLIDAYS.get(now_ist.year, {}).get(today_iso)
+    have_calendar = now_ist.year in NSE_HOLIDAYS
+    if holiday_name:
+        trading_day = _ok(f"No - {holiday_name}")
+    elif not is_weekday:
+        trading_day = _ok("No - weekend")
+    elif have_calendar:
+        trading_day = _ok("Yes - scheduled trading day")
+    else:
+        trading_day = _ok("Likely (weekday) - no holiday calendar for this year, verify independently")
+    holiday_check = (
+        _ok(f"Holiday calendar found - {holiday_name}" if holiday_name else "No holiday on this date in our calendar")
+        if have_calendar else
+        _na(f"No NSE holiday calendar wired in for {now_ist.year} - verify against the official NSE calendar before relying on this")
+    )
     session_phase = (
         "pre-market" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15)
         else "during session" if (now_ist.hour, now_ist.minute) < (15, 30)
@@ -183,8 +224,8 @@ def generate_report(now_utc: datetime | None = None) -> dict:
         "header": {
             "report_date": now_ist.strftime("%A, %d %B %Y"),
             "report_generated_ist": now_ist.strftime("%H:%M:%S IST"),
-            "nse_trading_day": _ok("Likely (weekday)") if is_weekday else _ok("No - weekend"),
-            "nse_holiday_check": _na("No NSE holiday calendar wired into this app - verify against the official NSE calendar before relying on this"),
+            "nse_trading_day": trading_day,
+            "nse_holiday_check": holiday_check,
             "session": "09:15-15:30 IST (Equity Cash)",
             "session_phase": session_phase,
         },
@@ -198,7 +239,7 @@ def generate_report(now_utc: datetime | None = None) -> dict:
             "sunset_ist": datetime.fromisoformat(panchang["sunset_utc"]).astimezone(IST).strftime("%H:%M") if panchang["sunset_utc"] else None,
             "mumbai_rahu_kaal_ist": f"{rk_start_ist}-{rk_end_ist}" if rk_start_ist else "NOT AVAILABLE",
             "ayanamsa": f"Lahiri {panchang['ayanamsa_lahiri_deg']} deg",
-            "node_type": "MEAN lunar node (not true/osculating node - see module docstring)",
+            "node_type": "TRUE (osculating) lunar node - see vedic_panchang module docstring",
         },
         "sidereal_positions": {
             "reference_time_ist": now_ist.strftime("%H:%M IST"),
