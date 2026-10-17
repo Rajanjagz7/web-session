@@ -381,6 +381,57 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 .seg.rng{margin-left:4px}.seg.rng button{padding:0 7px}
 @media (max-width:900px){.st-grid{grid-template-columns:1fr}.st-kv.big{grid-template-columns:repeat(2,1fr)}}
 
+/* ---- Vedic Astro infographic ---- */
+#v-vedic .vd-wrap{background:linear-gradient(180deg,#070f1f,#0b1829 60%,#0a1420);border:1px solid #2a4568;border-radius:16px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+#v-vedic .vd-top{text-align:center;padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid #22395c}
+#v-vedic .vd-title{font-size:clamp(20px,3.2vw,28px);font-weight:800;letter-spacing:.05em;color:#f3d98a;text-shadow:0 0 18px rgba(243,217,138,.22)}
+#v-vedic .vd-sub{font-size:clamp(13px,1.8vw,16px);font-weight:700;letter-spacing:.06em;color:#6ee7b7;margin-top:4px}
+#v-vedic .vd-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:16px}
+#v-vedic .vd-stat{background:#0d1c33;border:1px solid #22395c;border-radius:10px;padding:10px 12px;border-left:3px solid #f3d98a}
+#v-vedic .vd-stat small{display:block;font-size:10.5px;color:#8fb3de;letter-spacing:.05em;text-transform:uppercase}
+#v-vedic .vd-stat b{display:block;font-size:13.5px;font-weight:700;color:#eaf2ff;margin-top:3px}
+#v-vedic .vd-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+#v-vedic .vd-panel{background:#0d1c33;border:1px solid #22395c;border-radius:12px;padding:14px}
+#v-vedic .vd-panel h3{font-size:11.5px;letter-spacing:.06em;color:#f3d98a;text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #1d3354}
+#v-vedic .vd-kv{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;font-size:12px;border-bottom:1px dashed #152543}
+#v-vedic .vd-kv:last-child{border-bottom:none}
+#v-vedic .vd-kv b{color:#eaf2ff;font-weight:700;text-align:right}
+#v-vedic .vd-kv small{color:#7f9bc2;flex-shrink:0}
+#v-vedic .vd-rahu{margin-top:10px;background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:7px 10px;text-align:center;font-size:12px;font-weight:700;color:#fca5a5}
+#v-vedic .vd-windows{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
+#v-vedic .vd-win{border-radius:12px;padding:12px;border:1px solid;display:flex;flex-direction:column;gap:6px}
+#v-vedic .vd-win .n{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#06111f;margin-right:6px}
+#v-vedic .vd-win h4{font-size:12px;letter-spacing:.02em;display:inline;color:#eaf2ff}
+#v-vedic .vd-win .t{font-size:10.5px;font-weight:700;opacity:.85;margin-top:4px}
+#v-vedic .vd-win p{font-size:11px;color:#b9c9e0;margin-top:2px}
+#v-vedic .vd-win.c1{background:rgba(16,185,129,.08);border-color:#10b981}#v-vedic .vd-win.c1 .n{background:#10b981}#v-vedic .vd-win.c1 .t{color:#34d399}
+#v-vedic .vd-win.c2{background:rgba(59,130,246,.08);border-color:#3b82f6}#v-vedic .vd-win.c2 .n{background:#3b82f6}#v-vedic .vd-win.c2 .t{color:#60a5fa}
+#v-vedic .vd-win.c3{background:rgba(239,68,68,.08);border-color:#ef4444}#v-vedic .vd-win.c3 .n{background:#ef4444}#v-vedic .vd-win.c3 .t{color:#f87171}
+#v-vedic .vd-win.c4{background:rgba(168,85,247,.08);border-color:#a855f7}#v-vedic .vd-win.c4 .n{background:#a855f7}#v-vedic .vd-win.c4 .t{color:#c084fc}
+#v-vedic .vd-win.c5{background:rgba(245,166,35,.08);border-color:#f5a623}#v-vedic .vd-win.c5 .n{background:#f5a623}#v-vedic .vd-win.c5 .t{color:#fbbf24}
+#v-vedic .vd-sch{margin:16px 0;background:#0d1c33;border:1px solid #22395c;border-radius:12px;padding:12px}
+#v-vedic .vd-sch-cap{text-align:center;font-size:11px;font-weight:700;letter-spacing:.06em;color:#f3d98a;margin-bottom:8px}
+#v-vedic .vd-sch-bar{display:flex;border-radius:8px;overflow:hidden;height:46px}
+#v-vedic .vd-sch-bar>div{display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#06111f;text-align:center;padding:2px}
+#v-vedic .vd-sch-lbl{display:flex;margin-top:4px;font-size:10px;color:#7f9bc2}
+#v-vedic .vd-sch-lbl>div{text-align:center}
+#v-vedic table.vd-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+#v-vedic table.vd-tbl th{background:#0d1c33;color:#f3d98a;text-align:left;padding:8px;border:1px solid #22395c;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+#v-vedic table.vd-tbl td{padding:8px;border:1px solid #1d3354;vertical-align:top;color:#dbe6f6}
+#v-vedic table.vd-tbl td.win{font-weight:700;white-space:nowrap}
+#v-vedic .vd-foot-grid{display:grid;grid-template-columns:1fr 1fr 1.6fr 1fr;gap:12px;margin:16px 0}
+#v-vedic .vd-foot-grid h3{font-size:11px;letter-spacing:.05em;color:#f3d98a;text-transform:uppercase;margin-bottom:8px}
+#v-vedic .vd-foot-grid ul{list-style:none;font-size:11.5px;color:#cfe0f5}
+#v-vedic .vd-foot-grid li{padding:3px 0;display:flex;gap:6px}
+#v-vedic .vd-foot-grid li::before{content:'✓';color:#34d399;flex-shrink:0}
+#v-vedic .vd-stock{background:rgba(255,255,255,.03);border-radius:8px;padding:8px;margin-bottom:6px}
+#v-vedic .vd-stock b{color:#f3d98a;font-size:12px}
+#v-vedic .vd-stock p{font-size:11px;color:#b9c9e0;margin-top:2px}
+#v-vedic .vd-disc{margin-top:16px;padding-top:12px;border-top:1px solid #22395c;font-size:10.5px;color:#7f9bc2;line-height:1.6}
+#v-vedic .vd-disc b{color:#fca5a5}
+@media (max-width:980px){#v-vedic .vd-cols{grid-template-columns:1fr}#v-vedic .vd-windows{grid-template-columns:repeat(2,1fr)}#v-vedic .vd-foot-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){#v-vedic .vd-windows{grid-template-columns:1fr}#v-vedic .vd-foot-grid{grid-template-columns:1fr}#v-vedic table.vd-tbl{font-size:10.5px}}
+
 .tokb{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;font-size:12.5px;border-bottom:1px solid var(--line)}
 .tokb.warn{background:var(--warn-bg);color:var(--warn)}.tokb.bad{background:var(--down-bg);color:var(--down)}.tokb button{margin-left:auto}
 
@@ -1837,7 +1888,7 @@ function fullTime(t,sec){const d=new Date(t);const base=`${DOW[d.getDay()]} ${St
 function countdown(ms){if(ms<0)ms=0;const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h>=24?Math.floor(h/24)+'d '+(h%24)+'h':h?`${h}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`}
 
 /* ======================= App state ======================= */
-const App={view:'picks',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000000,positions:[],orders:[],history:[],alerts:[],notes:[],unread:0,
+const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000000,positions:[],orders:[],history:[],alerts:[],notes:[],unread:0,
   btab:'positions',book:'book',tape:[],tk:{side:'buy',type:'market',qty:10,price:'',tp:false,tpPx:'',sl:false,slPx:'',tsl:false,tslV:'',tslU:'pct',tif:'Day'},
   mk:{q:'',cls:'All',sort:'vol',dir:-1},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
@@ -2190,39 +2241,64 @@ async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
   VD.busy=false}
 function vdField(label,f,fmt){if(!f)return'';
   const v=f.available?(fmt?fmt(f.value):esc(f.value)):`<span class="muted" title="${esc(f.reason||'Not available')}">N/A</span>`;
-  return `<span><small>${esc(label)}</small><b class="num">${v}</b></span>`}
-function vdWindowCard(w){return `<div class="card st-card"><div class="st-h"><h4>${esc(w.label)}</h4><span class="badge b-mute">${esc(w.window_ist||'—')}</span></div>
-  <p class="st-d"><b>${esc(w.focus)}</b></p>
-  <div class="st-kv" style="grid-template-columns:1fr"><span><small>Bullish case</small><b style="font-size:13px;line-height:1.4;white-space:normal">${esc(w.bullish)}</b></span>
-  <span><small>Bearish case</small><b style="font-size:13px;line-height:1.4;white-space:normal">${esc(w.bearish)}</b></span>
-  <span><small>No-trade</small><b style="font-size:13px;line-height:1.4;white-space:normal">${esc(w.no_trade)}</b></span></div>
-  <div class="filters" style="margin-top:8px"><div class="chips">${(w.key_checks||[]).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}</div></div>
-  ${w.astrology_note?`<p class="muted st-note" style="margin-top:8px">${esc(w.astrology_note)}</p>`:''}</div>`}
+  return `<div class="vd-kv"><small>${esc(label)}</small><b class="num">${v}</b></div>`}
+const VD_COLORS=['#10b981','#3b82f6','#ef4444','#a855f7','#f5a623'];
+const VD_VWAP_CHECKLIST=['Price above / below VWAP?','VWAP slope (up / down / flat)?','Price sustained above/below VWAP?','Rising volume on breakouts?','Volume dry-up on pullback?','Institutional participation?','Range expansion or contraction?','Market breadth supportive?'];
+const VD_TRADE_COND={bull:'5-min close ABOVE opening range high AND above VWAP AND with volume confirmation.',bear:'5-min close BELOW opening range low AND below VWAP AND with volume confirmation.',no:'Breakout unconfirmed, volume weak, range choppy, or reward/risk poor. Patience over prediction.'};
+function vdMins(s){const m=s.match(/(\d{2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):null}
+function vdSchematic(windows){
+  const segs=windows.map(w=>{const m=(w.window_ist||'').match(/(\d{2}:\d{2})-(\d{2}:\d{2})/);return m?{s:vdMins(m[1]),e:vdMins(m[2])}:null});
+  const bar=windows.map((w,i)=>{const s=segs[i],dur=s?Math.max(s.e-s.s,10):75;return `<div style="flex:${dur} 0 0;background:${VD_COLORS[i]}">${esc(w.window_ist||'—')}</div>`}).join('');
+  const lbl=windows.map((w,i)=>`<div style="flex:1">${esc(w.label)}</div>`).join('');
+  return `<div class="vd-sch"><div class="vd-sch-cap">SCHEMATIC ONLY — NOT LIVE PRICE DATA</div><div class="vd-sch-bar">${bar}</div><div class="vd-sch-lbl">${lbl}</div></div>`}
+function vdWinCard(w,i){return `<div class="vd-win c${i+1}"><div><span class="n">${i+1}</span><h4>${esc(w.label)}</h4></div><div class="t">${esc(w.window_ist||'—')}</div><p>${esc(w.focus)}</p></div>`}
+function vdTable(windows){const row=w=>`<tr><td class="win">${esc(w.label)}</td><td>${esc(w.focus)}</td><td>${esc(w.bullish)}</td><td>${esc(w.bearish)}</td><td>${esc(w.no_trade)}</td><td>${(w.key_checks||[]).join(', ')}</td></tr>`;
+  return `<div style="overflow-x:auto"><table class="vd-tbl"><thead><tr><th>Window</th><th>Primary focus</th><th>Bullish setup</th><th>Bearish setup</th><th>No-trade</th><th>Key checks</th></tr></thead><tbody>${windows.map(row).join('')}</tbody></table></div>`}
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','Panchang, Rahu Kaal and sidereal planetary positions — informational context only, never a BUY/SELL signal by itself.')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
   const r=VD.data;if(!r){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','')}<div class="empty">Loading…</div></div>`;return}
   const h=r.header,mc=r.market_context,p=r.panchang,planets=r.sidereal_positions.planets_deg,stocks=r.stocks_to_watch;
-  el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch',`${esc(h.report_date)} · generated ${esc(h.report_generated_ist)}`,
-    `<button class="btn-xs" data-act="vedic-retry">${I('reset',14)} Refresh</button>`)}
-    <div class="card"><div class="card-h"><h3>Session</h3><span class="badge b-mute">${esc(h.session_phase)}</span></div>
-      <div class="st-kv">${vdField('Trading day',h.nse_trading_day)}${vdField('NSE holiday check',h.nse_holiday_check)}<span><small>Session</small><b>${esc(h.session)}</b></span></div></div>
-    <div class="card"><div class="card-h"><h3>Market context</h3><span class="muted" style="font-size:12px">${mc.quotes_as_of.available?'as of '+esc(mc.quotes_as_of.value):''}</span></div>
-      <div class="st-kv">${vdField('NIFTY last',mc.nifty_last,v=>fmtP(v,2))}${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('Market open',mc.market_open,v=>v?'Yes':'No')}${vdField('GIFT Nifty',mc.gift_nifty)}${vdField('Crude oil',mc.crude_oil)}${vdField('FPI flow',mc.fpi_flow)}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}</div></div>
-    <div class="card"><div class="card-h"><h3>Panchang</h3><span class="badge b-info">${esc(p.day)}</span></div>
-      <div class="st-kv"><span><small>Tithi</small><b>${esc(p.tithi)}</b></span><span><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></span><span><small>Moon sign</small><b>${esc(p.moon_sign)}</b></span>
-      <span><small>Sunrise</small><b>${esc(p.sunrise_ist||'—')} IST</b></span><span><small>Sunset</small><b>${esc(p.sunset_ist||'—')} IST</b></span>
-      <span><small>Mumbai Rahu Kaal</small><b class="num" style="color:var(--down)">${esc(p.mumbai_rahu_kaal_ist)} IST</b></span></div>
-      <p class="muted st-note" style="margin-top:8px">${esc(p.ayanamsa)} · ${esc(p.node_type)}</p></div>
-    <div class="card"><div class="card-h"><h3>Sidereal planetary positions</h3><span class="muted" style="font-size:12px">${esc(r.sidereal_positions.reference_time_ist)}</span></div>
-      <div class="st-kv">${Object.entries(planets).map(([n,d])=>`<span><small>${esc(n)}</small><b class="num">${d}°</b></span>`).join('')}</div>
-      <p class="muted st-note" style="margin-top:8px">${esc(r.sidereal_positions.source)}</p></div>
-    <h3 style="margin:18px 0 10px">Intraday watch windows</h3>
-    <div class="st-grid">${r.watch_windows.map(vdWindowCard).join('')}</div>
-    <h3 style="margin:18px 0 10px">Stocks to watch</h3>
-    <div class="card">${stocks.available?stocks.value.map(s=>`<div class="st-card" style="margin-bottom:8px"><div class="st-h"><h4>${esc(s.symbol)} <span class="muted" style="font-weight:500">${esc(s.name)}</span></h4><span class="badge ${s.bias==='bullish'?'b-up':s.bias==='bearish'?'b-down':'b-mute'}">${esc(s.bias)}</span></div><p class="st-d">${esc(s.reason)} — ${esc(s.idea)}</p><div class="st-kv"><span><small>LTP</small><b class="num">${fmtP(s.ltp,2)}</b></span><span><small>Prev close</small><b class="num">${fmtP(s.prev,2)}</b></span><span><small>Chg%</small><b class="num ${s.chg_pct>=0?'up':'down'}">${pct(s.chg_pct/100)}</b></span></div></div>`).join(''):`<div class="empty">${esc(stocks.reason||'Not available')}</div>`}</div>
-    <h3 style="margin:18px 0 10px">Risk management</h3>
-    <div class="card"><ul style="margin:0;padding-left:18px;line-height:1.7">${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
-    <p class="muted st-note" style="margin:14px 0 4px">${esc(r.disclaimer)}</p></div>`}
+  el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','',`<button class="btn-xs" data-act="vedic-retry">${I('reset',14)} Refresh</button>`)}
+  <div class="vd-wrap">
+    <div class="vd-top">
+      <div class="vd-title">NIFTY 50</div>
+      <div class="vd-sub">VEDIC ASTRO INTRADAY WATCH REPORT</div>
+      <div class="vd-stats">
+        <div class="vd-stat"><small>Report date</small><b>${esc(h.report_date)}</b></div>
+        <div class="vd-stat"><small>Report generated</small><b>${esc(h.report_generated_ist)} (${esc(h.session_phase)})</b></div>
+        <div class="vd-stat"><small>NSE status</small><b>${h.nse_trading_day.available?esc(h.nse_trading_day.value):'N/A'}</b></div>
+        <div class="vd-stat"><small>Normal market session</small><b>${esc(h.session)}</b></div>
+      </div>
+    </div>
+    <div class="vd-cols">
+      <div class="vd-panel"><h3>Market context</h3>
+        ${vdField('NIFTY last',mc.nifty_last,v=>fmtP(v,2))}${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('Market open',mc.market_open,v=>v?'Yes':'No')}${vdField('GIFT Nifty',mc.gift_nifty)}${vdField('Crude oil',mc.crude_oil)}${vdField('FPI flow',mc.fpi_flow)}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}
+        <p class="muted st-note" style="margin-top:8px">${mc.quotes_as_of.available?'As of '+esc(mc.quotes_as_of.value):'Live spot not verified — check before trading'}</p></div>
+      <div class="vd-panel"><h3>Panchang (Mumbai)</h3>
+        <div class="vd-kv"><small>Day</small><b>${esc(p.day)}</b></div><div class="vd-kv"><small>Tithi</small><b>${esc(p.tithi)}</b></div><div class="vd-kv"><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="vd-kv"><small>Moon sign</small><b>${esc(p.moon_sign)}</b></div><div class="vd-kv"><small>Sunrise</small><b>${esc(p.sunrise_ist||'—')} IST</b></div><div class="vd-kv"><small>Sunset</small><b>${esc(p.sunset_ist||'—')} IST</b></div>
+        <div class="vd-rahu">MUMBAI RAHU KAAL: ${esc(p.mumbai_rahu_kaal_ist)} IST</div>
+        <p class="muted st-note" style="margin-top:8px">${esc(p.ayanamsa)} · ${esc(p.node_type)}</p></div>
+      <div class="vd-panel"><h3>Sidereal positions · ${esc(r.sidereal_positions.reference_time_ist)}</h3>
+        ${Object.entries(planets).map(([n,d])=>`<div class="vd-kv"><small>${esc(n)}</small><b class="num">${d}°</b></div>`).join('')}
+        <p class="muted st-note" style="margin-top:8px">${esc(r.sidereal_positions.source)}</p></div>
+    </div>
+    <h3 style="color:#f3d98a;font-size:13px;letter-spacing:.04em;text-transform:uppercase;margin:16px 0 10px;text-align:center">Intraday astro + price action watch windows (IST)</h3>
+    <div class="vd-windows">${r.watch_windows.map(vdWinCard).join('')}</div>
+    ${vdSchematic(r.watch_windows)}
+    <h3 style="color:#f3d98a;font-size:13px;letter-spacing:.04em;text-transform:uppercase;margin:16px 0 10px;text-align:center">What to do in each time frame (action plan)</h3>
+    ${vdTable(r.watch_windows)}
+    <div class="vd-foot-grid">
+      <div class="vd-panel"><h3>VWAP &amp; volume checklist</h3><ul>${VD_VWAP_CHECKLIST.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+      <div class="vd-panel"><h3>Trade conditions</h3>
+        <p style="color:#34d399;font-weight:700;font-size:11.5px;margin-bottom:4px">Bullish candidate</p><p style="font-size:11px;color:#cfe0f5;margin-bottom:8px">${esc(VD_TRADE_COND.bull)}</p>
+        <p style="color:#f87171;font-weight:700;font-size:11.5px;margin-bottom:4px">Bearish candidate</p><p style="font-size:11px;color:#cfe0f5;margin-bottom:8px">${esc(VD_TRADE_COND.bear)}</p>
+        <p style="color:#8fb3de;font-weight:700;font-size:11.5px;margin-bottom:4px">No-trade zone</p><p style="font-size:11px;color:#cfe0f5">${esc(VD_TRADE_COND.no)}</p></div>
+      <div class="vd-panel"><h3>5 stocks to watch today — ${esc(h.report_date)}</h3>
+        ${stocks.available?stocks.value.map(s=>`<div class="vd-stock"><b>${esc(s.symbol)}</b> <span class="muted" style="font-size:11px">${esc(s.name)}</span> <span class="badge ${s.bias==='bullish'?'b-up':s.bias==='bearish'?'b-down':'b-mute'}" style="float:right">${esc(s.bias)}</span><p>${esc(s.reason)} — ${esc(s.idea)}. LTP ${fmtP(s.ltp,2)}, prev close ${fmtP(s.prev,2)}, chg ${pct(s.chg_pct/100)}.</p></div>`).join(''):`<div class="empty">${esc(stocks.reason||'Not available')}</div>`}</div>
+      <div class="vd-panel"><h3>Risk management</h3><ul>${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    </div>
+    <div class="vd-disc"><b>This report is for informational and educational purposes only. Not financial advice. Trade responsibly.</b><br>${esc(r.disclaimer)}</div>
+  </div></div>`}
 async function renderVedic(){const el=$('#v-vedic');if(!el)return;
   if(!VD.data&&!VD.err){vdPaint();await loadVedic(false)}
   vdPaint()}
@@ -3398,7 +3474,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   await loadUniverse();
   await Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]);await Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))]);
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
-  const h=location.hash.slice(1);$('#boot')?.remove();go(VIEWS.some(v=>v[0]===h)?h:'picks');
+  const h=location.hash.slice(1);$('#boot')?.remove();go(VIEWS.some(v=>v[0]===h)?h:'vedic');
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
 </script>
 </body>
