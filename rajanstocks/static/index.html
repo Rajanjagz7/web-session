@@ -2204,6 +2204,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
   const h=r.header,mc=r.market_context,p=r.panchang,planets=r.sidereal_positions.planets_deg,stocks=r.stocks_to_watch;
   el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch',`${esc(h.report_date)} · generated ${esc(h.report_generated_ist)}`,
     `<button class="btn-xs" data-act="vedic-retry">${I('reset',14)} Refresh</button>`)}
+    <div class="card"><img src="/static/vedic-ref.png" alt="Reference screenshot" style="width:100%;border-radius:8px;display:block"></div>
     <div class="card"><div class="card-h"><h3>Session</h3><span class="badge b-mute">${esc(h.session_phase)}</span></div>
       <div class="st-kv">${vdField('Trading day',h.nse_trading_day)}${vdField('NSE holiday check',h.nse_holiday_check)}<span><small>Session</small><b>${esc(h.session)}</b></span></div></div>
     <div class="card"><div class="card-h"><h3>Market context</h3><span class="muted" style="font-size:12px">${mc.quotes_as_of.available?'as of '+esc(mc.quotes_as_of.value):''}</span></div>
