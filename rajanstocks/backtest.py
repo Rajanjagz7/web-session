@@ -118,6 +118,14 @@ def simulate(bars, atr, i, side, variant="fixed", opp_i=None):
     return (d * (bars[last]["close"] - entry) / risk - cost_r, last, "TIME")
 
 
+def _hold_days(T):
+    """Calendar days from entry to exit, from the backtest's own simulated trades - not a guess."""
+    ds = sorted(d for d in ((date.fromisoformat(t["exit"]) - date.fromisoformat(t["entry"])).days for t in T) if d >= 0)
+    if not ds:
+        return {"avg": 0, "median": 0, "n": 0}
+    return {"avg": round(sum(ds) / len(ds), 1), "median": ds[len(ds) // 2], "n": len(ds)}
+
+
 def _stats(Rs):
     n = len(Rs)
     if not n:
@@ -262,6 +270,7 @@ def run_backtest(progress=None):
         T0 = [t for t in trades if t["key"] == key and t["variant"] == chosen["variant"] and t["filter"] == chosen["filter"]]
         ranking.append({"key": key, "variant": chosen["variant"], "filter": chosen["filter"], "all": a_, "inSample": i_,
                         "outOfSample": o, "tradesPerMonth": round(a_["n"] / months, 1), "proven": proven, "reason": why,
+                        "holdDays": _hold_days(T0),
                         "index": _stats([t["R"] for t in T0 if t["kind"] == "index"]),
                         "stock": _stats([t["R"] for t in T0 if t["kind"] == "stock"]), "configs": cfgs,
                         "perSymbol": {sy: {"all": _stats([t["R"] for t in T0 if t["sym"] == sy]),

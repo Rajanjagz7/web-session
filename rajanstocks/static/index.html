@@ -2488,13 +2488,24 @@ function stBadge(r){const cl=r.bias==='bull'?'b-up':r.bias==='bear'?'b-down':'b-
   const txt=r.signal==='NONE'||!r.signal?'No signal':r.stale?'Last '+raw:raw;
   return`<span class="badge ${cl}" ${r.stale?'title="An older signal — not active now, so it is not counted"':''}>${esc(txt)}</span>`}
 function stVal(d){return typeof d.value==='number'?fmtP(d.value,Math.abs(d.value)<10?3:2):esc(d.value)}
+const NO_HORIZON_GROUPS=new Set(['Intraday','Options','Option scans']);
+function horizonBadge(m){if(NO_HORIZON_GROUPS.has(m.group))return'';
+  const r=BT.data&&BT.data.ranking.find(x=>x.key===m.key),h=r&&r.holdDays;
+  if(!h||!h.n)return'';
+  const kind=h.avg<=10?'Swing':'Positional';
+  return `<span class="badge b-info" title="From ${h.n} backtested trades on this strategy: median ${h.median}d, average ${h.avg}d">${kind} · holds ~${Math.round(h.avg)}d</span>`}
+function dayCounter(r){const ed=r.details&&r.details.find(d=>d.label==='entryDate');
+  if(!ed||!ed.value)return'';
+  const d0=new Date(ed.value+'T00:00:00+05:30'),days=Math.max(1,Math.round((Date.now()-d0)/86400000)+1);
+  return `<div class="badge b-warn" style="margin-top:6px" title="Entry date: ${esc(ed.value)}">Day ${days} of this trade</div>`}
 function stBody(m){const sym=ST.sym,r=ST.res[m.key+'|'+sym];
   if(m.kind==='optscan')return'<div class="muted st-note">Scans the live option chains for contracts that match — all indices, or indices plus 30 liquid stocks.</div>';
   if(m.indexOnly&&!INDEX_RE.test(sym))return'<div class="muted st-note">Works on indices only — pick NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY or SENSEX.</div>';
   if(!r||r.pending)return'<div class="muted st-note">Running on '+esc(sym)+'…</div>';
   if(r.err)return'<div class="muted st-note">'+esc(r.err)+'</div>';
   const kv=r.details.slice(0,4).map(d=>`<span><small>${esc(/\s/.test(String(d.label))?d.label:lvlName(d.label))}</small><b class="num">${stVal(d)}</b></span>`).join('');
-  return`<div class="st-res">${stBadge(r)}<span class="st-hl">${esc(tidyText(r.headline))}</span></div>${kv?`<div class="st-kv">${kv}</div>`:''}${recLine(m.key,sym)}`}
+  const hb=horizonBadge(m);
+  return`<div class="st-res">${stBadge(r)}${hb}<span class="st-hl">${esc(tidyText(r.headline))}</span></div>${kv?`<div class="st-kv">${kv}</div>`:''}${dayCounter(r)}${recLine(m.key,sym)}`}
 function stCard(m){return`<div class="card st-card" id="stc-${m.key}"><div class="st-h"><h4>${esc(m.name)}</h4><span class="badge b-mute">${esc(m.group)}</span></div><p class="st-d">${esc(m.desc)}</p>
   <div class="st-body">${stBody(m)}</div>
   ${m.kind==='optscan'?`<div class="st-f"><button class="btn-xs pri" data-st="oscan:${m.key}:indices">Scan indices</button><button class="btn-xs" data-st="oscan:${m.key}:core">Indices + 30 stocks</button><button class="btn-xs" data-st="oscan:${m.key}:all">All F&amp;O stocks</button></div>`:`<div class="st-f">${m.chart?`<button class="btn-xs pri" data-st="chart:${m.key}">${chart&&chart.ind.some(i=>i.key==='S:'+m.key)?'On chart ✓':'Add to chart'}</button>`:''}<button class="btn-xs" data-st="scan:${m.key}">Scan stocks</button><button class="btn-xs" data-st="detail:${m.key}">Details</button></div>`}</div>`}
