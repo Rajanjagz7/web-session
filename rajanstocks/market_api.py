@@ -272,6 +272,28 @@ def universe():
     }
 
 
+def _year_range(symbol, key):
+    """52-week high/low computed from daily candles.
+
+    Upstox's live quote payload only carries year_high/year_low for equity
+    instruments, not for indices - index quotes always come back 0/0 there.
+    Falls back to scanning ~370 days of daily candles for those. Cached per
+    calendar day (this barely moves intraday) so it's one extra network call
+    per index per day, not per request.
+    """
+    def compute():
+        try:
+            end = date.today()
+            start = end - timedelta(days=370)
+            rows = nse_service.upstox.fetch_historical_candles(key, "days", "1", end.isoformat(), start.isoformat())
+            highs = [_num(r.get("high")) for r in rows if _num(r.get("high")) > 0]
+            lows = [_num(r.get("low")) for r in rows if _num(r.get("low")) > 0]
+            return (max(highs), min(lows)) if highs and lows else (0.0, 0.0)
+        except Exception:
+            return (0.0, 0.0)
+    return shared_cache.fetch(f"yr52|{symbol}|{date.today().isoformat()}", 20 * 3600, compute)
+
+
 @router.get("/quotes")
 def quotes(symbols: str = ""):
     ensure_universe()
@@ -296,13 +318,16 @@ def quotes(symbols: str = ""):
             last = _num(q.get("last_price"))
             net = _num(q.get("net_change"))
             prev = _num(q.get("prev_close_price")) or (last - net if last else 0.0)
+            yh, yl = _num(q.get("year_high")), _num(q.get("year_low"))
+            if not yh or not yl:
+                yh, yl = _year_range(s, k)
             out.append({
                 "s": s, "last": last, "prev": prev,
                 "open": _num(o.get("open")), "high": _num(o.get("high")), "low": _num(o.get("low")),
                 "vol": _num(q.get("volume")) or _num(o.get("volume")),
                 "bid": _num(((q.get("depth") or {}).get("buy") or [{}])[0].get("price")),
                 "ask": _num(((q.get("depth") or {}).get("sell") or [{}])[0].get("price")),
-                "yh": _num(q.get("year_high")), "yl": _num(q.get("year_low")),
+                "yh": yh, "yl": yl,
             })
         if not out and keymap:
             raise RuntimeError("Upstox returned no quotes")     # never cache an empty answer
