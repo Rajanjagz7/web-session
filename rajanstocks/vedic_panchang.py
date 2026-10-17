@@ -8,8 +8,27 @@ IAU formula), not the true/osculating node. True-node longitude needs the
 Moon's instantaneous orbital-plane geometry (position x velocity vectors),
 which isn't implemented here - don't present this as "true node" output.
 """
+import os
 from datetime import datetime, timedelta
-from skyfield.api import load, wgs84
+from skyfield.api import Loader, wgs84
+
+# Vercel's filesystem is read-only except /tmp - the default skyfield.api.load
+# writes the downloaded ephemeris into the current directory, which fails
+# there. Point the loader at a writable dir, same convention as
+# BHAV_CACHE_WRITE_DIR elsewhere in this app. Cached at module level so a
+# warm serverless instance doesn't re-download ~17MB on every request.
+_loader = Loader(os.environ.get("BHAV_CACHE_WRITE_DIR") or "/tmp")
+_eph = None
+_ts = None
+
+
+def _get_eph_ts():
+    global _eph, _ts
+    if _eph is None:
+        _eph = _loader("de421.bsp")
+        _ts = _loader.timescale()
+    return _eph, _ts
+
 
 MUMBAI_LAT = 18.96
 MUMBAI_LON = 72.82
@@ -70,8 +89,7 @@ def _sidereal_lon(eph, earth, body, t, ayanamsa):
 
 def compute_panchang(dt_utc: datetime, lat: float = MUMBAI_LAT, lon: float = MUMBAI_LON) -> dict:
     """Full Panchang + sidereal planetary snapshot for the given UTC instant."""
-    eph = load('de421.bsp')
-    ts = load.timescale()
+    eph, ts = _get_eph_ts()
     earth = eph['earth']
     t = ts.from_datetime(dt_utc)
     ayanamsa = lahiri_ayanamsa(t.J)
@@ -112,8 +130,10 @@ def compute_panchang(dt_utc: datetime, lat: float = MUMBAI_LAT, lon: float = MUM
     from skyfield import almanac
     f = almanac.sunrise_sunset(eph, topos)
     times, events = almanac.find_discrete(t0, t1, f)
-    sunrise = next((ti for ti, ev in zip(times, events) if ev == 1), None)
-    sunset = next((ti for ti, ev in zip(times, events) if ev == 0), None)
+    sunrise_i = next((i for i, ev in enumerate(events) if ev == 1), None)
+    sunset_i = next((i for i, ev in enumerate(events) if ev == 0), None)
+    sunrise = times[sunrise_i] if sunrise_i is not None else None
+    sunset = times[sunset_i] if sunset_i is not None else None
 
     return {
         "ayanamsa_lahiri_deg": round(ayanamsa, 4),
@@ -130,8 +150,8 @@ def compute_panchang(dt_utc: datetime, lat: float = MUMBAI_LAT, lon: float = MUM
         "weekday_sanskrit": WEEKDAY_SANSKRIT[dt_utc.weekday()],
         "planets_sidereal_deg": planets,
         "node_type": "mean",  # honesty flag - NOT true node
-        "sunrise_utc": sunrise.utc_iso() if sunrise else None,
-        "sunset_utc": sunset.utc_iso() if sunset else None,
+        "sunrise_utc": sunrise.utc_iso() if sunrise is not None else None,
+        "sunset_utc": sunset.utc_iso() if sunset is not None else None,
     }
 
 

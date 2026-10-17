@@ -2295,7 +2295,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data
 
 
 /* ======================= Strategies & indicators (your own pack) ======================= */
-const ST={meta:null,res:{},grp:'All',sym:null,run:0};
+const ST={meta:null,res:{},grp:'All',gen:'new',page:0,sym:null,run:0};
 const STPAL=[0,3,4,6,1,5];
 const INDEX_RE=/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/;
 const sigBias=s=>/SELL|SHORT|BELOW|BEAR|DOWN/i.test(s||'')?-1:/BUY|LONG|ABOVE|BULL|UP|SPURT/i.test(s||'')?1:0;
@@ -2372,12 +2372,17 @@ function stCard(m){return`<div class="card st-card" id="stc-${m.key}"><div class
 async function renderIndicators(){const el=$('#v-indicators');if(!el)return;
   if(!ST.sym)ST.sym=App.sym.s;
   try{await loadStratMeta()}catch(e){el.innerHTML='<div class="page"><div class="empty">Could not load strategies. <button class="btn-xs" data-view="indicators">Retry</button></div></div>';return}
-  const M=ST.meta,list=M.strategies.filter(m=>ST.grp==='All'||m.group===ST.grp);
+  const M=ST.meta,newCount=M.strategies.filter(m=>m.gen==='new').length,oldCount=M.strategies.length-newCount;
+  const list=M.strategies.filter(m=>(m.gen||'old')===ST.gen&&(ST.grp==='All'||m.group===ST.grp));
+  const PAGE=5,pages=Math.max(1,Math.ceil(list.length/PAGE));ST.page=Math.min(Math.max(0,ST.page),pages-1);
+  const pageList=list.slice(ST.page*PAGE,ST.page*PAGE+PAGE);
+  const pager=pages>1?`<div class="pager" style="margin:14px 0 2px"><button class="btn-xs" data-stp="${ST.page-1}" ${ST.page<=0?'disabled':''}>‹ Prev</button><span class="muted" style="font-size:12px;padding:0 6px">Page ${ST.page+1} of ${pages}</span><button class="btn-xs" data-stp="${ST.page+1}" ${ST.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
   el.innerHTML=`<div class="page">${pageHead('Indicators & strategies',`${M.strategies.length} of your own strategies, running on real NSE data for any stock or index.`,
     `<select class="inp" id="stSym" aria-label="Symbol" style="width:auto;min-width:150px">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${SYMS.filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===ST.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>`)}
     <div class="card st-sum" id="stSum"></div>
+    <div class="filters"><div class="chips">${[['new','New ('+newCount+')'],['old','Old ('+oldCount+')']].map(([k,l])=>`<button class="chip ${ST.gen===k?'on':''}" data-stgen="${k}">${l}</button>`).join('')}</div></div>
     <div class="filters"><div class="chips">${['All',...M.groups].map(g=>`<button class="chip ${ST.grp===g?'on':''}" data-stg="${esc(g)}">${esc(g)}</button>`).join('')}</div></div>
-    <div class="st-grid">${list.map(stCard).join('')}</div></div>`;
+    <div class="st-grid">${pageList.length?pageList.map(stCard).join(''):'<div class="empty">No '+ST.gen+' indicators in this category.</div>'}</div>${pager}</div>`;
   loadBT().then(()=>{if($('#stSum'))stSummary();ST.meta.strategies.forEach(m=>{const c=$('#stc-'+m.key+' .st-body');if(c&&m.kind!=='optscan')c.innerHTML=stBody(m)})});
   const myRun=++ST.run,sym=ST.sym,todo=list.filter(m=>m.kind!=='optscan'&&!(m.indexOnly&&!INDEX_RE.test(sym)));
   let i=0;const worker=async()=>{while(i<todo.length&&myRun===ST.run){const m=todo[i++];ST.res[m.key+'|'+sym]=ST.res[m.key+'|'+sym]||{pending:1};
@@ -2395,7 +2400,9 @@ function stDetail(m){const r=ST.res[m.key+'|'+ST.sym];
    ${r.details.length?`<h4 style="margin:10px 0 6px">Values</h4><div class="st-kv big">${r.details.map(d=>`<span><small>${esc(d.label)}</small><b class="num">${stVal(d)}</b></span>`).join('')}</div>`:''}
    ${r.events.length?`<h4 style="margin:12px 0 6px">Recent signals</h4><div class="tbl-wrap"><table><tbody>${r.events.slice().reverse().map(e=>`<tr><td class="muted">${esc(e.date||'')}</td><td>${esc(e.text)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted" style="margin-top:10px">No signals in the lookback window.</p>'}`;
   modal(m.name,`<p class="m2" style="margin-bottom:8px">${esc(m.desc)}</p>${body}`,{foot:m.chart?`<button class="btn pri" onclick="stGo('${m.key}','${esc(ST.sym)}')">Open on chart</button>`:'',wide:true})}
-document.addEventListener('click',e=>{const g=e.target.closest('[data-stg]');if(g){ST.grp=g.dataset.stg;renderIndicators();return}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-stg]');if(g){ST.grp=g.dataset.stg;ST.page=0;renderIndicators();return}
+  const gn=e.target.closest('[data-stgen]');if(gn){ST.gen=gn.dataset.stgen;ST.page=0;renderIndicators();return}
+  const sp=e.target.closest('[data-stp]');if(sp){ST.page=+sp.dataset.stp;renderIndicators();return}
   const t=e.target.closest('[data-st]');if(!t||!ST.meta)return;const [a,key,arg]=t.dataset.st.split(':'),m=ST.meta.strategies.find(x=>x.key===key);if(!m)return;
   if(a==='oscan')optScan(m,arg);else if(a==='scan'){if(key==='rajan-ohol-options')go('daily');else stScan(m)}else if(a==='detail')stDetail(m);else if(a==='chart')stGo(key,ST.sym)});
 document.addEventListener('change',e=>{if(e.target.id==='stSym'){ST.sym=e.target.value;renderIndicators()}});

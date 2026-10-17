@@ -12,11 +12,14 @@ by the caller (this module only emits the static rule text + whatever live
 numbers are available to check them against).
 """
 from datetime import datetime, timezone, timedelta
-from zoneinfo import ZoneInfo
 
 import vedic_panchang
 
-IST = ZoneInfo("Asia/Kolkata")
+# Fixed-offset, not ZoneInfo("Asia/Kolkata") - that needs the IANA tzdata
+# package, which isn't guaranteed to be present (fails on this Windows dev
+# box, and isn't certain on Vercel's runtime either). Matches the IST
+# convention already used everywhere else in this app (market_api.py etc.).
+IST = timezone(timedelta(hours=5, minutes=30))
 
 WATCH_WINDOWS_TEMPLATE = [
     {

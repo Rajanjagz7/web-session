@@ -525,8 +525,11 @@ OPT_SCANS = [
     ("opt-ol", "Bullish Open = Low (contracts)", "Option scans", "Option contracts that opened exactly at their day low - buyers in control."),
     ("opt-oh", "Bearish Open = High (contracts)", "Option scans", "Option contracts that opened exactly at their day high - sellers in control."),
     ("opt-spike", "Volume Spurt and OI Spike (contracts)", "Option scans", "Contracts trading over 2x the typical strike volume on a rising candle while open interest builds."),
+    ("rajan-premium-levels", "Rajan Premium Levels", "Option scans",
+     "Open=High premium touching support at prev-close /2 or /4 (normal day) or /6.5 or /10 (Tuesday - approximated as expiry day for every underlying here). Base is always previous close. Pine: Rajan_Premium_Levels.pine."),
 ]
-OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": []} for k, n, g, d in OPT_SCANS}
+OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": [],
+                "gen": "new" if k in newind.NEW_KEYS_SET or k == "rajan-premium-levels" else "old"} for k, n, g, d in OPT_SCANS}
 SCAN_INDICES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"]
 TICK = 0.05
 
@@ -552,6 +555,18 @@ def _opt_rule(key, leg, prev_close):
     if key == "opt-oh":
         ok = hi > lo and abs(op - hi) <= TICK
         return ok, "Open = High" if ok else ""
+    if key == "rajan-premium-levels":
+        if prev_close <= 0:
+            return False, ""
+        is_expiry = datetime.now(market_api.IST).weekday() == 1  # Tuesday (NIFTY weekly) - approximated for every underlying
+        primary, last = (prev_close / 6.5, prev_close / 10) if is_expiry else (prev_close / 2, prev_close / 4)
+        touch_buf, max_above, oh_tol = 2.0, 10.0, 0.5
+        is_oh = hi > lo and abs(op - hi) <= oh_tol
+        touch_p = lo <= primary + touch_buf and primary <= ltp <= primary + max_above
+        touch_l = lo <= last + touch_buf and last <= ltp <= last + max_above
+        ok = is_oh and (touch_p or touch_l)
+        level, name = (primary, "base/6.5" if is_expiry else "base/2") if touch_p else (last, "base/10" if is_expiry else "base/4")
+        return ok, (f"Open=High, touched {name} support {level:,.2f} off prev close {prev_close:,.2f}") if ok else ""
     return False, ""
 
 
