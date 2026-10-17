@@ -2560,9 +2560,10 @@ function saveTfLast(){try{localStorage.setItem('rs-tf-last',App.tf.k)}catch(e){}
 function restoreTfLast(){try{const t=TFS.find(x=>x.k===localStorage.getItem('rs-tf-last'));if(t)App.tf=t;const o=TFS.find(x=>x.k===localStorage.getItem('rs-otf'));if(o&&o.sec<=86400)OPT.tf=o}catch(e){}
   try{App.from=localStorage.getItem('rs-from')||null;App.to=localStorage.getItem('rs-to')||null}catch(e){}}
 function addCustomTf(k,persist=true){if(!tfValid(k))return null;let t=TFS.find(x=>x.k===k);if(!t){t={k,sec:tfSecOf(k),custom:true};TFS.push(t);TFS.sort((a,b)=>a.sec-b.sec)}if(TFV)TFV.add(k);if(persist){saveCustomTfs();saveTfVis()}return t}
+function widenSpanFor(t){const bpd=t.sec>=86400?86400/t.sec:22500/t.sec;if(App.span&&App.span*bpd<50)App.span=Math.ceil(50/bpd)}
 function applyTf(t){TFV.add(t.k);saveTfVis();
   if(App.view==='options'){if(t.sec>86400){toast(tfLabel(t.k)+' added — it is available on the Trade chart','info');return}OPT.tf=t;try{localStorage.setItem('rs-otf',t.k)}catch(e){}drawOptTf();optLoad(false);return}
-  App.tf=t;saveTfLast();loadChart(false);renderToolbar()}
+  App.tf=t;widenSpanFor(t);saveTfLast();loadChart(false);renderToolbar()}
 function openTfDialog(){
   const body=()=>`<p class="m2" style="margin-bottom:10px">Choose which timeframes show on the chart bar. Your choices and the last timeframe you used are remembered.</p>
    <div class="tfm-list">${TFS.map(t=>`<label class="tfm-row"><input type="checkbox" data-tfvis="${t.k}" ${TFV.has(t.k)||t===App.tf?'checked':''} ${t===App.tf?'disabled':''}><b>${tfLabel(t.k)}</b><small class="muted">${tfNice(t.k)}${t===App.tf?' · in use':''}</small>${t.custom?`<button class="tf-x" data-tfdel="${t.k}">Remove</button>`:''}</label>`).join('')}</div>
@@ -2725,7 +2726,7 @@ function openTfPop(anchor,opt){if(tfPopEl){closeTfPop();return}if(!anchor)return
   const N=tfPopEl.querySelector('#tfpN'),U=tfPopEl.querySelector('#tfpU'),H=tfPopEl.querySelector('#tfpHint');
   const upd=()=>{const k=(N.value||'')+U.value;N.max=TF_LIM[U.value];H.textContent=tfValid(k)?tfNice(k)+' candles':'Enter 1 to '+TF_LIM[U.value]+' '+TF_NAME[U.value];H.style.color=tfValid(k)?'':'var(--down)'};N.oninput=U.onchange=upd;upd();
   tfPopEl.querySelector('#tfpAdd').onclick=()=>{const k=(+N.value||0)+U.value;if(!tfValid(k)){upd();return}const t=addCustomTf(k);closeTfPop();applyTf(t)}}
-document.addEventListener('click',e=>{const pick=e.target.closest('[data-tfpick]');if(pick&&tfPopEl){const t=TFS.find(x=>x.k===pick.dataset.tfpick),opt=tfPopEl.dataset.opt;closeTfPop();if(t){if(opt==='opt'){OPT.tf=t;try{localStorage.setItem('rs-otf',t.k)}catch(x){}drawOptTf();optLoad(false)}else{App.tf=t;saveTfLast();loadChart(false);renderToolbar()}}return}
+document.addEventListener('click',e=>{const pick=e.target.closest('[data-tfpick]');if(pick&&tfPopEl){const t=TFS.find(x=>x.k===pick.dataset.tfpick),opt=tfPopEl.dataset.opt;closeTfPop();if(t){if(opt==='opt'){OPT.tf=t;try{localStorage.setItem('rs-otf',t.k)}catch(x){}drawOptTf();optLoad(false)}else{App.tf=t;widenSpanFor(t);saveTfLast();loadChart(false);renderToolbar()}}return}
   const del=e.target.closest('[data-tfpdel]');if(del&&tfPopEl){const k=del.dataset.tfpdel,i=TFS.findIndex(t=>t.k===k);if(i>=0){const was=TFS[i];TFS.splice(i,1);TFV.delete(k);saveCustomTfs();saveTfVis();if(App.tf===was){App.tf=TFS.find(t=>t.k==='1D');saveTfLast();loadChart(false)}if(OPT.tf===was){OPT.tf=TFS.find(t=>t.k==='5m');if(OPT.osym)optLoad(false)}const opt=tfPopEl.dataset.opt,a=tfPopEl;tfPopEl=null;a.remove();renderToolbar();drawOptTf();openTfPop(opt==='opt'?$('#opTfBtn'):$('#toolbar .tf-btn'),opt)}return}
   if(tfPopEl&&!e.target.closest('.tfpop')&&!e.target.closest('.tf-btn'))closeTfPop()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTfPop()});
@@ -3023,7 +3024,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[dat
   if(!t||t.closest('.modal-bg')&&!t.matches('[data-sym]'))return;const d=t.dataset;
   if(d.view){go(d.view);return}
   if(d.sym!=null){closeModal();switchSym(d.sym);return}
-  if(d.tf){App.tf=TFS.find(x=>x.k===d.tf);saveTfLast();loadChart(false);renderToolbar();return}
+  if(d.tf){const t=TFS.find(x=>x.k===d.tf);App.tf=t;widenSpanFor(t);saveTfLast();loadChart(false);renderToolbar();return}
   if(d.tool){chart.setTool(d.tool);return}
   if(d.btab){App.btab=d.btab;$('#bottom').classList.remove('collapsed');renderBottom();return}
   if(d.close!=null&&d.close!==''){closePos(d.close);return}
