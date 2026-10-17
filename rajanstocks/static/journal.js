@@ -13,7 +13,7 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-  const TABS = [['overview', 'Overview'], ['new', 'New Trade'], ['journal', 'Trade Journal'], ['strategy', 'Strategy Lab'],
+  const TABS = [['overview', 'Overview'], ['new', 'New Trade'], ['journal', 'Trade Journal'], ['orders', 'Orders'], ['strategy', 'Strategy Lab'],
                 ['tsl', 'TSL Lab'], ['auto', 'Auto Trader'], ['backtest', 'Backtest'], ['reports', 'Reports'], ['settings', 'Settings']];
 
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -268,6 +268,13 @@
     <div class="card"><div class="card-h"><h3>Open paper positions</h3></div>${tradeTable(open, true)}</div>
     <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, false)}</div>
     <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
+  }
+
+  function viewOrders() {
+    if (!window.App || !window.ordTable) return '<div class="empty">Orders are not available right now.</div>';
+    const A = window.App, f = A.ord || 'Open', all = [...(A.orders || []), ...(A.history || [])].sort((a, b) => b.t - a.t);
+    const list = f === 'All' ? all : all.filter(o => o.status === f);
+    return `<div class="card"><div class="filters"><div class="seg" id="jvOrdSeg">${['Open', 'Filled', 'Cancelled', 'All'].map(s => `<button class="${f === s ? 'on' : ''}" data-jvord="${s}">${s} <span class="muted">${s === 'All' ? all.length : all.filter(o => o.status === s).length}</span></button>`).join('')}</div></div><div class="tbl-wrap">${window.ordTable(list, f === 'Open')}</div></div>`;
   }
 
   function filterBar() {
@@ -845,7 +852,7 @@
     applyManualTsl();
     const head = `<div class="page-h"><div style="flex:1"><h1>Journal</h1><p>Plan, log and review paper trades — portfolio, risk rules and analytics in one place.</p></div></div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}">${l}</button>`).join('')}</div>`;
-    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true)}</div>`, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
+    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true)}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
     el.innerHTML = `<div class="page jv">${head}${banner()}${ui.tab === 'overview' ? '' : topStrip()}${tabs}${(bodies[ui.tab] || viewOverview)()}</div>`;
     if (ui.tab === 'overview') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
@@ -857,6 +864,12 @@
     }
     if (ui.tab === 'new') renderCalc();
   }
+
+  document.addEventListener('click', e => {
+    const o = e.target.closest('[data-jvord]'); if (!o) return;
+    if (window.App) window.App.ord = o.dataset.jvord;
+    render();
+  });
 
   /* ---------- events ---------- */
   document.addEventListener('click', e => {

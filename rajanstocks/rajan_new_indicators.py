@@ -33,7 +33,7 @@ NEW_CATALOG = [
     ("rajan-breakout-trap", "Rajan Breakout & Trap", "Breakout",
      "Donchian(20) breakout plus fake-breakout/breakdown traps at swing pivots, ADX filter, ATR-clamped stop. Pine: Rajan_Breakout_Trap.pine.", "new"),
     ("rajan-ohol-options", "Rajan OH-OL Options", "Options",
-     "Index Open=Low (bullish) / Open=High (bearish) with India VIX tiering for stop/target width. Indices only. Pine: Rajan_OHOL_Options.pine.", "new"),
+     "Open=Low (bullish) / Open=High (bearish) with India VIX tiering for stop/target width. Works on any F&O stock or index - use Scan stocks for the full-universe view with ATM CE/PE legs. Pine: Rajan_OHOL_Options.pine.", "new"),
     ("rajan-gann-sq9", "Rajan Gann Square of 9", "Trend",
      "Gann Square of 9 levels from previous close, Gann HiLo trend filter (daily-bar adaptation of the intraday day-open Pine script).", "new"),
 ]
@@ -343,13 +343,11 @@ def rajan_breakout_trap_scan(symbol, don_len=20, piv_len=10, conf_bars=3, lookba
 
 
 # ───────────────────────── Rajan OH-OL Options ─────────────────────────
-INDEX_SYMBOLS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
-
-
+# Works on any F&O underlying, not just indices - the Open=High/Open=Low
+# read and the India-VIX-tiered stop/target % apply the same way to a stock's
+# own options as to an index's.
 def rajan_ohol_options_scan(symbol, lookback_days=120):
     symbol = symbol.upper()
-    if symbol not in INDEX_SYMBOLS:
-        raise RuntimeError("Rajan OH-OL Options is for indices only (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX)")
     bars = ut_bot.fetch_index_history(symbol, lookback_days=lookback_days)
     if len(bars) < 5:
         raise RuntimeError("Not enough daily history for the OH/OL setup")
@@ -370,8 +368,9 @@ def rajan_ohol_options_scan(symbol, lookback_days=120):
         "date": last_bar["date"], "close": last_bar["close"], "signal": cur_row["signal"],
         "openEqLow": cur_row["openEqLow"], "openEqHigh": cur_row["openEqHigh"],
         "vix": vix, "vixTier": tier, "slPct": slpct, "t1Pct": t1pct,
-        "note": "Index-side setup only: a BUY_CALL/SELL_PUT_BIAS day means buy the ATM option on that side; "
-                "size the option's own stop/target from slPct/t1Pct off its own entry premium, not the index points.",
+        "note": "Options-side setup: a BUY_CALL/SELL_PUT_BIAS day means buy the underlying's ATM option on that "
+                "side; size the option's own stop/target from slPct/t1Pct off its own entry premium, not the "
+                "underlying's points.",
     }
     return {"symbol": symbol, "columns": [], "current": current, "bars": rows[-120:], "events": rp._events_from_bars(rows)}
 
