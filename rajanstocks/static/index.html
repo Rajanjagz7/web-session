@@ -1400,6 +1400,10 @@ const CSS=`.rn-bell{position:relative}
 .st-good{border-top:1px solid var(--line);padding-top:8px;font-size:13px}.st-goodrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .st-rec{margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--text-2,#4A5568)}.st-rec.good{color:var(--text,#0E1726)}
 .mk-mv{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;margin-bottom:12px}.mk-mv .card-h{padding:10px 12px}
+.mk-dash{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+.mk-side{display:flex;flex-direction:column;gap:12px;position:sticky;top:12px}
+.mk-ix .card-h{padding:10px 12px}
+@media (max-width:980px){.mk-dash{grid-template-columns:1fr}.mk-side{position:static}}
 .mv-pg{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-top:1px solid var(--line)}
 .sb-nm{white-space:normal;line-height:1.25}
 @media (max-width:600px){.sb-name{width:100%}.oc-btn{order:2}}
@@ -1897,7 +1901,7 @@ function countdown(ms){if(ms<0)ms=0;const s=Math.floor(ms/1000),h=Math.floor(s/3
 /* ======================= App state ======================= */
 const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000000,positions:[],orders:[],history:[],alerts:[],notes:[],unread:0,
   btab:'positions',book:'book',tape:[],tk:{side:'buy',type:'market',qty:10,price:'',tp:false,tpPx:'',sl:false,slPx:'',tsl:false,tslV:'',tslU:'pct',tif:'Day'},
-  mk:{q:'',cls:'All',sort:'vol',dir:-1},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
+  mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
 async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path+' '+r.status);return r.json()}
@@ -1947,7 +1951,7 @@ function liveUpdate(){
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['journal','Journal'],['stocks','Stocks'],['indicators','Indicators'],['vedic','Vedic Astro']];
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
 const PRIMARY=['picks','trade','markets','options'];
 function renderNav(){$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${App.view===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${App.view===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${PRIMARY.includes(App.view)?'':'on'}" data-act="more"><span class="ni">${I('list',19)}</span><span>More</span></button>`}
 const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon'};
@@ -2156,24 +2160,22 @@ function bindAlertForm(){const hint=()=>{const s=SYM($('#alSym').value),c=$('#al
 
 /* ======================= Other views ======================= */
 function pageHead(t,p,extra=''){return`<div class="page-h"><div style="flex:1"><h1>${t}</h1><p>${p}</p></div>${extra}</div>`}
-function renderMarkets(){const mk=App.mk;mk.page=mk.page||0;mk.size=mk.size||15;mk.sec=mk.sec||'All';mk.mode=mk.mode||'all';
-  const all=SYMS.slice(),chg=s=>s.last/s.prev-1,stocks=all.filter(s=>s.cls==='Stocks');
-  const gain=stocks.filter(s=>s.last>0&&s.prev>0).sort((a,b)=>chg(b)-chg(a)),act=stocks.slice().sort((a,b)=>b.turn-a.turn);
-  const secs=['All',...new Set(stocks.map(s=>s.sec).filter(Boolean))].sort((x,y)=>x==='All'?-1:y==='All'?1:x.localeCompare(y));
-  const heat=stocks.filter(s=>s.turn>0).sort((a,b)=>b.turn-a.turn).slice(0,60);
+const MK_KEY_IDX=['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','INDIAVIX'];
+function renderMarkets(){
+  const idx=MK_KEY_IDX.map(k=>SYM(k)).filter(Boolean);
+  const idxRows=idx.map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${s.last>=s.prev?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('');
   $('#v-markets').innerHTML=`<div class="page mk">
-   <div class="mk-head"><div><h1>Markets</h1><p id="mkCount" class="muted"></p></div>
-    </div><div class="mk-mv" id="mkMovers"></div>
-   <div class="card mk-card"><div class="mk-bar">
-     <input class="inp" id="mkq" placeholder="Search symbol or name" value="${esc(mk.q)}" aria-label="Search markets">
-     <div class="chips" id="mkcls">${['All','Indices','Stocks'].map(c=>`<button class="chip ${mk.cls===c?'on':''}" data-mkcls="${c}">${c}</button>`).join('')}</div>
-     <div class="chips">${[['all','Any'],['up','Gainers'],['down','Losers'],['act','Most active'],['watch','Watchlist']].map(([k,l])=>`<button class="chip ${mk.mode===k?'on':''}" data-mkmode="${k}">${l}</button>`).join('')}</div>
-     <select class="inp" id="mksec" aria-label="Sector">${secs.map(x=>`<option ${mk.sec===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-     <select class="inp" id="mksize" aria-label="Rows per page">${[10,15,30,100,500,1000].map(n=>`<option value="${n}" ${mk.size===n?'selected':''}>${n} / page</option>`).join('')}</select>
-     <button class="btn-xs ${mk.heat?'pri':''}" data-mkmode="heat">Heatmap</button></div>
-    ${mk.heat?`<div class="heat" style="margin:8px 12px">${heat.map(s=>`<button class="tile" data-sym="${esc(s.s)}" data-heat="${esc(s.s)}" style="flex:${Math.sqrt(s.turn/1e8).toFixed(2)} 1 ${Math.max(70,Math.sqrt(s.turn/1e8)*30).toFixed(0)}px" aria-label="${esc(s.s)}"><b>${esc(s.s)}</b><span></span></button>`).join('')}<span style="flex:1000 1 0" aria-hidden="true"></span></div>`:''}
-    <div class="tbl-wrap mk-wrap" id="mktbl"></div><div class="pager mk-pager" id="mkPager"></div></div></div>`;
-  drawMovers();drawMkTable()}
+   <div class="mk-head"><div><h1>Markets</h1><p class="muted">Key indices and movers alongside the full searchable stock list — one screen for what the market's doing.</p></div></div>
+   <div class="mk-dash">
+     <div class="mk-side">
+       <div class="card mk-ix"><div class="card-h"><h3>Key indices</h3></div>${idxRows}</div>
+       <div class="mk-mv" id="mkMovers"></div>
+     </div>
+     <div class="mk-main"><div id="mkStockList"></div></div>
+   </div></div>`;
+  drawMovers();
+  if(typeof SB!=='undefined')SB.page($('#mkStockList'));
+  liveUpdate()}
 function drawMovers(){const host=$('#mkMovers');if(!host)return;const mk=App.mk;mk.pg=mk.pg||{g:0,l:0,a:0};
   const chg=s=>s.last/s.prev-1,st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0&&s.prev>0);
   const lists={g:st.filter(s=>chg(s)>0).sort((a,b)=>chg(b)-chg(a)),l:st.filter(s=>chg(s)<0).sort((a,b)=>chg(a)-chg(b)),a:st.slice().sort((a,b)=>(b.turn||0)-(a.turn||0))};
@@ -2183,28 +2185,7 @@ function drawMovers(){const host=$('#mkMovers');if(!host)return;const mk=App.mk;
     return`<div class="card"><div class="card-h"><h3>${T[id]}</h3><span class="muted" style="font-size:12px">${l.length} stocks</span></div>${rows}
       <div class="mv-pg"><button class="btn-xs" data-mvp="${id}:${pg-1}" ${pg<=0?'disabled':''}>‹ Prev</button><span class="muted">Page ${pg+1} of ${pages}</span><button class="btn-xs" data-mvp="${id}:${pg+1}" ${pg>=pages-1?'disabled':''}>Next ›</button></div></div>`}).join('');
   liveUpdate()}
-function drawMkTable(){const mk=App.mk,chg=s=>s.last/s.prev-1;
-  const sig=[mk.cls,mk.q,mk.sec,mk.mode,mk.sort,mk.dir,mk.size].join('|');if(mk._sig!==sig){mk._sig=sig;mk.page=0}
-  const sortKey={s:s=>s.s,last:s=>s.last,chg:s=>chg(s)||0,vol:s=>s.turn||0,cap:s=>s.sec||''}[mk.sort]||(s=>s.turn||0);
-  let l=SYMS.filter(s=>(mk.cls==='All'||s.cls===mk.cls)&&(mk.sec==='All'||s.sec===mk.sec)&&(s.s+' '+s.n).toLowerCase().includes((mk.q||'').toLowerCase()));
-  if(mk.mode==='up')l=l.filter(s=>chg(s)>0);else if(mk.mode==='down')l=l.filter(s=>chg(s)<0);else if(mk.mode==='watch')l=l.filter(s=>App.watch.has(s.s));
-  let dir=mk.dir;if(mk.mode==='up'&&mk.sort==='vol'){l.sort((a,b)=>chg(b)-chg(a))}else if(mk.mode==='down'&&mk.sort==='vol'){l.sort((a,b)=>chg(a)-chg(b))}
-  else l.sort((a,b)=>{const x=sortKey(a),y=sortKey(b);return(x>y?1:x<y?-1:0)*dir});
-  const total=l.length,pages=Math.max(1,Math.ceil(total/mk.size));mk.page=Math.min(mk.page,pages-1);
-  const part=l.slice(mk.page*mk.size,(mk.page+1)*mk.size);
-  const th=(k,lab,n,cx='')=>`<th class="${n?'num ':''}${cx}" data-sort="${k}" aria-sort="${mk.sort===k?(mk.dir>0?'ascending':'descending'):'none'}">${lab}${mk.sort===k?(mk.dir>0?' ↑':' ↓'):''}</th>`;
-  const hasOpt=s=>(s.cls==='Indices'||s.cls==='Stocks')&&s.s!=='INDIAVIX';
-  $('#mktbl').innerHTML=`<table class="mk-t"><thead><tr>${th('s','Symbol')}${th('last','Last',1)}<th class="num">Chg</th>${th('chg','Chg %',1)}<th class="hm">Day range</th>${th('vol','Value (₹)',1,'hm')}${th('cap','Sector',0,'hm')}<th class="hm">20d</th><th></th></tr></thead><tbody>${part.map(s=>`<tr><td><button class="sym-link" data-sym="${esc(s.s)}">${esc(s.s)}</button><div class="muted mk-n">${esc(s.n)}</div></td><td class="num" data-px="${esc(s.s)}"></td><td class="num"><span data-chga="${esc(s.s)}"></span></td><td class="num"><span data-chg="${esc(s.s)}"></span></td><td class="hm"><span class="num m2" style="font-size:11.5px" data-rt></span><div class="rangebar" data-range="${esc(s.s)}" style="margin-top:3px"><i></i></div></td><td class="num hm">${fmtN(s.turn)}</td><td class="muted hm">${esc(s.sec)}</td><td class="hm">${sparkSVG(spark7(s),70,22,s.last>=s.prev?'var(--up)':'var(--down)')}</td><td class="mk-act"><button class="btn-xs ${App.watch.has(s.s)?'':'m2'}" data-watch="${esc(s.s)}" aria-label="Toggle watchlist" style="${App.watch.has(s.s)?'color:var(--brand);border-color:var(--brand)':''}">${I('star',12)}</button> <button class="btn-xs" data-sym="${esc(s.s)}">Chart</button>${hasOpt(s)?` <button class="btn-xs" data-ocq="${esc(s.s)}">Options</button>`:''}</td></tr>`).join('')}</tbody></table>${total?'':'<div class="empty">No symbols match these filters.</div>'}`;
-  const c=$('#mkCount');if(c)c.textContent=total?`${total.toLocaleString('en-IN')} symbols · showing ${mk.page*mk.size+1}–${mk.page*mk.size+part.length}`:'No symbols';
-  const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-mk.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
-  const pg=$('#mkPager');if(pg)pg.innerHTML=pages>1?`<button class="btn-xs" data-mkp="${mk.page-1}" ${mk.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===mk.page?'pri':''}" data-mkp="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-mkp="${mk.page+1}" ${mk.page>=pages-1?'disabled':''}>Next ›</button>`:'';
-  liveUpdate()}
-document.addEventListener('click',e=>{const mv=e.target.closest('[data-mvp]');if(mv&&!mv.disabled){const [id,pg]=mv.dataset.mvp.split(':');(App.mk.pg=App.mk.pg||{})[id]=+pg;drawMovers();return}
-  const p=e.target.closest('[data-mkp]'),m=e.target.closest('[data-mkmode]');
-  if(p&&!p.disabled){App.mk.page=+p.dataset.mkp;drawMkTable();const w=$('#v-markets .mk-card');if(w)w.scrollIntoView({block:'start',behavior:'smooth'})}
-  else if(m){const k=m.dataset.mkmode;if(k==='heat')App.mk.heat=!App.mk.heat;else App.mk.mode=k;renderMarkets()}});
-document.addEventListener('input',e=>{if(e.target.id==='mkq'){App.mk.q=e.target.value;drawMkTable()}});
-document.addEventListener('change',e=>{if(e.target.id==='mksec'){App.mk.sec=e.target.value;drawMkTable()}else if(e.target.id==='mksize'){App.mk.size=+e.target.value;drawMkTable()}});
+document.addEventListener('click',e=>{const mv=e.target.closest('[data-mvp]');if(mv&&!mv.disabled){const [id,pg]=mv.dataset.mvp.split(':');(App.mk.pg=App.mk.pg||{})[id]=+pg;drawMovers()}});
 
 let eqRange=90;
 function renderPortfolio(){const eq=equity(),inv=App.positions.reduce((a,p)=>a+Math.abs(p.q)*p.avg,0),unr=App.positions.reduce((a,p)=>a+p.q*(SYM(p.sym).last-p.avg),0);
@@ -3392,7 +3373,7 @@ async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?
 async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks()}
 
 /* ======================= Events ======================= */
-document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[data-sym],[data-act],[data-tf],[data-tool],[data-btab],[data-close],[data-cancel],[data-side],[data-otype],[data-pct],[data-b],[data-mkcls],[data-sort],[data-watch],[data-eqr],[data-ord],[data-altog],[data-aldel],[data-libcat],[data-libadd],[data-mtf],[data-msheet],[data-mq],[data-mplace]');
+document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[data-sym],[data-act],[data-tf],[data-tool],[data-btab],[data-close],[data-cancel],[data-side],[data-otype],[data-pct],[data-b],[data-eqr],[data-ord],[data-altog],[data-aldel],[data-libcat],[data-libadd],[data-mtf],[data-msheet],[data-mq],[data-mplace]');
   if(!t||t.closest('.modal-bg')&&!t.matches('[data-sym]'))return;const d=t.dataset;
   if(d.view){go(d.view);return}
   if(d.sym!=null){closeModal();switchSym(d.sym);return}
@@ -3406,9 +3387,6 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[dat
   if(d.pct){const s=App.sym,tk=App.tk,p=posOf(s.s),px=tk.type==='market'?ask(s):(+tk.price||s.last),f=+d.pct/100,qd=10**(s.qdp||0);
     tk.qty=String(tk.side==='sell'&&p&&p.q>0?Math.floor(p.q*f*qd)/qd:Math.floor(App.cash*f/px*qd)/qd);$('#tkQty').value=tk.qty;calcTicket();return}
   if(d.b){App.book=d.b;$$('#bookSeg button').forEach(x=>x.classList.toggle('on',x===t));buildBook();return}
-  if(d.mkcls){App.mk.cls=d.mkcls;$$('#mkcls .chip').forEach(x=>x.classList.toggle('on',x===t));drawMkTable();return}
-  if(d.sort){const mk=App.mk;if(mk.sort===d.sort)mk.dir*=-1;else{mk.sort=d.sort;mk.dir=d.sort==='s'?1:-1}drawMkTable();return}
-  if(d.watch){App.watch.has(d.watch)?App.watch.delete(d.watch):App.watch.add(d.watch);drawMkTable();renderWatchlist();return}
   if(d.eqr){eqRange=+d.eqr;$$('#eqSeg button').forEach(x=>x.classList.toggle('on',x===t));drawEquity();return}
   if(d.ord){App.ord=d.ord;renderOrders();return}
   if(d.altog){const a=App.alerts.find(x=>x.id==d.altog);a.on=!a.on;if(a.on)a.status='Active';renderAlerts();renderBottom();setChartLines();return}
@@ -3456,7 +3434,7 @@ async function ensureX(sym,name,isIdx){sym=String(sym||'').trim().toUpperCase();
   try{const r=await api('/api/m/quotes?symbols='+encodeURIComponent(sym)),q=(r.quotes||[]).find(x=>x.s===sym);
     if(q&&q.last>0)Object.assign(e,{last:q.last,p:q.last,prev:q.prev>0?q.prev:q.last,hi:q.high||q.last,lo:q.low||q.last,open:q.open||q.last,yh:q.yh||e.yh,yl:q.yl||e.yl})}catch(_){}
   return e}
-SB.init({get:p=>api(p),goTab:()=>go('stocks'),
+SB.init({get:p=>api(p),goTab:(tab)=>{go('markets');if(tab)SB.page($('#mkStockList'),tab)},
   async trade(sym,name,side,idx){const e=await ensureX(sym,name,idx);if(!(e.last>0)){toast('No live price for '+sym+' right now','bad');return}App.tk.side=side==='SELL'?'sell':'buy';App.tk.type='market';switchSym(sym)},
   async chart(sym,name,idx){const e=await ensureX(sym,name,idx);if(!(e.last>0)){toast('No live price for '+sym+' right now','bad');return}switchSym(sym)},
   async alert(sym,name,idx){const e=await ensureX(sym,name,idx);if(!(e.last>0)){toast('No live price for '+sym+' right now','bad');return}
