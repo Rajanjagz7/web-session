@@ -24,10 +24,6 @@
     {
       "path": "/api/cron/weekly-cleanup",
       "schedule": "30 18 * * 6"
-    },
-    {
-      "path": "/api/cron/signal-push",
-      "schedule": "*/5 3-10 * * 1-5"
     }
   ],
   "rewrites": [
