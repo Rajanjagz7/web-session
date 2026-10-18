@@ -722,7 +722,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-empty-s svg{width:30px;height:30px;flex:none}.opx-empty-s p{max-width:none}
 .opx-sig{padding:0}
 @media (max-width:899px){.opx-empty-s{display:none}}
-#opStrat .tbl-wrap,#opRead .tbl-wrap{display:block;width:100%;overflow-x:auto}#opStrat table.rd,#opRead table.rd{width:100%!important;display:table!important}
+#opStrat .tbl-wrap,#opRead .tbl-wrap,#rInd .tbl-wrap{display:block;width:100%;overflow-x:auto}#opStrat table.rd,#opRead table.rd,#rInd table.rd{width:100%!important;display:table!important}
 @media (max-width:899px){#opStrat table.rd thead{display:none}#opStrat table.rd,#opStrat table.rd tbody{display:block!important}#opStrat table.rd tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}#opStrat table.rd td{padding:0;border:0;display:block}#opStrat table.rd td:nth-child(3){grid-column:1/-1}#opStrat table.rd td[colspan]{grid-column:2}}
 @media (min-width:900px){
   .opx-wtabs{display:none}.opx-ph{display:block;padding:12px 14px 0;font-weight:700;font-size:14px}
@@ -864,7 +864,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
     </section>
     <aside class="right">
       <div class="rtabs" id="rtabs"><button class="on" data-rtab="order">Order</button><button data-rtab="ind">Indicators</button></div>
-      <div id="rInd" class="rind ip-host" hidden></div>
+      <div id="rInd" class="rind" hidden></div>
       <div id="rOrder">
       <div class="ticket" id="ticket"></div>
       <div class="book"><div class="book-h"><div class="seg" id="bookSeg"><button class="on" data-b="book">Order book</button><button data-b="tape">Trades</button></div><span class="muted" style="font-size:11.5px" title="Depth is illustrative around the real bid/ask; paper trading only"><span id="bookSym"></span> · illustrative depth</span></div><div id="book"></div></div>
@@ -2154,7 +2154,7 @@ function renderTools(){$('#tools').innerHTML=TOOLS.map(([k,l])=>`<button class="
   const hint={trend:'Click two points to draw a trend line',hline:'Click to place a horizontal line',rect:'Click two corners',fib:'Click swing high, then swing low',measure:'Click start and end to measure'}[chart.tool];
   $('#hint').textContent=hint?hint+' · Esc to cancel':'';$('#hint').classList.toggle('show',!!hint)}
 function switchSym(k){App.span=null;App.sym=SYM(k);App.tk.price='';App.tk.tpPx='';App.tk.slPx='';chart.drawings=[];chart.sel=-1;loadChart(false);renderSymbar();renderWatchlist();renderTicket();buildBook();if(App.view!=='trade')go('trade');liveUpdate();$('#v-trade').classList.remove('wl-open');renderIndPanels();
-  const ri=$('#rInd');if(ri&&!ri.hidden)ensureStatuses()}
+  const ri=$('#rInd');if(ri&&!ri.hidden)renderTradeIndAll()}
 function setChartLines(){const s=App.sym,ls=[],p=posOf(s.s);
   if(p){const pnl=p.q*(s.last-p.avg);ls.push({price:p.avg,label:`${p.q>0?'LONG':'SHORT'} ${qfmt(Math.abs(p.q),s)}  ${smoney(pnl)}`,color:T.s[0],dash:[1,0]});
     if(p.tp)ls.push({price:p.tp,label:'TP '+fmtP(p.tp,s.dp),color:T.up,drag:1,set:v=>p.tp=v,kind:'tp'});
@@ -2999,7 +2999,7 @@ function renderIndPanels(){const keepQ=document.activeElement&&document.activeEl
 function ensureStatuses(){if(!ST.meta||App.sym.tv)return;const sym=App.sym.s,todo=ST.meta.strategies.filter(m=>m.kind!=='optscan'&&!(m.indexOnly&&!INDEX_RE.test(sym))&&!(ST.res[m.key+'|'+sym]&&!ST.res[m.key+'|'+sym].pending));let i=0,n=0;
   const w=async()=>{while(i<todo.length){const m=todo[i++];ST.res[m.key+'|'+sym]=ST.res[m.key+'|'+sym]||{pending:1};await runStrat(m.key,sym);n++;if(App.sym.s===sym&&n%3===0)renderIndPanels()}if(App.sym.s===sym)renderIndPanels()};
   Promise.all([w(),w(),w(),w()])}
-document.addEventListener('click',e=>{const rt=e.target.closest('[data-rtab]');if(rt){const t=rt.dataset.rtab;$$('#rtabs button').forEach(b=>b.classList.toggle('on',b===rt));$('#rOrder').hidden=t!=='order';$('#rInd').hidden=t!=='ind';if(t==='ind'){loadStratMeta().then(()=>{restorePending();renderIndPanels();ensureStatuses()}).catch(()=>renderIndPanels())}return}
+document.addEventListener('click',e=>{const rt=e.target.closest('[data-rtab]');if(rt){const t=rt.dataset.rtab;$$('#rtabs button').forEach(b=>b.classList.toggle('on',b===rt));$('#rOrder').hidden=t!=='order';$('#rInd').hidden=t!=='ind';if(t==='ind')renderTradeIndAll();return}
   const b=e.target.closest('[data-ip]');if(!b)return;const [a,v]=b.dataset.ip.split(/:(.*)/s);
   if(a==='cat'){IP.cat=v;renderIndPanels();return}
   if(a==='add'){if(DEFS[v]&&addInd(v)){toast(DEFS[v].name+' added','ok');renderToolbar();renderIndPanels()}return}
@@ -3441,10 +3441,10 @@ const tidyText=s=>String(s||'').replace(/\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b/g,m=>m.toL
 const headNoLvl=h=>tidyText(h).split(' · ').filter(p=>!/^(plan\s|T\d\s|SL\s|TP\s|support\s|resistance\s)/i.test(p)).join(' · ');
 function levelsLine(lv){if(!lv)return'';const parts=Object.entries(lv).filter(([k,v])=>typeof v==='number'&&isFinite(v)).slice(0,6).map(([k,v])=>`<span class="lvl"><small>${esc(lvlName(k))}</small> <b class="num">${fmtP(v)}</b></span>`);
   return parts.length?`<div class="lvls">${parts.join('')}</div>`:''}
-async function optStrats(){const box=$('#opStrat');if(!box)return;const und=OPT.sym;
-  const meta=await loadStratMeta().catch(()=>null);if(!meta||!$('#opStrat'))return;
+async function renderAllIndicators(containerSel,und,side){const box=$(containerSel);if(!box)return;
+  const meta=await loadStratMeta().catch(()=>null);if(!meta||!$(containerSel))return;
   const list=meta.strategies.filter(m=>!String(m.key).startsWith('opt-')&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
-  const draw=()=>{const bx=$('#opStrat');if(!bx)return;const side=OPT.sel?OPT.sel.side:null,rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side||'CE');
+  const draw=()=>{const bx=$(containerSel);if(!bx)return;const rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side||'CE');
     if(!side){V.txt=!(V.bu+V.be)?`No active signal on ${und} right now — wait for a setup`:V.bu===V.be?`${und} is mixed: ${V.bu} bullish · ${V.be} bearish`:V.bu>V.be?`${und} leans bullish (${V.bu} vs ${V.be}) — CE side favoured`:`${und} leans bearish (${V.be} vs ${V.bu}) — PE side favoured`;V.cls=V.bu===V.be?'muted':V.bu>V.be?'up':'down'}
     const done=rows.filter(x=>x.r&&!x.r.pending).length;
     const live=x=>x.r&&!x.r.pending&&!x.r.err&&!x.r.stale;
@@ -3469,14 +3469,16 @@ async function optStrats(){const box=$('#opStrat');if(!box)return;const und=OPT.
      <div class="opx-sigpg"><div class="opx-seg opx-seg-s">${[[5,'5'],[10,'10'],[20,'20'],[0,'All']].map(([n,l])=>`<button class="${(OS.size||0)===n?'on':''}" data-ossig="size:${n}">${l}</button>`).join('')}</div>
        <span class="muted">${fr.length?`${OS.pg*size+1}–${OS.pg*size+pr.length} of ${fr.length}`:'0'}</span>
        <span class="opx-pgb"><button class="opx-pb" data-ossig="pg:${OS.pg-1}" ${OS.pg<=0?'disabled':''} aria-label="Previous indicators">‹</button><b>${OS.pg+1} / ${pages}</b><button class="opx-pb" data-ossig="pg:${OS.pg+1}" ${OS.pg>=pages-1?'disabled':''} aria-label="Next indicators">›</button></span></div>
-     <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). Only active signals are counted — bullish favours a CE, bearish favours a PE. ${side?"The plan above is built from the contract's own chart.":'Pick a CE or PE in the chain to see what each signal means for that contract.'}</p>`;if(OPT.sel)updateOptPlan()};
+     <p class="muted" style="padding:6px 14px 12px;font-size:11.5px">Strategies run on ${esc(und)} (daily bars). Only active signals are counted — bullish favours a CE, bearish favours a PE. ${side?"The plan above is built from the contract's own chart.":'Pick a CE or PE in the chain to see what each signal means for that contract.'}</p>`;if(side&&OPT.sel)updateOptPlan()};
   if(OS.sym!==und){OS.sym=und;OS.token++}
   draw();
   const tk=OS.token,todo=list.filter(m=>{const r=OS.res[m.key+'|'+und];return !r||(!r.pending&&Date.now()-(r.ts||0)>90000)});
   let i=0;const w=async()=>{while(i<todo.length){const m=todo[i++];OS.res[m.key+'|'+und]=OS.res[m.key+'|'+und]||{pending:1};
       try{const r=await api('/api/m/strategy?key='+m.key+'&symbol='+encodeURIComponent(und));r.ts=Date.now();OS.res[m.key+'|'+und]=r}catch(e){OS.res[m.key+'|'+und]={err:1,ts:Date.now()}}
-      if(OS.token===tk&&OPT.sym===und)draw()}};
+      if(OS.token===tk)draw()}};
   await Promise.all([w(),w(),w()])}
+function optStrats(){return renderAllIndicators('#opStrat',OPT.sym,OPT.sel?OPT.sel.side:null)}
+function renderTradeIndAll(){return renderAllIndicators('#rInd',App.sym.s,null)}
 
 /* ======================= Live engine (real NSE quotes via Upstox) ======================= */
 function trig(s,pv){
