@@ -143,7 +143,7 @@ def _sma_list(vals, n):
 def _raw_supertrend_mtf(symbol):
     bars = bar_source.daily_bars(symbol, 700)
     if len(bars) < 40:
-        raise RuntimeError("Not enough daily history for Supertrend")
+        raise HTTPException(400, "Not enough daily history for Supertrend")
     line, up = rp._supertrend(bars, 3.0, 10)
     groups, bucket = rp._resample_with_map(bars, "W")
     _wl, wup = rp._supertrend(groups, 3.0, 10)
@@ -187,7 +187,7 @@ def _raw_volume_spurt(symbol):
         spurt = sma[i] is not None and sma[i] > 0 and vols[i] > sma[i] * 2.0 and b["close"] > b["open"]
         rows.append({"date": b["date"], "signal": "SPURT" if spurt else None, "ratio": (vols[i] / sma[i]) if sma[i] else None})
     if not any(vols):
-        raise RuntimeError(f"{symbol} has no volume data (indices do not report volume)")
+        raise HTTPException(400, f"{symbol} has no volume data (indices do not report volume)")
     last = bars[-1]
     return {"bars": rows[-120:], "current": {"date": last["date"], "close": last["close"], "volume": vols[-1], "avgVolume20": sma[-1],
             "ratio": rows[-1]["ratio"], "signal": rows[-1]["signal"]}}
@@ -203,13 +203,13 @@ def _session_days(m1):
 def _raw_orb(symbol):
     m1 = bar_source.bars_1m(symbol, 5)
     if not m1:
-        raise RuntimeError("No intraday data available")
+        raise HTTPException(400, "No intraday data available")
     days = _session_days(m1)
     d = max(days)
     sess = days[d]
     window = [b for b in sess if (b["dt"].hour, b["dt"].minute) < (9, 30)]
     if len(window) < 5:
-        raise RuntimeError("The 09:15-09:30 opening range is not complete in the data yet")
+        raise HTTPException(400, "The 09:15-09:30 opening range is not complete in the data yet")
     hi, lo = max(b["high"] for b in window), min(b["low"] for b in window)
     rng = hi - lo
     after = [b for b in sess if (b["dt"].hour, b["dt"].minute) >= (9, 30)]
@@ -232,7 +232,7 @@ def _raw_orb(symbol):
 def _raw_vwap_rsi(symbol):
     m1 = bar_source.bars_1m(symbol, 5)
     if not m1:
-        raise RuntimeError("No intraday data available")
+        raise HTTPException(400, "No intraday data available")
     five = []
     for dday, bars in sorted(_session_days(m1).items()):
         for i in range(0, len(bars), 5):
@@ -240,7 +240,7 @@ def _raw_vwap_rsi(symbol):
             five.append({"dt": ch[0]["dt"], "open": ch[0]["open"], "high": max(x["high"] for x in ch), "low": min(x["low"] for x in ch),
                          "close": ch[-1]["close"], "volume": sum(x.get("volume", 0) or 0 for x in ch), "day": dday})
     if len(five) < 40:
-        raise RuntimeError("Not enough 5-minute bars yet")
+        raise HTTPException(400, "Not enough 5-minute bars yet")
     vw, pv, vv, cur_day = [], 0.0, 0.0, None
     for b in five:
         if b["day"] != cur_day:
