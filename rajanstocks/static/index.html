@@ -398,6 +398,14 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 #v-vedic .vd-kv b{color:#eaf2ff;font-weight:700;text-align:right}
 #v-vedic .vd-kv small{color:#7f9bc2;flex-shrink:0}
 #v-vedic .vd-rahu{margin-top:10px;background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:7px 10px;text-align:center;font-size:12px;font-weight:700;color:#fca5a5}
+#v-vedic .vd-bias{display:inline-block;margin-top:12px;padding:9px 20px;border-radius:10px;font-weight:800;font-size:15px;letter-spacing:.04em}
+#v-vedic .vd-bias small{display:block;font-weight:600;font-size:10.5px;letter-spacing:.03em;opacity:.85;margin-top:2px;text-transform:none}
+#v-vedic .vd-bias.bullish{background:rgba(16,185,129,.15);color:#34d399;border:1px solid #10b981}
+#v-vedic .vd-bias.bearish{background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef4444}
+#v-vedic .vd-bias.neutral{background:rgba(245,166,35,.15);color:#fbbf24;border:1px solid #f5a623}
+#v-vedic .vd-weekend{margin:16px 0;padding:18px;border-radius:12px;background:rgba(239,68,68,.08);border:1px solid #ef4444;text-align:center}
+#v-vedic .vd-weekend b{display:block;font-size:16px;font-weight:800;color:#fca5a5}
+#v-vedic .vd-weekend p{margin-top:6px;font-size:12px;color:#b9c9e0}
 #v-vedic .vd-windows{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
 #v-vedic .vd-win{border-radius:12px;padding:12px;border:1px solid;display:flex;flex-direction:column;gap:6px}
 #v-vedic .vd-win .n{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#06111f;margin-right:6px}
@@ -2245,12 +2253,13 @@ function vdTable(windows){const row=w=>`<tr><td class="win" data-label="Window">
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','Panchang, Rahu Kaal and sidereal planetary positions — informational context only, never a BUY/SELL signal by itself.')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
   const r=VD.data;if(!r){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','')}<div class="empty">Loading…</div></div>`;return}
-  const h=r.header,mc=r.market_context,p=r.panchang,planets=r.sidereal_positions.planets_deg,stocks=r.stocks_to_watch;
+  const h=r.header,mc=r.market_context,p=r.panchang,planets=r.sidereal_positions.planets_deg,stocks=r.stocks_to_watch,bias=r.day_bias;
   el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','',`<button class="btn-xs" data-act="vedic-retry">${I('reset',14)} Refresh</button>`)}
   <div class="vd-wrap">
     <div class="vd-top">
       <div class="vd-title">NIFTY 50</div>
       <div class="vd-sub">VEDIC ASTRO INTRADAY WATCH REPORT</div>
+      <div class="vd-bias ${esc(bias.tone)}">${esc(bias.label)}<small>${esc(bias.basis)} — traditional bias, not a signal</small></div>
       <div class="vd-stats">
         <div class="vd-stat"><small>Report date</small><b>${esc(h.report_date)}</b></div>
         <div class="vd-stat"><small>Report generated</small><b>${esc(h.report_generated_ist)} (${esc(h.session_phase)})</b></div>
@@ -2258,6 +2267,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
         <div class="vd-stat"><small>Normal market session</small><b>${esc(h.session)}</b></div>
       </div>
     </div>
+    ${h.is_weekend?`<div class="vd-weekend"><b>${esc(h.weekend_message)}</b><p>Markets, option-flow scans and intraday watch windows don't apply on non-trading days — the Panchang and planetary positions below are still today's real data, kept for reference.</p></div>`:''}
     <div class="vd-cols">
       <div class="vd-panel"><h3>Market context</h3>
         ${vdField('NIFTY last',mc.nifty_last,v=>fmtP(v,2))}${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('Market open',mc.market_open,v=>v?'Yes':'No')}${vdField('GIFT Nifty',mc.gift_nifty)}${vdField('Crude oil',mc.crude_oil)}${vdField('FPI flow',mc.fpi_flow)}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}

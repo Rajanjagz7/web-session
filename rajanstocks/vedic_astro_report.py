@@ -110,6 +110,34 @@ DISCLAIMER = (
 )
 
 
+def _day_bias(paksha: str, tithi_number: int) -> dict:
+    """Traditional Vedic market-astrology headline bias from the lunar fortnight.
+
+    Shukla Paksha (waxing moon) is traditionally read as a bullish/expansion
+    half-month, Krishna Paksha (waning moon) as bearish/contraction - hence
+    "buy on dip" vs "sell on rise" as a day-opening posture. Purnima/Amavasya
+    (the paksha turning points) are flagged separately since they're
+    traditionally treated as higher-volatility, directionless days. This is
+    NOT a trading signal - it's the same traditional-astrology caveat that
+    applies to the rest of this report.
+    """
+    if tithi_number in (15, 30):
+        return {
+            "label": "TRANSITION DAY", "tone": "neutral",
+            "basis": "Purnima (full moon)" if tithi_number == 15 else "Amavasya (new moon)",
+            "note": "Traditionally a higher-volatility, directionless day in Vedic market astrology - not a signal. Wait for price confirmation before acting.",
+        }
+    if paksha == "Shukla":
+        return {
+            "label": "BUY ON DIP", "tone": "bullish", "basis": "Shukla Paksha - waxing moon",
+            "note": "Traditional Vedic market-astrology bias only, not a trading signal. Confirm with price action, VWAP and volume before acting.",
+        }
+    return {
+        "label": "SELL ON RISE", "tone": "bearish", "basis": "Krishna Paksha - waning moon",
+        "note": "Traditional Vedic market-astrology bias only, not a trading signal. Confirm with price action, VWAP and volume before acting.",
+    }
+
+
 def _na(reason: str):
     return {"available": False, "value": None, "reason": reason}
 
@@ -199,6 +227,11 @@ def generate_report(now_utc: datetime | None = None) -> dict:
 
     today_iso = now_ist.date().isoformat()
     is_weekday = now_ist.weekday() < 5
+    is_weekend = not is_weekday
+    weekend_message = None
+    if is_weekend:
+        next_monday = (now_ist + timedelta(days=(-now_ist.weekday()) % 7)).date()
+        weekend_message = f"Markets are closed for the weekend. This report updates again Monday, {next_monday.strftime('%d %B %Y')} at 08:00 IST."
     holiday_name = NSE_HOLIDAYS.get(now_ist.year, {}).get(today_iso)
     have_calendar = now_ist.year in NSE_HOLIDAYS
     if holiday_name:
@@ -228,7 +261,10 @@ def generate_report(now_utc: datetime | None = None) -> dict:
             "nse_holiday_check": holiday_check,
             "session": "09:15-15:30 IST (Equity Cash)",
             "session_phase": session_phase,
+            "is_weekend": is_weekend,
+            "weekend_message": weekend_message,
         },
+        "day_bias": _day_bias(panchang["paksha"], panchang["tithi_number"]),
         "market_context": _market_context(),
         "panchang": {
             "day": f"{now_ist.strftime('%A')} / {panchang['weekday_sanskrit']}",
