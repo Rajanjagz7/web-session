@@ -468,7 +468,7 @@ FUNDS = [
     ("Flexi Cap", ["Kotak Flexicap Fund", "Kotak Flexi Cap"]),
     ("Mid Cap", ["Motilal Oswal Midcap Fund", "Motilal Oswal Mid Cap"]),
     ("Mid Cap", ["HDFC Mid Cap Fund", "HDFC Mid-Cap Opportunities Fund"]),
-    ("Mid Cap", ["Kotak Midcap Fund", "Kotak Emerging Equity Fund"]),
+    ("Mid Cap", ["Kotak Emerging Equity Fund", "Kotak Midcap Fund"]),
     ("Small Cap", ["Nippon India Small Cap Fund"]),
     ("Small Cap", ["SBI Small Cap Fund"]),
     ("Small Cap", ["Quant Small Cap Fund"]),
@@ -480,9 +480,9 @@ FUNDS = [
     ("ELSS Tax Saver", ["DSP ELSS Tax Saver Fund"]),
     ("Hybrid", ["ICICI Prudential Balanced Advantage Fund"]),
     ("Hybrid", ["HDFC Balanced Advantage Fund"]),
-    ("Hybrid", ["SBI Equity Hybrid Fund"]),
+    ("Hybrid", ["SBI Equity Hybrid Fund", "SBI Equity Hybrid"]),
     ("Debt", ["HDFC Corporate Bond Fund"]),
-    ("Debt", ["ICICI Prudential Corporate Bond Fund"]),
+    ("Debt", ["ICICI Prudential Corporate Bond Fund", "ICICI Prudential Corporate Bond"]),
     ("Debt", ["SBI Liquid Fund"]),
     ("Gold", ["SBI Gold Fund", "Nippon India Gold Savings Fund"]),
     ("Gold", ["HDFC Gold ETF Fund of Fund", "HDFC Gold Fund"]),
@@ -495,31 +495,54 @@ def _is_direct_growth(n):
 
 
 def mf_search(q, direct_growth=True):
-    r = _http.get(f"{MF_API}/search", params={"q": q}, timeout=10)
-    r.raise_for_status()
-    items = r.json() or []
+    last = None
+    for attempt in range(3):
+        try:
+            r = _http.get(f"{MF_API}/search", params={"q": q}, timeout=10)
+            r.raise_for_status()
+            items = r.json() or []
+            break
+        except Exception as e:  # mfapi.in rate-limits bursts: back off and retry
+            last = e
+            time.sleep(0.6 * (attempt + 1))
+    else:
+        raise last
     if direct_growth:
         items = [i for i in items if _is_direct_growth(i.get("schemeName", ""))]
     return items
 
 
+_PASSIVE = {"index", "nifty", "etf", "fof", "sensex", "50", "150", "100"}
+
+
 def _resolve(names):
+    """First query whose words ALL appear in a Direct-Growth scheme name; passive funds only when asked for."""
     for q in names:
         try:
             items = mf_search(q)
         except Exception:
             continue
         toks = set(_norm(q)) - {"fund"}
-        items.sort(key=lambda i: -len(toks & set(_norm(i["schemeName"]))))
-        if items and len(toks & set(_norm(items[0]["schemeName"]))) >= max(2, len(toks) - 1):
-            return items[0]["schemeCode"], items[0]["schemeName"]
+        ok = []
+        for i in items:
+            nt = set(_norm(i["schemeName"].replace("-", " ")))
+            if toks <= nt and not ((nt & _PASSIVE) - toks):
+                ok.append(i)
+        if ok:
+            ok.sort(key=lambda i: len(i["schemeName"]))
+            return ok[0]["schemeCode"], ok[0]["schemeName"]
     return None, None
 
 
 def _resolve_all():
-    with ThreadPoolExecutor(8) as ex:
+    with ThreadPoolExecutor(4) as ex:
         res = list(ex.map(lambda f: _resolve(f[1]), FUNDS))
-    return [{"category": cat, "code": c, "scheme": n} for (cat, _), (c, n) in zip(FUNDS, res) if c]
+    out, seen = [], set()
+    for (cat, _), (c, n) in zip(FUNDS, res):
+        if c and c not in seen:
+            seen.add(c)
+            out.append({"category": cat, "code": c, "scheme": n})
+    return out
 
 
 def _nav_history(code):
@@ -694,7 +717,7 @@ def _fund_summary(f):
 
 
 def build_funds():
-    codes = _cached("mf:codes:v1", 7 * 86400, _resolve_all)
+    codes = _cached("mf:codes:v2", 7 * 86400, _resolve_all)
     if not codes:
         raise RuntimeError("mfapi.in did not answer the scheme search")
     with ThreadPoolExecutor(8) as ex:
@@ -705,7 +728,7 @@ def build_funds():
 
 @router.get("/api/funds/list")
 def funds_list(refresh: bool = False):
-    key = "mf:list:v1"
+    key = "mf:list:v2"
     if refresh:
         with _mem_lock:
             _mem.pop(key, None)
