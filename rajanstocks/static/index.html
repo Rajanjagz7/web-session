@@ -3430,7 +3430,8 @@ const OS={res:{},sym:null,token:0};
 (()=>{let v={};try{v=JSON.parse(localStorage.getItem('rs-ossig')||'{}')}catch(e){}OS.flt=v.flt||'all';OS.size=v.size===undefined?5:v.size;OS.pg=0})();
 /* what the underlying's active strategies mean for THIS contract: bullish supports a CE, bearish supports a PE */
 function optVerdict(und,side){let bu=0,be=0;
-  for(const [k,r] of Object.entries(OS.res)){if(!k.endsWith('|'+und)||k.startsWith('opt-')||!r||r.err||r.pending||r.stale)continue;if(r.bias==='bull')bu++;else if(r.bias==='bear')be++}
+  const optscanKeys=new Set((ST.meta?.strategies||[]).filter(m=>m.kind==='optscan').map(m=>m.key));
+  for(const [k,r] of Object.entries(OS.res)){if(!k.endsWith('|'+und)||optscanKeys.has(k.slice(0,k.lastIndexOf('|')))||!r||r.err||r.pending||r.stale)continue;if(r.bias==='bull')bu++;else if(r.bias==='bear')be++}
   const tot=bu+be,nm=side==='CE'?'CE':'PE';let txt,cls,ok=null;
   if(!tot){txt=`No active strategy signal on ${und} right now — wait for a setup`;cls='muted'}
   else if(bu===be){txt=`Strategies are mixed on ${und} (${bu} bullish · ${be} bearish) — no clear edge`;cls='muted'}
@@ -3450,7 +3451,7 @@ function levelsLine(lv){if(!lv)return'';const parts=Object.entries(lv).filter(([
   return parts.length?`<div class="lvls">${parts.join('')}</div>`:''}
 async function renderAllIndicators(containerSel,und,side){const box=$(containerSel);if(!box)return;
   const meta=await loadStratMeta().catch(()=>null);if(!meta||!$(containerSel))return;
-  const list=meta.strategies.filter(m=>!String(m.key).startsWith('opt-')&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
+  const list=meta.strategies.filter(m=>m.kind!=='optscan'&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
   const draw=()=>{const bx=$(containerSel);if(!bx)return;const rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side||'CE');
     if(!side){V.txt=!(V.bu+V.be)?`No active signal on ${und} right now — wait for a setup`:V.bu===V.be?`${und} is mixed: ${V.bu} bullish · ${V.be} bearish`:V.bu>V.be?`${und} leans bullish (${V.bu} vs ${V.be}) — CE side favoured`:`${und} leans bearish (${V.be} vs ${V.bu}) — PE side favoured`;V.cls=V.bu===V.be?'muted':V.bu>V.be?'up':'down'}
     const done=rows.filter(x=>x.r&&!x.r.pending).length;
