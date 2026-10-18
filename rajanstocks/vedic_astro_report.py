@@ -260,7 +260,7 @@ def generate_report(now_utc: datetime | None = None) -> dict:
     if holiday_name:
         trading_day = _ok(f"No - {holiday_name}")
     elif not is_weekday:
-        trading_day = _ok("No - weekend")
+        trading_day = _ok("No")
     elif have_calendar:
         trading_day = _ok("Yes - scheduled trading day")
     else:
@@ -271,10 +271,10 @@ def generate_report(now_utc: datetime | None = None) -> dict:
         _na(f"No NSE holiday calendar wired in for {now_ist.year} - verify against the official NSE calendar before relying on this")
     )
     session_phase = (
-        "market closed" if (holiday_name or not is_weekday)
-        else "pre-market" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15)
-        else "during session" if (now_ist.hour, now_ist.minute) < (15, 30)
-        else "post-market"
+        "Market closed" if (holiday_name or not is_weekday)
+        else "Pre-market" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15)
+        else "During session" if (now_ist.hour, now_ist.minute) < (15, 30)
+        else "Post-market"
     )
 
     mc = _market_context()
