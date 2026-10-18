@@ -731,6 +731,73 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   .opx-empty-s{padding:10px 14px}
 }
 </style>
+<style id="vxCss">
+.vx{--gold:#e8b84a;max-width:1400px;margin:0 auto}
+.vx .up{color:var(--up)}.vx .down{color:var(--down)}
+.vx-hero{display:grid;grid-template-columns:1.1fr 1.3fr 1.2fr;gap:12px;align-items:stretch;margin:4px 0 10px}
+.vx-hero>div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.vx-h1{background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 14%,var(--panel)),var(--panel))!important}
+.vx-eye{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--gold)}
+.vx-px{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0}.vx-px b{font-size:26px}.vx-px span{font-size:13px;font-weight:600}
+.vx-meta{font-size:12px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.vx-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:700;background:var(--panel-2);color:var(--text-2);white-space:nowrap}
+.vx-chip.up{background:var(--up-bg);color:var(--up)}.vx-chip.down{background:var(--down-bg);color:var(--down)}.vx-chip.gold{background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold)}
+.vx-lean{display:flex;flex-direction:column;gap:6px;cursor:help}.vx-lean small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}
+.vx-lean b{font-size:20px;letter-spacing:.02em}.vx-lean.up b{color:var(--up)}.vx-lean.down b{color:var(--down)}.vx-lean.mute b{color:var(--gold)}
+.vx-meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--line) 50%,var(--up))}.vx-meter i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
+.vx-factors{display:flex;flex-wrap:wrap;gap:4px}
+.vx-today{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;align-content:start;position:relative}.vx-today small{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em}.vx-today b{display:block;font-size:13px}.vx-today span{font-size:11px;color:var(--text-3)}
+.vx-today .rahu b{color:var(--down)}.vx-today .btn-xs{position:absolute;right:10px;bottom:10px}
+.vx-closed{padding:8px 12px;border-radius:10px;margin-bottom:10px;font-size:12.5px;background:color-mix(in srgb,var(--gold) 10%,transparent);border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);color:var(--text)}
+.vx-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:10px}.vx-tabs button{padding:9px 16px;border:0;background:none;color:var(--text-3);font:inherit;font-weight:700;font-size:13.5px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}.vx-tabs button.on{color:var(--text);border-bottom-color:var(--gold)}
+.vx-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:10px;margin-bottom:10px}
+.vx-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0;margin-bottom:10px}.vx-grid2 .vx-card{margin-bottom:0}
+.vx-card h3{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin:0 0 10px;display:flex;align-items:center;gap:6px}
+.vx-tip{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--panel-2);color:var(--text-3);font-size:10px;cursor:help}
+.vx-note{font-size:11.5px;color:var(--text-3);margin:8px 0 0}
+.vx-ladder{display:flex;flex-direction:column;gap:3px}
+.vx-lad{display:grid;grid-template-columns:96px 1fr 70px;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel-2);font-size:13px;cursor:help}
+.vx-lad span{font-size:11px;font-weight:700;color:var(--text-3)}.vx-lad em{font-style:normal;font-size:11.5px;text-align:right;color:var(--text-3)}
+.vx-lad.up{border-left:3px solid var(--down)}.vx-lad.up b{color:var(--down)}.vx-lad.dn{border-left:3px solid var(--up)}.vx-lad.dn b{color:var(--up)}
+.vx-lad.base{border-left:3px solid var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}.vx-lad.base b,.vx-lad.base span{color:var(--gold)}
+.vx-lad.now{background:var(--brand);color:#fff;font-weight:700}.vx-lad.now span,.vx-lad.now em{color:#fff}
+.vx-setups{display:grid;grid-template-columns:1fr 1fr;gap:8px}.vx-setup{border-radius:10px;padding:10px 12px;display:grid;gap:6px}
+.vx-setup.long{background:var(--up-bg);border:1px solid color-mix(in srgb,var(--up) 35%,transparent)}.vx-setup.short{background:var(--down-bg);border:1px solid color-mix(in srgb,var(--down) 35%,transparent)}
+.vx-setup h4{margin:0;font-size:13px}.vx-setup.long h4{color:var(--up)}.vx-setup.short h4{color:var(--down)}.vx-setup small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase}.vx-setup b{font-size:14px}
+.vx-kvs .vd-kv{display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px}.vx-kvs .vd-kv small{color:var(--text-3)}
+.vx-tl{margin:4px 0 12px}.vx-tl-bar{position:relative;height:34px;border-radius:8px;background:var(--panel-2);overflow:hidden}
+.vx-seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;border-right:1px solid var(--panel)}.vx-seg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.vx-seg.k0{background:#10b981}.vx-seg.k1{background:#3b82f6}.vx-seg.k2{background:#a855f7}.vx-seg.k3{background:#f59e0b}.vx-seg.k4{background:#14b8a6}
+.vx-seg.rahu{background:repeating-linear-gradient(45deg,#ef4444,#ef4444 6px,#b91c1c 6px,#b91c1c 12px)!important;z-index:2;opacity:.92}
+.vx-now{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);z-index:3}
+.vx-tl-ticks{position:relative;height:16px;font-size:10px;color:var(--text-3)}.vx-tl-ticks i{position:absolute;transform:translateX(-50%);font-style:normal}.vx-tl-ticks i:first-child{transform:none}.vx-tl-ticks i:last-child{transform:translateX(-100%)}
+.vx-tl-out{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+.vx-wins{display:grid;gap:6px}.vx-win{border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}.vx-win summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:24px minmax(150px,auto) 110px 1fr;align-items:center;gap:8px;padding:8px 10px;font-size:12.5px}
+.vx-win summary::-webkit-details-marker{display:none}.vx-win small{color:var(--text-3)}.vx-win em{font-style:normal;color:var(--gold);font-weight:700}
+.vx-wn{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--panel);font-size:11px;font-weight:800}
+.vx-win.rahu{border-color:color-mix(in srgb,var(--down) 45%,transparent)}.vx-win.rahu em{color:var(--down)}.vx-win.off{opacity:.6}
+.vx-wb{padding:0 12px 10px 42px;font-size:12.5px}.vx-wb p{margin:4px 0}
+.vx-pan{display:grid;grid-template-columns:1fr 1fr;gap:8px}.vx-pan>div{background:var(--panel-2);border-radius:9px;padding:8px 10px}.vx-pan .wide{grid-column:1/-1}.vx-pan small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.vx-pan b{font-size:13.5px}
+.vx-pan .rahu{background:var(--down-bg)}.vx-pan .rahu b{color:var(--down)}
+.vx-prog{display:block;height:4px;border-radius:2px;background:var(--line);margin-top:6px;overflow:hidden}.vx-prog i{display:block;height:100%}
+.vx-biasbox{margin-top:10px;border-radius:10px;padding:10px 12px;background:var(--panel-2);border-left:3px solid var(--gold)}.vx-biasbox.bullish{border-left-color:var(--up)}.vx-biasbox.bearish{border-left-color:var(--down)}
+.vx-biasbox b{font-size:14px}.vx-biasbox span{margin-left:8px;font-size:12px;color:var(--text-3)}.vx-biasbox p{margin:4px 0 0;font-size:12px;color:var(--text-2)}
+.vx-wheelwrap{display:flex;justify-content:center}.vx-wheel{width:min(100%,300px);height:auto}
+.vx-w0{fill:var(--panel-2);stroke:var(--line)}.vx-w1{fill:var(--panel);stroke:var(--line)}.vx-w2{fill:var(--panel-2);stroke:var(--line)}.vx-wl{stroke:var(--line)}
+.vx-wg{font-size:14px;fill:var(--gold)}.vx-wp{font-size:9.5px;font-weight:800}.vx-wc{font-size:10px;fill:var(--text-3);font-weight:700}.vx-wc2{font-size:9px;fill:var(--text-3)}
+.vx-t{width:100%;font-size:12.5px;border-collapse:collapse}.vx-t th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}.vx-t td{padding:6px 8px;border-top:1px solid var(--line)}
+.vx-t .num{text-align:right}.vx-t tr.base td{color:var(--gold);font-weight:700}.vx-t tr.hot td{background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.vx-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.vx-pvs{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.vx-pvs>div{background:var(--panel-2);border-radius:9px;padding:8px 12px}.vx-pvs small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase}.vx-pvs b{font-size:15px}
+.vx-pivots{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:10px}.vx-pivots>div{background:var(--panel-2);border-radius:9px;padding:8px 12px}.vx-pivots small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase}.vx-pivots b{font-size:15px}.vx-pivots span{display:block;font-size:11.5px;color:var(--text-3)}
+.vx-seas{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.vx-stock{padding:8px 0;border-top:1px solid var(--line)}.vx-stock:first-of-type{border-top:0}.vx-stock>div{display:flex;align-items:center;gap:6px}.vx-stock .vx-chip{margin-left:auto}.vx-stock p{margin:3px 0;font-size:12.5px;color:var(--text-2)}.vx-stock small{font-size:11.5px;color:var(--text-3)}
+.vx-ul{margin:0;padding-left:18px;font-size:12.5px;display:grid;gap:3px}.vx-card>p{font-size:12.5px;margin:4px 0}
+.vx-disc{font-size:12px;color:var(--text-3);margin:4px 0 20px}.vx-disc summary{cursor:pointer;font-weight:700}
+.vx-skel{height:120px;border-radius:12px;background:linear-gradient(90deg,var(--panel),var(--panel-2),var(--panel));background-size:200% 100%;animation:vxsk 1.2s linear infinite}@keyframes vxsk{to{background-position:-200% 0}}
+@media(max-width:1000px){.vx-hero{grid-template-columns:1fr 1fr}.vx-h1{grid-column:1/-1}}
+@media(max-width:640px){.vx-hero{grid-template-columns:1fr}.vx-setups{grid-template-columns:1fr}.vx-win summary{grid-template-columns:24px 1fr auto}.vx-win summary small{grid-column:2/-1}.vx-tabs{overflow-x:auto}.vx-seg span{display:none}.vx-tl-ticks i.opt{display:none}.vx-lad{grid-template-columns:80px 1fr 60px}}
+</style>
 </head>
 <body>
 <div class="newsbar" id="newsBar" hidden></div>
@@ -2238,65 +2305,101 @@ async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
 function vdField(label,f,fmt){if(!f)return'';
   const v=f.available?(fmt?fmt(f.value):esc(f.value)):`<span class="muted" title="${esc(f.reason||'Not available')}">N/A</span>`;
   return `<div class="vd-kv"><small>${esc(label)}</small><b class="num">${v}</b></div>`}
-const VD_COLORS=['#10b981','#3b82f6','#ef4444','#a855f7','#f5a623'];
+const VX_RASHI=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+const VX_RASHI_SK=['Mesha','Vrishabha','Mithuna','Karka','Simha','Kanya','Tula','Vrischika','Dhanu','Makara','Kumbha','Meena'];
+const VX_RASHI_GLYPH=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'].map(g=>g+'\uFE0E');
+const VX_NAK=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','P. Phalguni','U. Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','P. Ashadha','U. Ashadha','Shravana','Dhanishta','Shatabhisha','P. Bhadrapada','U. Bhadrapada','Revati'];
+const VX_PSHORT={'Sun':'Su','Moon':'Mo','Mars':'Ma','Mercury':'Me','Jupiter':'Ju','Venus':'Ve','Saturn':'Sa','Rahu (true node)':'Ra','Ketu (true node)':'Ke'};
+const VX_PCOL={'Su':'#f5b942','Mo':'#cfd8e3','Ma':'#ef5350','Me':'#26a69a','Ju':'#f59e0b','Ve':'#ec4899','Sa':'#8b9cf7','Ra':'#94a3b8','Ke':'#a78bfa'};
 const VD_VWAP_CHECKLIST=['Price above / below VWAP?','VWAP slope (up / down / flat)?','Price sustained above/below VWAP?','Rising volume on breakouts?','Volume dry-up on pullback?','Institutional participation?','Range expansion or contraction?','Market breadth supportive?'];
 const VD_TRADE_COND={bull:'5-min close ABOVE opening range high AND above VWAP AND with volume confirmation.',bear:'5-min close BELOW opening range low AND below VWAP AND with volume confirmation.',no:'Breakout unconfirmed, volume weak, range choppy, or reward/risk poor. Patience over prediction.'};
-function vdMins(s){const m=s.match(/(\d{2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):null}
-function vdSchematic(windows){
-  const segs=windows.map(w=>{const m=(w.window_ist||'').match(/(\d{2}:\d{2})-(\d{2}:\d{2})/);return m?{s:vdMins(m[1]),e:vdMins(m[2])}:null});
-  const bar=windows.map((w,i)=>{const s=segs[i],dur=s?Math.max(s.e-s.s,10):75;return `<div style="flex:${dur} 0 0;background:${VD_COLORS[i]}">${esc(w.window_ist||'—')}</div>`}).join('');
-  const lbl=windows.map((w,i)=>`<div style="flex:1">${esc(w.label)}</div>`).join('');
-  return `<div class="vd-sch"><div class="vd-sch-cap">SCHEMATIC ONLY — NOT LIVE PRICE DATA</div><div class="vd-sch-bar">${bar}</div><div class="vd-sch-lbl">${lbl}</div></div>`}
-function vdWinCard(w,i){return `<div class="vd-win c${i+1}"><div><span class="n">${i+1}</span><h4>${esc(w.label)}</h4></div><div class="t">${esc(w.window_ist||'—')}</div><p>${esc(w.focus)}</p></div>`}
-function vdTable(windows){const row=w=>`<tr><td class="win" data-label="Window">${esc(w.label)}</td><td data-label="Primary focus">${esc(w.focus)}</td><td data-label="Bullish setup">${esc(w.bullish)}</td><td data-label="Bearish setup">${esc(w.bearish)}</td><td data-label="No-trade">${esc(w.no_trade)}</td><td data-label="Key checks">${(w.key_checks||[]).join(', ')}</td></tr>`;
-  return `<div style="overflow-x:auto"><table class="vd-tbl"><thead><tr><th>Window</th><th>Primary focus</th><th>Bullish setup</th><th>Bearish setup</th><th>No-trade</th><th>Key checks</th></tr></thead><tbody>${windows.map(row).join('')}</tbody></table></div>`}
+VD.tab=(()=>{try{return localStorage.getItem('vx-tab')||'plan'}catch(e){return 'plan'}})();
+const vxDeg=d=>{const s=Math.floor(d/30)%12,ins=d-s*30;return `${Math.floor(ins)}°${String(Math.round((ins%1)*60)).padStart(2,'0')}′`};
+const vxBar=(f,c)=>`<span class="vx-prog" title="${Math.round(f*100)}% remaining"><i style="width:${Math.max(2,Math.round(f*100))}%;background:${c}"></i></span>`;
+function vxWheel(planets){const S=280,c=S/2,R=128,r1=100,r2=76;let s=`<svg class="vx-wheel" viewBox="0 0 ${S} ${S}" role="img" aria-label="Sidereal zodiac wheel with planet positions">`;
+  const pt=(rr,th)=>{const a=th*Math.PI/180;return[c-rr*Math.cos(a),c-rr*Math.sin(a)]};
+  s+=`<circle cx="${c}" cy="${c}" r="${R}" class="vx-w0"/><circle cx="${c}" cy="${c}" r="${r1}" class="vx-w1"/><circle cx="${c}" cy="${c}" r="${r2-14}" class="vx-w2"/>`;
+  for(let k=0;k<12;k++){const[a1,b1]=pt(r1,k*30),[a2,b2]=pt(R,k*30),[lx,ly]=pt((R+r1)/2,k*30+15);s+=`<line x1="${a1}" y1="${b1}" x2="${a2}" y2="${b2}" class="vx-wl"/><text x="${lx}" y="${ly}" class="vx-wg" text-anchor="middle" dominant-baseline="central"><title>${VX_RASHI[k]} / ${VX_RASHI_SK[k]}</title>${VX_RASHI_GLYPH[k]}</text>`}
+  const list=Object.entries(planets).map(([n,d])=>({n,d:+d,sh:VX_PSHORT[n]||n.slice(0,2)})).sort((a,b)=>a.d-b.d);let prev=-99,lvl=0;
+  list.forEach(p=>{lvl=(p.d-prev<9)?lvl+1:0;prev=p.d;const rr=r1-14-lvl*17,[x,y]=pt(rr,p.d),[tx,ty]=pt(r1,p.d);
+    s+=`<line x1="${tx}" y1="${ty}" x2="${x}" y2="${y}" stroke="${VX_PCOL[p.sh]}" stroke-opacity=".35"/><circle cx="${x}" cy="${y}" r="10" fill="${VX_PCOL[p.sh]}" fill-opacity=".18" stroke="${VX_PCOL[p.sh]}"/><text x="${x}" y="${y}" class="vx-wp" fill="${VX_PCOL[p.sh]}" text-anchor="middle" dominant-baseline="central"><title>${esc(p.n)} ${p.d.toFixed(2)}° · ${VX_RASHI[Math.floor(p.d/30)%12]}</title>${p.sh}</text>`});
+  return s+`<text x="${c}" y="${c-6}" class="vx-wc" text-anchor="middle">Sidereal</text><text x="${c}" y="${c+10}" class="vx-wc2" text-anchor="middle">Lahiri</text></svg>`}
+function vxTimeline(wins){const S0=555,S1=930,span=S1-S0,pos=m=>Math.max(0,Math.min(100,(m-S0)/span*100));
+  const segs=wins.filter(w=>w.in_session&&w.start_min!=null).map((w,i)=>`<div class="vx-seg ${w.key==='rahu_kaal'?'rahu':''} k${i}" style="left:${pos(w.start_min)}%;width:${Math.max(1.5,pos(w.end_min)-pos(w.start_min))}%" title="${esc(w.label)} ${esc(w.window_ist)}"><span>${esc(w.label.replace('WINDOW','').replace('MUMBAI ','').trim())}</span></div>`).join('');
+  const now=new Date(Date.now()+(330+new Date().getTimezoneOffset())*60000),nm=now.getHours()*60+now.getMinutes();
+  const ticks=['09:15','10:00','11:00','12:00','13:00','14:00','15:00','15:30'].map((t,i)=>{const m=+t.slice(0,2)*60+ +t.slice(3);return `<i class="${[1,3,5,6].includes(i)?'opt':''}" style="left:${pos(m)}%">${t}</i>`}).join('');
+  const out=wins.filter(w=>!w.in_session&&w.window_ist&&w.window_ist!=='NOT AVAILABLE').map(w=>`<span class="vx-chip mute" title="${esc(w.focus)}">${esc(w.label)} ${esc(w.window_ist)} · outside market hours</span>`).join('');
+  return `<div class="vx-tl"><div class="vx-tl-bar">${segs}${nm>=S0&&nm<=S1&&!(VD.data.header.is_weekend)?`<b class="vx-now" style="left:${pos(nm)}%" title="Now"></b>`:''}</div><div class="vx-tl-ticks">${ticks}</div>${out?`<div class="vx-tl-out">${out}</div>`:''}</div>`}
+function vxLadder(g){if(!g||!g.available)return`<div class="empty">${esc(g&&g.reason||'Gann levels not available')}</div>`;
+  const spot=g.spot,rows=g.levels.slice().reverse();let placed=false,html='';
+  rows.forEach(l=>{if(!placed&&l.level<spot){html+=`<div class="vx-lad now"><span>NIFTY</span><b class="num">${fmtP(spot,2)}</b><em>live</em></div>`;placed=true}
+    const d=(l.level-spot)/spot*100,cls=l.n===0?'base':l.level>spot?'up':'dn';
+    html+=`<div class="vx-lad ${cls}" title="${l.n===0?'Gann base = '+esc(g.base.kind):(l.n>0?'+':'−')+l.angle+' on the Square of 9'}"><span>${l.n===0?'BASE 0°':(l.level>spot?'R ':'S ')+(l.n>0?'+':'−')+l.angle}</span><b class="num">${fmtP(l.level,2)}</b><em class="num">${d>=0?'+':''}${d.toFixed(2)}%</em></div>`});
+  if(!placed)html+=`<div class="vx-lad now"><span>NIFTY</span><b class="num">${fmtP(spot,2)}</b><em>live</em></div>`;
+  return `<div class="vx-ladder">${html}</div><p class="vx-note">Square of 9 from ${esc(g.base.kind)} ${fmtP(g.base.price,2)} · 45° steps</p>`}
+function vxPlanCards(g){if(!g||!g.available)return'';const p=g.plan,f=v=>v?fmtP(v,2):'—';
+  return `<div class="vx-setups"><div class="vx-setup long"><h4>▲ Long setup</h4><div><small>Buy above</small><b class="num">${f(p.buy_above)}</b></div><div><small>Targets</small><b class="num">${p.buy_targets.map(f).join(' → ')}</b></div><div><small>Stop-loss</small><b class="num">${f(p.buy_stop)}</b></div></div>
+    <div class="vx-setup short"><h4>▼ Short setup</h4><div><small>Sell below</small><b class="num">${f(p.sell_below)}</b></div><div><small>Targets</small><b class="num">${p.sell_targets.map(f).join(' → ')}</b></div><div><small>Stop-loss</small><b class="num">${f(p.sell_stop)}</b></div></div></div>
+    <p class="vx-note">Only on a 5-min close beyond the level with VWAP and volume agreeing. Avoid fresh entries inside Rahu Kaal.</p>`}
+function vxWinCards(wins){return `<div class="vx-wins">${wins.map((w,i)=>`<details class="vx-win ${w.key==='rahu_kaal'?'rahu':''} ${w.in_session?'':'off'}"><summary><span class="vx-wn">${i+1}</span><b>${esc(w.label)}</b><em class="num">${esc(w.window_ist||'—')}</em><small>${esc(w.focus)}</small></summary>
+  <div class="vx-wb"><p><b class="up">Bullish:</b> ${esc(w.bullish)}</p><p><b class="down">Bearish:</b> ${esc(w.bearish)}</p><p><b>No trade:</b> ${esc(w.no_trade)}</p><p class="vx-note">Checks: ${(w.key_checks||[]).map(esc).join(' · ')}</p>${w.astrology_note?`<p class="vx-note">${esc(w.astrology_note)}</p>`:''}</div></details>`).join('')}</div>`}
+function vxTabPlan(r){const g=r.gann,mc=r.market_context;
+  return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live NIFTY marked.">?</span></h3>${vxLadder(g)}</section>
+    <section class="vx-card"><h3>Trade plan</h3>${vxPlanCards(g)}<h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('GIFT Nifty',mc.gift_nifty,v=>typeof v==='object'?fmtP(v.last||v.p||0,2):esc(v))}${vdField('Crude oil',mc.crude_oil,v=>typeof v==='object'?fmtP(v.last||v.p||0,2):esc(v))}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}</div></section></div>
+    <section class="vx-card"><h3>Session timeline (IST)</h3>${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>`}
+function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
+  const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
+  return `<div class="vx-grid2"><section class="vx-card"><h3>Panchang · Mumbai</h3><div class="vx-pan">
+      <div><small>Tithi</small><b>${esc(p.tithi)}</b>${p.tithi_remaining!=null?vxBar(p.tithi_remaining,'#f5b942'):''}</div>
+      <div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b>${p.nakshatra_remaining!=null?vxBar(p.nakshatra_remaining,'#8b9cf7'):''}</div>
+      <div><small>Yoga</small><b>${esc(p.yoga||'—')}</b></div><div><small>Moon sign</small><b>${esc(p.moon_sign)}</b></div>
+      <div><small>Day</small><b>${esc(p.day)}</b></div><div><small>Sunrise · Sunset</small><b>${esc(p.sunrise_ist||'—')} · ${esc(p.sunset_ist||'—')}</b></div>
+      <div class="wide rahu"><small>Rahu Kaal (Mumbai)</small><b>${esc(p.mumbai_rahu_kaal_ist)} IST</b></div></div>
+      <div class="vx-biasbox ${esc(bias.tone)}"><b>${esc(bias.label)}</b><span>${esc(bias.basis)}</span><p>${esc(bias.note)}</p></div>
+      <p class="vx-note">${esc(p.ayanamsa)} · true lunar node</p></section>
+    <section class="vx-card"><h3>Planets · ${esc(r.sidereal_positions.reference_time_ist)}</h3><div class="vx-wheelwrap">${vxWheel(pl)}</div>
+      <div class="tbl-wrap"><table class="vx-t"><thead><tr><th>Planet</th><th>Rashi</th><th>In sign</th><th>Nakshatra</th><th>Longitude</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="vx-note">${esc(r.sidereal_positions.source)}</p></section></div>`}
+function vxTabGann(r){const g=r.gann;if(!g||!g.available)return`<section class="vx-card"><div class="empty">${esc(g&&g.reason||'Gann data not available')}</div></section>`;
+  const lvl=(list,title)=>`<div class="tbl-wrap"><table class="vx-t"><thead><tr><th>${title}</th><th class="num">Level</th><th class="num">From spot</th></tr></thead><tbody>${list.slice().reverse().map(l=>`<tr class="${l.n===0?'base':''}"><td>${l.n===0?'Base 0°':(l.level>g.spot?'Resistance ':'Support ')+(l.n>0?'+':'−')+l.angle}</td><td class="num">${fmtP(l.level,2)}</td><td class="num ${l.level>=g.spot?'up':'down'}">${((l.level-g.spot)/g.spot*100).toFixed(2)}%</td></tr>`).join('')}</tbody></table></div>`;
+  const pv=g.price_vs_sun,cy=g.cycles;
+  return `<div class="vx-grid2"><section class="vx-card"><h3>Square of 9 <span class="vx-tip" title="(√base ± n×0.25)²: each 0.25 on the root is 45° on Gann's Square of 9 wheel.">?</span></h3>${lvl(g.levels,'From '+g.base.kind+' '+fmtP(g.base.price,2))}${g.open_levels?lvl(g.open_levels,'From today\'s open'):''}</section>
+    <section class="vx-card"><h3>Planetary price lines <span class="vx-tip" title="Gann maps a planet at L° to prices L + 360×k. Lines close to the price are watched as support or resistance.">?</span></h3>
+      <div class="tbl-wrap"><table class="vx-t"><thead><tr><th>Planet</th><th class="num">Line below</th><th class="num">Line above</th><th class="num">Nearest</th></tr></thead><tbody>${g.planet_lines.slice(0,9).map(x=>`<tr class="${Math.abs(x.dist_pct)<=0.3?'hot':''}"><td><span class="vx-dot" style="background:${VX_PCOL[x.short]||'#888'}"></span>${esc(x.planet.replace(' (true node)',''))} <span class="muted">${x.deg}°</span></td><td class="num">${fmtP(x.below,0)}</td><td class="num">${fmtP(x.above,0)}</td><td class="num ${x.dist_pct>=0?'up':'down'}">${x.dist_pct>=0?'+':''}${x.dist_pct}%</td></tr>`).join('')}</tbody></table></div>
+      <p class="vx-note">Highlighted = within 0.3% of NIFTY right now.</p>
+      <h3 style="margin-top:14px">Price vs Sun on the Square of 9 <span class="vx-tip" title="Gann's price-time balance: NIFTY's angle on the Square of 9 compared with the Sun's tropical longitude. Within ±10° (or opposite) is called balanced.">?</span></h3>
+      <div class="vx-pvs"><div><small>NIFTY angle</small><b class="num">${pv.price_angle}°</b></div><div><small>Sun (tropical)</small><b class="num">${pv.sun_tropical}°</b></div><div><small>Gap</small><b class="num ${pv.balanced?'up':''}">${pv.diff}°</b></div><span class="vx-chip ${pv.balanced?'up':'mute'}">${pv.balanced?'Balanced: watch for a turn':'Not balanced'}</span></div></section></div>
+    <section class="vx-card"><h3>Gann time cycles <span class="vx-tip" title="Calendar-day counts (30, 45, 60, 90, 120, 144, 180, 240, 270, 360 and doubles) from the 1-year swing high and low.">?</span></h3>
+      ${cy?`<div class="vx-pivots">${cy.pivots.map(p=>`<div><small>${esc(p.kind)}</small><b class="num">${fmtP(p.price,2)}</b><span>${esc(p.date)} · ${p.days_since} days ago</span></div>`).join('')}</div>
+      ${cy.upcoming.length?`<div class="tbl-wrap"><table class="vx-t"><thead><tr><th>Date</th><th>When</th><th>Cycle</th><th>Strength</th></tr></thead><tbody>${cy.upcoming.map(u=>`<tr><td>${esc(u.date)}</td><td>${u.in_days===0?'<b class="up">Today</b>':u.in_days<0?'Yesterday':'in '+u.in_days+' d'}</td><td>${esc(u.cycle)}</td><td><span class="vx-chip ${u.strength==='major'?'gold':'mute'}">${esc(u.strength)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="vx-note">No cycle date falls in the next 14 days.</p>'}`:'<p class="vx-note">Daily history not available right now, so time cycles are skipped.</p>'}
+      <div class="vx-seas">${(g.seasonal||[]).map(s=>`<span class="vx-chip gold" title="Gann seasonal date (solstice / equinox / cross-quarter)">Seasonal ${esc(s.date)} · in ${s.in_days} d</span>`).join('')}</div></section>`}
+function vxTabWatch(r){const st=r.stocks_to_watch,h=r.header;
+  return `<div class="vx-grid2"><section class="vx-card"><h3>Stocks to watch · ${esc(h.report_date)}</h3>${st.available?st.value.map(s=>`<div class="vx-stock"><div><b>${esc(s.symbol)}</b> <span class="muted">${esc(s.name)}</span><span class="vx-chip ${s.bias==='bullish'?'up':s.bias==='bearish'?'down':'mute'}">${esc(s.bias)}</span></div><p>${esc(s.reason)} — ${esc(s.idea)}</p><small class="num">LTP ${fmtP(s.ltp,2)} · prev ${fmtP(s.prev,2)} · <span class="${s.chg_pct>=0?'up':'down'}">${pct(s.chg_pct/100)}</span></small></div>`).join(''):`<div class="empty">${esc(st.reason||'Not available')}</div>`}</section>
+    <section class="vx-card"><h3>Trade conditions</h3><p><b class="up">Bullish:</b> ${esc(VD_TRADE_COND.bull)}</p><p><b class="down">Bearish:</b> ${esc(VD_TRADE_COND.bear)}</p><p><b>No-trade:</b> ${esc(VD_TRADE_COND.no)}</p>
+      <h3 style="margin-top:12px">VWAP &amp; volume checklist</h3><ul class="vx-ul">${VD_VWAP_CHECKLIST.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+      <h3 style="margin-top:12px">Risk management</h3><ul class="vx-ul">${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section></div>`}
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
-  if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','Panchang, Rahu Kaal and sidereal planetary positions — informational context only, never a BUY/SELL signal by itself.')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
-  const r=VD.data;if(!r){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','')}<div class="empty">Loading…</div></div>`;return}
-  const h=r.header,mc=r.market_context,p=r.panchang,planets=r.sidereal_positions.planets_deg,stocks=r.stocks_to_watch,bias=r.day_bias;
-  el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','',`<button class="btn-xs" data-act="vedic-retry">${I('reset',14)} Refresh</button>`)}
-  <div class="vd-wrap">
-    <div class="vd-top">
-      <div class="vd-title">NIFTY 50</div>
-      <div class="vd-sub">VEDIC ASTRO INTRADAY WATCH REPORT</div>
-      <div class="vd-bias ${esc(bias.tone)}">${esc(bias.label)}<small>${esc(bias.basis)} — traditional bias, not a signal</small></div>
-      <div class="vd-stats">
-        <div class="vd-stat"><small>Report date</small><b>${esc(h.report_date)}</b></div>
-        <div class="vd-stat"><small>Report generated</small><b>${esc(h.report_generated_ist)} (${esc(h.session_phase)})</b></div>
-        <div class="vd-stat"><small>NSE status</small><b>${h.nse_trading_day.available?esc(h.nse_trading_day.value):'N/A'}</b></div>
-        <div class="vd-stat"><small>Normal market session</small><b>${esc(h.session)}</b></div>
-      </div>
-    </div>
-    ${h.is_weekend?`<div class="vd-weekend"><b>${esc(h.weekend_message)}</b><p>Markets, option-flow scans and intraday watch windows don't apply on non-trading days — the Panchang and planetary positions below are still today's real data, kept for reference.</p></div>`:''}
-    <div class="vd-cols">
-      <div class="vd-panel"><h3>Market context</h3>
-        ${vdField('NIFTY last',mc.nifty_last,v=>fmtP(v,2))}${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('Market open',mc.market_open,v=>v?'Yes':'No')}${vdField('GIFT Nifty',mc.gift_nifty)}${vdField('Crude oil',mc.crude_oil)}${vdField('FPI flow',mc.fpi_flow)}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}
-        <p class="muted st-note" style="margin-top:8px">${mc.quotes_as_of.available?'As of '+esc(mc.quotes_as_of.value):'Live spot not verified — check before trading'}</p></div>
-      <div class="vd-panel"><h3>Panchang (Mumbai)</h3>
-        <div class="vd-kv"><small>Day</small><b>${esc(p.day)}</b></div><div class="vd-kv"><small>Tithi</small><b>${esc(p.tithi)}</b></div><div class="vd-kv"><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="vd-kv"><small>Moon sign</small><b>${esc(p.moon_sign)}</b></div><div class="vd-kv"><small>Sunrise</small><b>${esc(p.sunrise_ist||'—')} IST</b></div><div class="vd-kv"><small>Sunset</small><b>${esc(p.sunset_ist||'—')} IST</b></div>
-        <div class="vd-rahu">MUMBAI RAHU KAAL: ${esc(p.mumbai_rahu_kaal_ist)} IST</div>
-        <p class="muted st-note" style="margin-top:8px">${esc(p.ayanamsa)} · ${esc(p.node_type)}</p></div>
-      <div class="vd-panel"><h3>Sidereal positions · ${esc(r.sidereal_positions.reference_time_ist)}</h3>
-        ${Object.entries(planets).map(([n,d])=>`<div class="vd-kv"><small>${esc(n)}</small><b class="num">${d}°</b></div>`).join('')}
-        <p class="muted st-note" style="margin-top:8px">${esc(r.sidereal_positions.source)}</p></div>
-    </div>
-    <h3 style="color:#f3d98a;font-size:13px;letter-spacing:.04em;text-transform:uppercase;margin:16px 0 10px;text-align:center">Intraday astro + price action watch windows (IST)</h3>
-    <div class="vd-windows">${r.watch_windows.map(vdWinCard).join('')}</div>
-    ${vdSchematic(r.watch_windows)}
-    <h3 style="color:#f3d98a;font-size:13px;letter-spacing:.04em;text-transform:uppercase;margin:16px 0 10px;text-align:center">What to do in each time frame (action plan)</h3>
-    ${vdTable(r.watch_windows)}
-    <div class="vd-foot-grid">
-      <div class="vd-panel"><h3>VWAP &amp; volume checklist</h3><ul>${VD_VWAP_CHECKLIST.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
-      <div class="vd-panel"><h3>Trade conditions</h3>
-        <p style="color:#34d399;font-weight:700;font-size:11.5px;margin-bottom:4px">Bullish candidate</p><p style="font-size:11px;color:#cfe0f5;margin-bottom:8px">${esc(VD_TRADE_COND.bull)}</p>
-        <p style="color:#f87171;font-weight:700;font-size:11.5px;margin-bottom:4px">Bearish candidate</p><p style="font-size:11px;color:#cfe0f5;margin-bottom:8px">${esc(VD_TRADE_COND.bear)}</p>
-        <p style="color:#8fb3de;font-weight:700;font-size:11.5px;margin-bottom:4px">No-trade zone</p><p style="font-size:11px;color:#cfe0f5">${esc(VD_TRADE_COND.no)}</p></div>
-      <div class="vd-panel"><h3>5 stocks to watch today — ${esc(h.report_date)}</h3>
-        ${stocks.available?stocks.value.map(s=>`<div class="vd-stock"><b>${esc(s.symbol)}</b> <span class="muted" style="font-size:11px">${esc(s.name)}</span> <span class="badge ${s.bias==='bullish'?'b-up':s.bias==='bearish'?'b-down':'b-mute'}" style="float:right">${esc(s.bias)}</span><p>${esc(s.reason)} — ${esc(s.idea)}. LTP ${fmtP(s.ltp,2)}, prev close ${fmtP(s.prev,2)}, chg ${pct(s.chg_pct/100)}.</p></div>`).join(''):`<div class="empty">${esc(stocks.reason||'Not available')}</div>`}</div>
-      <div class="vd-panel"><h3>Risk management</h3><ul>${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
-    </div>
-    <div class="vd-disc"><b>This report is for informational and educational purposes only. Not financial advice. Trade responsibly.</b><br>${esc(r.disclaimer)}</div>
-  </div></div>`}
+  if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic + Gann','')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
+  const r=VD.data;if(!r){el.innerHTML=`<div class="page vx"><div class="vx-hero vx-skel"></div><div class="empty">Calculating today's Panchang, planets and Gann levels…</div></div>`;return}
+  const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
+  const last=mc.nifty_last.available?mc.nifty_last.value:null,prev=mc.nifty_prev_close.available?mc.nifty_prev_close.value:null,ch=last&&prev?last/prev-1:null;
+  const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};const leanCls=c.lean.startsWith('BULL')?'up':c.lean.startsWith('BEAR')?'down':'mute';
+  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];
+  el.innerHTML=`<div class="page vx">
+   <div class="vx-hero">
+    <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · NIFTY 50</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
+      <div class="vx-meta">${esc(h.report_date)} · <span class="vx-chip ${h.session_phase==='during session'?'up':'mute'}">${esc(h.session_phase)}</span> · ${h.nse_trading_day.available?esc(h.nse_trading_day.value):''}</div></div>
+    <div class="vx-lean ${leanCls}" title="${esc(c.note||'')}"><small>Today's lean</small><b>${esc(c.lean)}</b><div class="vx-meter"><i style="left:${50+(c.score/Math.max(1,c.max))*50}%"></i></div>
+      <div class="vx-factors">${c.factors.map(f=>`<span class="vx-chip ${f.vote>0?'up':f.vote<0?'down':'mute'}" title="${esc(f.detail)}">${f.vote>0?'▲':f.vote<0?'▼':'•'} ${esc(f.name)}</span>`).join('')}</div></div>
+    <div class="vx-today"><div><small>Tithi</small><b>${esc(p.tithi)}</b></div><div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="${rk.in_session?'rahu':''}"><small>Rahu Kaal</small><b>${esc(p.mumbai_rahu_kaal_ist)}</b><span>${rk.in_session?'during market hours':'outside market hours'}</span></div>
+      <button class="btn-xs" data-act="vedic-retry" title="Recalculate now">${I('reset',14)} Refresh</button></div>
+   </div>
+   ${h.is_weekend||h.session_phase==='market closed'?`<div class="vx-closed">${esc(h.weekend_message||'Market closed today.')} Panchang, planets and Gann levels below are live calculations, ready for the next session.</div>`:''}
+   <div class="vx-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" class="${VD.tab===k?'on':''}" data-vxtab="${k}">${l}</button>`).join('')}</div>
+   ${({plan:vxTabPlan,vedic:vxTabVedic,gann:vxTabGann,watch:vxTabWatch})[VD.tab](r)}
+   <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
+  </div>`}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
 async function renderVedic(){const el=$('#v-vedic');if(!el)return;
   if(!VD.data&&!VD.err){vdPaint();await loadVedic(false)}
   vdPaint()}

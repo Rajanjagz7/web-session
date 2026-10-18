@@ -13,6 +13,7 @@ numbers are available to check them against).
 """
 from datetime import datetime, timezone, timedelta
 
+import gann_levels
 import vedic_panchang
 
 # Fixed-offset, not ZoneInfo("Asia/Kolkata") - that needs the IANA tzdata
@@ -218,12 +219,26 @@ def generate_report(now_utc: datetime | None = None) -> dict:
     rk_start_ist = datetime.fromisoformat(rk_start).astimezone(IST).strftime("%H:%M") if rk_start else None
     rk_end_ist = datetime.fromisoformat(rk_end).astimezone(IST).strftime("%H:%M") if rk_end else None
 
+    def _mins(hhmm):
+        h, m = hhmm.split(":")
+        return int(h) * 60 + int(m)
+
     windows = []
     for w in WATCH_WINDOWS_TEMPLATE:
         w = dict(w)
         if w["key"] == "rahu_kaal":
             w["window_ist"] = f"{rk_start_ist}-{rk_end_ist}" if rk_start_ist else "NOT AVAILABLE"
+        if w["window_ist"] and "-" in w["window_ist"] and w["window_ist"] != "NOT AVAILABLE":
+            a, b = w["window_ist"].split("-")
+            w["start_min"], w["end_min"] = _mins(a), _mins(b)
+            w["in_session"] = w["end_min"] > 555 and w["start_min"] < 930   # overlaps 09:15-15:30
+        else:
+            w["start_min"] = w["end_min"] = None
+            w["in_session"] = False
+        if w["key"] == "rahu_kaal" and not w["in_session"]:
+            w["focus"] = "Outside market hours today - no effect on the session"
         windows.append(w)
+    windows.sort(key=lambda w: (not w["in_session"], w["start_min"] if w["start_min"] is not None else 9999))
 
     today_iso = now_ist.date().isoformat()
     is_weekday = now_ist.weekday() < 5
@@ -248,10 +263,40 @@ def generate_report(now_utc: datetime | None = None) -> dict:
         _na(f"No NSE holiday calendar wired in for {now_ist.year} - verify against the official NSE calendar before relying on this")
     )
     session_phase = (
-        "pre-market" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15)
+        "market closed" if (holiday_name or not is_weekday)
+        else "pre-market" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15)
         else "during session" if (now_ist.hour, now_ist.minute) < (15, 30)
         else "post-market"
     )
+
+    mc = _market_context()
+    spot = mc["nifty_last"]["value"] if mc.get("nifty_last", {}).get("available") else None
+    prev = mc["nifty_prev_close"]["value"] if mc.get("nifty_prev_close", {}).get("available") else None
+    ohlc = mc["nifty_today_ohlc"]["value"] if mc.get("nifty_today_ohlc", {}).get("available") else None
+    today_open = ohlc.get("open") if (ohlc and mc.get("market_open", {}).get("value")) else None
+    bars = None
+    try:
+        from ut_bot import fetch_index_history
+        bars = fetch_index_history("NIFTY", lookback_days=400)
+    except Exception:
+        bars = None
+    try:
+        gann = gann_levels.build(spot, prev, today_open, panchang["planets_sidereal_deg"], panchang["ayanamsa_lahiri_deg"], bars, now_ist.date())
+    except Exception as e:
+        gann = {"available": False, "reason": f"Gann levels unavailable: {str(e)[:160]}"}
+    bias = _day_bias(panchang["paksha"], panchang["tithi_number"])
+    votes = []
+    votes.append(("Vedic lunar bias", {"bullish": 1, "bearish": -1}.get(bias["tone"], 0), bias["label"]))
+    if gann.get("available"):
+        base = gann["base"]["price"]
+        votes.append(("Price vs Gann base (0°)", 1 if spot > base else -1 if spot < base else 0, f"{'above' if spot > base else 'below'} {base:,.2f}"))
+        if gann.get("hilo_trend"):
+            votes.append(("Gann HiLo trend (daily)", {"up": 1, "down": -1}.get(gann["hilo_trend"], 0), gann["hilo_trend"]))
+    score = sum(v for _, v, _ in votes)
+    lean = "BULLISH LEAN" if score >= 2 else "BEARISH LEAN" if score <= -2 else "MIXED / WAIT"
+    confluence = {"lean": lean, "score": score, "max": len(votes),
+                  "factors": [{"name": n, "vote": v, "detail": d} for n, v, d in votes],
+                  "note": "Counts traditional and technical cues only. Not a signal - act only on live price action, VWAP and volume."}
 
     return {
         "header": {
@@ -264,13 +309,20 @@ def generate_report(now_utc: datetime | None = None) -> dict:
             "is_weekend": is_weekend,
             "weekend_message": weekend_message,
         },
-        "day_bias": _day_bias(panchang["paksha"], panchang["tithi_number"]),
-        "market_context": _market_context(),
+        "day_bias": bias,
+        "market_context": mc,
+        "gann": gann,
+        "confluence": confluence,
         "panchang": {
             "day": f"{now_ist.strftime('%A')} / {panchang['weekday_sanskrit']}",
             "tithi": f"{panchang['paksha']} {panchang['tithi_name']} (#{panchang['tithi_number']})",
             "nakshatra": panchang["nakshatra"],
             "moon_sign": panchang["moon_rashi"],
+            "yoga": panchang["yoga"],
+            "paksha": panchang["paksha"],
+            "tithi_number": panchang["tithi_number"],
+            "tithi_remaining": panchang["tithi_ends_fraction_of_day_remaining"],
+            "nakshatra_remaining": panchang["nakshatra_ends_fraction_remaining"],
             "sunrise_ist": datetime.fromisoformat(panchang["sunrise_utc"]).astimezone(IST).strftime("%H:%M") if panchang["sunrise_utc"] else None,
             "sunset_ist": datetime.fromisoformat(panchang["sunset_utc"]).astimezone(IST).strftime("%H:%M") if panchang["sunset_utc"] else None,
             "mumbai_rahu_kaal_ist": f"{rk_start_ist}-{rk_end_ist}" if rk_start_ist else "NOT AVAILABLE",
@@ -279,7 +331,7 @@ def generate_report(now_utc: datetime | None = None) -> dict:
         },
         "sidereal_positions": {
             "reference_time_ist": now_ist.strftime("%H:%M IST"),
-            "planets_deg": panchang["planets_sidereal_deg"],
+            "planets_deg": {k: float(v) for k, v in panchang["planets_sidereal_deg"].items()},
             "source": "Skyfield / JPL DE421, Lahiri ayanamsa (computed here, not a third-party API)",
         },
         "watch_windows": windows,

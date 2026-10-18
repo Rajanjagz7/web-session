@@ -104,7 +104,9 @@ def true_lunar_node_longitude(eph, earth, t) -> float:
 
 def _sidereal_lon(eph, earth, body, t, ayanamsa):
     apparent = earth.at(t).observe(eph[body]).apparent()
-    lon, _, _ = apparent.ecliptic_latlon()
+    # ecliptic_latlon() returns (latitude, longitude, distance) - longitude is the SECOND value.
+    # Reading the first value here used to put every planet at roughly (0 - ayanamsa) = ~336 deg.
+    _, lon, _ = apparent.ecliptic_latlon(epoch=t)
     return (lon.degrees - ayanamsa) % 360.0
 
 
