@@ -2129,7 +2129,8 @@ function renderTools(){$('#tools').innerHTML=TOOLS.map(([k,l])=>`<button class="
   `<span class="sep"></span><button class="ibtn ${chart.hideDraw?'on':''}" data-act="hidedraw" title="Hide drawings" aria-label="Hide drawings">${I(chart.hideDraw?'eyeoff':'eye')}</button><button class="ibtn" data-act="cleardraw" title="Remove all drawings" aria-label="Remove all drawings">${I('trash')}</button>`;
   const hint={trend:'Click two points to draw a trend line',hline:'Click to place a horizontal line',rect:'Click two corners',fib:'Click swing high, then swing low',measure:'Click start and end to measure'}[chart.tool];
   $('#hint').textContent=hint?hint+' · Esc to cancel':'';$('#hint').classList.toggle('show',!!hint)}
-function switchSym(k){App.span=null;App.sym=SYM(k);App.tk.price='';App.tk.tpPx='';App.tk.slPx='';chart.drawings=[];chart.sel=-1;loadChart(false);renderSymbar();renderWatchlist();renderTicket();buildBook();if(App.view!=='trade')go('trade');liveUpdate();$('#v-trade').classList.remove('wl-open');renderIndPanels();ensureStatuses()}
+function switchSym(k){App.span=null;App.sym=SYM(k);App.tk.price='';App.tk.tpPx='';App.tk.slPx='';chart.drawings=[];chart.sel=-1;loadChart(false);renderSymbar();renderWatchlist();renderTicket();buildBook();if(App.view!=='trade')go('trade');liveUpdate();$('#v-trade').classList.remove('wl-open');renderIndPanels();
+  const ri=$('#rInd');if(ri&&!ri.hidden)ensureStatuses()}
 function setChartLines(){const s=App.sym,ls=[],p=posOf(s.s);
   if(p){const pnl=p.q*(s.last-p.avg);ls.push({price:p.avg,label:`${p.q>0?'LONG':'SHORT'} ${qfmt(Math.abs(p.q),s)}  ${smoney(pnl)}`,color:T.s[0],dash:[1,0]});
     if(p.tp)ls.push({price:p.tp,label:'TP '+fmtP(p.tp,s.dp),color:T.up,drag:1,set:v=>p.tp=v,kind:'tp'});
