@@ -286,6 +286,48 @@ def fetch_nse_past(days=120):
 
 
 # ----------------------------------------------------------------------------- listing performance (Yahoo)
+def _pick(row, *keys):
+    for k in keys:
+        if row.get(k) not in (None, "", "-"):
+            return row[k]
+    return None
+
+
+def _nse_bars(symbol, since):
+    """Daily OHLC from NSE's own history API - covers SME (SM/ST series) that Yahoo barely has."""
+    out = {}
+    start, end = since - timedelta(days=1), _today()
+    while start <= end:
+        stop = min(end, start + timedelta(days=360))
+        try:
+            js = _nse(f"/api/historical/cm/equity?symbol={requests.utils.quote(symbol)}"
+                      f"&series=[%22EQ%22,%22BE%22,%22SM%22,%22ST%22,%22BZ%22]"
+                      f"&from={start.strftime('%d-%m-%Y')}&to={stop.strftime('%d-%m-%Y')}")
+        except Exception:
+            js = None
+        for r in (js or {}).get("data") or []:
+            d = _pick(r, "CH_TIMESTAMP", "TIMESTAMP", "mTIMESTAMP")
+            dd = None
+            if d:
+                dd = _d(str(d)[:11]) if not re.match(r"\d{4}-", str(d)) else date.fromisoformat(str(d)[:10])
+            o, h, l, c = (_num(_pick(r, *k)) for k in (("CH_OPENING_PRICE", "OPEN_PRICE"), ("CH_TRADE_HIGH_PRICE", "HIGH_PRICE"),
+                                                      ("CH_TRADE_LOW_PRICE", "LOW_PRICE"), ("CH_CLOSING_PRICE", "CLOSE_PRICE")))
+            if dd and None not in (o, h, l, c) and c > 0:
+                out[dd.isoformat()] = {"date": dd.isoformat(), "open": o, "high": h, "low": l, "close": c}
+        start = stop + timedelta(days=1)
+    return [out[k] for k in sorted(out)]
+
+
+def _price_bars(symbol, since):
+    """Yahoo first; NSE history when Yahoo has (almost) nothing - typical for SME listings."""
+    bars, live = _yahoo_bars(symbol, since)
+    if len([b for b in bars if b["date"] >= since.isoformat()]) < 3 and (_today() - since).days >= 3:
+        nb = _nse_bars(symbol, since)
+        if len(nb) > len(bars):
+            return nb, None
+    return bars, live
+
+
 def _yahoo_bars(symbol, since):
     p1 = int(datetime.combine(since - timedelta(days=2), datetime.min.time(), tzinfo=timezone.utc).timestamp())
     p2 = int(time.time()) + 86400
@@ -332,7 +374,7 @@ def _range_stats(bars, cur):
 
 def _listing_perf(item):
     ld = date.fromisoformat(item["listing_date"])
-    bars, live = _yahoo_bars(item["symbol"], ld)
+    bars, live = _price_bars(item["symbol"], ld)
     bars = [b for b in bars if b["date"] >= item["listing_date"]]
     if not bars:
         return item
@@ -459,7 +501,7 @@ def build_ipo_dashboard():
 
 @router.get("/api/ipo/dashboard")
 def ipo_dashboard(refresh: bool = False):
-    key = "ipo:dash:v2"
+    key = "ipo:dash:v3"
     if refresh:
         with _mem_lock:
             _mem.pop(key, None)
@@ -480,7 +522,7 @@ def ipo_chart(symbol: str = Query(..., min_length=1, max_length=30, pattern=r"^[
     key = f"ipochart:{symbol.upper()}:{listing_date}"
 
     def build():
-        bars, live = _yahoo_bars(symbol.upper(), date.fromisoformat(listing_date))
+        bars, live = _price_bars(symbol.upper(), date.fromisoformat(listing_date))
         bars = [b for b in bars if b["date"] >= listing_date]
         if not bars:
             return None
