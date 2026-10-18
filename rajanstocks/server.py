@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Body, FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
@@ -227,10 +227,20 @@ def api_fetch_latest(force: bool = False):
     return {"success": True, "totalContracts": 0, "todayDate": ""}
 
 
-@app.post("/api/upload")
-async def api_upload(file: UploadFile = File(...), isToday: str = Form(...)):
-    # Bhavcopy upload is no longer used — endpoint kept for backward compatibility.
-    return {"contractsLoaded": 0}
+@app.post("/api/admin/bhavcopy-refresh")
+def api_bhavcopy_refresh():
+    """Manual-only: pulls the latest NSE F&O bhavcopy and reloads the option-OI
+    baseline store. Nothing calls this automatically - the old cron/upload path
+    was dead (bhav_fetch.py had zero importers, store was always empty in
+    production). Use this only if a feature that reads store.today_lookup()
+    (live-scan OI baselines) actually needs it."""
+    import bhav_fetch
+    try:
+        path, trade_date = bhav_fetch.fetch_latest_bhavcopy(nse_service)
+    except Exception as exc:
+        raise HTTPException(502, f"Bhavcopy fetch failed: {exc}")
+    store.reload()
+    return {"loaded": store.is_loaded(), "todayDate": store.today_date, "prevDate": store.prev_date, "rows": len(store.today_rows), "file": path}
 
 
 @app.get("/api/live/scan")
@@ -376,12 +386,12 @@ def api_indicator_ut_bot(
 def api_cron_morning_refresh():
     """Hit automatically by Vercel Cron at market open (see vercel.json — two
     entries call this, 9:16 and 9:21 IST Mon-Fri, so a transient NSE hiccup on
-    the first run gets a same-morning retry 5 minutes later). Refreshes the
-    bhavcopy cache and warms the NSE session/cookies so the first real user
-    request of the day doesn't pay that cold-start cost, and snapshots each
-    index's opening price. Idempotent — re-running it just re-fetches the same
-    day's data. There's no notification channel wired up — it just runs
-    server-side; check Vercel's Cron Jobs dashboard to confirm it fired."""
+    the first run gets a same-morning retry 5 minutes later). Warms the NSE
+    session/cookies so the first real user request of the day doesn't pay
+    that cold-start cost, and snapshots each index's opening price. Idempotent
+    — re-running it just re-fetches the same day's data. There's no
+    notification channel wired up — it just runs server-side; check Vercel's
+    Cron Jobs dashboard to confirm it fired."""
     summary = {"ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
     try:
