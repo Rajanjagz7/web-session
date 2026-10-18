@@ -62,7 +62,9 @@ svg.i{display:block;flex-shrink:0}
 .hdr-r{display:flex;align-items:center;gap:10px}
 .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);white-space:nowrap}
 .live i{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 3px var(--up-bg)}
-.eq{text-align:right;line-height:1.15;white-space:nowrap}.eq small{display:block;font-size:10.5px;color:var(--text-3)}.eq b{font-size:13px}
+.pf-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pf-chip small{font-size:11px;color:var(--text-3)}.pf-chip b{font-size:13px;color:var(--text)}.pf-d{font-size:11.5px;font-weight:600;color:var(--text-3)}
+.pf-chip.up .pf-d{color:var(--up)}.pf-chip.down .pf-d{color:var(--down)}.pf-chip:hover{border-color:var(--brand)}
 .ibtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--text-2);position:relative;flex-shrink:0}
 .ibtn:hover{background:var(--panel-2);color:var(--text)}
 .ibtn.on{background:var(--brand-2);color:var(--brand)}
@@ -313,7 +315,7 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   #v-trade{grid-template-columns:minmax(0,1fr) 300px}
   #v-trade .wl{display:none}
   #v-trade.wl-open .wl{display:flex;position:fixed;left:0;top:calc(52px + var(--nb,0px));bottom:0;width:260px;z-index:40;box-shadow:var(--shadow)}
-  .live,.eq{display:none}
+  .live,.pf-chip small,.pf-d{display:none}.pf-chip{padding:0 9px;gap:4px;flex:none}.pf-chip.up b{color:var(--up)}.pf-chip.down b{color:var(--down)}
 }
 @media (max-width:960px){
   #v-trade.on{display:block;height:auto}
@@ -616,7 +618,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
-<script src="/static/journal.js?v=20261017d"></script>
+<script src="/static/journal.js?v=20261018e"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
@@ -828,8 +830,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
   <div class="hdr-r">
     <span class="live"><i id="liveDot"></i><span id="liveTxt">Connecting…</span></span>
-    <button class="pnl-chip" id="pnlChip" data-view="journal" hidden title="Total paper P&L (realized + unrealized)"></button>
-    <div class="eq"><small>Equity</small><b data-eq></b></div>
+    <button class="pf-chip" id="pfChip" data-view="journal" aria-label="Portfolio value - open the journal"></button>
     <button class="ibtn" id="bellBtn" aria-label="Notifications"></button>
     <button class="ibtn" id="themeBtn" aria-label="Toggle theme"></button>
   </div>
@@ -2040,7 +2041,7 @@ function liveUpdate(){
    $$('[data-rpnl]').forEach(e=>{e.textContent=ar(real)+' '+smoney(real);e.className=cls(real)});
    $$('[data-tpnl]').forEach(e=>{e.textContent=ar(tot)+' '+smoney(tot);e.className=cls(tot)});
    $$('[data-npos]').forEach(e=>{const w=App.positions.filter(p=>p.q*(px(p)-p.avg)>0.004).length,l=App.positions.filter(p=>p.q*(px(p)-p.avg)<-0.004).length;e.innerHTML=`<span class="up">▲ ${w} in profit</span> · <span class="down">▼ ${l} in loss</span>`});
-   const c=$('#pnlChip');if(c){const show=(App.trades&&App.trades.length)||App.positions.length;c.hidden=!show;if(show){c.className='pnl-chip '+cls(tot);c.innerHTML=`<small>P&amp;L</small> <b>${ar(tot)} ${smoney(tot)}</b>`}}}
+   renderPfChip()}
   $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.className=cls(v)});
   $$('[data-cash]').forEach(e=>e.textContent=money(App.cash));
   $$('[data-range]').forEach(e=>{const s=SYM(e.dataset.range);s.hi=Math.max(s.hi,s.last);s.lo=Math.min(s.lo,s.last);e.querySelector('i').style.left=((s.last-s.lo)/(s.hi-s.lo||1)*100)+'%';const t=e.parentNode.querySelector('[data-rt]');if(t)t.textContent=fmtP(s.lo,s.dp)+' – '+fmtP(s.hi,s.dp)});
@@ -2057,6 +2058,14 @@ const navKey=v=>(SUBVIEWS[v]||[v])[0];
 const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
 const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'));
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
+/* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
+setInterval(()=>{if(!document.hidden)renderPfChip()},4000);setTimeout(()=>renderPfChip(),800);
+function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
+  const eq=t?t.eq:equity(),cap=t?t.capital:1000000,pl=eq-cap,pc=cap?pl/cap*100:0;
+  const sh=v=>{const a=Math.abs(v);return a>=1e7?(a/1e7).toFixed(2)+' Cr':a>=1e5?(a/1e5).toFixed(2)+' L':Math.round(a).toLocaleString('en-IN')};
+  const k=pl>0.5?'up':pl<-0.5?'down':'';
+  c.className='pf-chip '+k;c.innerHTML=`<small>Portfolio</small><b>₹${sh(eq)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;
+  c.title=t?`Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} · booked ${t.booked>=0?'+':'−'}₹${Math.round(Math.abs(t.booked)).toLocaleString('en-IN')} · open ${t.unr>=0?'+':'−'}₹${Math.round(Math.abs(t.unr)).toLocaleString('en-IN')} (${t.open} open) — click for the journal`:'Portfolio value'}
 function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
 const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
