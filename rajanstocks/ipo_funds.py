@@ -461,14 +461,14 @@ MF_API = "https://api.mfapi.in/mf"
 
 FUNDS = [
     ("Large Cap", ["Nippon India Large Cap Fund", "Nippon India Large Cap"]),
-    ("Large Cap", ["ICICI Prudential Large Cap Fund", "ICICI Prudential Bluechip Fund"]),
+    ("Large Cap", [120586]),  # ICICI Prudential Large Cap (erstwhile Bluechip)
     ("Large Cap", ["Mirae Asset Large Cap Fund"]),
     ("Flexi Cap", ["Parag Parikh Flexi Cap Fund"]),
     ("Flexi Cap", ["HDFC Flexi Cap Fund"]),
     ("Flexi Cap", ["Kotak Flexicap Fund", "Kotak Flexi Cap"]),
-    ("Mid Cap", ["Motilal Oswal Midcap Fund", "Motilal Oswal Mid Cap"]),
+    ("Mid Cap", [127042]),  # Motilal Oswal Midcap
     ("Mid Cap", ["HDFC Mid Cap Fund", "HDFC Mid-Cap Opportunities Fund"]),
-    ("Mid Cap", ["Kotak Emerging Equity Fund", "Kotak Midcap Fund"]),
+    ("Mid Cap", [119775]),  # Kotak Mid Cap (erstwhile Emerging Equity)
     ("Small Cap", ["Nippon India Small Cap Fund"]),
     ("Small Cap", ["SBI Small Cap Fund"]),
     ("Small Cap", ["Quant Small Cap Fund"]),
@@ -480,9 +480,9 @@ FUNDS = [
     ("ELSS Tax Saver", ["DSP ELSS Tax Saver Fund"]),
     ("Hybrid", ["ICICI Prudential Balanced Advantage Fund"]),
     ("Hybrid", ["HDFC Balanced Advantage Fund"]),
-    ("Hybrid", ["SBI Equity Hybrid Fund", "SBI Equity Hybrid"]),
+    ("Hybrid", [119609]),  # SBI Aggressive Hybrid (erstwhile Equity Hybrid)
     ("Debt", ["HDFC Corporate Bond Fund"]),
-    ("Debt", ["ICICI Prudential Corporate Bond Fund", "ICICI Prudential Corporate Bond"]),
+    ("Debt", [120692]),  # ICICI Prudential Corporate Bond
     ("Debt", ["SBI Liquid Fund"]),
     ("Gold", ["SBI Gold Fund", "Nippon India Gold Savings Fund"]),
     ("Gold", ["HDFC Gold ETF Fund of Fund", "HDFC Gold Fund"]),
@@ -513,11 +513,16 @@ def mf_search(q, direct_growth=True):
 
 
 _PASSIVE = {"index", "nifty", "etf", "fof", "sensex", "50", "150", "100"}
+# words that change what kind of fund it is - an extra one means a different scheme ("Large & Mid Cap" is not "Large Cap")
+_KIND = _PASSIVE | {"large", "mid", "midcap", "small", "smallcap", "multi", "flexi", "flexicap", "hybrid", "balanced", "advantage",
+                    "equity", "value", "focused", "focus", "dividend", "yield", "contra", "momentum", "quality", "overseas", "global"}
 
 
 def _resolve(names):
     """First query whose words ALL appear in a Direct-Growth scheme name; passive funds only when asked for."""
     for q in names:
+        if isinstance(q, int):  # pinned AMFI scheme code (mfapi search misses some renamed schemes)
+            return q, ""
         try:
             items = mf_search(q)
         except Exception:
@@ -526,7 +531,7 @@ def _resolve(names):
         ok = []
         for i in items:
             nt = set(_norm(i["schemeName"].replace("-", " ")))
-            if toks <= nt and not ((nt & _PASSIVE) - toks):
+            if toks <= nt and not ((nt - toks) & _KIND):
                 ok.append(i)
         if ok:
             ok.sort(key=lambda i: len(i["schemeName"]))
@@ -717,7 +722,7 @@ def _fund_summary(f):
 
 
 def build_funds():
-    codes = _cached("mf:codes:v2", 7 * 86400, _resolve_all)
+    codes = _cached("mf:codes:v3", 7 * 86400, _resolve_all)
     if not codes:
         raise RuntimeError("mfapi.in did not answer the scheme search")
     with ThreadPoolExecutor(8) as ex:
@@ -728,7 +733,7 @@ def build_funds():
 
 @router.get("/api/funds/list")
 def funds_list(refresh: bool = False):
-    key = "mf:list:v2"
+    key = "mf:list:v3"
     if refresh:
         with _mem_lock:
             _mem.pop(key, None)
