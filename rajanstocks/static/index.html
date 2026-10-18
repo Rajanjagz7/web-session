@@ -51,7 +51,12 @@ svg.i{display:block;flex-shrink:0}
 .nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 0}
 .nav button{height:32px;padding:0 11px;border-radius:8px;color:var(--text-2);font-weight:500;white-space:nowrap}
 .nav button:hover{background:var(--panel-2);color:var(--text)}
-.nav button.on{background:var(--brand-2);color:var(--brand)}
+.nav button.on{background:var(--brand-2);color:var(--brand);font-weight:650;position:relative}
+.nav button.on::after{content:'';position:absolute;left:10px;right:10px;bottom:-10px;height:2px;border-radius:2px;background:var(--brand)}
+.here{display:flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 9px;border-radius:15px;background:var(--brand-2);color:var(--brand);font-size:12.5px;white-space:nowrap;flex:none;max-width:260px;overflow:hidden}
+.here b{font-weight:700}.here-i{display:flex}.here-sep{opacity:.6}.here-sub{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.pick-row.on{background:var(--brand-2)}.pick-row.on b{color:var(--brand)}
+@media (min-width:961px) and (max-width:1440px){.hdr .search-btn{width:34px;min-width:0;padding:0;justify-content:center;flex:none}.hdr .search-btn span:not(#searchI),.hdr .search-btn kbd{display:none}}
 .search-btn{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--text-3);min-width:200px;margin-left:auto}
 .search-btn kbd{margin-left:auto;font:11px Inter;border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .hdr-r{display:flex;align-items:center;gap:10px}
@@ -359,6 +364,8 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);background:var(--panel);border-top:1px solid var(--line);justify-content:space-around;overflow:visible;flex:none}
   .nav button{flex:1;height:100%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;border-radius:10px}
   .nav .ni{display:block}.nav .sec{display:none}.nav .more{display:flex}
+  .nav button.on::after{left:30%;right:30%;top:0;bottom:auto;height:3px;border-radius:0 0 3px 3px}
+  .here{height:28px;font-size:12px;padding:0 10px 0 8px;max-width:52vw}.hdr .brand .txt{display:none}
   .ixs{grid-template-columns:1fr 1fr}.pk-grid{grid-template-columns:1fr}
   html,body{overflow-x:hidden}
   .toolbar{flex-wrap:wrap;overflow:visible;gap:6px}.toolbar [data-act="log"],.toolbar [data-act="shot"],.toolbar [data-act="focus"],.toolbar .sep{display:none}
@@ -608,6 +615,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
 <script src="/static/journal.js?v=20261017d"></script>
+<script src="/static/ipo.js?v=20261018a"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -813,6 +821,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <div class="newsbar" id="newsBar" hidden></div>
 <header class="hdr">
   <div class="brand"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
+  <div class="here" id="here" aria-live="polite"></div>
   <nav class="nav" id="nav"></nav>
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
   <div class="hdr-r">
@@ -860,6 +869,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <section class="view" id="v-alerts"></section>
   <section class="view" id="v-indicators"></section>
   <section class="view" id="v-vedic"></section>
+  <section class="view" id="v-ipo"></section>
   <section class="view" id="v-mobile"></section>
 </main>
 <div id="boot"><div class="spin"></div><b>Rajan Algo</b><small>Loading live NSE data…</small></div>
@@ -1652,6 +1662,7 @@ const IC={
  trendup:'<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
  log:'<path d="M4 20V4M4 20h16"/><path d="M7 16c3-1 5-4 6-8 1 3 3 5 6 6"/>',
  download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+ coins:'<ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7"/><path d="M9 15v2c0 1.7 2.7 3 6 3s6-1.3 6-3v-5c0-1.6-2.4-2.9-5.5-3"/>',
 };
 const I=(n,s=18,sw=1.8)=>`<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 
@@ -2036,10 +2047,16 @@ function liveUpdate(){
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
-const PRIMARY=['picks','trade','markets','options'];
-function renderNav(){$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${App.view===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${App.view===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${PRIMARY.includes(App.view)?'':'on'}" data-act="more"><span class="ni">${I('list',19)}</span><span>More</span></button>`}
-const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon'};
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
+const PRIMARY=['picks','trade','markets','ipo'];
+/* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
+const SUBVIEWS={options:['trade','Options'],mobile:['trade',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
+const navKey=v=>(SUBVIEWS[v]||[v])[0];
+const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
+const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'));
+function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
+function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
+const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
 function closeOverlays(){
   try{RN.closeAll()}catch(e){}try{closeOc()}catch(e){}try{closeTfPop()}catch(e){}try{closeModal()}catch(e){}
@@ -2047,7 +2064,7 @@ function closeOverlays(){
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
 function go(v){closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
-  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,stocks:()=>SB.page($('#v-stocks')),orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,mobile:renderMobile})[v]?.();liveUpdate();window.scrollTo(0,0)}
+  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,stocks:()=>SB.page($('#v-stocks')),orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
 /* ======================= Trade view ======================= */
@@ -3542,7 +3559,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[dat
     collapse:()=>{$('#bottom').classList.toggle('collapsed');renderBottom()},
     star:()=>{const k=App.sym.s;App.watch.has(k)?App.watch.delete(k):App.watch.add(k);renderSymbar();renderWatchlist();if(App.view==='mobile')renderMobile();liveUpdate()},
     usemkt:()=>{App.tk.price=App.sym.last.toFixed(App.sym.dp);$('#tkPrice').value=App.tk.price;calcTicket();setChartLines()},
-    more:()=>{modal('More',VIEWS.filter(v=>!PRIMARY.includes(v[0])).map(v=>`<button class="pick-row" onclick="closeModal();go('${v[0]}')"><span class="t"><b>${v[1]}</b></span></button>`).join('')+'<button class="pick-row" onclick="closeModal();openSearch()"><span class="t"><b>Search symbols</b></span></button>')},
+    more:()=>{modal('More',VIEWS.filter(v=>!PRIMARY.includes(v[0])).map(v=>`<button class="pick-row ${navKey(App.view)===v[0]?'on':''}" ${navKey(App.view)===v[0]?'aria-current="page"':''} onclick="closeModal();go('${v[0]}')"><span class="t"><b>${v[1]}</b>${navKey(App.view)===v[0]?'<small style="color:var(--brand)">You are here</small>':''}</span></button>`).join('')+'<button class="pick-row" onclick="closeModal();openSearch()"><span class="t"><b>Search symbols</b></span></button>')},
     resetpaper:()=>{if(confirm('Reset the paper account to ₹10,00,000 and clear all positions, orders and alerts?')){App.cash=1000000;App.positions=[];App.orders=[];App.history=[];App.alerts=[];App.trades=[];App.meta={};saveTrades();savePaper();if(App.view==='journal')renderJournal();else renderPortfolio();renderBottom();setChartLines();toast('Paper account reset','ok');RN.emit('N-12',{amount:'₹10,00,000.00',note:'Paper account funded'},{key:'fund|'+Date.now()})}},
     csv:()=>{const rows=[['id','time','symbol','side','type','qty','price','status'],...[...App.orders,...App.history].map(o=>[o.id,new Date(o.t).toISOString(),o.sym,o.side,o.type,o.qty,o.price,o.status])];const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='orders.csv';l.click();toast('orders.csv downloaded','ok')},
   })[a]?.()});
@@ -3605,7 +3622,7 @@ function rangeTo(days){
   if(refetch)delete CACHE[k];
   if(sw||refetch){App.pendingRange=days;if(sw)renderToolbar();loadChart(false)}else chart.showRange(days)}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-rng]');if(!t||!chart)return;rangeTo(t.dataset.rng===''?null:+t.dataset.rng)});
-window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!==App.view&&VIEWS.some(v=>v[0]===h))go(h)});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!==App.view&&KNOWN_VIEWS.includes(h))go(h)});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTheme();chart.req()});
 
 /* ======================= Boot ======================= */
@@ -3621,7 +3638,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   await loadUniverse();
   await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])]);
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
-  const h=location.hash.slice(1);$('#boot')?.remove();go(VIEWS.some(v=>v[0]===h)?h:'vedic');
+  const h=location.hash.slice(1);$('#boot')?.remove();go(KNOWN_VIEWS.includes(h)?h:'vedic');
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
 </script>
 </body>
