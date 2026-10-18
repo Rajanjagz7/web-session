@@ -51,10 +51,10 @@ svg.i{display:block;flex-shrink:0}
 .nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 0}
 .nav button{height:32px;padding:0 11px;border-radius:8px;color:var(--text-2);font-weight:500;white-space:nowrap}
 .nav button:hover{background:var(--panel-2);color:var(--text)}
-.nav button.on{background:var(--brand-2);color:var(--brand);font-weight:650;position:relative}
-.nav button.on::after{content:'';position:absolute;left:10px;right:10px;bottom:-10px;height:2px;border-radius:2px;background:var(--brand)}
-.here{display:flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 9px;border-radius:15px;background:var(--brand-2);color:var(--brand);font-size:12.5px;white-space:nowrap;flex:none;max-width:260px;overflow:hidden}
-.here b{font-weight:700}.here-i{display:flex}.here-sep{opacity:.6}.here-sub{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.nav button.on{background:var(--brand);color:#fff;font-weight:650;box-shadow:0 2px 10px color-mix(in srgb,var(--brand) 35%,transparent)}
+.nav button.on:hover{background:var(--brand);color:#fff}
+.here{display:none}
+.nav .nav-sub{font-weight:500;opacity:.85;margin-left:4px}
 .pick-row.on{background:var(--brand-2)}.pick-row.on b{color:var(--brand)}
 @media (min-width:961px) and (max-width:1440px){.hdr .search-btn{width:34px;min-width:0;padding:0;justify-content:center;flex:none}.hdr .search-btn span:not(#searchI),.hdr .search-btn kbd{display:none}}
 .search-btn{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--text-3);min-width:200px;margin-left:auto}
@@ -364,8 +364,10 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);background:var(--panel);border-top:1px solid var(--line);justify-content:space-around;overflow:visible;flex:none}
   .nav button{flex:1;height:100%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;border-radius:10px}
   .nav .ni{display:block}.nav .sec{display:none}.nav .more{display:flex}
-  .nav button.on::after{left:30%;right:30%;top:0;bottom:auto;height:3px;border-radius:0 0 3px 3px}
-  .here{height:28px;font-size:12px;padding:0 10px 0 8px;max-width:52vw}.hdr .brand .txt{display:none}
+  .here{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;font-size:15px}.hdr .brand .txt{display:none}
+  .here b{font-weight:700;color:var(--text)}.here-sep{color:var(--text-3)}.here-sub{color:var(--text-2);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis}.here-i{display:none}
+  .nav button.on{background:var(--brand-2);color:var(--brand);box-shadow:none}.nav button.on:hover{background:var(--brand-2);color:var(--brand)}
+  .nav button.on::after{content:'';position:absolute;left:30%;right:30%;top:0;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}.nav button{position:relative}
   .ixs{grid-template-columns:1fr 1fr}.pk-grid{grid-template-columns:1fr}
   html,body{overflow-x:hidden}
   .toolbar{flex-wrap:wrap;overflow:visible;gap:6px}.toolbar [data-act="log"],.toolbar [data-act="shot"],.toolbar [data-act="focus"],.toolbar .sep{display:none}
@@ -615,7 +617,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
 <script src="/static/journal.js?v=20261017d"></script>
-<script src="/static/ipo.js?v=20261018b"></script>
+<script src="/static/ipo.js?v=20261018d"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2055,7 +2057,7 @@ const navKey=v=>(SUBVIEWS[v]||[v])[0];
 const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
 const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'));
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
-function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
+function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
 const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
 function closeOverlays(){
