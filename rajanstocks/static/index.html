@@ -2588,7 +2588,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data
 
 
 /* ======================= Strategies & indicators (your own pack) ======================= */
-const ST={meta:null,res:{},grp:'All',gen:'new',page:0,sym:null,run:0};
+const ST={meta:null,res:{},grp:'All',gen:'new',page:0,sym:null,run:0,inflight:{}};
 const STPAL=[0,3,4,6,1,5];
 const INDEX_RE=/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/;
 const sigBias=s=>/SELL|SHORT|BELOW|BEAR|DOWN/i.test(s||'')?-1:/BUY|LONG|ABOVE|BULL|UP|SPURT/i.test(s||'')?1:0;
@@ -2599,7 +2599,9 @@ function registerStratBase(list){for(const m of list){if(!m.chart)continue;
   DEFS['S:'+m.key]={name:m.name,short:m.name.split(' ').slice(0,2).join(' '),cat:'Rajan',pane:'main',params:[],lines,calc:(d,p,x)=>stratCalc(m,d,x),
     desc:m.desc,read:'Levels and BUY / SELL dots come from your strategy code run on the selected symbol (daily bars). They show on intraday and daily charts; weekly and monthly charts do not align to daily signals.'}}}
 async function runStrat(key,sym,force){const k=key+'|'+sym,c=ST.res[k];if(!force&&c&&c.ts&&Date.now()-c.ts<60000&&!c.err)return c;
-  try{const r=await api('/api/m/strategy?key='+key+'&symbol='+encodeURIComponent(sym));r.ts=Date.now();ST.res[k]=r}catch(e){ST.res[k]={err:'Not available for '+sym,ts:Date.now()}}return ST.res[k]}
+  if(ST.inflight[k])return ST.inflight[k];
+  const p=(async()=>{try{const r=await api('/api/m/strategy?key='+key+'&symbol='+encodeURIComponent(sym));r.ts=Date.now();ST.res[k]=r}catch(e){ST.res[k]={err:'Not available for '+sym,ts:Date.now()}}delete ST.inflight[k];return ST.res[k]})();
+  ST.inflight[k]=p;return p}
 function stratCalc(m,d,x){const sym=App.sym.s,k=m.key+'|'+sym,n=d.length,out={};m.lines.forEach(l=>out[l.k]=NA(n));out._buy=NA(n);out._sell=NA(n);
   if(App.sym.tv)return out;                       // NSE strategies do not apply to global instruments
   const R=ST.res[k];
