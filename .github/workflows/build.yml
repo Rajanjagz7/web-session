@@ -1,0 +1,58 @@
+name: Build CloudStream plugins
+
+concurrency:
+  group: "cs-build"
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [cloudstream]
+    paths-ignore: ['*.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src
+      - uses: actions/checkout@v4
+        with:
+          ref: cloudstream-builds
+          path: builds
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Build plugins
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew make makePluginsJson --no-daemon 2>&1 | tee $GITHUB_WORKSPACE/build.log
+      - name: Publish builds
+        run: |
+          cd $GITHUB_WORKSPACE/builds
+          rm -f *.cs3 build.log
+          cp $GITHUB_WORKSPACE/src/*/build/*.cs3 .
+          cp $GITHUB_WORKSPACE/src/build/plugins.json plugins.json
+          cp $GITHUB_WORKSPACE/src/repo.json repo.json
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add -A
+          git commit -m "Build $GITHUB_SHA" || exit 0
+          git push
+      - name: Save build log on failure
+        if: failure()
+        run: |
+          cd $GITHUB_WORKSPACE/builds
+          (grep -E "^e: |error:|FAILURE|What went wrong" -A3 $GITHUB_WORKSPACE/build.log | head -n 120; echo ----; tail -n 80 $GITHUB_WORKSPACE/build.log) > build.log || echo "no log" > build.log
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add build.log
+          git commit -m "Build FAILED $GITHUB_SHA" && git push

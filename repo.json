@@ -1,0 +1,10 @@
+{
+  "name": "Rajan Collections",
+  "description": "Free Indian live TV and public-domain classic films, in neat themed rows.",
+  "manifestVersion": 1,
+  "repositoryUrl": "https://github.com/Rajanjagz7/web-session/tree/cloudstream",
+  "iconUrl": "https://raw.githubusercontent.com/Rajanjagz7/web-session/cloudstream/icons/repo.png",
+  "pluginLists": [
+    "https://raw.githubusercontent.com/Rajanjagz7/web-session/cloudstream-builds/plugins.json"
+  ]
+}
