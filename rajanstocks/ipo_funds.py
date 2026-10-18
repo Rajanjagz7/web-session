@@ -293,9 +293,6 @@ def _pick(row, *keys):
     return None
 
 
-_DIAG = {}
-
-
 def _nse_bars(symbol, since):
     """Daily OHLC from NSE's own history API - covers SME (SM/ST series) that Yahoo barely has."""
     out = {}
@@ -304,26 +301,26 @@ def _nse_bars(symbol, since):
         stop = min(end, start + timedelta(days=360))
         q = requests.utils.quote(symbol)
         f, t = start.strftime('%d-%m-%Y'), stop.strftime('%d-%m-%Y')
-        js, notes = None, []
+        js = None
         for path in (f"/api/historicalOR/generateSecurityWiseHistoricalData?from={f}&to={t}&symbol={q}&type=priceVolumeDeliverable&series=ALL",
                      f"/api/historical/securityArchives?from={f}&to={t}&symbol={q}&dataType=priceVolumeDeliverable&series=ALL",
                      f"/api/historical/cm/equity?symbol={q}&series=[%22EQ%22,%22BE%22,%22SM%22,%22ST%22]&from={f}&to={t}"):
             try:
                 cand = _nse(path)
                 rows = cand.get("data") if isinstance(cand, dict) else None
-                notes.append(f"{path.split('?')[0]}: {len(rows or [])} rows")
                 if rows:
                     js = cand
-                    notes.append("first=" + str(rows[0])[:240])
                     break
-            except Exception as e:
-                notes.append(f"{path.split('?')[0]}: {str(e)[:80]}")
-        _DIAG[symbol] = " | ".join(notes)
+            except Exception:
+                continue
         for r in (js or {}).get("data") or []:
-            d = _pick(r, "CH_TIMESTAMP", "TIMESTAMP", "mTIMESTAMP")
-            dd = None
-            if d:
-                dd = _d(str(d)[:11]) if not re.match(r"\d{4}-", str(d)) else date.fromisoformat(str(d)[:10])
+            dd = _d(str(r.get("mTIMESTAMP") or "")[:11])  # "13-Oct-2026" - the trading day itself
+            if not dd:
+                d = str(_pick(r, "CH_TIMESTAMP", "TIMESTAMP") or "")
+                try:  # ISO, possibly a UTC instant ("2026-10-12T18:30:00Z" is 13 Oct in IST)
+                    dd = datetime.fromisoformat(d.replace("Z", "+00:00")).astimezone(IST).date() if "T" in d else date.fromisoformat(d[:10])
+                except ValueError:
+                    dd = _d(d[:11])
             o, h, l, c = (_num(_pick(r, *k)) for k in (("CH_OPENING_PRICE", "OPEN_PRICE"), ("CH_TRADE_HIGH_PRICE", "HIGH_PRICE"),
                                                       ("CH_TRADE_LOW_PRICE", "LOW_PRICE"), ("CH_CLOSING_PRICE", "CLOSE_PRICE")))
             if dd and None not in (o, h, l, c) and c > 0:
@@ -337,7 +334,7 @@ def _price_bars(symbol, since):
     bars, live = _yahoo_bars(symbol, since)
     if len([b for b in bars if b["date"] >= since.isoformat()]) < 3 and (_today() - since).days >= 3:
         nb = _nse_bars(symbol, since)
-        if len(nb) > len(bars):
+        if nb and len(nb) >= len(bars):  # official NSE bars win a tie
             return nb, None
     return bars, live
 
@@ -515,7 +512,7 @@ def build_ipo_dashboard():
 
 @router.get("/api/ipo/dashboard")
 def ipo_dashboard(refresh: bool = False):
-    key = "ipo:dash:v3"
+    key = "ipo:dash:v4"
     if refresh:
         with _mem_lock:
             _mem.pop(key, None)
@@ -548,7 +545,7 @@ def ipo_chart(symbol: str = Query(..., min_length=1, max_length=30, pattern=r"^[
         if issue_price:
             st["issue_price"] = issue_price
             st["return_pct"] = round((cur / issue_price - 1) * 100, 2)
-        return {"symbol": symbol.upper(), "listing_date": listing_date, "stats": st, "diag": _DIAG.get(symbol.upper()),
+        return {"symbol": symbol.upper(), "listing_date": listing_date, "stats": st,
                 "bars": [[b["date"], round(b["open"], 2), round(b["high"], 2), round(b["low"], 2), round(b["close"], 2)] for b in bars]}
 
     try:
