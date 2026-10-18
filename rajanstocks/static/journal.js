@@ -270,7 +270,7 @@
       const w2 = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild; if (w2) w2.scrollLeft = x; }
     const ts = document.getElementById('jvLiveTs'); if (ts) ts.textContent = 'live · updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
-  setInterval(() => { refreshLive(); }, 5000);
+  setInterval(() => { refreshLive(); if (!document.hidden) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 15000);
 
   function viewOverview() {
@@ -1095,5 +1095,7 @@
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) syncAuto(true); }, 60000);
-  window.JV = { render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate };
+  window.JV = { render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate,
+    /* live portfolio for the header: capital + booked + open (marked to market) */
+    totals: () => { const L = liveTotals(today()); return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
 })();
