@@ -302,17 +302,23 @@ def _nse_bars(symbol, since):
     start, end = since - timedelta(days=1), _today()
     while start <= end:
         stop = min(end, start + timedelta(days=360))
-        try:
-            _DIAG[symbol] = "nse call"
-            js = _nse(f"/api/historical/cm/equity?symbol={requests.utils.quote(symbol)}"
-                      f"&series=[%22EQ%22,%22BE%22,%22SM%22,%22ST%22,%22BZ%22]"
-                      f"&from={start.strftime('%d-%m-%Y')}&to={stop.strftime('%d-%m-%Y')}")
-            _DIAG[symbol] = f"nse ok, keys={list(js)[:4] if isinstance(js, dict) else type(js).__name__}, rows={len((js or {}).get('data') or []) if isinstance(js, dict) else 0}"
-            if isinstance(js, dict) and js.get("data"):
-                _DIAG[symbol] += f", first={str(js['data'][0])[:300]}"
-        except Exception as e:
-            _DIAG[symbol] = f"nse error: {str(e)[:200]}"
-            js = None
+        q = requests.utils.quote(symbol)
+        f, t = start.strftime('%d-%m-%Y'), stop.strftime('%d-%m-%Y')
+        js, notes = None, []
+        for path in (f"/api/historicalOR/generateSecurityWiseHistoricalData?from={f}&to={t}&symbol={q}&type=priceVolumeDeliverable&series=ALL",
+                     f"/api/historical/securityArchives?from={f}&to={t}&symbol={q}&dataType=priceVolumeDeliverable&series=ALL",
+                     f"/api/historical/cm/equity?symbol={q}&series=[%22EQ%22,%22BE%22,%22SM%22,%22ST%22]&from={f}&to={t}"):
+            try:
+                cand = _nse(path)
+                rows = cand.get("data") if isinstance(cand, dict) else None
+                notes.append(f"{path.split('?')[0]}: {len(rows or [])} rows")
+                if rows:
+                    js = cand
+                    notes.append("first=" + str(rows[0])[:240])
+                    break
+            except Exception as e:
+                notes.append(f"{path.split('?')[0]}: {str(e)[:80]}")
+        _DIAG[symbol] = " | ".join(notes)
         for r in (js or {}).get("data") or []:
             d = _pick(r, "CH_TIMESTAMP", "TIMESTAMP", "mTIMESTAMP")
             dd = None
