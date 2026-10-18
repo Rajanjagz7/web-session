@@ -313,6 +313,23 @@ def _yahoo_bars(symbol, since):
     return [], None
 
 
+def _range_stats(bars, cur):
+    """High/low since listing and over the last 52 weeks (= since listing when it listed under a year ago)."""
+    if not bars:
+        return {}
+    cut = (_today() - timedelta(days=365)).isoformat()
+    yr = [b for b in bars if b["date"] >= cut] or bars
+    hi_b, lo_b = max(bars, key=lambda b: b["high"]), min(bars, key=lambda b: b["low"])
+    h52, l52 = max(yr, key=lambda b: b["high"]), min(yr, key=lambda b: b["low"])
+    out = {"high_since": round(hi_b["high"], 2), "high_since_date": hi_b["date"], "low_since": round(lo_b["low"], 2), "low_since_date": lo_b["date"],
+           "hi52": round(h52["high"], 2), "hi52_date": h52["date"], "lo52": round(l52["low"], 2), "lo52_date": l52["date"],
+           "w52_partial": bars[0]["date"] > cut}
+    if cur:
+        out["from_hi52_pct"] = round((cur / h52["high"] - 1) * 100, 2)
+        out["from_lo52_pct"] = round((cur / l52["low"] - 1) * 100, 2)
+    return out
+
+
 def _listing_perf(item):
     ld = date.fromisoformat(item["listing_date"])
     bars, live = _yahoo_bars(item["symbol"], ld)
@@ -325,6 +342,7 @@ def _listing_perf(item):
     item.update({"list_open": round(b0["open"], 2), "list_close": round(b0["close"], 2), "list_high": round(b0["high"], 2),
                  "list_low": round(b0["low"], 2), "current": round(cur, 2),
                  "spark": [round(b["close"], 2) for b in bars[-30:]]})
+    item.update(_range_stats(bars, cur))
     if ip:
         item["listing_gain_pct"] = round((b0["open"] - ip) / ip * 100, 2)
         item["day1_close_pct"] = round((b0["close"] - ip) / ip * 100, 2)
@@ -441,7 +459,7 @@ def build_ipo_dashboard():
 
 @router.get("/api/ipo/dashboard")
 def ipo_dashboard(refresh: bool = False):
-    key = "ipo:dash:v1"
+    key = "ipo:dash:v2"
     if refresh:
         with _mem_lock:
             _mem.pop(key, None)
@@ -454,6 +472,36 @@ def ipo_dashboard(refresh: bool = False):
         return _cached(key, 900, build_ipo_dashboard)
     except Exception as e:
         raise HTTPException(502, f"Could not load IPO data: {e}")
+
+
+@router.get("/api/ipo/chart")
+def ipo_chart(symbol: str = Query(..., min_length=1, max_length=30, pattern=r"^[A-Za-z0-9&\-]+$"),
+              listing_date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"), issue_price: float = 0):
+    key = f"ipochart:{symbol.upper()}:{listing_date}"
+
+    def build():
+        bars, live = _yahoo_bars(symbol.upper(), date.fromisoformat(listing_date))
+        bars = [b for b in bars if b["date"] >= listing_date]
+        if not bars:
+            return None
+        cur = live or bars[-1]["close"]
+        b0 = bars[0]
+        st = {"current": round(cur, 2), "list_open": round(b0["open"], 2), "list_high": round(b0["high"], 2),
+              "list_low": round(b0["low"], 2), "list_close": round(b0["close"], 2), "days": len(bars)}
+        st.update(_range_stats(bars, cur))
+        if issue_price:
+            st["issue_price"] = issue_price
+            st["return_pct"] = round((cur / issue_price - 1) * 100, 2)
+        return {"symbol": symbol.upper(), "listing_date": listing_date, "stats": st,
+                "bars": [[b["date"], round(b["open"], 2), round(b["high"], 2), round(b["low"], 2), round(b["close"], 2)] for b in bars]}
+
+    try:
+        data = _cached(key, 900, build, shared=False)
+    except Exception as e:
+        raise HTTPException(502, f"Could not load prices: {e}")
+    if not data:
+        raise HTTPException(404, "No price history for this symbol yet")
+    return data
 
 
 # ----------------------------------------------------------------------------- Mutual funds
@@ -694,6 +742,16 @@ def sip_sim(navs, amount, years=None, start=None, step_up_pct=0.0, day=None, max
     }
 
 
+def _nav_stats(navs):
+    end_d, cur = navs[-1]
+    yr = [x for x in navs if x[0] >= end_d - timedelta(days=365)]
+    h52, l52 = max(yr, key=lambda x: x[1]), min(yr, key=lambda x: x[1])
+    ath = max(navs, key=lambda x: x[1])
+    return {"hi52": round(h52[1], 4), "hi52_date": h52[0].isoformat(), "lo52": round(l52[1], 4), "lo52_date": l52[0].isoformat(),
+            "ath": round(ath[1], 4), "ath_date": ath[0].isoformat(), "dd_pct": round((cur / ath[1] - 1) * 100, 2),
+            "from_hi52_pct": round((cur / h52[1] - 1) * 100, 2), "from_lo52_pct": round((cur / l52[1] - 1) * 100, 2)}
+
+
 def _fund_summary(f):
     try:
         h = _nav_history(f["code"])
@@ -710,6 +768,7 @@ def _fund_summary(f):
         "nav": navs[-1][1], "nav_date": navs[-1][0].isoformat(), "inception": navs[0][0].isoformat(),
         "r1y": _cagr(navs, 1), "r3y": _cagr(navs, 3), "r5y": _cagr(navs, 5), "r10y": _cagr(navs, 10),
     })
+    out.update(_nav_stats(navs))
     prev = _nav_on(navs, navs[-1][0] - timedelta(days=1))
     if prev and prev[0] != navs[-1][0]:
         out["day_pct"] = round((navs[-1][1] / prev[1] - 1) * 100, 2)
@@ -733,7 +792,7 @@ def build_funds():
 
 @router.get("/api/funds/list")
 def funds_list(refresh: bool = False):
-    key = "mf:list:v3"
+    key = "mf:list:v4"
     if refresh:
         with _mem_lock:
             _mem.pop(key, None)
@@ -753,6 +812,34 @@ def funds_search(q: str = Query(..., min_length=2, max_length=60), all_plans: bo
     except Exception as e:
         raise HTTPException(502, f"Fund search is unavailable: {e}")
     return {"items": [{"code": i["schemeCode"], "scheme": i["schemeName"]} for i in items[:25]]}
+
+
+@router.get("/api/funds/nav")
+def funds_nav(code: int, years: int = Query(0, ge=0, le=40)):
+    """NAV series for the chart (years=0 -> since launch), thinned to ~500 points, plus range stats."""
+    try:
+        h = _nav_history(code)
+    except Exception as e:
+        raise HTTPException(502, f"Could not load NAV history: {e}")
+    navs = h["navs"]
+    if not navs:
+        raise HTTPException(404, "No NAV history for this scheme")
+    end = navs[-1][0]
+    sel = [x for x in navs if x[0] >= end - timedelta(days=round(365.25 * years))] if years else navs
+    step = max(1, math.ceil(len(sel) / 500))
+    pts = sel[::step]
+    if pts[-1] != sel[-1]:
+        pts.append(sel[-1])
+    lo_p, hi_p = min(sel, key=lambda x: x[1]), max(sel, key=lambda x: x[1])
+    meta = h["meta"]
+    st = _nav_stats(navs)
+    st.update({"nav": navs[-1][1], "nav_date": end.isoformat(), "inception": navs[0][0].isoformat(),
+               "range_high": round(hi_p[1], 4), "range_high_date": hi_p[0].isoformat(),
+               "range_low": round(lo_p[1], 4), "range_low_date": lo_p[0].isoformat(),
+               "range_return_pct": round((sel[-1][1] / sel[0][1] - 1) * 100, 2),
+               "r1y": _cagr(navs, 1), "r3y": _cagr(navs, 3), "r5y": _cagr(navs, 5)})
+    return {"code": code, "scheme": meta.get("scheme_name"), "fund_house": meta.get("fund_house"), "category": meta.get("scheme_category"),
+            "years": years, "stats": st, "points": [[d.isoformat(), v] for d, v in pts]}
 
 
 @router.get("/api/funds/sip")

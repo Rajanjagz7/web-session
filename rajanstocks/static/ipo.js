@@ -40,6 +40,137 @@
     return `<svg class="ipf-spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
   }
 
+  /* where the current price sits between the 52-week low and high */
+  function rangeBar(lo, hi, cur, d) {
+    if (lo == null || hi == null || cur == null || hi <= lo) return '<span class="muted">—</span>';
+    const f = Math.max(0, Math.min(1, (cur - lo) / (hi - lo)));
+    const fmt = v => d ? Number(v).toFixed(d) : inr(v, v < 100 ? 2 : 0);
+    return `<span class="ipf-rb" ${tip('52-week low ' + fmt(lo) + ' · high ' + fmt(hi) + ' · now ' + fmt(cur))}><span class="ipf-rb-t"><i style="left:${(f * 100).toFixed(1)}%"></i></span><span class="ipf-rb-l"><span>${fmt(lo)}</span><span>${fmt(hi)}</span></span></span>`;
+  }
+
+  /* ---------- detail panel: price / NAV chart with high-low stats ---------- */
+  const D = { open: false, kind: null, ref: null, range: null, data: {}, busy: false, err: null };
+  const IPO_RANGES = [['1M', 31], ['3M', 92], ['6M', 183], ['1Y', 366], ['All', 0]];
+  const MF_RANGES = [['1Y', 1], ['3Y', 3], ['5Y', 5], ['10Y', 10], ['Max', 0]];
+  function openDetail(kind, ref) {
+    D.open = true; D.kind = kind; D.ref = ref; D.err = null;
+    D.range = kind === 'ipo' ? 'All' : '3Y';
+    paintDetail(); loadDetail();
+    document.body.classList.add('ipf-noscroll');
+  }
+  function closeDetail() { D.open = false; const el = document.getElementById('ipfDet'); if (el) el.remove(); document.body.classList.remove('ipf-noscroll'); }
+  function detKey() { return D.kind === 'ipo' ? 'ipo:' + D.ref.symbol : 'mf:' + D.ref.code + ':' + (MF_RANGES.find(r => r[0] === D.range) || [0, 3])[1]; }
+  async function loadDetail() {
+    const k = detKey(); if (D.data[k]) { paintDetail(); return; }
+    D.busy = true; D.err = null; paintDetail();
+    try {
+      D.data[k] = D.kind === 'ipo'
+        ? await api(`/api/ipo/chart?symbol=${encodeURIComponent(D.ref.symbol)}&listing_date=${D.ref.listing_date}&issue_price=${D.ref.issue_price || 0}`)
+        : await api(`/api/funds/nav?code=${encodeURIComponent(D.ref.code)}&years=${(MF_RANGES.find(r => r[0] === D.range) || [0, 3])[1]}`);
+    } catch (e) { D.err = D.kind === 'ipo' ? 'No price history for this stock yet.' : 'NAV history could not be loaded.'; }
+    D.busy = false; if (D.open) paintDetail();
+  }
+  function detPoints() {
+    const d = D.data[detKey()]; if (!d) return [];
+    if (D.kind === 'mf') return d.points.map(p => ({ t: p[0], v: p[1] }));
+    const days = (IPO_RANGES.find(r => r[0] === D.range) || [0, 0])[1];
+    let b = d.bars; if (days) { const cut = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10); b = b.filter(x => x[0] >= cut); if (b.length < 2) b = d.bars.slice(-2); }
+    return b.map(x => ({ t: x[0], o: x[1], h: x[2], l: x[3], v: x[4] }));
+  }
+  function detChart(pts, ref) {
+    if (pts.length < 2) return '<div class="empty">Not enough data for this range yet.</div>';
+    const sm = window.innerWidth < 700, W = sm ? 420 : 860, H = sm ? 230 : 300, L = sm ? 52 : 64, R = 12, T = 14, B = 26;
+    const vals = pts.map(p => p.v).concat(pts.filter(p => p.h != null).flatMap(p => [p.h, p.l]));
+    if (ref) vals.push(ref);
+    let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.06 || hi * 0.02; lo -= pad; hi += pad;
+    const n = pts.length, X = i => L + i / (n - 1) * (W - L - R), Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    const up = pts[n - 1].v >= pts[0].v, col = up ? 'var(--up)' : 'var(--down)';
+    const line = pts.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(p.v).toFixed(1)}`).join('');
+    const area = line + `L${X(n - 1).toFixed(1)} ${H - B}L${L} ${H - B}Z`;
+    const ticks = [0, 1, 2, 3, 4].map(k => lo + (hi - lo) * (k + 0.5) / 5);
+    const fmtV = v => D.kind === 'mf' ? v.toFixed(v < 100 ? 2 : 1) : inr(v, v < 1000 ? 1 : 0);
+    const xl = []; const step = Math.max(1, Math.floor(n / (sm ? 4 : 7)));
+    for (let i = 0; i < n; i += step) xl.push(i);
+    const lab = t => { const d = new Date(t + 'T00:00:00'); const span = (Date.parse(pts[n - 1].t) - Date.parse(pts[0].t)) / 864e5; return d.toLocaleDateString('en-IN', span > 400 ? { month: 'short', year: '2-digit' } : { day: 'numeric', month: 'short' }); };
+    const iHi = pts.reduce((a, p, i) => (p.h ?? p.v) > (pts[a].h ?? pts[a].v) ? i : a, 0), iLo = pts.reduce((a, p, i) => (p.l ?? p.v) < (pts[a].l ?? pts[a].v) ? i : a, 0);
+    const hv = pts[iHi].h ?? pts[iHi].v, lv = pts[iLo].l ?? pts[iLo].v;
+    const mark = (i, v, txt, above) => { const x = X(i), y = Y(v), anchor = x > W - 110 ? 'end' : x < L + 60 ? 'start' : 'middle'; return `<circle cx="${x}" cy="${y}" r="3.5" fill="var(--panel)" stroke="var(--text-2)" stroke-width="1.5"/><text x="${x}" y="${above ? y - 8 : y + 16}" text-anchor="${anchor}" class="ipf-ax ipf-mk">${txt} ${fmtV(v)}</text>`; };
+    return `<div class="ipf-chartbox"><svg class="ipf-chart ipf-dchart" viewBox="0 0 ${W} ${H}" data-w="${W}" data-l="${L}" data-r="${R}" role="img" aria-label="Price chart">
+      ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end" class="ipf-ax">${fmtV(v)}</text>`).join('')}
+      ${xl.map(i => `<text x="${X(i)}" y="${H - 7}" text-anchor="${i === 0 ? 'start' : X(i) > W - R - 40 ? 'end' : 'middle'}" class="ipf-ax">${lab(pts[i].t)}</text>`).join('')}
+      ${ref ? `<line x1="${L}" x2="${W - R}" y1="${Y(ref)}" y2="${Y(ref)}" stroke="var(--text-3)" stroke-dasharray="5 4"/><text x="${W - R}" y="${Y(ref) - 5}" text-anchor="end" class="ipf-ax">Issue ${inr(ref)}</text>` : ''}
+      <path d="${area}" fill="${col}" fill-opacity=".1"/><path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
+      ${mark(iHi, hv, 'High', true)}${iLo !== iHi ? mark(iLo, lv, 'Low', false) : ''}
+      <line class="ipf-guide" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--text-3)" stroke-width="1" style="display:none"/>
+      <circle class="ipf-dot" r="4" fill="${col}" style="display:none"/>
+    </svg><div class="ipf-tt" style="display:none"></div></div>`;
+  }
+  function hookChart() {
+    const box = document.querySelector('#ipfDet .ipf-chartbox'); if (!box) return;
+    const svg = box.querySelector('svg'), pts = detPoints(), tt = box.querySelector('.ipf-tt'), g = svg.querySelector('.ipf-guide'), dot = svg.querySelector('.ipf-dot');
+    const W = +svg.dataset.w, L = +svg.dataset.l, R = +svg.dataset.r, n = pts.length; if (n < 2) return;
+    const vb = svg.viewBox.baseVal, ys = [...svg.querySelectorAll('path')][1];
+    const move = ev => {
+      const r = svg.getBoundingClientRect(), cx = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
+      const i = Math.max(0, Math.min(n - 1, Math.round((cx - L) / (W - L - R) * (n - 1)))), p = pts[i], x = L + i / (n - 1) * (W - L - R);
+      const segs = ys.getAttribute('d').split(/[ML]/).filter(Boolean), y = +(segs[i] || '0 0').split(' ')[1];
+      g.setAttribute('x1', x); g.setAttribute('x2', x); g.style.display = ''; dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.style.display = '';
+      const dt2 = new Date(p.t + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      tt.innerHTML = D.kind === 'mf' ? `<b>${dt2}</b><span>NAV ${p.v.toFixed(4)}</span>` : `<b>${dt2}</b><span>O ${inr(p.o, 2)} · H ${inr(p.h, 2)}</span><span>L ${inr(p.l, 2)} · C ${inr(p.v, 2)}</span>`;
+      tt.style.display = ''; const px = x / W * r.width; tt.style.left = Math.min(r.width - tt.offsetWidth - 4, Math.max(4, px - tt.offsetWidth / 2)) + 'px';
+    };
+    const leave = () => { g.style.display = 'none'; dot.style.display = 'none'; tt.style.display = 'none'; };
+    svg.addEventListener('mousemove', move); svg.addEventListener('touchmove', move, { passive: true }); svg.addEventListener('mouseleave', leave); svg.addEventListener('touchend', leave);
+  }
+  function paintDetail() {
+    if (!D.open) return;
+    let el = document.getElementById('ipfDet');
+    if (!el) { el = document.createElement('div'); el.id = 'ipfDet'; el.className = 'ipf-det-bg'; document.body.appendChild(el); }
+    const d = D.data[detKey()], st = d && d.stats, ref = D.ref, isIpo = D.kind === 'ipo';
+    const ranges = isIpo ? IPO_RANGES : MF_RANGES, pts = d ? detPoints() : [];
+    const rngRet = pts.length > 1 ? (pts[pts.length - 1].v / pts[0].v - 1) * 100 : null;
+    const kv = (l, v, sub, k) => `<div class="ipf-kv"><small>${l}</small><b class="num ${k || ''}">${v}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
+    const pv = v => isIpo ? inr(v, 2) : v != null ? Number(v).toFixed(4) : '—';
+    let stats = '';
+    if (st && isIpo) {
+      const wk = st.w52_partial ? '52W (since listing)' : '52-week';
+      stats = kv('Current', inr(st.current, 2), st.return_pct != null ? pct(st.return_pct, 1) + ' vs issue' : '', cls(st.return_pct))
+        + kv('Issue price', inr(st.issue_price || ref.issue_price))
+        + kv('Listing day', `${inr(st.list_open, 2)} → ${inr(st.list_close, 2)}`, `High ${inr(st.list_high, 2)} · Low ${inr(st.list_low, 2)}`)
+        + kv(wk + ' high', inr(st.hi52, 2), `${dt(st.hi52_date)} · ${pct(st.from_hi52_pct, 1)} from here`)
+        + kv(wk + ' low', inr(st.lo52, 2), `${dt(st.lo52_date)} · ${pct(st.from_lo52_pct, 1)} above`)
+        + kv('High since listing', inr(st.high_since, 2), dt(st.high_since_date))
+        + kv('Low since listing', inr(st.low_since, 2), dt(st.low_since_date))
+        + kv(D.range + ' change', pct(rngRet, 1), st.days + ' trading days listed', cls(rngRet));
+    } else if (st) {
+      stats = kv('NAV', pv(st.nav), dty(st.nav_date))
+        + kv('52-week high', pv(st.hi52), `${dt(st.hi52_date)} · ${pct(st.from_hi52_pct, 1)} from here`)
+        + kv('52-week low', pv(st.lo52), `${dt(st.lo52_date)} · ${pct(st.from_lo52_pct, 1)} above`)
+        + kv('All-time high', pv(st.ath), `${dty(st.ath_date)} · ${st.dd_pct >= -0.05 ? 'at the peak now' : pct(st.dd_pct, 1) + ' from here'}`)
+        + kv(D.range + ' high / low', `${pv(st.range_high)} / ${pv(st.range_low)}`, `${dt(st.range_high_date)} / ${dt(st.range_low_date)}`)
+        + kv(D.range + ' return', pct(st.range_return_pct, 1), 'point to point', cls(st.range_return_pct))
+        + kv('1Y return', pct(st.r1y, 1), `3Y CAGR ${pct(st.r3y, 1)} · 5Y CAGR ${pct(st.r5y, 1)}`, cls(st.r1y))
+        + kv('Launched', dty(st.inception));
+    }
+    el.innerHTML = `<div class="ipf-det" role="dialog" aria-modal="true" aria-label="${E(ref.name)} chart">
+      <header><div><b>${E(ref.name)}</b><small>${isIpo ? `${E(ref.symbol)} · listed ${dty(ref.listing_date)}` : E((d && d.category) || ref.category || '')}</small></div>
+        <button class="ibtn" data-ipf-det="close" aria-label="Close">${ic('x', 18)}</button></header>
+      <div class="seg ipf-det-rng">${ranges.map(([k]) => `<button class="${D.range === k ? 'on' : ''}" data-ipf-rng="${k}">${k}</button>`).join('')}</div>
+      ${D.busy && !d ? '<div class="ipf-skel ipf-skel1"><i></i></div>' : D.err ? `<div class="empty">${E(D.err)}</div>` : d ? detChart(pts, isIpo ? (st.issue_price || ref.issue_price) : null) : ''}
+      ${stats ? `<div class="ipf-kvs">${stats}</div>` : ''}
+      ${isIpo && d ? '<p class="ipf-note">Daily prices from market data. Hover or drag on the chart for open, high, low and close.</p>' : d ? '<p class="ipf-note">Daily NAV from AMFI via mfapi.in, Direct plan, Growth option. Hover or drag on the chart for the NAV on any day.</p>' : ''}
+    </div>`;
+    hookChart();
+  }
+  document.addEventListener('click', e => {
+    if (!D.open) return;
+    const t = e.target;
+    if (t.id === 'ipfDet' || t.closest('[data-ipf-det="close"]')) return closeDetail();
+    const r = t.closest('[data-ipf-rng]'); if (r && t.closest('#ipfDet')) { D.range = r.dataset.ipfRng; if (D.kind === 'ipo') paintDetail(); else loadDetail(); }
+  });
+  document.addEventListener('keydown', e => { if (D.open && e.key === 'Escape') closeDetail(); });
+  addEventListener('hashchange', closeDetail);
+
   function pager(key, total) {
     const size = S.size, pages = Math.max(1, Math.ceil(total / size));
     if (S.pg[key] >= pages) S.pg[key] = pages - 1;
@@ -116,14 +247,16 @@
       <th class="r" ${tip('Last grey market premium seen before listing')}>Last GMP</th><th class="r" ${tip('Issue price + last GMP')}>Expected</th>
       <th class="r" ${tip('Opening price on listing day')}>List open</th><th class="r" ${tip('(List open − issue) ÷ issue')}>Listing gain</th>
       <th class="r" ${tip('Listing-day close vs issue price')}>Day-1 close</th><th class="r">Now</th><th class="r" ${tip('Current price vs issue price')}>Return</th>
-      <th class="r" ${tip('Actual listing gain minus the gain GMP predicted, in percentage points')}>GMP error</th><th>Trend</th></tr></thead><tbody>
-      ${list.map(r => `<tr><td><b>${E(r.name)}</b><small class="ipf-sub">${E(r.symbol || '')} · <span class="ipf-tag ${r.sme ? 'sme' : 'main'}">${r.sme ? 'SME' : 'Main'}</span></small></td>
+      <th class="r" ${tip('Actual listing gain minus the gain GMP predicted, in percentage points')}>GMP error</th>
+      <th ${tip('Where today\'s price sits between the 52-week low and high (since listing for IPOs under a year old)')}>52W low – high</th><th>Trend</th></tr></thead><tbody>
+      ${list.map(r => `<tr class="ipf-click" data-ipf-ipo="${E(JSON.stringify({ symbol: r.symbol, listing_date: r.listing_date, issue_price: r.issue_price, name: r.name }))}" ${tip('Open the price chart')}><td><b>${E(r.name)}</b><small class="ipf-sub">${E(r.symbol || '')} · <span class="ipf-tag ${r.sme ? 'sme' : 'main'}">${r.sme ? 'SME' : 'Main'}</span></small></td>
         <td>${dt(r.listing_date)}</td><td class="r num">${inr(r.issue_price)}</td>
         <td class="r num ${cls(r.last_gmp)}">${r.last_gmp != null ? inr(r.last_gmp) : '—'}</td>
         <td class="r num">${inr(r.expected_listing)}${r.expected_gain_pct != null ? `<small class="ipf-sub">${pct(r.expected_gain_pct, 1)}</small>` : ''}</td>
         <td class="r num">${inr(r.list_open, 2)}</td><td class="r">${pc(r.listing_gain_pct, 1)}</td><td class="r">${pc(r.day1_close_pct, 1)}</td>
         <td class="r num">${inr(r.current, 2)}</td><td class="r">${pc(r.return_pct, 1)}</td>
         <td class="r num">${r.gmp_error_pct != null ? (r.gmp_error_pct > 0 ? '+' : r.gmp_error_pct < 0 ? '−' : '') + Math.abs(r.gmp_error_pct).toFixed(1) + ' pts' : '—'}</td>
+        <td>${rangeBar(r.lo52, r.hi52, r.current)}</td>
         <td>${spark(r.spark)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   function ipoTab() {
@@ -176,14 +309,16 @@
         <th>Fund</th><th class="r" ${tip('Latest NAV, Direct plan, Growth option')}>NAV</th><th class="r">1D</th>
         <th class="r" ${tip('Point-to-point return over 1 year')}>1Y</th><th class="r" ${tip('Compound annual growth over 3 years')}>3Y CAGR</th><th class="r" ${tip('Compound annual growth over 5 years')}>5Y CAGR</th>
         <th class="r" ${tip('Annualised return of a monthly SIP over 3 years')}>SIP 3Y XIRR</th><th class="r" ${tip('Annualised return of a monthly SIP over 5 years')}>SIP 5Y XIRR</th>
+        <th ${tip('Where today\'s NAV sits between the 52-week low and high')}>52W low – high</th><th class="r" ${tip('How far the NAV is below its all-time high')}>From peak</th>
         <th class="r" ${tip(inr(amt) + ' a month for 5 years: total invested and value today')}>${inrS(amt)}/mo · 5Y</th><th></th></tr></thead><tbody>
-        ${slice('mf', list).map(f => { const inv = amt * 60, val = f.sip5y_mult ? inv * f.sip5y_mult : null; return `<tr>
+        ${slice('mf', list).map(f => { const inv = amt * 60, val = f.sip5y_mult ? inv * f.sip5y_mult : null; return `<tr class="ipf-click" data-ipf-fund="${E(JSON.stringify({ code: f.code, name: f.name, category: f.category }))}" ${tip('Open the NAV chart')}>
           <td><b>${E(f.name)}</b><small class="ipf-sub">${E(f.category)}${f.fund_house ? ' · ' + E(f.fund_house.replace(/ Mutual Fund$/, '')) : ''}</small></td>
           <td class="r num">${f.nav != null ? f.nav.toFixed(2) : '—'}<small class="ipf-sub">${dt(f.nav_date)}</small></td>
           <td class="r">${pc(f.day_pct)}</td><td class="r">${pc(f.r1y, 1)}</td><td class="r">${pc(f.r3y, 1)}</td><td class="r">${pc(f.r5y, 1)}</td>
           <td class="r">${pc(f.sip3y_xirr, 1)}</td><td class="r">${pc(f.sip5y_xirr, 1)}</td>
+          <td>${rangeBar(f.lo52, f.hi52, f.nav, 2)}</td><td class="r num ${f.dd_pct != null && f.dd_pct < -0.05 ? 'down' : 'up'}">${f.dd_pct == null ? '—' : f.dd_pct >= -0.05 ? 'At peak' : pct(f.dd_pct, 1)}</td>
           <td class="r num">${val ? `<b class="${cls(val - inv)}">${inrS(val)}</b><small class="ipf-sub">of ${inrS(inv)}</small>` : '<span class="muted">under 5Y</span>'}</td>
-          <td><button class="btn-xs" data-ipf-calc="${f.code}" data-ipf-name="${E(f.name)}">SIP calc</button></td></tr>`; }).join('') || '<tr><td colspan="10"><div class="empty">No funds match.</div></td></tr>'}
+          <td><button class="btn-xs" data-ipf-calc="${f.code}" data-ipf-name="${E(f.name)}">SIP calc</button></td></tr>`; }).join('') || '<tr><td colspan="12"><div class="empty">No funds match.</div></td></tr>'}
         </tbody></table></div>${pager('mf', list.length)}
       <p class="ipf-note">${ic('eye', 13)} Returns are calculated from each fund's daily NAV history (AMFI, via mfapi.in) for the Direct plan, Growth option. Past returns do not guarantee future returns. NAVs as of ${S.mf.funds && S.mf.funds[0] ? dty(S.mf.funds[0].nav_date) : '—'}.</p>`;
   }
@@ -283,7 +418,7 @@
   }
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-ipf],[data-ipf-tab],[data-ipf-stage],[data-ipf-board],[data-ipf-pg],[data-ipf-cat],[data-ipf-calc],[data-ipf-yrs]');
+    const t = e.target.closest('[data-ipf],[data-ipf-tab],[data-ipf-stage],[data-ipf-board],[data-ipf-pg],[data-ipf-cat],[data-ipf-calc],[data-ipf-yrs],[data-ipf-ipo],[data-ipf-fund]');
     if (!t || !t.closest('#v-ipo')) return;
     const d = t.dataset;
     if (d.ipfTab) return setTab(d.ipfTab);
@@ -292,6 +427,8 @@
     if (d.ipfPg) { const [k, n] = d.ipfPg.split(':'); S.pg[k] = Math.max(0, S.pg[k] + Number(n)); paint(); const h = document.querySelector('#v-ipo .ipf-body'); return; }
     if (d.ipfCat) { S.cat = d.ipfCat; SS('ipf-cat', S.cat); S.pg.mf = 0; return paint(); }
     if (d.ipfCalc) return openCalc(d.ipfCalc, d.ipfName);
+    if (d.ipfIpo) { try { return openDetail('ipo', JSON.parse(d.ipfIpo)); } catch (x) { return; } }
+    if (d.ipfFund) { try { return openDetail('mf', JSON.parse(d.ipfFund)); } catch (x) { return; } }
     if (d.ipfYrs) { S.calc.years = Number(d.ipfYrs); SS('ipf-calc', S.calc); return runSip(); }
     if (d.ipf === 'refresh') { if (S.tab === 'ipo') loadIpo(true); else loadMf(true); if (S.tab === 'sip') runSip(); return; }
     if (d.ipf === 'ipo-refresh') return loadIpo(true);
@@ -374,7 +511,25 @@
   .ipf-legend i.v.up{background:var(--up)}.ipf-legend i.v.down{background:var(--down)}.ipf-legend i.inv{background:repeating-linear-gradient(90deg,var(--text-3) 0 5px,transparent 5px 9px)}
   .ipf-skel{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.ipf-skel i{height:150px;border-radius:12px;background:linear-gradient(90deg,var(--panel-2),var(--panel),var(--panel-2));background-size:200% 100%;animation:ipfSk 1.2s infinite}
   @keyframes ipfSk{to{background-position:-200% 0}}
+  .ipf-click{cursor:pointer}
+  .ipf-rb{display:inline-flex;flex-direction:column;gap:3px;width:118px;vertical-align:middle}
+  .ipf-rb-t{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down-bg),var(--panel-2) 50%,var(--up-bg));border:1px solid var(--line)}
+  .ipf-rb-t i{position:absolute;top:50%;width:9px;height:9px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--brand);border:2px solid var(--panel)}
+  .ipf-rb-l{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-3);font-variant-numeric:tabular-nums}
+  body.ipf-noscroll{overflow:hidden}
+  .ipf-det-bg{position:fixed;inset:0;z-index:200;background:rgba(5,10,20,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+  .ipf-det{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(920px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:16px 18px 14px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .ipf-det header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+  .ipf-det header b{display:block;font-size:16px}.ipf-det header small{color:var(--text-3);font-size:12px}
+  .ipf-det-rng{margin-bottom:10px}
+  .ipf-chartbox{position:relative}.ipf-dchart{touch-action:pan-y}.ipf-mk{font-weight:600;fill:var(--text-2)}
+  .ipf-tt{position:absolute;top:4px;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:11.5px;box-shadow:0 4px 14px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:1px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ipf-kvs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .ipf-kv{background:var(--panel-2);border-radius:10px;padding:9px 11px;min-width:0}.ipf-kv small{display:block;font-size:11px;color:var(--text-3)}.ipf-kv b{display:block;font-size:15px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ipf-kv span{display:block;font-size:11px;color:var(--text-3);margin-top:1px}
+  .ipf-skel1{grid-template-columns:1fr}.ipf-skel1 i{height:260px}
   @media (max-width:760px){
+    .ipf-det-bg{align-items:flex-end;padding:0}.ipf-det{border-radius:16px 16px 0 0;max-height:92vh;padding:14px 14px 18px}
+    .ipf-kvs{grid-template-columns:1fr 1fr}
     .ipf-q{max-width:none;flex:1 1 140px}.ipf-find{max-width:none;flex-basis:100%}
     .ipf-kpis{grid-template-columns:1fr 1fr}.ipf-grid{grid-template-columns:1fr}
     .ipf-gmp{gap:10px}.ipf-gmp b{font-size:14px}
