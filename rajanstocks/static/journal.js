@@ -13,11 +13,14 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-  const TABS = [['overview', 'Overview'], ['new', 'New'], ['journal', 'Trades'], ['orders', 'Orders'], ['strategy', 'Strategy'],
-                ['tsl', 'TSL'], ['auto', 'Auto'], ['backtest', 'Backtest'], ['reports', 'Reports'], ['settings', 'Settings']];
+  const TABS = [['overview', 'Overview'], ['new', 'New'], ['journal', 'Trades'], ['orders', 'Orders'], ['analysis', 'Analysis'], ['config', 'Config'], ['reports', 'Reports']];
+  const GROUPS = { analysis: [['strategy', 'Strategy'], ['tsl', 'TSL'], ['backtest', 'Backtest']], config: [['auto', 'Auto'], ['settings', 'Settings']] };
   const TAB_TIPS = { overview: 'Equity, P&L, open positions and recent trades', new: 'Plan and log a new paper trade', journal: 'Every trade, with filters',
-    orders: 'Open, filled and cancelled orders', strategy: 'Strategy Lab: results by setup', tsl: 'TSL Lab: compare trailing-stop methods',
+    orders: 'Open, filled and cancelled orders', analysis: 'Strategy Lab, TSL Lab and Backtest', config: 'Auto Trader and settings',
+    strategy: 'Strategy Lab: results by setup', tsl: 'TSL Lab: compare trailing-stop methods',
     auto: 'Auto Trader: automated trades and settings', backtest: 'Run and review backtests', reports: 'Exports and summary reports', settings: 'Capital, risk and rule settings' };
+  const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
+  const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -69,7 +72,7 @@
         AUTO.list = (a.open || []).concat(a.closed || []).map(mapAuto);
         AUTO.ts = Date.now();
         if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.unrl, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
-            ['overview', 'journal', 'strategy', 'reports'].includes(ui.tab)) render();
+            ['overview', 'journal', 'strategy', 'reports'].includes(effTab())) render();
       }
     } catch (e) { /* offline: keep what we have */ }
     AUTO.busy = false;
@@ -82,7 +85,7 @@
       return r.ok ? { ok: true, d } : { ok: false, err: d.detail || ('Request failed (' + r.status + ')') };
     } catch (e) { return { ok: false, err: 'No internet connection.' }; }
   }
-  const ui = { tab: 'overview', f: { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }, sel: null, lab: null, labBusy: false };
+  const ui = { tab: 'overview', sub: { analysis: 'strategy', config: 'auto' }, f: { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }, sel: null, lab: null, labBusy: false };
 
   /* ---------- helpers ---------- */
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -381,9 +384,12 @@
         ${inp('jf-date', 'Date', d.date, 'date')}${inp('jf-time', 'Entry time (IST)', d.time, 'time')}
         <label class="fld"><span>Market type</span>${sel('jf-market', MARKETS, d.market)}</label>
         <label class="fld"><span>Instrument</span><input class="inp" id="jf-inst" list="jvSyms" value="${E(d.instrument || '')}" placeholder="e.g. RELIANCE / NIFTY"><datalist id="jvSyms">${syms}</datalist></label>
+        ${d.market === 'Options' ? `${inp('jf-strike', 'Strike', d.strike, 'number', 'step="any" placeholder="22600"')}
+        <label class="fld"><span>Option type</span>${sel('jf-opt', ['CE', 'PE'], d.opt || 'CE')}</label>
+        ${inp('jf-expiry', 'Expiry', d.expiry, 'date')}` : ''}
         ${inp('jf-sym', 'Symbol / contract', d.symbol || '', 'text', 'placeholder="e.g. NIFTY 22600 PE"')}
         <label class="fld"><span>Direction</span>${sel('jf-dir', ['Long', 'Short'], d.dir)}</label>
-        <label class="fld"><span>Strategy / setup</span><input class="inp" id="jf-setup" list="jvSetups" value="${E(d.setup || '')}"><datalist id="jvSetups">${setups.map(s => `<option value="${E(s)}">`).join('')}</datalist></label>
+        <label class="fld"><span>Strategy / setup</span><input class="inp" id="jf-setup" list="jvSetups" value="${E(d.setup || '')}" placeholder="${d.market === 'Options' ? 'e.g. breakout CE buy, IV crush PE sell' : ''}"><datalist id="jvSetups">${setups.map(s => `<option value="${E(s)}">`).join('')}</datalist></label>
         ${inp('jf-tf', 'Timeframe', d.tf || '', 'text', 'placeholder="5m / 15m / 1D"')}
         ${inp('jf-ind', 'Indicator values', d.ind || '', 'text', 'placeholder="UT Bot BUY, RSI 58…"')}
       </fieldset>
@@ -412,6 +418,7 @@
     const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
     const f = {
       date: g('jf-date'), time: g('jf-time'), market: g('jf-market'), instrument: g('jf-inst').trim(), symbol: g('jf-sym').trim(),
+      strike: num(g('jf-strike')), opt: g('jf-opt'), expiry: g('jf-expiry'),
       dir: g('jf-dir'), setup: g('jf-setup').trim(), tf: g('jf-tf').trim(), ind: g('jf-ind').trim(),
       entry: num(g('jf-entry')), sl: num(g('jf-sl')), qty: num(g('jf-qty')), mult: num(g('jf-mult')) || 1,
       t1: num(g('jf-t1')), t2: num(g('jf-t2')), t3: num(g('jf-t3')), tsl: g('jf-tsl'), tslTrig: num(g('jf-trig')),
@@ -419,6 +426,12 @@
     };
     ui.draft = Object.assign({}, f);
     return f;
+  }
+  function composeOptSymbol() {
+    const d = readForm(); if (d.market !== 'Options' || !d.instrument || !(d.strike > 0)) return;
+    const sym = document.getElementById('jf-sym'); if (!sym) return;
+    sym.value = `${d.instrument} ${Number(d.strike).toFixed(0)} ${d.opt || 'CE'}${d.expiry ? ' ' + d.expiry : ''}`;
+    ui.draft.symbol = sym.value;
   }
   function fillTargets(f) {
     const d = f.dir === 'Short' ? -1 : 1, r = Math.abs(f.entry - f.sl);
@@ -659,8 +672,8 @@
   }
 
   /* ---------- Strategy lab / reports ---------- */
-  function groupBy(list, keyFn) {
-    const g = {}; list.forEach(t => { (keyFn(t) || '—').toString().split(',').map(s => s.trim()).filter(Boolean).forEach(k => (g[k] = g[k] || []).push(t)); });
+  function groupBy(list, keyFn, split) {
+    const g = {}; list.forEach(t => { const v = (keyFn(t) || '—').toString(); (split ? v.split(',').map(s => s.trim()).filter(Boolean) : [v]).forEach(k => (g[k] = g[k] || []).push(t)); });
     return Object.keys(g).map(k => ({ k, m: metrics(g[k]), all: g[k].length })).sort((a, b) => b.m.net - a.m.net);
   }
   function groupTable(rows, label) {
@@ -671,10 +684,10 @@
   }
   function viewStrategy() {
     const L = filtered();
-    return `${filterBar()}<div class="card"><div class="card-h"><h3>By strategy / setup</h3></div>${groupTable(groupBy(L, t => t.setup), 'Setup')}</div>
-      <div class="card"><div class="card-h"><h3>By indicator</h3></div>${groupTable(groupBy(L, t => t.ind), 'Indicator')}</div>
-      <div class="card"><div class="card-h"><h3>By instrument</h3></div>${groupTable(groupBy(L, t => t.instrument), 'Instrument')}</div>
-      <div class="card"><div class="card-h"><h3>By direction / market</h3></div>${groupTable(groupBy(L, t => t.dir + ' · ' + t.market), 'Segment')}</div>`;
+    return `${filterBar()}<div class="card"><div class="card-h"><h3>By strategy / setup</h3></div>${groupTable(groupBy(L, t => t.setup, false), 'Setup')}</div>
+      <div class="card"><div class="card-h"><h3>By indicator</h3></div>${groupTable(groupBy(L, t => t.ind, true), 'Indicator')}</div>
+      <div class="card"><div class="card-h"><h3>By instrument</h3></div>${groupTable(groupBy(L, t => t.instrument, false), 'Instrument')}</div>
+      <div class="card"><div class="card-h"><h3>By direction / market</h3></div>${groupTable(groupBy(L, t => t.dir + ' · ' + t.market, false), 'Segment')}</div>`;
   }
   function periodTable(L, fmt, label) {
     const g = {}; L.forEach(t => { if (!entered(t)) return; (t.exits || []).forEach(l => { const k = fmt(l.date); g[k] = (g[k] || 0) + dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (S.cost + S.slip) * units(t) * l.qty; }); });
@@ -808,7 +821,7 @@
       if (which === 'auto') SV.auto = await jget('/api/auto/status');
       else { const b = await jget('/api/backtest'); SV.bt = b; SV.btBusy = !!b.running; }
     } catch (e) { if (which === 'auto') SV.auto = { error: String(e.message || e) }; else SV.bt = { error: String(e.message || e) }; }
-    if (ui.tab === which || (which === 'bt' && ui.tab === 'backtest')) render();
+    const eff = effTab(); if (eff === which || (which === 'bt' && eff === 'backtest')) render();
   }
   const cfgName = r => r.variant === 'fixed' ? '1.5 ATR stop · 2R target' : r.variant === 'trail' ? '2 ATR trailing stop' : '2 ATR stop · exit on opposite signal';
   const KEYNAME = k => { try { const m = (typeof ST !== 'undefined' && ST.meta) ? ST.meta.strategies.find(x => x.key === k) : null; return m ? m.name : k; } catch (e) { return k; } };
@@ -941,8 +954,9 @@
     applyManualTsl();
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
+    const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
     const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true, 'journal')}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
-    el.innerHTML = `<div class="page jv">${head}${tabs}${ui.tab === 'overview' ? '' : topStrip()}${(bodies[ui.tab] || viewOverview)()}</div>`;
+    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'overview' ? '' : topStrip()}${(bodies[effTab()] || viewOverview)()}</div>`;
     if (ui.tab === 'overview') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
       try { d = JSON.parse(dEl.textContent); } catch (e) { }
@@ -965,7 +979,8 @@
     const b = e.target.closest('[data-jv]'); if (!b) return;
     const a = b.dataset.jv, id = b.dataset.id;
     if (!document.getElementById('v-journal') && !document.querySelector('.modal-bg')) return;
-    if (a === 'tab') { ui.tab = b.dataset.k; if (ui.tab === 'auto') SV.auto = null; if (ui.tab === 'backtest') SV.bt = null; render(); }
+    if (a === 'tab') { ui.tab = b.dataset.k; const eff = effTab(); if (eff === 'auto') SV.auto = null; if (eff === 'backtest') SV.bt = null; render(); }
+    else if (a === 'subtab') { ui.sub[b.dataset.grp] = b.dataset.k; if (b.dataset.k === 'auto') SV.auto = null; if (b.dataset.k === 'backtest') SV.bt = null; render(); }
     else if (a === 'open') openDetail(id);
     else if (a === 'clearf') { ui.f = { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '' }; render(); }
     else if (a === 'plan') savePlan();
@@ -987,7 +1002,7 @@
     else if (a === 'csv') exportCsv();
     else if (a === 'csvsum') exportSummary();
     else if (a === 'runlab') runLab();
-    else if (a === 'btrun') { fetch('/api/backtest/run', { method: 'POST' }).then(() => { SV.btBusy = true; SV.bt = null; ui.tab = 'backtest'; render(); const iv = setInterval(async () => { await loadSrv('bt'); if (SV.bt && !SV.bt.running) clearInterval(iv); }, 4000); }); }
+    else if (a === 'btrun') { fetch('/api/backtest/run', { method: 'POST' }).then(() => { SV.btBusy = true; SV.bt = null; ui.tab = 'analysis'; ui.sub.analysis = 'backtest'; render(); const iv = setInterval(async () => { await loadSrv('bt'); if (SV.bt && !SV.bt.running) clearInterval(iv); }, 4000); }); }
     else if (a === 'autotoggle') { const on = !(SV.auto && SV.auto.cfg.enabled); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); }
@@ -1004,8 +1019,13 @@
     const f = e.target.closest('[data-jf]'); if (f) { ui.f[f.dataset.jf] = f.value; render(); return; }
     const s = e.target.closest('[data-jset]');
     if (s) { const k = s.dataset.jset; S[k] = k === 'allowOverride' ? s.value === '1' : (num(s.value) ?? DEFAULTS[k]); persistS(); if (ui.tab === 'new') renderCalc(); }
+    if (e.target.id === 'jf-market') { readForm(); render(); return; }
+    if (['jf-strike', 'jf-opt', 'jf-expiry', 'jf-inst'].includes(e.target.id)) composeOptSymbol();
   });
-  document.addEventListener('input', e => { if (e.target.closest('#jvForm')) renderCalc(); if (e.target.matches('[data-jf="inst"]')) { ui.f.inst = e.target.value; } });
+  document.addEventListener('input', e => {
+    if (e.target.closest('#jvForm')) { renderCalc(); if (['jf-strike', 'jf-inst'].includes(e.target.id)) composeOptSymbol(); }
+    if (e.target.matches('[data-jf="inst"]')) { ui.f.inst = e.target.value; }
+  });
   document.addEventListener('keydown', e => { const r = e.target.closest && e.target.closest('tr[data-jv="open"]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDetail(r.dataset.id); } });
 
   document.addEventListener('click', e => {
@@ -1030,6 +1050,9 @@
   .jv-tabs{display:flex;gap:6px;overflow-x:auto;margin:6px 0 12px;padding-bottom:2px;scrollbar-width:none}
   .jv-tabs button{white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text-2,inherit);font-size:13px}
   .jv-tabs button.on{background:var(--brand,#4f8ef7);border-color:var(--brand,#4f8ef7);color:#fff}
+  .jv-tabs.jv-subtabs{margin-top:-6px}
+  .jv-tabs.jv-subtabs button{padding:6px 12px;font-size:12px;background:none;border-color:transparent;color:var(--text-3,#8a93a6)}
+  .jv-tabs.jv-subtabs button.on{background:color-mix(in srgb,var(--brand,#4f8ef7) 16%,transparent);border-color:transparent;color:var(--brand,#4f8ef7)}
   .jv-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
   .jv-kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
   .jv-kpi small{color:var(--text-3,#8a93a6);font-size:11.5px}.jv-kpi b{font-size:18px;font-variant-numeric:tabular-nums}.jv-kpi span{font-size:11.5px;color:var(--text-3,#8a93a6)}
