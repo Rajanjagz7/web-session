@@ -147,25 +147,28 @@ def _ok(value):
     return {"available": True, "value": value}
 
 
-def _market_context():
+INDEX_DISPLAY_NAME = {"NIFTY": "Nifty 50", "BANKNIFTY": "Nifty Bank", "SENSEX": "BSE Sensex"}
+
+
+def _market_context(symbol: str = "NIFTY"):
     """Pulls from the app's existing live services. Degrades to NOT AVAILABLE per field, never fabricates."""
     out = {}
     try:
         import market_api
-        q = market_api.quotes(symbols="NIFTY")
-        row = next((r for r in q["quotes"] if r["s"] == "NIFTY"), None)
+        q = market_api.quotes(symbols=symbol)
+        row = next((r for r in q["quotes"] if r["s"] == symbol), None)
         if row:
-            out["nifty_prev_close"] = _ok(row["prev"])
-            out["nifty_today_ohlc"] = _ok({"open": row["open"], "high": row["high"], "low": row["low"]})
-            out["nifty_last"] = _ok(row["last"])
+            out["index_prev_close"] = _ok(row["prev"])
+            out["index_today_ohlc"] = _ok({"open": row["open"], "high": row["high"], "low": row["low"]})
+            out["index_last"] = _ok(row["last"])
             out["market_open"] = _ok(q["marketOpen"])
             out["quotes_as_of"] = _ok(q["asOf"])
             out["quotes_stale"] = _ok(q.get("stale", False))
         else:
-            out["nifty_prev_close"] = out["nifty_today_ohlc"] = out["nifty_last"] = _na("NIFTY not in quote response")
+            out["index_prev_close"] = out["index_today_ohlc"] = out["index_last"] = _na(f"{symbol} not in quote response")
     except Exception as e:
         reason = f"Live quotes unavailable: {str(e)[:160]}"
-        out["nifty_prev_close"] = out["nifty_today_ohlc"] = out["nifty_last"] = _na(reason)
+        out["index_prev_close"] = out["index_today_ohlc"] = out["index_last"] = _na(reason)
         out["market_open"] = out["quotes_as_of"] = _na(reason)
 
     try:
@@ -216,7 +219,10 @@ def _stocks_to_watch(limit: int = 5):
         return _na(f"Daily scan unavailable: {str(e)[:160]}")
 
 
-def generate_report(now_utc: datetime | None = None) -> dict:
+def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> dict:
+    symbol = symbol.upper()
+    if symbol not in INDEX_DISPLAY_NAME:
+        raise ValueError(f"Unsupported index {symbol!r} - choose one of {sorted(INDEX_DISPLAY_NAME)}")
     now_utc = now_utc or datetime.now(timezone.utc)
     now_ist = now_utc.astimezone(IST)
 
@@ -277,15 +283,15 @@ def generate_report(now_utc: datetime | None = None) -> dict:
         else "Post-market"
     )
 
-    mc = _market_context()
-    spot = mc["nifty_last"]["value"] if mc.get("nifty_last", {}).get("available") else None
-    prev = mc["nifty_prev_close"]["value"] if mc.get("nifty_prev_close", {}).get("available") else None
-    ohlc = mc["nifty_today_ohlc"]["value"] if mc.get("nifty_today_ohlc", {}).get("available") else None
+    mc = _market_context(symbol)
+    spot = mc["index_last"]["value"] if mc.get("index_last", {}).get("available") else None
+    prev = mc["index_prev_close"]["value"] if mc.get("index_prev_close", {}).get("available") else None
+    ohlc = mc["index_today_ohlc"]["value"] if mc.get("index_today_ohlc", {}).get("available") else None
     today_open = ohlc.get("open") if (ohlc and mc.get("market_open", {}).get("value")) else None
     bars = None
     try:
         from ut_bot import fetch_index_history
-        bars = fetch_index_history("NIFTY", lookback_days=400)
+        bars = fetch_index_history(symbol, lookback_days=400)
     except Exception:
         bars = None
     try:
@@ -308,6 +314,8 @@ def generate_report(now_utc: datetime | None = None) -> dict:
 
     return {
         "header": {
+            "symbol": symbol,
+            "symbol_name": INDEX_DISPLAY_NAME[symbol],
             "report_date": now_ist.strftime("%A, %d %B %Y"),
             "report_generated_ist": now_ist.strftime("%H:%M:%S IST"),
             "nse_trading_day": trading_day,

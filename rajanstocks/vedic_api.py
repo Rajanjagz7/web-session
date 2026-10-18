@@ -12,16 +12,19 @@ import vedic_astro_report
 
 router = APIRouter(prefix="/api/vedic")
 
-_cache = {"date": None, "report": None}
+_cache: dict[str, tuple[str, dict]] = {}  # symbol -> (date, report)
 
 
 @router.get("/report")
-def report(refresh: bool = False):
+def report(refresh: bool = False, symbol: str = "NIFTY"):
+    symbol = symbol.upper()
     today = datetime.now(timezone.utc).date().isoformat()
-    if refresh or _cache["date"] != today:
+    cached = _cache.get(symbol)
+    if refresh or not cached or cached[0] != today:
         try:
-            _cache["report"] = vedic_astro_report.generate_report()
-            _cache["date"] = today
+            _cache[symbol] = (today, vedic_astro_report.generate_report(symbol=symbol))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
         except Exception as e:
             raise HTTPException(502, f"Could not generate the Vedic Astro report: {e}")
-    return _cache["report"]
+    return _cache[symbol][1]

@@ -746,6 +746,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-eye{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--gold)}
 .vx-px{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0}.vx-px b{font-size:26px}.vx-px span{font-size:13px;font-weight:600}
 .vx-meta{font-size:12px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.vx-idx{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.vx-idx button{height:26px;padding:0 12px;border-radius:13px;border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);font-size:11.5px;font-weight:700;cursor:pointer}
+.vx-idx button.on{background:var(--gold);color:#1a1200;border-color:var(--gold)}
 .vx-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:700;background:var(--panel-2);color:var(--text-2);white-space:nowrap}
 .vx-chip.up{background:var(--up-bg);color:var(--up)}.vx-chip.down{background:var(--down-bg);color:var(--down)}.vx-chip.gold{background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold)}
 .vx-lean{display:flex;flex-direction:column;gap:6px;cursor:help}.vx-lean small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}
@@ -2304,9 +2307,10 @@ function renderAlerts(){$('#v-alerts').innerHTML=`<div class="page">${pageHead('
    <div class="card"><div class="card-h"><h3>Your alerts</h3><span class="muted" style="font-size:12px">${App.alerts.length} total</span></div>${App.alerts.map(a=>`<div class="al-row"><div class="t"><b>${esc(a.sym)}</b> <span class="m2">${condText(a)}</span><div class="muted" style="font-size:12px">Last <span class="num" data-px="${esc(a.sym)}"></span> · <span data-chg="${esc(a.sym)}"></span> today</div></div><span class="badge ${a.status==='Triggered'?'b-warn':a.on?'b-info':'b-mute'}">${a.on?a.status:'Paused'}</span><button class="toggle ${a.on?'on':''}" data-altog="${a.id}" aria-label="${a.on?'Pause':'Resume'} alert" aria-pressed="${a.on}"></button><button class="ibtn" data-aldel="${a.id}" aria-label="Delete alert">${I('trash',16)}</button></div>`).join('')||'<div class="empty">No alerts yet.</div>'}</div></div></div>`;bindAlertForm()}
 
 /* ======================= Vedic Astro (Panchang / Rahu Kaal) view ======================= */
-let VD={data:null,busy:false,err:null};
+let VD={data:null,busy:false,err:null,symbol:(()=>{try{return localStorage.getItem('vx-symbol')||'NIFTY'}catch(e){return 'NIFTY'}})()};
+const VX_INDICES=[['NIFTY','Nifty 50'],['SENSEX','BSE Sensex'],['BANKNIFTY','Nifty Bank']];
 async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
-  try{VD.data=await Promise.race([api('/api/vedic/report'+(refresh?'?refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))])}
+  try{VD.data=await Promise.race([api('/api/vedic/report?symbol='+VD.symbol+(refresh?'&refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))])}
   catch(e){VD.err='Could not load the Vedic Astro report. Try again in a moment.'}
   VD.busy=false}
 function vdField(label,f,fmt){if(!f)return'';
@@ -2353,9 +2357,9 @@ function vxPlanCards(g){if(!g||!g.available)return'';const p=g.plan,f=v=>v?fmtP(
     <p class="vx-note">Only on a 5-min close beyond the level with VWAP and volume agreeing. Avoid fresh entries inside Rahu Kaal.</p>`}
 function vxWinCards(wins){return `<div class="vx-wins">${wins.map((w,i)=>`<details class="vx-win ${w.key==='rahu_kaal'?'rahu':''} ${w.in_session?'':'off'}"><summary><span class="vx-wn">${i+1}</span><b>${esc(w.label)}</b><em class="num">${esc(w.window_ist||'—')}</em><small>${esc(w.focus)}</small></summary>
   <div class="vx-wb"><p><b class="up">Bullish:</b> ${esc(w.bullish)}</p><p><b class="down">Bearish:</b> ${esc(w.bearish)}</p><p><b>No trade:</b> ${esc(w.no_trade)}</p><p class="vx-note">Checks: ${(w.key_checks||[]).map(esc).join(' · ')}</p>${w.astrology_note?`<p class="vx-note">${esc(w.astrology_note)}</p>`:''}</div></details>`).join('')}</div>`}
-function vxTabPlan(r){const g=r.gann,mc=r.market_context;
-  return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live NIFTY marked.">?</span></h3>${vxLadder(g)}</section>
-    <section class="vx-card"><h3>Trade plan</h3>${vxPlanCards(g)}<h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('GIFT Nifty',mc.gift_nifty,v=>typeof v==='object'?fmtP(v.last||v.p||0,2):esc(v))}${vdField('Crude oil',mc.crude_oil,v=>typeof v==='object'?fmtP(v.last||v.p||0,2):esc(v))}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}</div></section></div>
+function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
+  return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3>${vxLadder(g)}</section>
+    <section class="vx-card"><h3>Trade plan</h3>${vxPlanCards(g)}<h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vdField(symName+' prev close',mc.index_prev_close,v=>fmtP(v,2))}${vdField('GIFT Nifty',mc.gift_nifty,v=>typeof v==='object'?fmtP(v.last||v.p||0,2):esc(v))}${vdField('Crude oil',mc.crude_oil,v=>typeof v==='object'?fmtP(v.last||v.p||0,2):esc(v))}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}</div></section></div>
     <section class="vx-card"><h3>Session timeline (IST)</h3>${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
@@ -2392,12 +2396,13 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic + Gann','')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
   const r=VD.data;if(!r){el.innerHTML=`<div class="page vx"><div class="vx-hero vx-skel"></div><div class="empty">Calculating today's Panchang, planets and Gann levels…</div></div>`;return}
   const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
-  const last=mc.nifty_last.available?mc.nifty_last.value:null,prev=mc.nifty_prev_close.available?mc.nifty_prev_close.value:null,ch=last&&prev?last/prev-1:null;
+  const last=mc.index_last.available?mc.index_last.value:null,prev=mc.index_prev_close.available?mc.index_prev_close.value:null,ch=last&&prev?last/prev-1:null;
   const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};const leanCls=c.lean.startsWith('BULL')?'up':c.lean.startsWith('BEAR')?'down':'mute';
   const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];
   el.innerHTML=`<div class="page vx">
    <div class="vx-hero">
-    <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · NIFTY 50</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
+    <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · ${esc(h.symbol_name)}</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
+      <div class="vx-idx">${VX_INDICES.map(([k,l])=>`<button class="${VD.symbol===k?'on':''}" data-vxsym="${k}">${l}</button>`).join('')}</div>
       <div class="vx-meta">${esc(h.report_date)} · <span class="vx-chip ${h.session_phase==='During session'?'up':'mute'}">${esc(h.session_phase)}</span> · ${h.nse_trading_day.available?esc(h.nse_trading_day.value):''}</div></div>
     <div class="vx-lean ${leanCls}" title="${esc(c.note||'')}"><small>Today's lean</small><b>${esc(c.lean)}</b><div class="vx-meter"><i style="left:${50+(c.score/Math.max(1,c.max))*50}%"></i></div>
       <div class="vx-factors">${c.factors.map(f=>`<span class="vx-chip ${f.vote>0?'up':f.vote<0?'down':'mute'}" title="${esc(f.detail)}">${f.vote>0?'▲':f.vote<0?'▼':'•'} ${esc(f.name)}</span>`).join('')}</div></div>
@@ -2410,6 +2415,9 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
    <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
   </div>`}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
+document.addEventListener('click',async e=>{const t=e.target.closest('[data-vxsym]');if(!t||VD.busy)return;const sym=t.dataset.vxsym;if(sym===VD.symbol)return;
+  VD.symbol=sym;try{localStorage.setItem('vx-symbol',sym)}catch(x){}VD.data=null;VD.err=null;vdPaint();
+  await loadVedic(false);vdPaint()});
 async function renderVedic(){const el=$('#v-vedic');if(!el)return;
   if(!VD.data&&!VD.err){vdPaint();await loadVedic(false)}
   vdPaint()}
