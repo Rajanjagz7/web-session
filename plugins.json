@@ -1,0 +1,42 @@
+[
+    {
+        "iconUrl": "https://raw.githubusercontent.com/Rajanjagz7/web-session/cloudstream/icons/classics.png",
+        "fileHash": "sha256-71ea86d3c0034d3b4ee8ac8c0b319952e101f95c8d7ce9d7cce7b3dd4368352f",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/Rajanjagz7/web-session",
+        "fileSize": 17633,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "Rajan"
+        ],
+        "tvTypes": [
+            "Movie"
+        ],
+        "version": 1,
+        "internalName": "RajanClassics",
+        "description": "Public-domain classic films from the Internet Archive: noir, sci-fi and horror, silent era, westerns, comedy and classic cartoons.",
+        "url": "https://raw.githubusercontent.com/Rajanjagz7/web-session/cloudstream-builds/RajanClassics.cs3",
+        "name": "RajanClassics"
+    },
+    {
+        "iconUrl": "https://raw.githubusercontent.com/Rajanjagz7/web-session/cloudstream/icons/tv.png",
+        "fileHash": "sha256-5e010848c9c49f465a5b53c5fe4e411d41e8df101357d7d28d23d76e8d1edbed",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/Rajanjagz7/web-session",
+        "fileSize": 16266,
+        "status": 1,
+        "language": "hi",
+        "authors": [
+            "Rajan"
+        ],
+        "tvTypes": [
+            "Live"
+        ],
+        "version": 1,
+        "internalName": "RajanTV",
+        "description": "Free Indian live TV, sorted into News, Entertainment, Music, Devotional, Kids and language rows. Channels come from the public iptv-org lists.",
+        "url": "https://raw.githubusercontent.com/Rajanjagz7/web-session/cloudstream-builds/RajanTV.cs3",
+        "name": "RajanTV"
+    }
+]
