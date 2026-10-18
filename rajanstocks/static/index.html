@@ -57,10 +57,16 @@ svg.i{display:block;flex-shrink:0}
 .nav .nav-sub{font-weight:500;opacity:.85;margin-left:4px}
 .pick-row.on{background:var(--brand-2)}.pick-row.on b{color:var(--brand)}
 @media (min-width:961px) and (max-width:1440px){.hdr .search-btn{width:34px;min-width:0;padding:0;justify-content:center;flex:none}.hdr .search-btn span:not(#searchI),.hdr .search-btn kbd{display:none}}
-.search-btn{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--text-3);min-width:200px;margin-left:auto}
+.search-btn{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--text-3);min-width:150px}
+.hx{display:flex;align-items:center;gap:2px;margin-left:auto;flex:none}
+.hx-i{display:flex;align-items:center;gap:6px;height:32px;padding:0 9px;border-radius:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hx-i:hover{background:var(--panel-2)}.hx-i small{font-size:11px;color:var(--text-3);font-weight:600}.hx-i b{font-size:13px;font-weight:600;color:var(--text)}.hx-i span{font-size:11.5px;font-weight:600;color:var(--text-3)}
+.hx-i span.up{color:var(--up)}.hx-i span.down{color:var(--down)}
+@media (max-width:1820px){.hx-i[data-hx=INDIAVIX]{display:none}}@media (max-width:1700px){.hx-i[data-hx=SENSEX]{display:none}}@media (max-width:1480px){.hx-i[data-hx=BANKNIFTY]{display:none}}@media (max-width:1240px){.hx{display:none}.search-btn{margin-left:auto}}
+@media (min-width:961px) and (max-width:1800px){.hdr .search-btn{width:34px;min-width:0;padding:0;justify-content:center;flex:none}.hdr .search-btn span:not(#searchI),.hdr .search-btn kbd{display:none}}
 .search-btn kbd{margin-left:auto;font:11px Inter;border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .hdr-r{display:flex;align-items:center;gap:10px}
-.live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);white-space:nowrap}
+.live{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-radius:13px;background:var(--panel-2);font-size:11.5px;font-weight:600;color:var(--text-2);white-space:nowrap;cursor:help}
 .live i{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 3px var(--up-bg)}
 .pf-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap;font-variant-numeric:tabular-nums}
 .pf-chip small{font-size:11px;color:var(--text-3)}.pf-chip b{font-size:13px;color:var(--text)}.pf-d{font-size:11.5px;font-weight:600;color:var(--text-3)}
@@ -315,7 +321,7 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   #v-trade{grid-template-columns:minmax(0,1fr) 300px}
   #v-trade .wl{display:none}
   #v-trade.wl-open .wl{display:flex;position:fixed;left:0;top:calc(52px + var(--nb,0px));bottom:0;width:260px;z-index:40;box-shadow:var(--shadow)}
-  .live,.pf-chip small,.pf-d{display:none}.pf-chip{padding:0 9px;gap:4px;flex:none}.pf-chip.up b{color:var(--up)}.pf-chip.down b{color:var(--down)}
+  .live #liveTxt,.pf-chip small,.pf-d{display:none}.live{padding:0 8px;height:26px}.pf-chip{padding:0 9px;gap:4px;flex:none}.pf-chip.up b{color:var(--up)}.pf-chip.down b{color:var(--down)}
 }
 @media (max-width:960px){
   #v-trade.on{display:block;height:auto}
@@ -827,9 +833,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <div class="brand"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
   <div class="here" id="here" aria-live="polite"></div>
   <nav class="nav" id="nav"></nav>
+  <div class="hx" id="hdrIdx" aria-label="Market indices"></div>
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
   <div class="hdr-r">
-    <span class="live"><i id="liveDot"></i><span id="liveTxt">Connecting…</span></span>
+    <span class="live" id="liveBox"><i id="liveDot"></i><span id="liveTxt">…</span></span>
     <button class="pf-chip" id="pfChip" data-view="journal" aria-label="Portfolio value - open the journal"></button>
     <button class="ibtn" id="bellBtn" aria-label="Notifications"></button>
     <button class="ibtn" id="themeBtn" aria-label="Toggle theme"></button>
@@ -2058,6 +2065,13 @@ const navKey=v=>(SUBVIEWS[v]||[v])[0];
 const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
 const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'));
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
+/* Header index strip: Nifty, Bank Nifty, Sensex, VIX with live change; click opens the chart. */
+const HX=[['NIFTY','Nifty'],['BANKNIFTY','Bank Nifty'],['SENSEX','Sensex'],['INDIAVIX','VIX']];
+function renderHdrIdx(){const el=$('#hdrIdx');if(!el)return;
+  el.innerHTML=HX.map(([k,l])=>{const s=SYM(k);if(!s||!(s.last>0))return'';const ch=s.prev>0?(s.last/s.prev-1)*100:0,c=ch>0.004?'up':ch<-0.004?'down':'';
+    return`<button class="hx-i" data-hx="${k}" title="${esc(s.n)} ${s.last.toLocaleString('en-IN',{maximumFractionDigits:2})} (${ch>=0?'+':''}${ch.toFixed(2)}%) — open chart"><small>${l}</small><b>${s.last.toLocaleString('en-IN',{maximumFractionDigits:k==='INDIAVIX'?2:1})}</b><span class="${c}">${ch>=0?'+':'−'}${Math.abs(ch).toFixed(2)}%</span></button>`}).join('')}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-hx]');if(!b)return;switchSym(b.dataset.hx);go('trade')});
+setInterval(()=>{if(!document.hidden)renderHdrIdx()},3000);setTimeout(()=>renderHdrIdx(),600);
 /* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
 setInterval(()=>{if(!document.hidden)renderPfChip()},4000);setTimeout(()=>renderPfChip(),800);
 function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
@@ -3475,11 +3489,12 @@ function trig(s,pv){
       if(better){p.peak=s.last;const d=p.tsl.u==='abs'?p.tsl.v:s.last*p.tsl.v/100,st=+(L?s.last-d:s.last+d).toFixed(s.dp||2);
         if(!(p.sl>0)||(L?st>p.sl:st<p.sl)){p.sl=st;savePaper();setChartLines()}}}
     if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){closePos(s.s,p.tsl?'TSL':'SL')}}}
-function setStatus(){const t=$('#liveTxt'),d=$('#liveDot');if(!t)return;
-  if(netOff()){t.textContent='No internet — prices not live';d.style.background='var(--down)';return}
-  if(MKT.err){t.textContent='Live prices unavailable — retrying';d.style.background='var(--down)';return}
-  if(MKT.stale){t.textContent='Delayed — provider limit · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false});d.style.background='var(--warn)';return}
-  t.textContent=MKT.open?'Live · '+new Date().toLocaleTimeString('en-IN',{hour12:false}):'Market closed · last close';d.style.background=MKT.open?'var(--up)':'var(--warn)'}
+function setStatus(){const t=$('#liveTxt'),d=$('#liveDot'),b=$('#liveBox');if(!t)return;const S=(w,full,c)=>{t.textContent=w;d.style.background=c;if(b)b.title=full};
+  if(netOff())return S('Offline','No internet — prices are not live and trading is disabled','var(--down)');
+  if(MKT.err)return S('No feed','Live prices unavailable — retrying','var(--down)');
+  if(MKT.stale)return S('Delayed','Delayed by the data provider · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false}),'var(--warn)');
+  const tm=new Date().toLocaleTimeString('en-IN',{hour12:false});
+  S(MKT.open?'Live':'Closed',MKT.open?'Market open · live prices · '+tm:'Market closed · showing last close prices',MKT.open?'var(--up)':'var(--warn)')}
 let pollBusy=false,firstQuotes=false;
 /* ======================= No-internet handling: clear message, and no trading while offline ======================= */
 const NET={ok:navigator.onLine!==false};
