@@ -722,7 +722,14 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-empty-s svg{width:30px;height:30px;flex:none}.opx-empty-s p{max-width:none}
 .opx-sig{padding:0}
 @media (max-width:899px){.opx-empty-s{display:none}}
-#opStrat .tbl-wrap,#opRead .tbl-wrap,#rInd .tbl-wrap{display:block;width:100%;overflow-x:auto}#opStrat table.rd,#opRead table.rd,#rInd table.rd{width:100%!important;display:table!important}
+#opStrat .tbl-wrap,#opRead .tbl-wrap,#rInd .tbl-wrap{display:block;width:100%;overflow-x:auto}#opStrat table.rd,#opRead table.rd{width:100%!important;display:table!important}
+#rInd table.rd{width:100%}
+#rInd table.rd thead{display:none}
+#rInd table.rd,#rInd table.rd tbody,#rInd table.rd tr,#rInd table.rd td{display:block;width:100%}
+#rInd table.rd tr{margin-bottom:10px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#rInd table.rd td{border:none;border-bottom:1px solid var(--line);white-space:normal;padding:8px 10px}
+#rInd table.rd td:last-child{border-bottom:none}
+#rInd table.rd td::before{content:attr(data-label);display:block;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:3px}
 @media (max-width:899px){#opStrat table.rd thead{display:none}#opStrat table.rd,#opStrat table.rd tbody{display:block!important}#opStrat table.rd tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}#opStrat table.rd td{padding:0;border:0;display:block}#opStrat table.rd td:nth-child(3){grid-column:1/-1}#opStrat table.rd td[colspan]{grid-column:2}}
 @media (min-width:900px){
   .opx-wtabs{display:none}.opx-ph{display:block;padding:12px 14px 0;font-weight:700;font-size:14px}
@@ -3457,7 +3464,7 @@ async function renderAllIndicators(containerSel,und,side){const box=$(containerS
      <div class="opx-sigf">${[['all','All'],['active','Active'],['bull','Bullish'],['bear','Bearish']].map(([k,l])=>`<button class="opx-chip ${OS.flt===k?'on':''}" data-ossig="flt:${k}">${l} <span>${cnt[k]}</span></button>`).join('')}</div>
      ${pr.length?'':`<div class="empty" style="padding:22px">No ${OS.flt==='bull'?'bullish':OS.flt==='bear'?'bearish':'active'} signals on ${esc(und)} right now.</div>`}
      <div class="tbl-wrap"><table class="rd"><thead><tr><th>Strategy</th><th>Signal</th><th>${side?'What it means for this '+side:'What it means'}</th></tr></thead><tbody>${pr.map(({m,r})=>{
-       if(!r||r.pending)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Loading…</td></tr>`;if(r.err)return`<tr><td>${esc(m.name)}</td><td colspan="2" class="muted">Not available for ${esc(und)}</td></tr>`;
+       if(!r||r.pending)return`<tr><td data-label="Strategy">${esc(m.name)}</td><td colspan="2" class="muted" data-label="Signal">Loading…</td></tr>`;if(r.err)return`<tr><td data-label="Strategy">${esc(m.name)}</td><td colspan="2" class="muted" data-label="Signal">Not available for ${esc(und)}</td></tr>`;
        let act='',ac='muted';
        if(r.stale){act='Older signal — not counted'}
        else if(!side&&r.bias==='bull'){act='▲ Bullish — favours a CE';ac='up'}
@@ -3465,7 +3472,7 @@ async function renderAllIndicators(containerSel,und,side){const box=$(containerS
        else if(r.bias==='bull'){act=side==='CE'?'✓ Supports buying this CE':'✗ Goes against this PE — a CE fits better';ac=side==='CE'?'up':'down'}
        else if(r.bias==='bear'){act=side==='PE'?'✓ Supports buying this PE':'✗ Goes against this CE — a PE fits better';ac=side==='PE'?'up':'down'}
        else{act='No clear direction'}
-       return`<tr><td><b>${esc(m.name)}</b></td><td>${stBadge(r)}</td><td><div>${esc(r.levels&&Object.keys(r.levels).length?headNoLvl(r.headline):tidyText(r.headline))}</div><div class="${ac}" style="font-size:12px;margin-top:2px">${act}</div>${levelsLine(r.levels)}</td></tr>`}).join('')}</tbody></table></div>
+       return`<tr><td data-label="Strategy"><b>${esc(m.name)}</b></td><td data-label="Signal">${stBadge(r)}</td><td data-label="${side?'What it means for this '+side:'What it means'}"><div>${esc(r.levels&&Object.keys(r.levels).length?headNoLvl(r.headline):tidyText(r.headline))}</div><div class="${ac}" style="font-size:12px;margin-top:2px">${act}</div>${levelsLine(r.levels)}</td></tr>`}).join('')}</tbody></table></div>
      <div class="opx-sigpg"><div class="opx-seg opx-seg-s">${[[5,'5'],[10,'10'],[20,'20'],[0,'All']].map(([n,l])=>`<button class="${(OS.size||0)===n?'on':''}" data-ossig="size:${n}">${l}</button>`).join('')}</div>
        <span class="muted">${fr.length?`${OS.pg*size+1}–${OS.pg*size+pr.length} of ${fr.length}`:'0'}</span>
        <span class="opx-pgb"><button class="opx-pb" data-ossig="pg:${OS.pg-1}" ${OS.pg<=0?'disabled':''} aria-label="Previous indicators">‹</button><b>${OS.pg+1} / ${pages}</b><button class="opx-pb" data-ossig="pg:${OS.pg+1}" ${OS.pg>=pages-1?'disabled':''} aria-label="Next indicators">›</button></span></div>
