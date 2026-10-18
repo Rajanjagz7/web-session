@@ -62,7 +62,7 @@ svg.i{display:block;flex-shrink:0}
 .hx-i{display:flex;align-items:center;gap:6px;height:32px;padding:0 9px;border-radius:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .hx-i:hover{background:var(--panel-2)}.hx-i small{font-size:11px;color:var(--text-3);font-weight:600}.hx-i b{font-size:13px;font-weight:600;color:var(--text)}.hx-i span{font-size:11.5px;font-weight:600;color:var(--text-3)}
 .hx-i span.up{color:var(--up)}.hx-i span.down{color:var(--down)}
-@media (max-width:1820px){.hx-i[data-hx=INDIAVIX]{display:none}}@media (max-width:1700px){.hx-i[data-hx=SENSEX]{display:none}}@media (max-width:1480px){.hx-i[data-hx=BANKNIFTY]{display:none}}@media (max-width:1240px){.hx{display:none}.search-btn{margin-left:auto}}
+@media (max-width:1820px){.hx-i[data-hx=INDIAVIX]{display:none}}@media (max-width:1700px){.hx-i[data-hx=BANKNIFTY]{display:none}}@media (max-width:1480px){.hx-i[data-hx=SENSEX]{display:none}}@media (max-width:1240px){.hx{display:none}.search-btn{margin-left:auto}}
 @media (min-width:961px) and (max-width:1800px){.hdr .search-btn{width:34px;min-width:0;padding:0;justify-content:center;flex:none}.hdr .search-btn span:not(#searchI),.hdr .search-btn kbd{display:none}}
 .search-btn kbd{margin-left:auto;font:11px Inter;border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .hdr-r{display:flex;align-items:center;gap:10px}
@@ -2066,7 +2066,7 @@ const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
 const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'));
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
 /* Header index strip: Nifty, Bank Nifty, Sensex, VIX with live change; click opens the chart. */
-const HX=[['NIFTY','Nifty'],['BANKNIFTY','Bank Nifty'],['SENSEX','Sensex'],['INDIAVIX','VIX']];
+const HX=[['NIFTY','Nifty'],['SENSEX','Sensex'],['BANKNIFTY','Bank Nifty'],['INDIAVIX','VIX']];
 function renderHdrIdx(){const el=$('#hdrIdx');if(!el)return;
   el.innerHTML=HX.map(([k,l])=>{const s=SYM(k);if(!s||!(s.last>0))return'';const ch=s.prev>0?(s.last/s.prev-1)*100:0,c=ch>0.004?'up':ch<-0.004?'down':'';
     return`<button class="hx-i" data-hx="${k}" title="${esc(s.n)} ${s.last.toLocaleString('en-IN',{maximumFractionDigits:2})} (${ch>=0?'+':''}${ch.toFixed(2)}%) — open chart"><small>${l}</small><b>${s.last.toLocaleString('en-IN',{maximumFractionDigits:k==='INDIAVIX'?2:1})}</b><span class="${c}">${ch>=0?'+':'−'}${Math.abs(ch).toFixed(2)}%</span></button>`}).join('')}
