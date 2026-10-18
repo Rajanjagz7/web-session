@@ -18,6 +18,8 @@
     calc: LS('ipf-calc', { code: null, name: '', amount: 10000, years: 5, step: 0, day: 5 }), sipRes: null, sipErr: null, sipBusy: false,
     found: [], seq: 0,
   };
+  try { const c = JSON.parse(localStorage.getItem('ipf-cache-ipo') || 'null'); if (c && c.ipos) S.ipo = c; } catch (e) {}
+  try { const c = JSON.parse(localStorage.getItem('ipf-cache-mf') || 'null'); if (c && c.funds) S.mf = c; } catch (e) {}
   window.IPF = S;
 
   /* ---------- formatting ---------- */
@@ -184,13 +186,13 @@
   /* ---------- data ---------- */
   async function loadIpo(force) {
     if (S.ipoBusy) return; S.ipoBusy = true; paint();
-    try { S.ipo = await api('/api/ipo/dashboard' + (force ? '?refresh=true' : '')); S.ipoErr = null; S.ipoTs = Date.now(); }
+    try { S.ipo = await api('/api/ipo/dashboard' + (force ? '?refresh=true' : '')); S.ipoErr = null; S.ipoTs = Date.now(); try { localStorage.setItem('ipf-cache-ipo', JSON.stringify(S.ipo)); } catch (e) {} }
     catch (e) { S.ipoErr = 'IPO data could not be loaded right now. Try Refresh in a minute.'; }
     S.ipoBusy = false; paint();
   }
   async function loadMf(force) {
     if (S.mfBusy) return; S.mfBusy = true; paint();
-    try { S.mf = await api('/api/funds/list' + (force ? '?refresh=true' : '')); S.mfErr = null; }
+    try { S.mf = await api('/api/funds/list' + (force ? '?refresh=true' : '')); S.mfErr = null; try { localStorage.setItem('ipf-cache-mf', JSON.stringify(S.mf)); } catch (e) {} }
     catch (e) { S.mfErr = 'Fund data could not be loaded right now. Try Refresh in a minute.'; }
     S.mfBusy = false; paint();
   }
@@ -260,7 +262,7 @@
         <td>${spark(r.spark)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   function ipoTab() {
-    if (!S.ipo && S.ipoBusy) return skeleton();
+    if (!S.ipo && S.ipoBusy) return skeleton('ipo');
     if (!S.ipo) return `<div class="empty">${E(S.ipoErr || 'Loading…')} <button class="btn-xs" data-ipf="ipo-refresh">Retry</button></div>`;
     const d = S.ipo, c = d.counts || {}, st = d.stats || {};
     const all = ipoFiltered(), live = all.filter(r => r.status !== 'listed'), listed = all.filter(r => r.status === 'listed');
@@ -293,7 +295,7 @@
     return f.sort((a, b) => k === 'name' ? a.name.localeCompare(b.name) : (b[k] ?? -1e9) - (a[k] ?? -1e9));
   }
   function mfTab() {
-    if (!S.mf && S.mfBusy) return skeleton();
+    if (!S.mf && S.mfBusy) return skeleton('mf');
     if (!S.mf) return `<div class="empty">${E(S.mfErr || 'Loading…')} <button class="btn-xs" data-ipf="mf-refresh">Retry</button></div>`;
     const cats = ['All'].concat(S.mf.categories || []), list = mfFiltered(), amt = S.amt;
     return `<div class="ipf-bar">
@@ -366,7 +368,7 @@
       </div>
       <div class="ipf-find ipf-find-c"><input class="inp" id="ipfFind" placeholder="Or search any fund in India…" aria-label="Search any mutual fund" autocomplete="off"><div class="ipf-found" id="ipfFound"></div></div>
     </div>
-    ${!c.code ? '<div class="empty">Pick a fund above to see what your SIP would be worth today.</div>' : S.sipBusy && !r ? skeleton() : S.sipErr ? `<div class="empty">${E(S.sipErr)}</div>` : r ? `
+    ${!c.code ? '<div class="empty">Pick a fund above to see what your SIP would be worth today.</div>' : S.sipBusy && !r ? skeleton('sip') : S.sipErr ? `<div class="empty">${E(S.sipErr)}</div>` : r ? `
       <h3 class="ipf-h">${E(r.scheme || c.name)} <span class="muted">· ${E(r.category || '')}</span></h3>
       ${r.short_history ? `<div class="ipf-warn">This fund started on ${dty(r.inception)}, so the SIP runs from launch: ${r.instalments} instalments instead of ${c.years * 12}.</div>` : ''}
       <div class="ipf-kpis">
@@ -381,16 +383,26 @@
       <p class="ipf-note">${ic('eye', 13)} Each instalment buys units at the first NAV on or after the SIP date${c.step ? `, rising ${c.step}% every 12 months` : ''}. Value uses the NAV of ${dty(r.end)}. Calculated from real NAV history; ignores exit load and tax. Past returns do not guarantee future returns.</p>` : ''}`;
   }
 
-  function skeleton() { return '<div class="ipf-skel"><i></i><i></i><i></i><i></i></div>'; }
+  function skeleton(kind) {
+    const msg = kind === 'mf' ? 'Loading fund NAVs from AMFI…' : kind === 'sip' ? 'Calculating from NAV history…' : 'Loading IPOs from NSE and today\'s GMP…';
+    return `<div class="ipf-load"><div class="ipf-load-k">${'<i></i>'.repeat(6)}</div>${kind === 'mf' || kind === 'sip' ? '<div class="ipf-load-t"><i></i></div>' : `<div class="ipf-load-c">${'<i></i>'.repeat(8)}</div>`}
+      <p class="ipf-load-m"><span class="ipf-spin"></span>${msg} The first load of the day can take up to 20 seconds.</p></div>`;
+  }
 
   /* ---------- page ---------- */
   function paint() {
     const el = document.getElementById('v-ipo'); if (!el || App.view !== 'ipo') return;
     const ae = document.activeElement, fid = ae && ae.id, pos = ae && ae.selectionStart;
     const body = S.tab === 'mf' ? mfTab() : S.tab === 'sip' ? sipTab() : ipoTab();
+    const busy = S.ipoBusy || S.mfBusy, src = S.tab === 'ipo' ? S.ipo : S.mf;
+    const upd = src && src.as_of ? new Date(src.as_of).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
     el.innerHTML = `<div class="page ipf">
-      ${pageHead('IPO &amp; Funds', 'IPO grey market premium, expected and actual listing returns, mutual fund returns and SIP calculator.', `<button class="btn" data-ipf="refresh" ${S.ipoBusy || S.mfBusy ? 'disabled' : ''}>${ic('reset', 15)}${S.ipoBusy || S.mfBusy ? 'Refreshing…' : 'Refresh'}</button>`)}
-      <div class="ipf-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-ipf-tab="${k}">${l}</button>`).join('')}</div>
+      <div class="ipf-head">
+        <div class="ipf-title"><h1>IPO &amp; Funds</h1><p>GMP, expected vs actual listing, fund returns and SIP calculator</p></div>
+        <div class="ipf-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-ipf-tab="${k}">${l}</button>`).join('')}</div>
+        <div class="ipf-act">${busy && src ? '<span class="ipf-upd"><span class="ipf-spin"></span>Updating…</span>' : upd ? `<span class="ipf-upd">Updated ${upd}</span>` : ''}
+          <button class="btn" data-ipf="refresh" ${busy ? 'disabled' : ''}>${ic('reset', 15)}Refresh</button></div>
+      </div>
       <div class="ipf-body">${body}</div></div>`;
     if (fid) { const n = document.getElementById(fid); if (n) { n.focus(); try { if (pos != null) n.setSelectionRange(pos, pos); } catch (e) {} } }
     if (fid === 'ipfFind') paintFound();
@@ -455,11 +467,24 @@
 
   /* ---------- styles ---------- */
   const css = `
+  .page.ipf{max-width:2200px;padding:18px clamp(14px,2vw,32px) 48px}
   .ipf .muted{color:var(--text-3)}
-  .ipf-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 16px;overflow-x:auto;scrollbar-width:none}
-  .ipf-tabs button{height:38px;padding:0 14px;font-weight:600;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
-  .ipf-tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
-  .ipf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .ipf-head{display:flex;align-items:center;gap:16px 24px;flex-wrap:wrap;margin-bottom:16px}
+  .ipf-title h1{font-size:21px;letter-spacing:-.01em;margin:0}.ipf-title p{margin:2px 0 0;color:var(--text-3);font-size:12.5px}
+  .ipf-tabs{display:inline-flex;gap:4px;padding:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px}
+  .ipf-tabs button{height:34px;padding:0 16px;font-weight:600;font-size:13px;color:var(--text-2);border-radius:9px;white-space:nowrap}
+  .ipf-tabs button:hover{color:var(--text)}
+  .ipf-tabs button.on{background:var(--brand);color:#fff;box-shadow:0 2px 8px color-mix(in srgb,var(--brand) 35%,transparent)}
+  .ipf-act{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .ipf-upd{display:inline-flex;align-items:center;gap:6px;color:var(--text-3);font-size:12px;white-space:nowrap}
+  .ipf-spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--brand);animation:ipfSpin .8s linear infinite;flex:none}
+  @keyframes ipfSpin{to{transform:rotate(360deg)}}
+  .ipf-load i{display:block;border-radius:12px;background:linear-gradient(90deg,var(--panel-2),var(--panel),var(--panel-2));background-size:200% 100%;animation:ipfSk 1.2s infinite}
+  .ipf-load-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}.ipf-load-k i{height:76px}
+  .ipf-load-c{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}.ipf-load-c i{height:210px}
+  .ipf-load-t i{height:420px}
+  .ipf-load-m{display:flex;align-items:center;gap:8px;justify-content:center;color:var(--text-3);font-size:12.5px;margin:18px 0 0}
+  .ipf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
   .ipf-kpi{padding:11px 13px}.ipf-kpi small{display:block;color:var(--text-3);font-size:11.5px}.ipf-kpi b{display:block;font-size:19px;margin-top:2px}.ipf-kpi span{font-size:11.5px}
   .ipf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
   .ipf-scroll{max-width:100%;overflow-x:auto;scrollbar-width:none}
@@ -468,7 +493,7 @@
   .ipf-q{max-width:220px;height:30px}
   .ipf-chips{display:flex;gap:6px}.ipf-chips .chip{white-space:nowrap}.ipf-chips .chip.on{background:var(--brand-2);color:var(--brand);border-color:transparent}
   .ipf-h{font-size:14px;margin:18px 0 10px}.ipf-h .muted{font-weight:500}
-  .ipf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+  .ipf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
   .ipf-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;display:flex;flex-direction:column;gap:11px}
   .ipf-card.ipf-open{border-color:color-mix(in srgb,var(--up) 45%,var(--line))}
   .ipf-card header{display:flex;gap:8px;justify-content:space-between;align-items:flex-start}
@@ -483,7 +508,7 @@
   .ipf-trend{margin-left:auto}
   .ipf-dl{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin:0}.ipf-dl dt{font-size:10.5px;color:var(--text-3)}.ipf-dl dd{margin:1px 0 0;font-size:12.5px;font-weight:500}
   .ipf-tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
-  .ipf-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px}
+  .ipf-t{width:100%;border-collapse:collapse;font-size:13px;min-width:860px}
   .ipf-t th{position:sticky;top:0;background:var(--panel-2);color:var(--text-3);font-weight:600;font-size:11px;text-align:left;padding:8px 10px;white-space:nowrap;cursor:help}
   .ipf-t td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle;white-space:nowrap}
   .ipf-t .r{text-align:right}.ipf-t td:first-child{white-space:normal;min-width:170px}
@@ -528,6 +553,8 @@
   .ipf-kv{background:var(--panel-2);border-radius:10px;padding:9px 11px;min-width:0}.ipf-kv small{display:block;font-size:11px;color:var(--text-3)}.ipf-kv b{display:block;font-size:15px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ipf-kv span{display:block;font-size:11px;color:var(--text-3);margin-top:1px}
   .ipf-skel1{grid-template-columns:1fr}.ipf-skel1 i{height:260px}
   @media (max-width:760px){
+    .ipf-head{gap:8px;flex-wrap:nowrap;margin-bottom:12px}.ipf-title{display:none}.ipf-tabs{flex:1;display:flex;min-width:0}.ipf-tabs button{flex:1;padding:0 4px;font-size:12.5px}
+    .ipf-act{margin-left:0;gap:0}.ipf-upd{display:none}.ipf-act .btn{width:40px;height:40px;padding:0;justify-content:center;font-size:0;gap:0}
     .ipf-det-bg{align-items:flex-end;padding:0}.ipf-det{border-radius:16px 16px 0 0;max-height:92vh;padding:14px 14px 18px}
     .ipf-kvs{grid-template-columns:1fr 1fr}
     .ipf-q{max-width:none;flex:1 1 140px}.ipf-find{max-width:none;flex-basis:100%}
