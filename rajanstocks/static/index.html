@@ -3117,7 +3117,10 @@ function chartErr(show,retry,msg){const host=$('#chart');if(!host)return;let el=
   if(retry){const go=()=>{chartErr(false);retry()};el.querySelector('button').onclick=go;if(chartErrTries++<3)chartErrTimer=setTimeout(go,6000)}else chartErrTries=0}
 function loadChart(keep){const k=App.sym.s+'|'+App.tf.k;
   if(!CACHE[k]){$('#hint').textContent='Loading '+App.sym.s+' · '+tfLabel(App.tf.k)+'…';$('#hint').classList.add('show');chartErr(false);const sy=App.sym,tf=App.tf;
-    if(chart.sym!==sy){chart.setData([],sy,tf,false);chart.lgDirty=true;chart.req()}
+    if(chart.sym!==sy){chart.setData([],sy,tf,false);chart.lgDirty=true;
+      try{if(chart.ctx&&chart.w&&chart.h)chart.ctx.clearRect(0,0,chart.w,chart.h);
+        if(chart.lgDirty)chart.buildLegend();
+        if(chart.lgHdr)chart.lgHdr.innerHTML=`<b>${esc(sy.s)}</b><span class="muted">${tfLabel(tf.k)} · ${esc(sy.ex)}</span>`}catch(e){}}
     fetchSeries(sy,tf).then(()=>{$('#hint').classList.remove('show');if(sy!==App.sym||tf!==App.tf)return;if(CACHE[k]){chartErrTries=0;loadChart(keep)}else chartErr(true,()=>{delete FAILS[k];loadChart(keep)},'Could not load '+sy.s+' · '+tfLabel(tf.k)+' candles')});return}
   chartErr(false);chart.setData(series(App.sym,App.tf),App.sym,App.tf,keep);chart.lgDirty=true;setChartLines();updatePlan(true);
   if(App.pendingRange!==undefined){const r=App.pendingRange;App.pendingRange=undefined;chart.showRange(r)}
