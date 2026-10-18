@@ -53,6 +53,9 @@ def _load():
                 d = json.load(f)
         st["cfg"].update(d.get("cfg") or {})
         st["trades"], st["log"] = d.get("trades") or [], d.get("log") or []
+        st["fillNext"], st["fillBackoff"] = d.get("fillNext") or 0, d.get("fillBackoff") or 0
+        if d.get("cand"):
+            st["cand"] = d["cand"]
         if st["cfg"].get("windowStart") == "09:20":          # old default: entries may now start at the open
             st["cfg"]["windowStart"] = "09:15"
     except FileNotFoundError:
@@ -687,7 +690,7 @@ def status():
         "mode": label,
         "cfg": st["cfg"], "today": today, "marketOpen": now.weekday() < 5 and 9 * 60 + 15 <= _mins(now) <= 15 * 60 + 30,
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
-        "open": opens, "closed": closed[-60:][::-1], "log": st["log"][-25:][::-1],
+        "open": opens, "closed": closed[-120:][::-1], "log": st["log"][-120:][::-1],
         "summary": {"trades": len(closed), "net": round(sum(t["net"] for t in closed), 0),
                     "winRate": round(len(wins) / len(closed), 2) if closed else 0,
                     "avgR": round(sum(t["R"] or 0 for t in closed) / len(closed), 2) if closed else 0,
@@ -714,6 +717,15 @@ def config(c: Cfg):
             st["cfg"]["maxPerDay"] = max(1, min(5, c.maxPerDay))       # the 5-a-day ceiling is fixed
         _save(st)
         return st["cfg"]
+
+
+@router.post("/log/clear")
+def clear_log():
+    with _lock:
+        st = _load()
+        st["log"] = []
+        _save(st)
+        return {"ok": True}
 
 
 @router.api_route("/run", methods=["GET", "POST"])

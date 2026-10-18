@@ -339,13 +339,21 @@
     ${chips.length ? `<div class="jv-chips">${chips.map(([k, l]) => `<button class="jv-chip" data-jvclr="${k}" title="Remove this filter">${E(l)} ✕</button>`).join('')}</div>` : ''}`;
   }
 
-  const PG_SIZES = [10, 15, 30, 100];
-  function tradeTable(list, withUnr, key) {
-    key = key || 'tbl'; ui.tbl = ui.tbl || {}; ui.pg = ui.pg || {}; ui.tbl[key] = { list, withUnr };
+  const PG_SIZES = [5, 10, 100, 1000];
+  function pagerBar(list, key) {
+    ui.pg = ui.pg || {};
     const pg = ui.pg[key] || (ui.pg[key] = { p: 0, s: 10 });
-    if (!list.length) return `<div class="jv-tw" data-jvt="${key}"><div class="empty">No trades match.</div></div>`;
     const pages = Math.max(1, Math.ceil(list.length / pg.s)); pg.p = Math.min(pg.p, pages - 1);
     const part = list.slice(pg.p * pg.s, (pg.p + 1) * pg.s);
+    const bar = list.length > PG_SIZES[0] ? `<div class="jv-pg"><div class="jv-seg jv-seg-s" title="Rows per page">${PG_SIZES.map(n => `<button class="${pg.s === n ? 'on' : ''}" data-jvps="${key}:${n}">${n}</button>`).join('')}</div>
+      <span class="muted">${pg.p * pg.s + 1}–${pg.p * pg.s + part.length} of ${list.length}</span>
+      <span class="jv-pgb"><button data-jvpg="${key}:${pg.p - 1}" ${pg.p <= 0 ? 'disabled' : ''} aria-label="Previous page">‹</button><b>${pg.p + 1}/${pages}</b><button data-jvpg="${key}:${pg.p + 1}" ${pg.p >= pages - 1 ? 'disabled' : ''} aria-label="Next page">›</button></span></div>` : '';
+    return { part, bar };
+  }
+  function tradeTable(list, withUnr, key) {
+    key = key || 'tbl'; ui.tbl = ui.tbl || {}; ui.pg = ui.pg || {}; ui.tbl[key] = { list, withUnr };
+    if (!list.length) return `<div class="jv-tw" data-jvt="${key}"><div class="empty">No trades match.</div></div>`;
+    const { part, bar: pager } = pagerBar(list, key);
     const th = (l, tip, cls) => `<th class="${cls || ''}" title="${tip}">${l}</th>`;
     const rows = part.map(t => {
       const c = calc(t), st = statusOf(t), u = withUnr ? unrealised(t) : null, closedish = st === 'Closed' || c.qx;
@@ -367,9 +375,6 @@
         <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : 'mktexit'}" data-id="${t.id}" title="Exit this position now at the live price">Exit</button>` : `<span title="${E(t.exitType || '')}">${E(t.exitType || '—')}</span>`}</td>
         <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
     }).join('');
-    const pager = list.length > PG_SIZES[0] ? `<div class="jv-pg"><div class="jv-seg jv-seg-s" title="Rows per page">${PG_SIZES.map(n => `<button class="${pg.s === n ? 'on' : ''}" data-jvps="${key}:${n}">${n}</button>`).join('')}</div>
-      <span class="muted">${pg.p * pg.s + 1}–${pg.p * pg.s + part.length} of ${list.length}</span>
-      <span class="jv-pgb"><button data-jvpg="${key}:${pg.p - 1}" ${pg.p <= 0 ? 'disabled' : ''} aria-label="Previous page">‹</button><b>${pg.p + 1}/${pages}</b><button data-jvpg="${key}:${pg.p + 1}" ${pg.p >= pages - 1 ? 'disabled' : ''} aria-label="Next page">›</button></span></div>` : '';
     return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date (MM-DD)')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Exit', 'Exit an open position now, or how a closed trade ended')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
   }
 
@@ -878,7 +883,11 @@
       <td>${E(KEYNAME(t.strategy))}<div class="muted" style="font-size:11px">${E(t.source || t.variant || '')}</div></td><td class="num">${px(t.entry)}</td><td class="num">${px(open ? t.last : t.exit)}</td>
       <td class="num ${cc(open ? t.unrealised : t.net)}">${sinr(open ? (t.unrealised || 0) : t.net)}</td>
       <td class="num">${px(t.stopU)}${t.targetU ? ' / ' + px(t.targetU) : ''}</td><td>${open ? 'Open' : E(t.exitReason)}</td></tr>`;
-    const tbl = (list, open) => list.length ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Date</th><th>Contract</th><th>Strategy</th><th>Entry ₹</th><th>${open ? 'Last' : 'Exit'} ₹</th><th>P&amp;L</th><th>Stop / target (underlying)</th><th>${open ? 'Status' : 'Exit reason'}</th></tr></thead><tbody>${list.map(t => trow(t, open)).join('')}</tbody></table></div>` : '<div class="empty">None yet.</div>';
+    const tbl = (list, open) => { if (!list.length) return '<div class="empty">None yet.</div>'; const { part, bar } = pagerBar(list, open ? 'auto-open' : 'auto-closed');
+      return `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Date</th><th>Contract</th><th>Strategy</th><th>Entry ₹</th><th>${open ? 'Last' : 'Exit'} ₹</th><th>P&amp;L</th><th>Stop / target (underlying)</th><th>${open ? 'Status' : 'Exit reason'}</th></tr></thead><tbody>${part.map(t => trow(t, open)).join('')}</tbody></table></div>${bar}`; };
+    const activityList = log => { if (!log.length) return '<p class="muted" style="padding:0 14px 12px">No activity yet. The first entries are made from 09:15 IST on the next trading day.</p>';
+      const { part, bar } = pagerBar(log, 'activity');
+      return `<ul class="jv-stops" style="padding:0 14px 12px 30px">${part.map(l => `<li>${new Date(l.at).toLocaleString('en-IN')} — ${E(l.msg)}</li>`).join('')}</ul>${bar}`; };
     return `<div class="card"><div class="card-h"><h3>Automated paper trades — 3 index options + 2 stock options a day</h3></div>
       <div style="padding:0 14px 12px"><p>${unproven ? '<span class="badge b-down">UNPROVEN · forward test</span> ' : '<span class="badge b-up">Proven strategies</span> '}${E(A.mode)}.
         ${unproven ? 'No strategy passed the backtest, so these trades are a live, out-of-sample experiment: results here are the only evidence that can\'t be flattered by hindsight.' : ''}</p>
@@ -897,7 +906,7 @@
       <div class="card"><div class="card-h"><h3>Open positions</h3></div>${tbl(A.open, true)}</div>
       <div class="card"><div class="card-h"><h3>Closed trades</h3></div>${tbl(A.closed, false)}</div>
       <div class="card"><div class="card-h"><h3>Strategies in use</h3></div><div class="jv-list">${A.activeStrategies.length ? A.activeStrategies.map(a => `<div><span>${E(KEYNAME(a.key))}</span><b>${E(a.variant)}${a.filter === 'trend200' ? ' · 200-EMA trend' : ''}</b></div>`).join('') : '<div><span>None active</span><b>—</b></div>'}</div></div>
-      <div class="card"><div class="card-h"><h3>Activity</h3></div><ul class="jv-stops" style="padding:0 14px 12px 30px">${A.log.length ? A.log.map(l => `<li>${new Date(l.at).toLocaleString('en-IN')} — ${E(l.msg)}</li>`).join('') : '<li>No activity yet. The first entries are made from 09:15 IST on the next trading day.</li>'}</ul></div>`;
+      <div class="card"><div class="card-h"><h3>Activity</h3>${A.log.length ? '<button class="btn-xs" data-jv="clearlog">Clear</button>' : ''}</div>${activityList(A.log)}</div>`;
   }
 
   /* ---------- your own trailing stop on MANUAL trades: ratchets with the live price while the journal is open ---------- */
@@ -1006,6 +1015,7 @@
     else if (a === 'autotoggle') { const on = !(SV.auto && SV.auto.cfg.enabled); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); }
+    else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
     else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
     else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
   });
