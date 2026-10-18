@@ -293,6 +293,9 @@ def _pick(row, *keys):
     return None
 
 
+_DIAG = {}
+
+
 def _nse_bars(symbol, since):
     """Daily OHLC from NSE's own history API - covers SME (SM/ST series) that Yahoo barely has."""
     out = {}
@@ -300,10 +303,15 @@ def _nse_bars(symbol, since):
     while start <= end:
         stop = min(end, start + timedelta(days=360))
         try:
+            _DIAG[symbol] = "nse call"
             js = _nse(f"/api/historical/cm/equity?symbol={requests.utils.quote(symbol)}"
                       f"&series=[%22EQ%22,%22BE%22,%22SM%22,%22ST%22,%22BZ%22]"
                       f"&from={start.strftime('%d-%m-%Y')}&to={stop.strftime('%d-%m-%Y')}")
-        except Exception:
+            _DIAG[symbol] = f"nse ok, keys={list(js)[:4] if isinstance(js, dict) else type(js).__name__}, rows={len((js or {}).get('data') or []) if isinstance(js, dict) else 0}"
+            if isinstance(js, dict) and js.get("data"):
+                _DIAG[symbol] += f", first={str(js['data'][0])[:300]}"
+        except Exception as e:
+            _DIAG[symbol] = f"nse error: {str(e)[:200]}"
             js = None
         for r in (js or {}).get("data") or []:
             d = _pick(r, "CH_TIMESTAMP", "TIMESTAMP", "mTIMESTAMP")
@@ -534,7 +542,7 @@ def ipo_chart(symbol: str = Query(..., min_length=1, max_length=30, pattern=r"^[
         if issue_price:
             st["issue_price"] = issue_price
             st["return_pct"] = round((cur / issue_price - 1) * 100, 2)
-        return {"symbol": symbol.upper(), "listing_date": listing_date, "stats": st,
+        return {"symbol": symbol.upper(), "listing_date": listing_date, "stats": st, "diag": _DIAG.get(symbol.upper()),
                 "bars": [[b["date"], round(b["open"], 2), round(b["high"], 2), round(b["low"], 2), round(b["close"], 2)] for b in bars]}
 
     try:
