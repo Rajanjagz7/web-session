@@ -1706,14 +1706,14 @@ const RANGES=[['1 mo',31],['3 mo',92],['6 mo',183],['1 yr',365],['5 yr',1830],['
 const tfLabel=k=>/M$/.test(k)?k.slice(0,-1)+'Mo':k;
 const TFS=[{k:'1m',sec:60},{k:'5m',sec:300},{k:'15m',sec:900},{k:'1H',sec:3600},{k:'4H',sec:14400},{k:'1D',sec:86400},{k:'1W',sec:604800},{k:'1M',sec:2592000}];
 
-const CACHE={},PEND={};
+const CACHE={},PEND={},SWAIT={};
 function stubSeries(sym,tf){const ms=tf.sec*1000,t0=Math.floor(Date.now()/ms)*ms,P=sym.last||1,o=[];for(let i=60;i>=0;i--)o.push({t:t0-i*ms,o:P,h:P,l:P,c:P,v:0});return o}
 function syncSeries(s,sym,tf){const ms=tf.sec*1000,now=Date.now();let lb=s[s.length-1];if(!MKT.open||!sym.last)return s;
   if(now-lb.t>ms*3){if(Date.now()-(s._ts||0)>20000){s._ts=Date.now();fetchSeries(sym,tf).then(()=>{if(sym===App.sym&&tf===App.tf)loadChart(true)})}}
   else{if(tf.sec<86400)while(now>=lb.t+ms){const nb={t:lb.t+ms,o:lb.c,h:lb.c,l:lb.c,c:lb.c,v:0};s.push(nb);if(s.length>20000)s.shift();lb=nb}
     lb.c=sym.last;lb.h=Math.max(lb.h,lb.c);lb.l=Math.min(lb.l,lb.c)}
   return s}
-function series(sym,tf){const k=sym.s+'|'+tf.k;if(!CACHE[k]||!CACHE[k].length){if(!CACHE[k])fetchSeries(sym,tf).then(()=>onSeries(sym,tf));return stubSeries(sym,tf)}return syncSeries(CACHE[k],sym,tf)}
+function series(sym,tf){const k=sym.s+'|'+tf.k;if(!CACHE[k]||!CACHE[k].length){if(!CACHE[k]&&!SWAIT[k]&&!(FAILS[k]&&Date.now()-FAILS[k]<8000)){SWAIT[k]=1;fetchSeries(sym,tf).then(()=>{delete SWAIT[k];onSeries(sym,tf)})}return stubSeries(sym,tf)}return syncSeries(CACHE[k],sym,tf)}
 function onSeries(sym,tf){if(App.view==='picks'&&typeof OV!=='undefined'&&sym===SYM(OV.sym)&&tf===TFS[OVR[OV.rng][1]])mountOverview();if(typeof OPT!=='undefined'&&OPT.osym&&sym===OPT.osym){optLoad(true);return}if(sym===App.sym&&tf===App.tf&&App.view==='trade')loadChart(true);if(App.view==='indicators')renderIndicators();if(App.view==='mobile')renderMobile()}
 
 /* ======================= Indicator math ======================= */
