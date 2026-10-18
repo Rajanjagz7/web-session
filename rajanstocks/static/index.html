@@ -436,6 +436,12 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 #v-vedic .vd-stock b{color:#f3d98a;font-size:12px}
 #v-vedic .vd-stock p{font-size:11px;color:#b9c9e0;margin-top:2px}
 #v-vedic .vd-disc{margin-top:16px;padding-top:12px;border-top:1px solid #22395c;font-size:10.5px;color:#7f9bc2;line-height:1.6}
+#v-vedic .vd-news{margin:16px 0}
+#v-vedic .vd-news-row{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px dashed #152543;text-decoration:none;color:inherit}
+#v-vedic .vd-news-row:last-child{border-bottom:none}
+#v-vedic .vd-news-src{flex-shrink:0;font-size:9.5px;font-weight:700;letter-spacing:.04em;color:#f3d98a;text-transform:uppercase;min-width:90px}
+#v-vedic .vd-news-t{font-size:12.5px;color:#dbe6f6;line-height:1.4}
+#v-vedic .vd-news-row:hover .vd-news-t{color:#fff;text-decoration:underline}
 #v-vedic .vd-disc b{color:#fca5a5}
 @media (max-width:980px){#v-vedic .vd-cols{grid-template-columns:1fr}#v-vedic .vd-windows{grid-template-columns:repeat(2,1fr)}#v-vedic .vd-foot-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){#v-vedic .vd-windows{grid-template-columns:1fr}#v-vedic .vd-foot-grid{grid-template-columns:1fr}#v-vedic table.vd-tbl{font-size:11.5px}
@@ -2232,7 +2238,7 @@ function renderAlerts(){$('#v-alerts').innerHTML=`<div class="page">${pageHead('
 /* ======================= Vedic Astro (Panchang / Rahu Kaal) view ======================= */
 let VD={data:null,busy:false,err:null};
 async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
-  try{VD.data=await api('/api/vedic/report'+(refresh?'?refresh=true':''))}
+  try{VD.data=await Promise.race([api('/api/vedic/report'+(refresh?'?refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))])}
   catch(e){VD.err='Could not load the Vedic Astro report. Try again in a moment.'}
   VD.busy=false}
 function vdField(label,f,fmt){if(!f)return'';
@@ -2250,6 +2256,9 @@ function vdSchematic(windows){
 function vdWinCard(w,i){return `<div class="vd-win c${i+1}"><div><span class="n">${i+1}</span><h4>${esc(w.label)}</h4></div><div class="t">${esc(w.window_ist||'—')}</div><p>${esc(w.focus)}</p></div>`}
 function vdTable(windows){const row=w=>`<tr><td class="win" data-label="Window">${esc(w.label)}</td><td data-label="Primary focus">${esc(w.focus)}</td><td data-label="Bullish setup">${esc(w.bullish)}</td><td data-label="Bearish setup">${esc(w.bearish)}</td><td data-label="No-trade">${esc(w.no_trade)}</td><td data-label="Key checks">${(w.key_checks||[]).join(', ')}</td></tr>`;
   return `<div style="overflow-x:auto"><table class="vd-tbl"><thead><tr><th>Window</th><th>Primary focus</th><th>Bullish setup</th><th>Bearish setup</th><th>No-trade</th><th>Key checks</th></tr></thead><tbody>${windows.map(row).join('')}</tbody></table></div>`}
+function vdNewsPanel(){const items=((App.news&&App.news.items)||[]).filter(n=>n.category==='india').slice(0,5);
+  if(!items.length)return'';
+  return `<div class="vd-panel vd-news"><h3>Indian market news</h3>${items.map(n=>`<a class="vd-news-row" href="${esc(n.link)}" target="_blank" rel="noopener">${n.source?`<span class="vd-news-src">${esc(n.source)}</span>`:''}<span class="vd-news-t">${esc(n.title)}</span></a>`).join('')}</div>`}
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','Panchang, Rahu Kaal and sidereal planetary positions — informational context only, never a BUY/SELL signal by itself.')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
   const r=VD.data;if(!r){el.innerHTML=`<div class="page">${pageHead('Vedic Astro — Daily Watch','')}<div class="empty">Loading…</div></div>`;return}
@@ -2268,6 +2277,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
       </div>
     </div>
     ${h.is_weekend?`<div class="vd-weekend"><b>${esc(h.weekend_message)}</b><p>Markets, option-flow scans and intraday watch windows don't apply on non-trading days — the Panchang and planetary positions below are still today's real data, kept for reference.</p></div>`:''}
+    ${vdNewsPanel()}
     <div class="vd-cols">
       <div class="vd-panel"><h3>Market context</h3>
         ${vdField('NIFTY last',mc.nifty_last,v=>fmtP(v,2))}${vdField('NIFTY prev close',mc.nifty_prev_close,v=>fmtP(v,2))}${vdField('Market open',mc.market_open,v=>v?'Yes':'No')}${vdField('GIFT Nifty',mc.gift_nifty)}${vdField('Crude oil',mc.crude_oil)}${vdField('FPI flow',mc.fpi_flow)}${vdField('Live VWAP',mc.live_vwap)}${vdField('Opening range',mc.opening_range)}
@@ -2292,7 +2302,8 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
         <p style="color:#f87171;font-weight:700;font-size:11.5px;margin-bottom:4px">Bearish candidate</p><p style="font-size:11px;color:#cfe0f5;margin-bottom:8px">${esc(VD_TRADE_COND.bear)}</p>
         <p style="color:#8fb3de;font-weight:700;font-size:11.5px;margin-bottom:4px">No-trade zone</p><p style="font-size:11px;color:#cfe0f5">${esc(VD_TRADE_COND.no)}</p></div>
       <div class="vd-panel"><h3>5 stocks to watch today — ${esc(h.report_date)}</h3>
-        ${stocks.available?stocks.value.map(s=>`<div class="vd-stock"><b>${esc(s.symbol)}</b> <span class="muted" style="font-size:11px">${esc(s.name)}</span> <span class="badge ${s.bias==='bullish'?'b-up':s.bias==='bearish'?'b-down':'b-mute'}" style="float:right">${esc(s.bias)}</span><p>${esc(s.reason)} — ${esc(s.idea)}. LTP ${fmtP(s.ltp,2)}, prev close ${fmtP(s.prev,2)}, chg ${pct(s.chg_pct/100)}.</p></div>`).join(''):`<div class="empty">${esc(stocks.reason||'Not available')}</div>`}</div>
+        ${stocks.session_note?`<p class="muted st-note" style="margin-bottom:8px">${esc(stocks.session_note)}</p>`:''}
+        ${stocks.available?stocks.value.map(s=>`<div class="vd-stock"><b>${esc(s.symbol)}</b> <span class="muted" style="font-size:11px">${esc(s.name)}</span> <span class="badge ${String(s.bias).toLowerCase()==='bullish'?'b-up':String(s.bias).toLowerCase()==='bearish'?'b-down':'b-mute'}" style="float:right">${esc(s.bias)}</span><p>${esc(s.reason)} — ${esc(s.idea)}. LTP ${fmtP(s.ltp,2)}, prev close ${fmtP(s.prev,2)}, chg ${pct(s.chg_pct/100)}.</p></div>`).join(''):`<div class="empty">${esc(stocks.reason||'Not available')}</div>`}</div>
       <div class="vd-panel"><h3>Risk management</h3><ul>${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
     </div>
     <div class="vd-disc"><b>This report is for informational and educational purposes only. Not financial advice. Trade responsibly.</b><br>${esc(r.disclaimer)}</div>
@@ -2300,7 +2311,10 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
 async function renderVedic(){const el=$('#v-vedic');if(!el)return;
   if(!VD.data&&!VD.err){vdPaint();await loadVedic(false)}
   vdPaint()}
-document.addEventListener('click',e=>{const vr=e.target.closest('[data-act="vedic-retry"]');if(vr){VD.err=null;loadVedic(true).then(vdPaint);vdPaint()}});
+document.addEventListener('click',async e=>{const vr=e.target.closest('[data-act="vedic-retry"]');if(!vr||VD.busy)return;
+  vr.disabled=true;vr.innerHTML='Refreshing…';VD.err=null;
+  await loadVedic(true);vdPaint();
+  toast(VD.err||'Vedic Astro report refreshed',VD.err?'bad':'ok')});
 function indPreview(key){const d=DEFS[key],s=SYM('NIFTY'),data=series(s,TFS[5]).slice(-220),ind={params:{},colors:d.lines.map(l=>l.c??0)};d.params.forEach(p=>ind.params[p.k]=p.v);const out=d.calc(data,ind.params,{tf:86400}),N=120,st=data.length-N,W=280,H=84;
   const slice=a=>a.slice(st),px=slice(C(data));let lines=d.lines.map((ln,j)=>({a:slice(out[ln.k]),c:T.s[ind.colors[j]],st:ln.style}));
   let all=d.pane==='sub'||d.pane==='vol'?lines.flatMap(l=>l.a):[...px,...lines.flatMap(l=>l.a)];all=all.filter(isFinite);if(d.range)all.push(...d.range);let lo=Math.min(...all),hi=Math.max(...all);if(d.zero){lo=Math.min(lo,0);hi=Math.max(hi,0)}const r=hi-lo||1;
@@ -3380,7 +3394,7 @@ async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}
   if(App.view==='picks')renderPicks()}
-async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks()}
+async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks();else if(App.view==='vedic')vdPaint()}
 
 /* ======================= Events ======================= */
 document.addEventListener('click',e=>{const t=e.target.closest('[data-view],[data-sym],[data-act],[data-tf],[data-tool],[data-btab],[data-close],[data-cancel],[data-side],[data-otype],[data-pct],[data-b],[data-eqr],[data-ord],[data-altog],[data-aldel],[data-libcat],[data-libadd],[data-mtf],[data-msheet],[data-mq],[data-mplace]');

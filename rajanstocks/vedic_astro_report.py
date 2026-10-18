@@ -186,11 +186,19 @@ def _market_context():
 
 
 def _stocks_to_watch(limit: int = 5):
-    """Reuses the existing /daily-scan (Open=High/Open=Low bias scanner) that already backs the live #picks page."""
+    """Reuses the existing /daily-scan (Open=High/Open=Low bias scanner) that already backs the live #picks page.
+
+    daily_scan() runs off Upstox's current quote snapshot regardless of whether
+    the market is open right now - on a weekend/holiday that snapshot is simply
+    frozen at Friday's close, which is correct (same "last session" convention
+    the Picks page uses), but needs to say so explicitly or it reads as if it
+    were today's live data.
+    """
     try:
         import market_api
         scan = market_api.daily_scan(refresh=False, limit=limit)
         rows = scan["rows"][:limit]
+        session_note = "Live - updates through the trading session." if scan.get("marketOpen") else "Market closed - showing the last completed session, not today's live data."
         if not rows:
             return _na("Daily scan returned no candidates (markets likely closed or no OH/OL setups today)")
         picks = []
@@ -202,7 +210,7 @@ def _stocks_to_watch(limit: int = 5):
                 "idea": r["idea"],
                 "note": "Watchlist candidate from the live Open=High/Open=Low scan, not a standing BUY/SELL recommendation.",
             })
-        return _ok(picks)
+        return {"available": True, "value": picks, "as_of": scan.get("asOf"), "market_open": scan.get("marketOpen"), "session_note": session_note}
     except Exception as e:
         return _na(f"Daily scan unavailable: {str(e)[:160]}")
 
