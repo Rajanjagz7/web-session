@@ -62,10 +62,10 @@ yarn-error.log*
 # Standalone Git Repositories (Managed in their own dedicated GitHub repos)
 crm/
 fieldr/
-gus-money/
 organized/
 rajan-o/
 rebatem8-playwright-qa/portfolio/
+**/.git_backup/
 
 # Large Files & Archives Exceeding GitHub's 100MB Limit
 OZ MED-TestData.zip

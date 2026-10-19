@@ -1,0 +1,6 @@
+pytest>=8
+pytest-cov>=5
+pytest-html>=4
+allure-pytest>=2.13
+requests>=2.32
+python-dotenv>=1.0

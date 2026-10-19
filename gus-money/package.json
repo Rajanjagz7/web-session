@@ -1,0 +1,28 @@
+{
+  "name": "gus-money",
+  "version": "1.0.0",
+  "description": "Playwright E2E automation framework and QA test plan for the Gus Money Admin Panel.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rajanjagz7/gus-money.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Rajanjagz7/gus-money/issues"
+  },
+  "homepage": "https://github.com/Rajanjagz7/gus-money#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
+    "allure-playwright": "^3.13.0",
+    "dotenv": "^18.0.1",
+    "typescript": "^7.0.2"
+  }
+}

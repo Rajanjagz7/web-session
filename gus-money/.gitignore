@@ -1,0 +1,12 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+.env
+*.xlsx
+.auth/
+__pycache__/
+.pytest_cache/
+allure-results/
+allure-report/
+reports/
