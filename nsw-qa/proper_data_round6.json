@@ -1,0 +1,1476 @@
+[
+ {
+  "n": 1,
+  "label": "H&C / Residential / Wentworthville",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "products_entered": [
+   {
+    "originalEquipment": "Installation of a New Air Conditioner",
+    "brand": "KELVINATOR",
+    "model": "KWH60CRF",
+    "block_text": "PRODUCT 1\n*\nOriginal Equipment\nInstallation of a New Air Conditioner\n*\nBrand\nKELVINATOR\n*\nModel\noption KWH60CRF, selected.\nKWH60CRF\nHeating Capacity (kW)\nCooling Capacity (kW)\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Heating Capacity": "0",
+     "Enter Cooling Capacity": "6",
+     "Enter Warranty Period": ""
+    }
+   }
+  ],
+  "created": true,
+  "entered": {
+   "activityType": "Heating & Cooling",
+   "buildingType": "Residential Building",
+   "customerName": "Priya Raman",
+   "email": "priya.raman.30359@yopmail.com",
+   "phone": "424938972",
+   "abnAcn": "49478258643",
+   "addressSearch": "14 Station Street Wentworthville",
+   "postcode": "2145",
+   "leadMethod": "Customer initiated contact",
+   "ownReference": "Q-26-0412",
+   "installationDate": "14-10-2026",
+   "addressSelected": "14 Station St, Wentworthville NSW 2145, Australia",
+   "installer": "BAWA",
+   "siteInspectionInstaller": "Belinda Baker"
+  },
+  "writes": [
+   {
+    "method": "POST",
+    "path": "/jobs",
+    "status": 201,
+    "req": "{\"installerId\":\"6ab34fcff9ea6129bf4333c5\",\"siteInspectionInstallerId\":\"6a7b1c0259748eb7dec5923b\",\"activityType\":\"heating_cooling\",\"customerType\":\"residential\",\"methodOfLeadGeneration\":\"Customer initiated contact\",\"ownReference\":\"Q-26-0412\",\"installationDate\":\"2026-10-14\",\"customer\":{\"name\":\"Priya Raman\",\"email\":\"priya.raman.30359@yopmail.com\",\"phoneNumber\":\"424938972\",\"countryCode\":\"+61\",\"flagCode\":\"AU\",\"abnAcn\":\"49478258643\"},\"address\":{\"fullAddress\":\"14 Station St, Wentworthville NSW 2145, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"14\",\"streetName\":\"Station\",\"streetType\":\"Street\",\"suburb\":\"Wentworthville\",\"state\":\"NSW\",\"postcode\":\"2145\"},\"equipmentQuoted\":[{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"KELVINATOR\",\"model\":\"KWH60CRF\",\"coolingCapacityKw\":6,\"heatingCapacityKw\":0}],\"createdFrom\":\"add_job\"}",
+    "resp": "{\"success\":true,\"statusCode\":201,\"message\":\"Job created successfully\",\"data\":{\"job\":{\"id\":\"6ab646047be3e3aa922521e2\",\"jobNumber\":\"M8N000132\",\"status\":\"engagement_sent\",\"installerId\":\"6ab34fcff9ea6129bf4333c5\",\"siteInspectionInstaller\":{\"_id\":\"6a7b1c0259748eb7dec5923b\"},\"contractorGroupId\":[],\"createdBy\":\"6a38ef2ea07431960aae2009\",\"customerId\":\"6ab646047be3e3aa922521df\",\"activityType\":\"heating_cooling\",\"customerType\":\"residential\",\"certificateRequirements\":{\"ccew\":\"required\",\"coc\":\"not_required\",\"cocGas\":\"not_required\",\"refrigerantEvidence\":\"required\"},\"methodOfLeadGeneration\":\"Customer initiated contact\",\"ownReference\":\"Q-26-0412\",\"installationDate\":\"2026-10-14T00:00:00.000Z\",\"createdFrom\":\"add_job\",\"address\":{\"fullAddress\":\"14 Station St, Wentworthville NSW 2145, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"14\",\"streetName\":\"Station\",\"streetType\":\"Street\",\"suburb\":\"Wentworthville\",\"state\":\"NSW\",\"postcode\":\"2145\",\"location\":{\"type\":\"Point\",\"coordinates\":[150.9723348,-33.8076717]}},\"equipmentQuoted\":[{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"KELVINATOR\",\"model\":\"KWH60CRF\",\"heatingCapacityKw\":0,\"coolingCapacityKw\":6}],\"engagement\":{\"factSheetEmail\":{\"status\":\"pending\",\"attempts\":0},\"email\":{\"status\":\"pending\",\"attempts\":0},\"sms\":{\"status\":\"pending\",\"attempts\":0}},\"isActive\":true,\"isDeleted\":false,\"createdAt\":\"2026-09-25T09:59:32.062Z\",\"updatedAt\":\"2026-09-25T09:59:32.062Z\"},\"customer\":{\"id\":\"6ab646047be3e3aa922521df\",\"nam"
+   }
+  ],
+  "errors_4xx_5xx": [],
+  "console_errors": [],
+  "jobNumber": "M8N000132",
+  "stored": {
+   "job": {
+    "id": "6ab646047be3e3aa922521e2",
+    "jobNumber": "M8N000132",
+    "status": "engagement_sent",
+    "installerId": "6ab34fcff9ea6129bf4333c5",
+    "siteInspectionInstaller": {
+     "_id": "6a7b1c0259748eb7dec5923b",
+     "name": "Belinda Baker"
+    },
+    "contractorGroupId": [],
+    "createdBy": "6a38ef2ea07431960aae2009",
+    "customerId": "6ab646047be3e3aa922521df",
+    "activityType": "heating_cooling",
+    "customerType": "residential",
+    "certificateRequirements": {
+     "ccew": "required",
+     "coc": "not_required",
+     "cocGas": "not_required",
+     "refrigerantEvidence": "required"
+    },
+    "methodOfLeadGeneration": "Customer initiated contact",
+    "ownReference": "Q-26-0412",
+    "installationDate": "2026-10-14T00:00:00.000Z",
+    "createdFrom": "add_job",
+    "address": {
+     "fullAddress": "14 Station St, Wentworthville NSW 2145, Australia",
+     "isManual": false,
+     "unitType": "",
+     "unitNumber": "",
+     "streetNumber": "14",
+     "streetName": "Station",
+     "streetType": "Street",
+     "suburb": "Wentworthville",
+     "state": "NSW",
+     "postcode": "2145",
+     "location": {
+      "type": "Point",
+      "coordinates": [
+       150.9723348,
+       -33.8076717
+      ]
+     }
+    },
+    "equipmentQuoted": [
+     {
+      "originalEquipment": "Installation of a New Air Conditioner",
+      "brand": "KELVINATOR",
+      "model": "KWH60CRF",
+      "heatingCapacityKw": 0,
+      "coolingCapacityKw": 6
+     }
+    ],
+    "engagement": {
+     "factSheetEmail": {
+      "status": "pending",
+      "attempts": 0
+     },
+     "email": {
+      "status": "pending",
+      "attempts": 0
+     },
+     "sms": {
+      "status": "pending",
+      "attempts": 0
+     }
+    },
+    "isActive": true,
+    "isDeleted": false,
+    "createdAt": "2026-09-25T09:59:32.062Z",
+    "updatedAt": "2026-09-25T09:59:32.071Z",
+    "customer": {
+     "id": "6ab646047be3e3aa922521df",
+     "name": "Priya Raman",
+     "email": "priya.raman.30359@yopmail.com",
+     "phoneNumber": "424938972",
+     "countryCode": "+61",
+     "flagCode": "AU",
+     "abnAcn": "49478258643",
+     "isActive": true
+    },
+    "installer": {
+     "id": "6ab34fcff9ea6129bf4333c5",
+     "companyName": "BAWA",
+     "installerCode": "I01-00017"
+    },
+    "hasProducts": false,
+    "escCertificates": 0,
+    "prcCertificates": 0,
+    "escValue": 0,
+    "prcValue": 0,
+    "stcValue": 0,
+    "totalRebate": 0
+   },
+   "statusList": [
+    {
+     "status": "engagement_sent",
+     "label": "Engagement Sent",
+     "order": 1,
+     "backgroundColor": "#FFF4D6",
+     "textColor": "#8A6D00"
+    },
+    {
+     "status": "site_assessment_and_nomination_requested",
+     "label": "Site Assessment and Nomination Requested",
+     "order": 2,
+     "backgroundColor": "#E3EDFB",
+     "textColor": "#1B4E8A"
+    },
+    {
+     "status": "site_assessment_requested",
+     "label": "Site Assessment Requested",
+     "order": 3,
+     "backgroundColor": "#CCF2F0",
+     "textColor": "#0A5C58"
+    },
+    {
+     "status": "site_assessment_complete",
+     "label": "Site Assessment Complete",
+     "order": 4,
+     "backgroundColor": "#00FFFF",
+     "textColor": "#005858"
+    },
+    {
+     "status": "nomination_signature_requested",
+     "label": "Nomination Signature Requested",
+     "order": 5,
+     "backgroundColor": "#CC99FF",
+     "textColor": "#310063"
+    },
+    {
+     "status": "nomination_signed",
+     "label": "Nomination Signed",
+     "order": 6,
+     "backgroundColor": "#D9F2E6",
+     "textColor": "#0B6B4F"
+    },
+    {
+     "status": "photos_started",
+     "label": "Photos Started",
+     "order": 7,
+     "backgroundColor": "#FFFF00",
+     "textColor": "#424200"
+    },
+    {
+     "status": "photos_complete",
+     "label": "Photos Complete",
+     "order": 8,
+     "backgroundColor": "#CC00FF",
+     "textColor": "#FAE8FF"
+    },
+    {
+     "status": "customer_signature_requested",
+     "label": "Customer Signature Requested",
+     "order": 9,
+     "backgroundColor": "#E1DFF6",
+     "textColor": "#4B3FA8"
+    },
+    {
+     "status": "installer_signature_missing",
+     "label": "Installer Signature Missing",
+     "order": 10,
+     "backgroundColor": "#FBCEB1",
+     "textColor": "#5C3A2E"
+    },
+    {
+     "status": "missing_evidence",
+     "label": "Missing Evidence",
+     "order": 11,
+     "backgroundColor": "#FFCCFF",
+     "textColor": "#5B005B"
+    },
+    {
+     "status": "requested_evidence_provided",
+     "label": "Requested Evidence Provided",
+     "order": 12,
+     "backgroundColor": "#FF0066",
+     "textColor": "#FFDEEB"
+    },
+    {
+     "status": "final_review",
+     "label": "Final Review",
+     "order": 13,
+     "backgroundColor": "#FF9900",
+     "textColor": "#FFF7EB"
+    },
+    {
+     "status": "passed_review",
+     "label": "Passed Review",
+     "order": 14,
+     "backgroundColor": "#00FF00",
+     "textColor": "#004800"
+    },
+    {
+     "status": "failed_review",
+     "label": "Failed Review",
+     "order": 15,
+     "backgroundColor": "#FF0000",
+     "textColor": "#FFDADA"
+    },
+    {
+     "status": "ready_to_register",
+     "label": "Ready to Register",
+     "order": 16,
+     "backgroundColor": "#CBDDFB",
+     "textColor": "#000080"
+    },
+    {
+     "status": "submitted_to_tessa",
+     "label": "Submitted to TESSA",
+     "order": 17,
+     "backgroundColor": "#E6F3FF",
+     "textColor": "#0066CC"
+    },
+    {
+     "status": "ready_to_pay",
+     "label": "Ready to Pay",
+     "order": 19,
+     "backgroundColor": "#CCFFCC",
+     "textColor": "#005200"
+    },
+    {
+     "status": "paid",
+     "label": "Paid",
+     "order": 20,
+     "backgroundColor": "#00B050",
+     "textColor": "#D3FFE7"
+    },
+    {
+     "status": "archived",
+     "label": "Archived",
+     "order": 21,
+     "backgroundColor": "#808080",
+     "textColor": "#FFFFFF"
+    },
+    {
+     "status": "cancelled",
+     "label": "Cancelled",
+     "order": 22,
+     "backgroundColor": "#FFDADA",
+     "textColor": "#B00020"
+    },
+    {
+     "status": "ineligible",
+     "label": "Ineligible",
+     "order": 23,
+     "backgroundColor": "#EEEEEE",
+     "textColor": "#616161"
+    },
+    {
+     "status": "spare",
+     "label": "Spare",
+     "order": 24,
+     "backgroundColor": "#F0F0F0",
+     "textColor": "#757575"
+    }
+   ]
+  },
+  "checks": {
+   "activityType": {
+    "entered": "Heating & Cooling",
+    "match": "MISSING",
+    "where": []
+   },
+   "buildingType": {
+    "entered": "Residential Building",
+    "match": "MISSING",
+    "where": []
+   },
+   "customerName": {
+    "entered": "Priya Raman",
+    "match": "exact",
+    "where": [
+     "job.customer.name"
+    ]
+   },
+   "email": {
+    "entered": "priya.raman.30359@yopmail.com",
+    "match": "exact",
+    "where": [
+     "job.customer.email"
+    ]
+   },
+   "phone": {
+    "entered": "424938972",
+    "match": "exact",
+    "where": [
+     "job.customer.phoneNumber"
+    ]
+   },
+   "abnAcn": {
+    "entered": "49478258643",
+    "match": "exact",
+    "where": [
+     "job.customer.abnAcn"
+    ]
+   },
+   "addressSearch": {
+    "entered": "14 Station Street Wentworthville",
+    "match": "MISSING",
+    "where": []
+   },
+   "postcode": {
+    "entered": "2145",
+    "match": "exact",
+    "where": [
+     "job.address.postcode"
+    ]
+   },
+   "leadMethod": {
+    "entered": "Customer initiated contact",
+    "match": "exact",
+    "where": [
+     "job.methodOfLeadGeneration"
+    ]
+   },
+   "ownReference": {
+    "entered": "Q-26-0412",
+    "match": "exact",
+    "where": [
+     "job.ownReference"
+    ]
+   },
+   "installationDate": {
+    "entered": "14-10-2026",
+    "match": "MISSING",
+    "where": []
+   },
+   "addressSelected": {
+    "entered": "14 Station St, Wentworthville NSW 2145, Australia",
+    "match": "exact",
+    "where": [
+     "job.address.fullAddress"
+    ]
+   },
+   "installer": {
+    "entered": "BAWA",
+    "match": "exact",
+    "where": [
+     "job.installer.companyName"
+    ]
+   },
+   "siteInspectionInstaller": {
+    "entered": "Belinda Baker",
+    "match": "exact",
+    "where": [
+     "job.siteInspectionInstaller.name"
+    ]
+   },
+   "product1.brand": {
+    "entered": "KELVINATOR",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[0].brand"
+    ]
+   },
+   "product1.model": {
+    "entered": "KWH60CRF",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[0].model"
+    ]
+   }
+  }
+ },
+ {
+  "n": 2,
+  "label": "HWHP / Residential / Parramatta",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "script_error": "TimeoutError: Locator.click: Timeout 20000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"dialog\").locator(\".border-dashed.border-gray-300\").first.get_by_text(\"Model\").first.locator(\"xpath=ancestor::*[.//*[contains(@class,\\\"select__control\\\")]][1]\").locator(\".select__control\").first\n    - locator resolved to ",
+  "entered": {
+   "activityType": "Hot Water Heat Pump",
+   "buildingType": "Residential Building",
+   "newSystem": "Heat pump",
+   "customerName": "Thomas Nguyen",
+   "email": "thomas.nguyen.30381@yopmail.com",
+   "phone": "436623918",
+   "abnAcn": "92920454371",
+   "addressSearch": "21 Macquarie Street Parramatta",
+   "postcode": "2150",
+   "leadMethod": "Online advertisement",
+   "ownReference": "Q-26-0413",
+   "installationDate": "21-10-2026",
+   "addressSelected": "21 Macquarie St, Parramatta NSW 2150, Australia",
+   "installer": "Belinda HVAC NSW",
+   "siteInspectionInstaller": "Belinda Baker"
+  },
+  "writes": [],
+  "errors_4xx_5xx": [],
+  "console_errors": []
+ },
+ {
+  "n": 3,
+  "label": "H&C / Small Business / Manly",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "products_entered": [
+   {
+    "originalEquipment": "Installation of a New Air Conditioner",
+    "brand": "GREE",
+    "model": "GJC18AG-K6DRNG1A",
+    "block_text": "PRODUCT 1\n*\nOriginal Equipment\nInstallation of a New Air Conditioner\n*\nBrand\nGREE\n*\nModel\noption GJC18AG-K6DRNG1A, selected.\nGJC18AG-K6DRNG1A\nHeating Capacity (kW)\nCooling Capacity (kW)\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Heating Capacity": "0",
+     "Enter Cooling Capacity": "5.3",
+     "Enter Warranty Period": ""
+    }
+   }
+  ],
+  "created": true,
+  "entered": {
+   "activityType": "Heating & Cooling",
+   "buildingType": "Small Business Site (less than 273 kWh/day)",
+   "businessName": "Harbourside Cafe Pty Ltd",
+   "signatoryFirstName": "Daniel",
+   "signatoryLastName": "Kowalski",
+   "signatoryPosition": "Owner",
+   "signatoryPhone": "429326759",
+   "signatoryEmail": "daniel.30414@yopmail.com",
+   "abnAcn": "87473035647",
+   "addressSearch": "10 The Corso Manly",
+   "postcode": "2095",
+   "leadMethod": "Social media",
+   "ownReference": "Q-26-0414",
+   "installationDate": "28-10-2026",
+   "addressSelected": "10 The Corso, Manly NSW 2095, Australia",
+   "installer": "Belinda Test Co",
+   "siteInspectionInstaller": "Belinda Baker"
+  },
+  "writes": [
+   {
+    "method": "POST",
+    "path": "/jobs",
+    "status": 201,
+    "req": "{\"installerId\":\"6aa75206fa4def8883b40ed5\",\"siteInspectionInstallerId\":\"6a7b1c0259748eb7dec5923b\",\"activityType\":\"heating_cooling\",\"customerType\":\"business\",\"averageKwhPerDay\":\"less_than_273\",\"methodOfLeadGeneration\":\"Social media\",\"ownReference\":\"Q-26-0414\",\"installationDate\":\"2026-10-28\",\"customer\":{\"name\":\"Harbourside Cafe Pty Ltd\",\"email\":\"daniel.30414@yopmail.com\",\"phoneNumber\":\"429326759\",\"countryCode\":\"+61\",\"flagCode\":\"AU\",\"abnAcn\":\"87473035647\",\"businessType\":\"\",\"authFirstName\":\"Daniel\",\"authLastName\":\"Kowalski\",\"authSignPosition\":\"Owner\"},\"address\":{\"fullAddress\":\"10 The Corso, Manly NSW 2095, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"10\",\"streetName\":\"The\",\"streetType\":\"Corso\",\"suburb\":\"Manly\",\"state\":\"NSW\",\"postcode\":\"2095\"},\"equipmentQuoted\":[{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"GREE\",\"model\":\"GJC18AG-K6DRNG1A\",\"coolingCapacityKw\":5.3,\"heatingCapacityKw\":0}],\"createdFrom\":\"add_job\"}",
+    "resp": "{\"success\":true,\"statusCode\":201,\"message\":\"Job created successfully\",\"data\":{\"job\":{\"id\":\"6ab6463c7be3e3aa92252254\",\"jobNumber\":\"M8N000133\",\"status\":\"engagement_sent\",\"installerId\":\"6aa75206fa4def8883b40ed5\",\"siteInspectionInstaller\":{\"_id\":\"6a7b1c0259748eb7dec5923b\"},\"contractorGroupId\":[],\"createdBy\":\"6a38ef2ea07431960aae2009\",\"customerId\":\"6ab6463c7be3e3aa92252251\",\"activityType\":\"heating_cooling\",\"customerType\":\"business\",\"averageKwhPerDay\":\"less_than_273\",\"certificateRequirements\":{\"ccew\":\"required\",\"coc\":\"not_required\",\"cocGas\":\"not_required\",\"refrigerantEvidence\":\"required\"},\"methodOfLeadGeneration\":\"Social media\",\"ownReference\":\"Q-26-0414\",\"installationDate\":\"2026-10-28T00:00:00.000Z\",\"createdFrom\":\"add_job\",\"address\":{\"fullAddress\":\"10 The Corso, Manly NSW 2095, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"10\",\"streetName\":\"The\",\"streetType\":\"Corso\",\"suburb\":\"Manly\",\"state\":\"NSW\",\"postcode\":\"2095\",\"location\":{\"type\":\"Point\",\"coordinates\":[151.2853785,-33.7990042]}},\"equipmentQuoted\":[{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"GREE\",\"model\":\"GJC18AG-K6DRNG1A\",\"heatingCapacityKw\":0,\"coolingCapacityKw\":5.3}],\"engagement\":{\"factSheetEmail\":{\"status\":\"pending\",\"attempts\":0},\"email\":{\"status\":\"pending\",\"attempts\":0},\"sms\":{\"status\":\"pending\",\"attempts\":0}},\"isActive\":true,\"isDeleted\":false,\"createdAt\":\"2026-09-25T10:00:28.924Z\",\"updatedAt\":\"2026-09-25T10:00:28.924Z\"},\"customer\":{\"id\":\"6ab6463c7be3e3aa92252251\",\"name\""
+   }
+  ],
+  "errors_4xx_5xx": [],
+  "console_errors": [],
+  "jobNumber": "M8N000133",
+  "stored": {
+   "job": {
+    "id": "6ab6463c7be3e3aa92252254",
+    "jobNumber": "M8N000133",
+    "status": "engagement_sent",
+    "installerId": "6aa75206fa4def8883b40ed5",
+    "siteInspectionInstaller": {
+     "_id": "6a7b1c0259748eb7dec5923b",
+     "name": "Belinda Baker"
+    },
+    "contractorGroupId": [],
+    "createdBy": "6a38ef2ea07431960aae2009",
+    "customerId": "6ab6463c7be3e3aa92252251",
+    "activityType": "heating_cooling",
+    "customerType": "business",
+    "averageKwhPerDay": "less_than_273",
+    "certificateRequirements": {
+     "ccew": "required",
+     "coc": "not_required",
+     "cocGas": "not_required",
+     "refrigerantEvidence": "required"
+    },
+    "methodOfLeadGeneration": "Social media",
+    "ownReference": "Q-26-0414",
+    "installationDate": "2026-10-28T00:00:00.000Z",
+    "createdFrom": "add_job",
+    "address": {
+     "fullAddress": "10 The Corso, Manly NSW 2095, Australia",
+     "isManual": false,
+     "unitType": "",
+     "unitNumber": "",
+     "streetNumber": "10",
+     "streetName": "The",
+     "streetType": "Corso",
+     "suburb": "Manly",
+     "state": "NSW",
+     "postcode": "2095",
+     "location": {
+      "type": "Point",
+      "coordinates": [
+       151.2853785,
+       -33.7990042
+      ]
+     }
+    },
+    "equipmentQuoted": [
+     {
+      "originalEquipment": "Installation of a New Air Conditioner",
+      "brand": "GREE",
+      "model": "GJC18AG-K6DRNG1A",
+      "heatingCapacityKw": 0,
+      "coolingCapacityKw": 5.3
+     }
+    ],
+    "engagement": {
+     "factSheetEmail": {
+      "status": "pending",
+      "attempts": 0
+     },
+     "email": {
+      "status": "pending",
+      "attempts": 0
+     },
+     "sms": {
+      "status": "pending",
+      "attempts": 0
+     }
+    },
+    "isActive": true,
+    "isDeleted": false,
+    "createdAt": "2026-09-25T10:00:28.924Z",
+    "updatedAt": "2026-09-25T10:00:28.934Z",
+    "customer": {
+     "id": "6ab6463c7be3e3aa92252251",
+     "name": "Harbourside Cafe Pty Ltd",
+     "email": "daniel.30414@yopmail.com",
+     "phoneNumber": "429326759",
+     "countryCode": "+61",
+     "flagCode": "AU",
+     "abnAcn": "87473035647",
+     "businessType": "",
+     "authFirstName": "Daniel",
+     "authLastName": "Kowalski",
+     "authSignPosition": "Owner",
+     "isActive": true
+    },
+    "installer": {
+     "id": "6aa75206fa4def8883b40ed5",
+     "companyName": "Belinda Test Co",
+     "installerCode": "I01-00013"
+    },
+    "hasProducts": false,
+    "escCertificates": 0,
+    "prcCertificates": 0,
+    "escValue": 0,
+    "prcValue": 0,
+    "stcValue": 0,
+    "totalRebate": 0
+   },
+   "statusList": [
+    {
+     "status": "engagement_sent",
+     "label": "Engagement Sent",
+     "order": 1,
+     "backgroundColor": "#FFF4D6",
+     "textColor": "#8A6D00"
+    },
+    {
+     "status": "site_assessment_and_nomination_requested",
+     "label": "Site Assessment and Nomination Requested",
+     "order": 2,
+     "backgroundColor": "#E3EDFB",
+     "textColor": "#1B4E8A"
+    },
+    {
+     "status": "site_assessment_requested",
+     "label": "Site Assessment Requested",
+     "order": 3,
+     "backgroundColor": "#CCF2F0",
+     "textColor": "#0A5C58"
+    },
+    {
+     "status": "site_assessment_complete",
+     "label": "Site Assessment Complete",
+     "order": 4,
+     "backgroundColor": "#00FFFF",
+     "textColor": "#005858"
+    },
+    {
+     "status": "nomination_signature_requested",
+     "label": "Nomination Signature Requested",
+     "order": 5,
+     "backgroundColor": "#CC99FF",
+     "textColor": "#310063"
+    },
+    {
+     "status": "nomination_signed",
+     "label": "Nomination Signed",
+     "order": 6,
+     "backgroundColor": "#D9F2E6",
+     "textColor": "#0B6B4F"
+    },
+    {
+     "status": "photos_started",
+     "label": "Photos Started",
+     "order": 7,
+     "backgroundColor": "#FFFF00",
+     "textColor": "#424200"
+    },
+    {
+     "status": "photos_complete",
+     "label": "Photos Complete",
+     "order": 8,
+     "backgroundColor": "#CC00FF",
+     "textColor": "#FAE8FF"
+    },
+    {
+     "status": "customer_signature_requested",
+     "label": "Customer Signature Requested",
+     "order": 9,
+     "backgroundColor": "#E1DFF6",
+     "textColor": "#4B3FA8"
+    },
+    {
+     "status": "installer_signature_missing",
+     "label": "Installer Signature Missing",
+     "order": 10,
+     "backgroundColor": "#FBCEB1",
+     "textColor": "#5C3A2E"
+    },
+    {
+     "status": "missing_evidence",
+     "label": "Missing Evidence",
+     "order": 11,
+     "backgroundColor": "#FFCCFF",
+     "textColor": "#5B005B"
+    },
+    {
+     "status": "requested_evidence_provided",
+     "label": "Requested Evidence Provided",
+     "order": 12,
+     "backgroundColor": "#FF0066",
+     "textColor": "#FFDEEB"
+    },
+    {
+     "status": "final_review",
+     "label": "Final Review",
+     "order": 13,
+     "backgroundColor": "#FF9900",
+     "textColor": "#FFF7EB"
+    },
+    {
+     "status": "passed_review",
+     "label": "Passed Review",
+     "order": 14,
+     "backgroundColor": "#00FF00",
+     "textColor": "#004800"
+    },
+    {
+     "status": "failed_review",
+     "label": "Failed Review",
+     "order": 15,
+     "backgroundColor": "#FF0000",
+     "textColor": "#FFDADA"
+    },
+    {
+     "status": "ready_to_register",
+     "label": "Ready to Register",
+     "order": 16,
+     "backgroundColor": "#CBDDFB",
+     "textColor": "#000080"
+    },
+    {
+     "status": "submitted_to_tessa",
+     "label": "Submitted to TESSA",
+     "order": 17,
+     "backgroundColor": "#E6F3FF",
+     "textColor": "#0066CC"
+    },
+    {
+     "status": "ready_to_pay",
+     "label": "Ready to Pay",
+     "order": 19,
+     "backgroundColor": "#CCFFCC",
+     "textColor": "#005200"
+    },
+    {
+     "status": "paid",
+     "label": "Paid",
+     "order": 20,
+     "backgroundColor": "#00B050",
+     "textColor": "#D3FFE7"
+    },
+    {
+     "status": "archived",
+     "label": "Archived",
+     "order": 21,
+     "backgroundColor": "#808080",
+     "textColor": "#FFFFFF"
+    },
+    {
+     "status": "cancelled",
+     "label": "Cancelled",
+     "order": 22,
+     "backgroundColor": "#FFDADA",
+     "textColor": "#B00020"
+    },
+    {
+     "status": "ineligible",
+     "label": "Ineligible",
+     "order": 23,
+     "backgroundColor": "#EEEEEE",
+     "textColor": "#616161"
+    },
+    {
+     "status": "spare",
+     "label": "Spare",
+     "order": 24,
+     "backgroundColor": "#F0F0F0",
+     "textColor": "#757575"
+    }
+   ]
+  },
+  "checks": {
+   "activityType": {
+    "entered": "Heating & Cooling",
+    "match": "MISSING",
+    "where": []
+   },
+   "buildingType": {
+    "entered": "Small Business Site (less than 273 kWh/day)",
+    "match": "MISSING",
+    "where": []
+   },
+   "businessName": {
+    "entered": "Harbourside Cafe Pty Ltd",
+    "match": "exact",
+    "where": [
+     "job.customer.name"
+    ]
+   },
+   "signatoryFirstName": {
+    "entered": "Daniel",
+    "match": "exact",
+    "where": [
+     "job.customer.authFirstName"
+    ]
+   },
+   "signatoryLastName": {
+    "entered": "Kowalski",
+    "match": "exact",
+    "where": [
+     "job.customer.authLastName"
+    ]
+   },
+   "signatoryPosition": {
+    "entered": "Owner",
+    "match": "exact",
+    "where": [
+     "job.customer.authSignPosition"
+    ]
+   },
+   "signatoryPhone": {
+    "entered": "429326759",
+    "match": "exact",
+    "where": [
+     "job.customer.phoneNumber"
+    ]
+   },
+   "signatoryEmail": {
+    "entered": "daniel.30414@yopmail.com",
+    "match": "exact",
+    "where": [
+     "job.customer.email"
+    ]
+   },
+   "abnAcn": {
+    "entered": "87473035647",
+    "match": "exact",
+    "where": [
+     "job.customer.abnAcn"
+    ]
+   },
+   "addressSearch": {
+    "entered": "10 The Corso Manly",
+    "match": "MISSING",
+    "where": []
+   },
+   "postcode": {
+    "entered": "2095",
+    "match": "exact",
+    "where": [
+     "job.address.postcode"
+    ]
+   },
+   "leadMethod": {
+    "entered": "Social media",
+    "match": "exact",
+    "where": [
+     "job.methodOfLeadGeneration"
+    ]
+   },
+   "ownReference": {
+    "entered": "Q-26-0414",
+    "match": "exact",
+    "where": [
+     "job.ownReference"
+    ]
+   },
+   "installationDate": {
+    "entered": "28-10-2026",
+    "match": "MISSING",
+    "where": []
+   },
+   "addressSelected": {
+    "entered": "10 The Corso, Manly NSW 2095, Australia",
+    "match": "exact",
+    "where": [
+     "job.address.fullAddress"
+    ]
+   },
+   "installer": {
+    "entered": "Belinda Test Co",
+    "match": "exact",
+    "where": [
+     "job.installer.companyName"
+    ]
+   },
+   "siteInspectionInstaller": {
+    "entered": "Belinda Baker",
+    "match": "exact",
+    "where": [
+     "job.siteInspectionInstaller.name"
+    ]
+   },
+   "product1.brand": {
+    "entered": "GREE",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[0].brand"
+    ]
+   },
+   "product1.model": {
+    "entered": "GJC18AG-K6DRNG1A",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[0].model"
+    ]
+   }
+  }
+ },
+ {
+  "n": 4,
+  "label": "HWHP / Small Business / Hornsby",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "script_error": "TimeoutError: Locator.click: Timeout 20000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"dialog\").locator(\".border-dashed.border-gray-300\").first.get_by_text(\"Model\").first.locator(\"xpath=ancestor::*[.//*[contains(@class,\\\"select__control\\\")]][1]\").locator(\".select__control\").first\n    - locator resolved to ",
+  "entered": {
+   "activityType": "Hot Water Heat Pump",
+   "buildingType": "Small Business Site",
+   "businessName": "Blue Gum Veterinary Clinic Pty Ltd",
+   "signatoryFirstName": "Sarah",
+   "signatoryLastName": "O'Connor",
+   "signatoryPosition": "Practice Manager",
+   "signatoryPhone": "414991559",
+   "signatoryEmail": "sarah.30437@yopmail.com",
+   "abnAcn": "65224078036",
+   "addressSearch": "5 Hunter Street Hornsby",
+   "postcode": "2077",
+   "leadMethod": "Email campaign",
+   "ownReference": "Q-26-0415",
+   "installationDate": "04-11-2026",
+   "addressSelected": "5 Hunter St, Hornsby NSW 2077, Australia",
+   "installer": "Belinda Testing",
+   "siteInspectionInstaller": "Belinda Baker"
+  },
+  "writes": [],
+  "errors_4xx_5xx": [],
+  "console_errors": []
+ },
+ {
+  "n": 5,
+  "label": "H&C / Residential / 2 products / Newcastle",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "products_entered": [
+   {
+    "originalEquipment": "Installation of a New Air Conditioner",
+    "brand": "AUX",
+    "model": "ARV-H180-NR1B-AU",
+    "block_text": "PRODUCT 1\nRemove\n*\nOriginal Equipment\nInstallation of a New Air Conditioner\n*\nBrand\nAUX\n*\nModel\noption ARV-H180-NR1B-AU, selected.\nARV-H180-NR1B-AU\nHeating Capacity (kW)\nCooling Capacity (kW)\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Heating Capacity": "21.5",
+     "Enter Cooling Capacity": "18.1",
+     "Enter Warranty Period": ""
+    }
+   },
+   {
+    "originalEquipment": "Installation of a New Air Conditioner",
+    "brand": "DEVANTI",
+    "model": "WAC-05C-WH",
+    "block_text": "PRODUCT 2\nRemove\n*\nOriginal Equipment\nInstallation of a New Air Conditioner\n*\nBrand\nDEVANTI\n*\nModel\noption WAC-05C-WH, selected.\nWAC-05C-WH\nHeating Capacity (kW)\nCooling Capacity (kW)\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Heating Capacity": "0",
+     "Enter Cooling Capacity": "1.7",
+     "Enter Warranty Period": ""
+    }
+   }
+  ],
+  "created": true,
+  "entered": {
+   "activityType": "Heating & Cooling",
+   "buildingType": "Residential Building",
+   "customerName": "Liam O'Brien",
+   "email": "liam.o.brien.30472@yopmail.com",
+   "phone": "474468114",
+   "abnAcn": "55508026030",
+   "addressSearch": "45 Hunter Street Newcastle",
+   "postcode": "2300",
+   "leadMethod": "Customer initiated contact",
+   "ownReference": "Q-26-0416",
+   "installationDate": "11-11-2026",
+   "addressSelected": "45 Hunter St, Newcastle West NSW 2300, Australia",
+   "installer": "Birds HVAC",
+   "siteInspectionInstaller": "Gopika Jani"
+  },
+  "writes": [
+   {
+    "method": "POST",
+    "path": "/jobs",
+    "status": 201,
+    "req": "{\"installerId\":\"6aa12f75fa4def8883b3c978\",\"siteInspectionInstallerId\":\"6a60ac79fbc29557832fb6f1\",\"activityType\":\"heating_cooling\",\"customerType\":\"residential\",\"methodOfLeadGeneration\":\"Customer initiated contact\",\"ownReference\":\"Q-26-0416\",\"installationDate\":\"2026-11-11\",\"customer\":{\"name\":\"Liam O'Brien\",\"email\":\"liam.o.brien.30472@yopmail.com\",\"phoneNumber\":\"474468114\",\"countryCode\":\"+61\",\"flagCode\":\"AU\",\"abnAcn\":\"55508026030\"},\"address\":{\"fullAddress\":\"45 Hunter St, Newcastle West NSW 2300, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"45\",\"streetName\":\"Hunter\",\"streetType\":\"Street\",\"suburb\":\"Newcastle West\",\"state\":\"NSW\",\"postcode\":\"2300\"},\"equipmentQuoted\":[{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"AUX\",\"model\":\"ARV-H180-NR1B-AU\",\"coolingCapacityKw\":18.1,\"heatingCapacityKw\":21.5},{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"DEVANTI\",\"model\":\"WAC-05C-WH\",\"coolingCapacityKw\":1.7,\"heatingCapacityKw\":0}],\"createdFrom\":\"add_job\"}",
+    "resp": "{\"success\":true,\"statusCode\":201,\"message\":\"Job created successfully\",\"data\":{\"job\":{\"id\":\"6ab646787be3e3aa92252319\",\"jobNumber\":\"M8N000134\",\"status\":\"engagement_sent\",\"installerId\":\"6aa12f75fa4def8883b3c978\",\"siteInspectionInstaller\":{\"_id\":\"6a60ac79fbc29557832fb6f1\"},\"contractorGroupId\":[],\"createdBy\":\"6a38ef2ea07431960aae2009\",\"customerId\":\"6ab646787be3e3aa92252316\",\"activityType\":\"heating_cooling\",\"customerType\":\"residential\",\"certificateRequirements\":{\"ccew\":\"required\",\"coc\":\"not_required\",\"cocGas\":\"not_required\",\"refrigerantEvidence\":\"required\"},\"methodOfLeadGeneration\":\"Customer initiated contact\",\"ownReference\":\"Q-26-0416\",\"installationDate\":\"2026-11-11T00:00:00.000Z\",\"createdFrom\":\"add_job\",\"address\":{\"fullAddress\":\"45 Hunter St, Newcastle West NSW 2300, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"45\",\"streetName\":\"Hunter\",\"streetType\":\"Street\",\"suburb\":\"Newcastle West\",\"state\":\"NSW\",\"postcode\":\"2300\",\"location\":{\"type\":\"Point\",\"coordinates\":[151.7636251,-32.9270359]}},\"equipmentQuoted\":[{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"AUX\",\"model\":\"ARV-H180-NR1B-AU\",\"heatingCapacityKw\":21.5,\"coolingCapacityKw\":18.1},{\"originalEquipment\":\"Installation of a New Air Conditioner\",\"brand\":\"DEVANTI\",\"model\":\"WAC-05C-WH\",\"heatingCapacityKw\":0,\"coolingCapacityKw\":1.7}],\"engagement\":{\"factSheetEmail\":{\"status\":\"pending\",\"attempts\":0},\"email\":{\"status\":\"pending\",\"attempts\":0},\"sms\":{\"status\":\"pending\",\"attempts\":0}},\"isActive"
+   }
+  ],
+  "errors_4xx_5xx": [],
+  "console_errors": [],
+  "jobNumber": "M8N000134",
+  "stored": {
+   "job": {
+    "id": "6ab646787be3e3aa92252319",
+    "jobNumber": "M8N000134",
+    "status": "engagement_sent",
+    "installerId": "6aa12f75fa4def8883b3c978",
+    "siteInspectionInstaller": {
+     "_id": "6a60ac79fbc29557832fb6f1",
+     "name": "Gopika Jani"
+    },
+    "contractorGroupId": [],
+    "createdBy": "6a38ef2ea07431960aae2009",
+    "customerId": "6ab646787be3e3aa92252316",
+    "activityType": "heating_cooling",
+    "customerType": "residential",
+    "certificateRequirements": {
+     "ccew": "required",
+     "coc": "not_required",
+     "cocGas": "not_required",
+     "refrigerantEvidence": "required"
+    },
+    "methodOfLeadGeneration": "Customer initiated contact",
+    "ownReference": "Q-26-0416",
+    "installationDate": "2026-11-11T00:00:00.000Z",
+    "createdFrom": "add_job",
+    "address": {
+     "fullAddress": "45 Hunter St, Newcastle West NSW 2300, Australia",
+     "isManual": false,
+     "unitType": "",
+     "unitNumber": "",
+     "streetNumber": "45",
+     "streetName": "Hunter",
+     "streetType": "Street",
+     "suburb": "Newcastle West",
+     "state": "NSW",
+     "postcode": "2300",
+     "location": {
+      "type": "Point",
+      "coordinates": [
+       151.7636251,
+       -32.9270359
+      ]
+     }
+    },
+    "equipmentQuoted": [
+     {
+      "originalEquipment": "Installation of a New Air Conditioner",
+      "brand": "AUX",
+      "model": "ARV-H180-NR1B-AU",
+      "heatingCapacityKw": 21.5,
+      "coolingCapacityKw": 18.1
+     },
+     {
+      "originalEquipment": "Installation of a New Air Conditioner",
+      "brand": "DEVANTI",
+      "model": "WAC-05C-WH",
+      "heatingCapacityKw": 0,
+      "coolingCapacityKw": 1.7
+     }
+    ],
+    "engagement": {
+     "factSheetEmail": {
+      "status": "pending",
+      "attempts": 0
+     },
+     "email": {
+      "status": "pending",
+      "attempts": 0
+     },
+     "sms": {
+      "status": "pending",
+      "attempts": 0
+     }
+    },
+    "isActive": true,
+    "isDeleted": false,
+    "createdAt": "2026-09-25T10:01:28.881Z",
+    "updatedAt": "2026-09-25T10:01:28.890Z",
+    "customer": {
+     "id": "6ab646787be3e3aa92252316",
+     "name": "Liam O'Brien",
+     "email": "liam.o.brien.30472@yopmail.com",
+     "phoneNumber": "474468114",
+     "countryCode": "+61",
+     "flagCode": "AU",
+     "abnAcn": "55508026030",
+     "isActive": true
+    },
+    "installer": {
+     "id": "6aa12f75fa4def8883b3c978",
+     "companyName": "Birds HVAC",
+     "installerCode": "I01-00012"
+    },
+    "hasProducts": false,
+    "escCertificates": 0,
+    "prcCertificates": 0,
+    "escValue": 0,
+    "prcValue": 0,
+    "stcValue": 0,
+    "totalRebate": 0
+   },
+   "statusList": [
+    {
+     "status": "engagement_sent",
+     "label": "Engagement Sent",
+     "order": 1,
+     "backgroundColor": "#FFF4D6",
+     "textColor": "#8A6D00"
+    },
+    {
+     "status": "site_assessment_and_nomination_requested",
+     "label": "Site Assessment and Nomination Requested",
+     "order": 2,
+     "backgroundColor": "#E3EDFB",
+     "textColor": "#1B4E8A"
+    },
+    {
+     "status": "site_assessment_requested",
+     "label": "Site Assessment Requested",
+     "order": 3,
+     "backgroundColor": "#CCF2F0",
+     "textColor": "#0A5C58"
+    },
+    {
+     "status": "site_assessment_complete",
+     "label": "Site Assessment Complete",
+     "order": 4,
+     "backgroundColor": "#00FFFF",
+     "textColor": "#005858"
+    },
+    {
+     "status": "nomination_signature_requested",
+     "label": "Nomination Signature Requested",
+     "order": 5,
+     "backgroundColor": "#CC99FF",
+     "textColor": "#310063"
+    },
+    {
+     "status": "nomination_signed",
+     "label": "Nomination Signed",
+     "order": 6,
+     "backgroundColor": "#D9F2E6",
+     "textColor": "#0B6B4F"
+    },
+    {
+     "status": "photos_started",
+     "label": "Photos Started",
+     "order": 7,
+     "backgroundColor": "#FFFF00",
+     "textColor": "#424200"
+    },
+    {
+     "status": "photos_complete",
+     "label": "Photos Complete",
+     "order": 8,
+     "backgroundColor": "#CC00FF",
+     "textColor": "#FAE8FF"
+    },
+    {
+     "status": "customer_signature_requested",
+     "label": "Customer Signature Requested",
+     "order": 9,
+     "backgroundColor": "#E1DFF6",
+     "textColor": "#4B3FA8"
+    },
+    {
+     "status": "installer_signature_missing",
+     "label": "Installer Signature Missing",
+     "order": 10,
+     "backgroundColor": "#FBCEB1",
+     "textColor": "#5C3A2E"
+    },
+    {
+     "status": "missing_evidence",
+     "label": "Missing Evidence",
+     "order": 11,
+     "backgroundColor": "#FFCCFF",
+     "textColor": "#5B005B"
+    },
+    {
+     "status": "requested_evidence_provided",
+     "label": "Requested Evidence Provided",
+     "order": 12,
+     "backgroundColor": "#FF0066",
+     "textColor": "#FFDEEB"
+    },
+    {
+     "status": "final_review",
+     "label": "Final Review",
+     "order": 13,
+     "backgroundColor": "#FF9900",
+     "textColor": "#FFF7EB"
+    },
+    {
+     "status": "passed_review",
+     "label": "Passed Review",
+     "order": 14,
+     "backgroundColor": "#00FF00",
+     "textColor": "#004800"
+    },
+    {
+     "status": "failed_review",
+     "label": "Failed Review",
+     "order": 15,
+     "backgroundColor": "#FF0000",
+     "textColor": "#FFDADA"
+    },
+    {
+     "status": "ready_to_register",
+     "label": "Ready to Register",
+     "order": 16,
+     "backgroundColor": "#CBDDFB",
+     "textColor": "#000080"
+    },
+    {
+     "status": "submitted_to_tessa",
+     "label": "Submitted to TESSA",
+     "order": 17,
+     "backgroundColor": "#E6F3FF",
+     "textColor": "#0066CC"
+    },
+    {
+     "status": "ready_to_pay",
+     "label": "Ready to Pay",
+     "order": 19,
+     "backgroundColor": "#CCFFCC",
+     "textColor": "#005200"
+    },
+    {
+     "status": "paid",
+     "label": "Paid",
+     "order": 20,
+     "backgroundColor": "#00B050",
+     "textColor": "#D3FFE7"
+    },
+    {
+     "status": "archived",
+     "label": "Archived",
+     "order": 21,
+     "backgroundColor": "#808080",
+     "textColor": "#FFFFFF"
+    },
+    {
+     "status": "cancelled",
+     "label": "Cancelled",
+     "order": 22,
+     "backgroundColor": "#FFDADA",
+     "textColor": "#B00020"
+    },
+    {
+     "status": "ineligible",
+     "label": "Ineligible",
+     "order": 23,
+     "backgroundColor": "#EEEEEE",
+     "textColor": "#616161"
+    },
+    {
+     "status": "spare",
+     "label": "Spare",
+     "order": 24,
+     "backgroundColor": "#F0F0F0",
+     "textColor": "#757575"
+    }
+   ]
+  },
+  "checks": {
+   "activityType": {
+    "entered": "Heating & Cooling",
+    "match": "MISSING",
+    "where": []
+   },
+   "buildingType": {
+    "entered": "Residential Building",
+    "match": "MISSING",
+    "where": []
+   },
+   "customerName": {
+    "entered": "Liam O'Brien",
+    "match": "exact",
+    "where": [
+     "job.customer.name"
+    ]
+   },
+   "email": {
+    "entered": "liam.o.brien.30472@yopmail.com",
+    "match": "exact",
+    "where": [
+     "job.customer.email"
+    ]
+   },
+   "phone": {
+    "entered": "474468114",
+    "match": "exact",
+    "where": [
+     "job.customer.phoneNumber"
+    ]
+   },
+   "abnAcn": {
+    "entered": "55508026030",
+    "match": "exact",
+    "where": [
+     "job.customer.abnAcn"
+    ]
+   },
+   "addressSearch": {
+    "entered": "45 Hunter Street Newcastle",
+    "match": "MISSING",
+    "where": []
+   },
+   "postcode": {
+    "entered": "2300",
+    "match": "exact",
+    "where": [
+     "job.address.postcode"
+    ]
+   },
+   "leadMethod": {
+    "entered": "Customer initiated contact",
+    "match": "exact",
+    "where": [
+     "job.methodOfLeadGeneration"
+    ]
+   },
+   "ownReference": {
+    "entered": "Q-26-0416",
+    "match": "exact",
+    "where": [
+     "job.ownReference"
+    ]
+   },
+   "installationDate": {
+    "entered": "11-11-2026",
+    "match": "MISSING",
+    "where": []
+   },
+   "addressSelected": {
+    "entered": "45 Hunter St, Newcastle West NSW 2300, Australia",
+    "match": "exact",
+    "where": [
+     "job.address.fullAddress"
+    ]
+   },
+   "installer": {
+    "entered": "Birds HVAC",
+    "match": "exact",
+    "where": [
+     "job.installer.companyName"
+    ]
+   },
+   "siteInspectionInstaller": {
+    "entered": "Gopika Jani",
+    "match": "exact",
+    "where": [
+     "job.siteInspectionInstaller.name"
+    ]
+   },
+   "product1.brand": {
+    "entered": "AUX",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[0].brand"
+    ]
+   },
+   "product1.model": {
+    "entered": "ARV-H180-NR1B-AU",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[0].model"
+    ]
+   },
+   "product2.brand": {
+    "entered": "DEVANTI",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[1].brand"
+    ]
+   },
+   "product2.model": {
+    "entered": "WAC-05C-WH",
+    "match": "exact",
+    "where": [
+     "job.equipmentQuoted[1].model"
+    ]
+   }
+  }
+ },
+ {
+  "n": 6,
+  "label": "HWHP / Residential / Wollongong",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "script_error": "TimeoutError: Locator.click: Timeout 20000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"dialog\").locator(\".border-dashed.border-gray-300\").first.get_by_text(\"Model\").first.locator(\"xpath=ancestor::*[.//*[contains(@class,\\\"select__control\\\")]][1]\").locator(\".select__control\").first\n    - locator resolved to ",
+  "entered": {
+   "activityType": "Hot Water Heat Pump",
+   "buildingType": "Residential Building",
+   "newSystem": "Heat pump",
+   "customerName": "Aisha Khan",
+   "email": "aisha.khan.30497@yopmail.com",
+   "phone": "451075016",
+   "abnAcn": "63085391339",
+   "addressSearch": "100 Crown Street Wollongong",
+   "postcode": "2500",
+   "leadMethod": "Social media",
+   "ownReference": "Q-26-0417",
+   "installationDate": "18-11-2026",
+   "addressSelected": "100 Crown St, Wollongong NSW 2500, Australia",
+   "installer": "Birvis HVAC",
+   "siteInspectionInstaller": "Kiara Smith"
+  },
+  "writes": [],
+  "errors_4xx_5xx": [],
+  "console_errors": []
+ }
+]

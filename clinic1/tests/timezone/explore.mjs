@@ -1,0 +1,18 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport: { width: 1440, height: 900 } });
+const p = await c.newPage();
+const reqs = [];
+p.on('response', r => { const u = r.url(); if (/api/.test(u) && /schedul|availab|location|slot|practition/i.test(u)) reqs.push(r.status() + ' ' + r.request().method() + ' ' + u); });
+await p.goto('https://dev.clinic1.ai/auth/sign-in');
+await p.locator('input[type="email"], input[name="email"]').first().fill('Jainamb@softwareco.com');
+await p.locator('input[type="password"]').first().fill('Test@123');
+await p.locator('button[type="submit"]').first().click();
+await p.waitForURL(u => !u.pathname.includes('/auth/sign-in'), { timeout: 30000 }).catch(e => console.log('login wait fail', e.message));
+await p.waitForTimeout(6000);
+console.log('URL', p.url());
+await p.screenshot({ path: 'test-results/tz-landing.png' });
+console.log((await p.locator('nav a, aside a, a').allInnerTexts()).map(s=>s.trim()).filter(Boolean).slice(0,60));
+console.log(reqs.slice(0,30).join('\n'));
+await c.storageState({ path: 'playwright/.auth/tz-user.json' });
+await b.close();

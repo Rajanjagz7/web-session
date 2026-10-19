@@ -1,0 +1,520 @@
+"ID","Module","Category","Priority","Preconditions","Steps","Expected result","Actual result","Status","Automation source","Browser"
+"UI-320","Responsive login","Edge","P2","Reachable development site; fresh browser context","Set title-specified viewport; open login; verify email/password/submit controls are visible and within viewport width; check no horizontal document overflow","Login is usable at 320x568","All test assertions passed","passed","accessibility.spec.ts:3","chromium"
+"UI-375","Responsive login","Edge","P2","Reachable development site; fresh browser context","Set title-specified viewport; open login; verify email/password/submit controls are visible and within viewport width; check no horizontal document overflow","Login is usable at 375x812","All test assertions passed","passed","accessibility.spec.ts:3","chromium"
+"UI-768","Responsive login","Edge","P2","Reachable development site; fresh browser context","Set title-specified viewport; open login; verify email/password/submit controls are visible and within viewport width; check no horizontal document overflow","Login is usable at 768x1024","All test assertions passed","passed","accessibility.spec.ts:3","chromium"
+"UI-1440","Responsive login","Edge","P2","Reachable development site; fresh browser context","Set title-specified viewport; open login; verify email/password/submit controls are visible and within viewport width; check no horizontal document overflow","Login is usable at 1440x900","All test assertions passed","passed","accessibility.spec.ts:3","chromium"
+"A11Y-001","Login accessibility","Accessibility","P2","Reachable development site; fresh browser context","Open login; inspect label/button semantics or submit empty fields for error semantics; exercise focus and keyboard navigation where specified","Email has a programmatically associated label","Error: expect(locator).toBeVisible() failed
+
+Locator: getByLabel('Email ID', { exact: true })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect ""toBeVisible"" with timeout 8000ms
+  - waiting for getByLabel('Email ID', { exact: true })
+
+
+  11 |
+  12 | test('A11Y-001 | Accessibility | Email has a programmatically associated label',async({page})=>{
+> 13 |   await new LoginPage(page).open();await expect(page.getByLabel('Email ID',{exact:true})).toBeVisible();
+     |                                                                                           ^
+  14 | });
+  15 | test('A11Y-002 | Accessibility | Password has a programmatically associated label',async({page})=>{
+  16 |   await new LoginPage(page).open();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();
+    at tests/accessibility.spec.ts:13:91","failed","accessibility.spec.ts:12","chromium"
+"A11Y-002","Login accessibility","Accessibility","P2","Reachable development site; fresh browser context","Open login; inspect label/button semantics or submit empty fields for error semantics; exercise focus and keyboard navigation where specified","Password has a programmatically associated label","Error: expect(locator).toBeVisible() failed
+
+Locator: getByLabel('Password', { exact: true })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect ""toBeVisible"" with timeout 8000ms
+  - waiting for getByLabel('Password', { exact: true })
+
+
+  14 | });
+  15 | test('A11Y-002 | Accessibility | Password has a programmatically associated label',async({page})=>{
+> 16 |   await new LoginPage(page).open();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();
+     |                                                                                           ^
+  17 | });
+  18 | test('A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button',async({page})=>{
+  19 |   await new LoginPage(page).open();const toggle=page.getByRole('button',{name:/show password|reveal password|toggle password/i});
+    at tests/accessibility.spec.ts:16:91","failed","accessibility.spec.ts:15","chromium"
+"A11Y-003","Login accessibility","Accessibility","P2","Reachable development site; fresh browser context","Open login; inspect label/button semantics or submit empty fields for error semantics; exercise focus and keyboard navigation where specified","Reveal password has a keyboard-accessible named button","Error: expect(locator).toBeVisible() failed
+
+Locator: getByRole('button', { name: /show password|reveal password|toggle password/i })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect ""toBeVisible"" with timeout 8000ms
+  - waiting for getByRole('button', { name: /show password|reveal password|toggle password/i })
+
+
+  18 | test('A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button',async({page})=>{
+  19 |   await new LoginPage(page).open();const toggle=page.getByRole('button',{name:/show password|reveal password|toggle password/i});
+> 20 |   await expect(toggle).toBeVisible();await toggle.focus();await expect(toggle).toBeFocused();
+     |                        ^
+  21 | });
+  22 | test('A11Y-004 | Accessibility | Validation errors identify invalid fields',async({page})=>{
+  23 |   const login=new LoginPage(page);await login.open();await login.submit.click();
+    at tests/accessibility.spec.ts:20:24","failed","accessibility.spec.ts:18","chromium"
+"A11Y-004","Login accessibility","Accessibility","P2","Reachable development site; fresh browser context","Open login; inspect label/button semantics or submit empty fields for error semantics; exercise focus and keyboard navigation where specified","Validation errors identify invalid fields","Error: expect(locator).toHaveAttribute(expected) failed
+
+Locator:  locator('input[name=""email""]')
+Expected: ""true""
+Received: """"
+Timeout:  8000ms
+
+Call log:
+  - Expect ""toHaveAttribute"" with timeout 8000ms
+  - waiting for locator('input[name=""email""]')
+    12 × locator resolved to <input value="""" type=""text"" name=""email"" autocomplete=""off"" placeholder=""Email ID"" class=""input input-md h-11 input-invalid""/>
+       - unexpected value ""null""
+
+
+  22 | test('A11Y-004 | Accessibility | Validation errors identify invalid fields',async({page})=>{
+  23 |   const login=new LoginPage(page);await login.open();await login.submit.click();
+> 24 |   await expect(login.email).toHaveAttribute('aria-invalid','true');
+     |                             ^
+  25 |   await expect(login.password).toHaveAttribute('aria-invalid','true');
+  26 |   const ids=await login.email.getAttribute('aria-describedby');expect(ids).toBeTruthy();
+  27 |   for(const id of ids!.split(/\s+/)) await expect(page.locator(`[id=""${id}""]`)).toBeVisible();
+    at tests/accessibility.spec.ts:24:29","failed","accessibility.spec.ts:22","chromium"
+"A11Y-005","Login accessibility","Positive","P2","Reachable development site; fresh browser context","Open login; inspect label/button semantics or submit empty fields for error semantics; exercise focus and keyboard navigation where specified","Keyboard tab order reaches email, password, submit","All test assertions passed","passed","accessibility.spec.ts:29","chromium"
+"AUTH-001","Authentication","Positive","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Login page renders over HTTPS","All test assertions passed","passed","auth.spec.ts:3","chromium"
+"AUTH-002","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Both fields empty","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-003","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email empty","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-004","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Password empty","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-005","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email whitespace only","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-006","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email missing at sign","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-007","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email missing local part","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-008","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email missing domain","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-009","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email multiple at signs","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-010","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email embedded space","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-011","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email consecutive dots","Error: expect(locator).toBeVisible() failed
+
+Locator: locator('.form-explain').first()
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect ""soft toBeVisible"" with timeout 8000ms
+  - waiting for locator('.form-explain').first()
+
+
+  31 |   await page.route(LOGIN_API, async r => {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});
+  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();
+> 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();
+     |                                                            ^
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+    at tests/auth.spec.ts:33:60","failed","auth.spec.ts:27","chromium"
+"AUTH-012","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email leading dot","Error: expect(locator).toBeVisible() failed
+
+Locator: locator('.form-explain').first()
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect ""soft toBeVisible"" with timeout 8000ms
+  - waiting for locator('.form-explain').first()
+
+
+  31 |   await page.route(LOGIN_API, async r => {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});
+  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();
+> 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();
+     |                                                            ^
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+    at tests/auth.spec.ts:33:60","failed","auth.spec.ts:27","chromium"
+"AUTH-013","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Email trailing local dot","Error: expect(locator).toBeVisible() failed
+
+Locator: locator('.form-explain').first()
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect ""soft toBeVisible"" with timeout 8000ms
+  - waiting for locator('.form-explain').first()
+
+
+  31 |   await page.route(LOGIN_API, async r => {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});
+  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();
+> 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();
+     |                                                            ^
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+    at tests/auth.spec.ts:33:60","failed","auth.spec.ts:27","chromium"
+"AUTH-014","Authentication","Negative","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Markup entered as email","All test assertions passed","passed","auth.spec.ts:27","chromium"
+"AUTH-015","Authentication","Positive","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Valid credentials reach Jobs using Enter","All test assertions passed","passed","auth.spec.ts:40","chromium"
+"AUTH-016","Authentication","Negative LIVE","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Incorrect password is rejected","All test assertions passed","passed","auth.spec.ts:47","chromium"
+"AUTH-017","Authentication","Negative LIVE","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Nonexistent account is rejected","All test assertions passed","passed","auth.spec.ts:56","chromium"
+"AUTH-018","Authentication","Edge","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Password reveal toggle preserves input and remasks","All test assertions passed","passed","auth.spec.ts:65","chromium"
+"AUTH-019","Authentication","Positive","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Validation clears when inputs are corrected","All test assertions passed","passed","auth.spec.ts:73","chromium"
+"AUTH-20","Authentication","Edge MOCK","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Syntactically valid email 1 reaches authentication","All test assertions passed","passed","auth.spec.ts:82","chromium"
+"AUTH-21","Authentication","Edge MOCK","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Syntactically valid email 2 reaches authentication","All test assertions passed","passed","auth.spec.ts:82","chromium"
+"AUTH-22","Authentication","Edge MOCK","P2","Reachable development site; fresh browser context","Open login; enter the exact test data in auth.spec.ts; submit; assert inline validation with zero requests for invalid forms, or intercepted authentication for valid syntax","Syntactically valid email 3 reaches authentication","All test assertions passed","passed","auth.spec.ts:82","chromium"
+"AUTH-023","Authentication","Edge MOCK","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Long and Unicode passwords are not silently truncated","All test assertions passed","passed","auth.spec.ts:88","chromium"
+"AUTH-024","Authentication","Edge MOCK","P2","Reachable development site; fresh browser context","Open /log-in; interact with the control or input described in the test title; assert the specified behavior","Password leading/trailing spaces are preserved","All test assertions passed","passed","auth.spec.ts:95","chromium"
+"MOD-001","Dashboard loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Dashboard loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 58
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/installer/filter/list"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-tracking"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-count"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-breakdown"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/top-product"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-rebate"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/avg-complete-time"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-tracking"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-count"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-breakdown"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/top-product"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-rebate"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/avg-complete-time"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/dashboard/job-tracking"",
++     ""status"": 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:mo","failed","modules.spec.ts:6","chromium"
+"MOD-002","Projects loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Projects loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 14
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/installer/filter/list"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/site/list"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/site/list"",
++     ""status"": 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-003","All loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","All loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-004","In Progress loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","In Progress loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/jobs"",
++     ""status"": 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-005","Action Required loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Action Required loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/jobs"",
++     ""status"": 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-006","Being Assessed loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Being Assessed loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/jobs"",
++     ""status"": 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-007","Completed loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Completed loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/jobs"",
++     ""status"": 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-008","Archived loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Archived loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/jobs"",
++     ""status"": 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-010","Installers loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Installers loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-011","Installer Users loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Installer Users loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-012","Matrix loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Matrix loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-013","Admin Users loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Admin Users loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-014","CMS loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","CMS loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-015","Activity loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Activity loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-016","Products loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Products loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-017","Rebates loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Rebates loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/rebate/installer/list"",
++     ""status"": 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-018","Calculator loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Calculator loads with healthy data requests","All test assertions passed","passed","modules.spec.ts:6","chromium"
+"MOD-019","Statistics loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Statistics loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 14
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/installer/filter/list"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/calculator-usage/installer/list"",
++     ""status"": 404,
++   },
++   Object {
++     ""path"": ""/api/v1/calculator-usage/installer/list"",
++     ""status"": 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-020","Invoices loads with healthy data requests","Positive LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Invoices loads with healthy data requests","Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     ""path"": ""/api/v1/invoice/list"",
++     ""status"": 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78","failed","modules.spec.ts:6","chromium"
+"MOD-LOGS","Exception Logs currently redirects this account to access-denied","Characterization LIVE","P1","Authenticated approved admin session; read-only access","Navigate to the discovered route; verify page heading/table; wait for initial requests to settle; record API errors and uncaught JavaScript errors","Exception Logs currently redirects this account to access-denied","All test assertions passed","passed","modules.spec.ts:22","chromium"
+"SEARCH-001","List search","Edge LIVE","P2","Authenticated approved admin session; healthy discovered list endpoint","Open named list; enter unique no-match marker; verify successful search response and no-data state; clear input and verify successful reload","Installers no-match search and clear","All test assertions passed","passed","modules.spec.ts:29","chromium"
+"SEARCH-002","List search","Edge LIVE","P2","Authenticated approved admin session; healthy discovered list endpoint","Open named list; enter unique no-match marker; verify successful search response and no-data state; clear input and verify successful reload","Matrix no-match search and clear","All test assertions passed","passed","modules.spec.ts:29","chromium"
+"SEARCH-003","List search","Edge LIVE","P2","Authenticated approved admin session; healthy discovered list endpoint","Open named list; enter unique no-match marker; verify successful search response and no-data state; clear input and verify successful reload","Admin Users no-match search and clear","All test assertions passed","passed","modules.spec.ts:29","chromium"
+"SEARCH-004","List search","Edge LIVE","P2","Authenticated approved admin session; healthy discovered list endpoint","Open named list; enter unique no-match marker; verify successful search response and no-data state; clear input and verify successful reload","Activity no-match search and clear","Error: Search HTTP status must be 200
+
+expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 400
+
+  32 |   const marker='qa_no_match_7d9f2c_20260914';
+  33 |   const response=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===module.searchEndpoint&&decodeURIComponent(r.url()).includes(marker));
+> 34 |   await search.fill(marker);const r=await response;expect(r.status(),'Search HTTP status must be 200').toBe(200);
+     |                                                                                                        ^
+  35 |   await expect(page.getByRole('heading',{name:/no data found|no .*found/i}).first()).toBeVisible();
+  36 |   const reset=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===module.searchEndpoint&&!decodeURIComponent(r.url()).includes(marker));
+  37 |   await search.clear();expect((await reset).ok()).toBe(true);await expect(search).toHaveValue('');
+    at tests/modules.spec.ts:34:104","failed","modules.spec.ts:29","chromium"
+"RES-001","Login resilience","Negative MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","HTTP 401 gives feedback and permits retry","All test assertions passed","passed","resilience.spec.ts:7","chromium"
+"RES-002","Login resilience","Negative MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","HTTP 429 gives feedback and permits retry","All test assertions passed","passed","resilience.spec.ts:7","chromium"
+"RES-003","Login resilience","Negative MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","HTTP 500 gives feedback and permits retry","All test assertions passed","passed","resilience.spec.ts:7","chromium"
+"RES-004","Login resilience","Negative MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","HTTP 503 gives feedback and permits retry","All test assertions passed","passed","resilience.spec.ts:7","chromium"
+"RES-005","Login resilience","Edge MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","Double submit sends only one pending login request","All test assertions passed","passed","resilience.spec.ts:14","chromium"
+"RES-006","Login resilience","Negative MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","Network failure restores login and displays error","All test assertions passed","passed","resilience.spec.ts:28","chromium"
+"RES-007","Login resilience","Edge MOCK","P2","Login page loaded; synthetic credentials; intercepted login request","Intercept login with specified HTTP/network/pending outcome; submit synthetic credentials; verify visible feedback, safe navigation and reusable submit button","Non-JSON gateway error does not crash login","All test assertions passed","passed","resilience.spec.ts:35","chromium"
+"GUARD-001","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Dashboard is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-002","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Projects is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-003","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to All is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-004","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to In Progress is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-005","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Action Required is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-006","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Being Assessed is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-007","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Completed is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-008","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Archived is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-009","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Exception Logs is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-010","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Installers is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-011","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Installer Users is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-012","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Matrix is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-013","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Admin Users is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-014","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to CMS is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-015","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Activity is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-016","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Products is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-017","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Rebates is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-018","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Calculator is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-019","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Statistics is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"GUARD-020","Route access","Negative LIVE","P1","Reachable development site; fresh browser context","Open the named protected route in a fresh unauthenticated context; verify redirect to /log-in and absence of protected tables","Anonymous access to Invoices is blocked","All test assertions passed","passed","session.spec.ts:12","chromium"
+"SESSION-001","Session","Positive LIVE","P1","Approved test account; isolated browser context; simulated 401 only where labeled MOCK","Establish or reuse authenticated state; perform the refresh, navigation, rejected-session, new-tab or sign-out action in the title; assert resulting URL and visible authenticated/login controls","Authenticated Jobs survives refresh","All test assertions passed","passed","session.spec.ts:9","chromium"
+"SESSION-002","Session","Positive LIVE","P1","Approved test account; isolated browser context; simulated 401 only where labeled MOCK","Establish or reuse authenticated state; perform the refresh, navigation, rejected-session, new-tab or sign-out action in the title; assert resulting URL and visible authenticated/login controls","Authenticated login URL redirects to Jobs","All test assertions passed","passed","session.spec.ts:13","chromium"
+"SESSION-003","Session","Negative MOCK","P1","Approved test account; isolated browser context; simulated 401 only where labeled MOCK","Establish or reuse authenticated state; perform the refresh, navigation, rejected-session, new-tab or sign-out action in the title; assert resulting URL and visible authenticated/login controls","Server-rejected session redirects to login","All test assertions passed","passed","session.spec.ts:23","chromium"
+"SESSION-004","Session","Positive LIVE","P1","Approved test account; isolated browser context; simulated 401 only where labeled MOCK","Establish or reuse authenticated state; perform the refresh, navigation, rejected-session, new-tab or sign-out action in the title; assert resulting URL and visible authenticated/login controls","New tab in the same context retains authentication","All test assertions passed","passed","session.spec.ts:20","chromium"
+"SESSION-005","Session","Negative LIVE","P1","Approved test account; isolated browser context; simulated 401 only where labeled MOCK","Establish or reuse authenticated state; perform the refresh, navigation, rejected-session, new-tab or sign-out action in the title; assert resulting URL and visible authenticated/login controls","Sign out blocks deep links and browser Back","All test assertions passed","passed","session.spec.ts:31","chromium"

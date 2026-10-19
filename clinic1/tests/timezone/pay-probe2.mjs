@@ -1,0 +1,17 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1300}, storageState:'playwright/.auth/tz-user.json', timezoneId:'Australia/Sydney' });
+const p = await c.newPage();
+const flat = t => t.split('\n').filter(Boolean).join(' | ');
+await p.goto('https://sunrise-family-medical.dev.clinic1.ai/invoices'); await p.waitForTimeout(6000);
+await p.getByRole('combobox').first().click().catch(()=>{});
+console.log('BUTTONS:', await p.getByRole('button').allInnerTexts().then(a=>a.filter(Boolean).slice(0,30)));
+await p.keyboard.press('Escape');
+const add = p.locator('button:has-text("Create"), button:has-text("Add"), a:has-text("Create")').first();
+console.log('add found', await add.count(), await add.innerText().catch(()=>''));
+await add.click(); await p.waitForTimeout(3500);
+console.log('URL', p.url());
+console.log(flat(await p.locator('body').innerText()).slice(250,1500));
+console.log(await p.locator('input,textarea').evaluateAll(l=>l.map(i=>[i.name,i.type,i.placeholder].join('|'))).then(a=>a.slice(0,30)));
+await p.screenshot({path:'test-results/walk/invoice-new.png'});
+await b.close();

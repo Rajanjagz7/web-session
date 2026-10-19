@@ -1,0 +1,662 @@
+<title>CRM Staging Bug Report</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  /* Layout: a single readable column; summary first, then filterable bug cards, then reference lists. */
+  --bg:#f6f7f9; --card:#ffffff; --fg:#1c2330; --muted:#5b6678; --line:#dde1e8; --soft:#eef1f5;
+  --accent:#2457d6; --accent-fg:#ffffff;
+  --med-bg:#fdeed9; --med-fg:#8a4b00; --low-bg:#e8edf4; --low-fg:#3d4a5f;
+  --be:#2457d6; --fe:#0b7a66; --hd:#8a3ea8;
+  --font:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12151b; --card:#1b2029; --fg:#e6e9ef; --muted:#9aa5b6; --line:#2c3340; --soft:#232a35;
+  --accent:#7ba0ff; --accent-fg:#0d1320; --med-bg:#3a2a12; --med-fg:#ffc577; --low-bg:#263040; --low-fg:#b8c3d6;
+  --be:#7ba0ff; --fe:#4fd1b4; --hd:#d09bec; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12151b; --card:#1b2029; --fg:#e6e9ef; --muted:#9aa5b6; --line:#2c3340; --soft:#232a35;
+  --accent:#7ba0ff; --accent-fg:#0d1320; --med-bg:#3a2a12; --med-fg:#ffc577; --low-bg:#263040; --low-fg:#b8c3d6;
+  --be:#7ba0ff; --fe:#4fd1b4; --hd:#d09bec; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:860px;margin:0 auto;padding:28px 16px 64px;box-sizing:border-box}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:19px;margin:36px 0 12px;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 20px;max-width:65ch}
+dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0 0 22px;font-size:14px}
+dl.meta dt{color:var(--muted)} dl.meta dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 8px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.stat b{display:block;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:13px}
+.verdict{background:var(--soft);border-radius:8px;padding:12px 14px;margin:10px 0 0;font-size:14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.chip:focus-visible,.copy:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.spacer{flex:1}
+.bug{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin:0 0 12px;display:grid;gap:10px;min-width:0}
+.bug.med{border-left:4px solid var(--med-fg)}
+.bug h3{font-size:16.5px;margin:0;line-height:1.35;text-wrap:balance}
+.head{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.id{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.tag{font-size:12px;border-radius:4px;padding:2px 8px;font-weight:600;letter-spacing:.02em}
+.tag.Medium{background:var(--med-bg);color:var(--med-fg)} .tag.Low{background:var(--low-bg);color:var(--low-fg)}
+.layer{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.layer.Backend{color:var(--be)} .layer.Frontend{color:var(--fe)} .layer.Hardening{color:var(--hd)}
+.area{color:var(--muted);font-size:13px}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:4px 12px;margin:0;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+code,.repro{font-family:var(--mono);font-size:12.8px;background:var(--soft);border-radius:4px;padding:1px 5px}
+.repro{display:block;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.copy{font:inherit;font-size:12.5px;border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:6px;padding:3px 10px;cursor:pointer;margin-left:auto}
+ul.plain{margin:0;padding-left:20px;display:grid;gap:8px} ul.plain li{padding-left:2px}
+.design{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.design li{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.design b{display:block;margin-bottom:2px}
+footer{color:var(--muted);font-size:13px;margin-top:36px}
+@media (max-width:520px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}
+</style>
+
+<div class="wrap">
+  <h1>CRM staging bug report</h1>
+  <p class="lede">20 defects found across the API and the web app, with the steps to reproduce each one. Nothing critical or high-severity, and no case of one customer's data reaching another.</p>
+  <dl class="meta">
+    <dt>Environment</dt><dd>https://crm.staging.notbhavik.dev (staging)</dd>
+    <dt>Project</dt><dd>Vercel 3 (6abe377f6194a264a524b653)</dd>
+    <dt>Tested</dt><dd>1 Oct 2026</dd>
+    <dt>Scope</dt><dd>Pipelines, Deals, Contacts, Companies, Close reasons, Files, Imports, Exports, Reports, auth and tenant isolation; UI in Chromium, Firefox, WebKit and mobile (375 px).</dd>
+    <dt>Method</dt><dd>Manual exploration plus over 200 automated checks (pytest for the API, Playwright for the UI), then fuzzing of bodies, IDs, queries, cursors and encodings. Test data was created and removed by the tests.</dd>
+  </dl>
+  <div class="stats">
+    <div class="stat"><b>2</b><span>Medium</span></div><div class="stat"><b>18</b><span>Low</span></div>
+    <div class="stat"><b>13</b><span>Backend</span></div><div class="stat"><b>6</b><span>Frontend</span></div>
+    <div class="stat"><b>1</b><span>Hardening</span></div><div class="stat"><b>6</b><span>Design questions</span></div>
+  </div>
+  <p class="verdict">Fix first: <a href="#BUG-01">BUG-01</a> (search returns 500) and <a href="#BUG-02">BUG-02</a> (expired session shows a developer error). The Low items are mostly missing validation and accessibility gaps.</p>
+
+  <h2>Bugs</h2>
+  <div class="bar" role="group" aria-label="Filter bugs">
+    <button class="chip" type="button" data-f="all" aria-pressed="true">All</button>
+    <button class="chip" type="button" data-f="Backend" aria-pressed="false">Backend</button>
+    <button class="chip" type="button" data-f="Frontend" aria-pressed="false">Frontend</button>
+    <button class="chip" type="button" data-f="Hardening" aria-pressed="false">Hardening</button>
+    <button class="chip" type="button" data-f="Medium" aria-pressed="false">Medium only</button>
+    <span class="spacer"></span><span class="area" id="shown" aria-live="polite"></span>
+    <button class="copy" type="button" data-md="md-all" style="margin-left:0">Copy all as Markdown</button>
+  </div>
+  <script type="text/plain" id="md-all">### BUG-01 [Medium] A null byte in the search query returns HTTP 500
+- **Layer:** Backend  |  **Area:** Search (contacts, companies, deals, files)
+- **Steps / request:** GET /api/crm/v1/contacts?q=a%00b   (same on /companies, /deals, /files)
+- **Expected:** 400 validation error, or the search ignores the character.
+- **Actual:** 500 internal_error. Other special characters (% \ ( [ * $ quotes, newlines) are handled fine. The UI search box would show a generic failure.
+- **Suggested fix:** Strip or reject U+0000 in query-string params before they reach the database layer.
+
+### BUG-02 [Medium] Expired session on submit shows a raw API message and leaves the dialog open
+- **Layer:** Frontend  |  **Area:** Session handling
+- **Steps / request:** Sign in, open Pipelines &gt; New pipeline, fill the form, clear cookies (or let the session expire), press Create pipeline.
+- **Expected:** Redirect to /login?next=... or a clear &#x27;Your session expired, sign in again&#x27; message that keeps the draft.
+- **Actual:** Dialog stays open and shows &#x27;A secret API key or Dashboard session is required&#x27; (developer wording). No sign-in prompt. Reloading goes to the login page and the draft is lost. A normal page load redirects correctly.
+- **Suggested fix:** Handle 401 from the API client centrally: redirect to login with next=, and show a user-facing message.
+
+### BUG-03 [Low] Contact phone number is not validated
+- **Layer:** Backend  |  **Area:** Contacts
+- **Steps / request:** POST /contacts {&quot;firstName&quot;:&quot;T&quot;,&quot;phone&quot;:&quot;abc&quot;}  (also &quot;1&quot; and a 40-digit string)
+- **Expected:** 400 for values that are not phone numbers (or normalise to E.164).
+- **Actual:** 201, stored as entered.
+- **Suggested fix:** Validate and normalise phone numbers.
+
+### BUG-04 [Low] Company phone and domain are not validated or normalised
+- **Layer:** Backend  |  **Area:** Companies
+- **Steps / request:** POST /companies {&quot;name&quot;:&quot;x&quot;,&quot;phone&quot;:&quot;xyz&quot;,&quot;domain&quot;:&quot;not a domain&quot;}   also domain &quot;https://example.com/path&quot; and &quot;EXAMPLE.com&quot;
+- **Expected:** 400 for invalid values; domain stored as a lower-case hostname.
+- **Actual:** 201. &#x27;not a domain&#x27; and a full URL are stored verbatim; &#x27;EXAMPLE.com&#x27; keeps its case (contact emails are lower-cased).
+- **Suggested fix:** Validate hostname, strip scheme and path, lower-case; validate phone as above.
+
+### BUG-05 [Low] Whitespace-only first name is accepted
+- **Layer:** Backend  |  **Area:** Contacts
+- **Steps / request:** POST /contacts {&quot;firstName&quot;:&quot;   &quot;}
+- **Expected:** 400, as for an empty name (pipeline names are trimmed and rejected).
+- **Actual:** 201 with a blank-looking contact.
+- **Suggested fix:** Trim, then require at least 1 character.
+
+### BUG-06 [Low] ownerActorId is not checked against real users
+- **Layer:** Backend  |  **Area:** Contacts
+- **Steps / request:** POST /contacts {&quot;firstName&quot;:&quot;T&quot;,&quot;ownerActorId&quot;:&quot;nope&quot;}
+- **Expected:** 400/404 when the user does not exist in the workspace.
+- **Actual:** 201. &#x27;nope&#x27; then appears as an owner in the contacts.by_owner report.
+- **Suggested fix:** Verify the actor exists and is a member of the workspace.
+
+### BUG-07 [Low] Inconsistent field length limits
+- **Layer:** Backend  |  **Area:** Contacts, Companies
+- **Steps / request:** POST /companies with a 300-character name; POST /contacts with a 300-character email.
+- **Expected:** Limits consistent with the rest of the API (pipeline name 120, contact name 200) and email at most 254.
+- **Actual:** Company name has no practical limit (300 accepted); a 300-character email is accepted (RFC limit is 254).
+- **Suggested fix:** Set explicit maximums on every string field.
+
+### BUG-08 [Low] Control characters are accepted and stored in names
+- **Layer:** Backend  |  **Area:** All string fields
+- **Steps / request:** POST /pipelines {&quot;name&quot;:&quot;a\u0000b&quot;,&quot;stages&quot;:[{&quot;name&quot;:&quot;s&quot;}]}   also &quot;\n&quot;, &quot;\r\nX-Evil: 1&quot;, &quot;\u0001&quot;
+- **Expected:** 400 for control characters in single-line fields.
+- **Actual:** 201, stored verbatim. The UI renders them safely, but logs, CSV exports and other tools can be confused.
+- **Suggested fix:** Reject or strip control characters (U+0000-U+001F, U+007F) in single-line fields.
+
+### BUG-09 [Low] Invalid UTF-8 is accepted and silently replaced
+- **Layer:** Backend  |  **Area:** Request parsing
+- **Steps / request:** POST /pipelines with raw body bytes {&quot;name&quot;:&quot;\xff\xfe&quot;,...} and content-type application/json
+- **Expected:** 400 &#x27;body is not valid UTF-8&#x27;.
+- **Actual:** 201; the name is stored as two U+FFFD replacement characters. A lone surrogate becomes three.
+- **Suggested fix:** Decode strictly (fatal on invalid sequences).
+
+### BUG-10 [Low] The 120-character name limit counts UTF-16 units, not characters
+- **Layer:** Backend  |  **Area:** Validation
+- **Steps / request:** POST /pipelines {&quot;name&quot;:&quot;&lt;100 x U+1F600&gt;&quot;,...}
+- **Expected:** Accepted: 100 characters is under the 120 limit.
+- **Actual:** 400 &#x27;Too big: expected string to have &lt;=120 characters&#x27; (the string is 200 UTF-16 units).
+- **Suggested fix:** Count code points (or grapheme clusters), not string length.
+
+### BUG-11 [Low] Oversized request bodies sometimes get an empty 502 instead of 413
+- **Layer:** Backend  |  **Area:** Proxy / API
+- **Steps / request:** POST a 10 MB JSON body to /pipelines several times. Observed once in about 5 attempts. The limit sits between 1 MB and 2 MB.
+- **Expected:** Always 413 with the JSON error body.
+- **Actual:** Usually 413; intermittently an empty 502 from the proxy (the app closes the connection while the client is still uploading). The service stays healthy.
+- **Suggested fix:** Reject on Content-Length before reading the body, or drain the request before closing.
+
+### BUG-12 [Low] TRACE returns a bare 500
+- **Layer:** Backend  |  **Area:** HTTP
+- **Steps / request:** TRACE /api/crm/v1/pipelines
+- **Expected:** 405 or 404 in the standard JSON error format (TRACE should be disabled).
+- **Actual:** 500 &#x27;Internal Server Error&#x27; as plain text.
+- **Suggested fix:** Disable TRACE at the proxy or add a route that returns 405.
+
+### BUG-13 [Low] text/plain bodies are parsed as JSON; mutating calls without an Origin header are accepted
+- **Layer:** Hardening  |  **Area:** Request handling
+- **Steps / request:** POST /pipelines with content-type: text/plain and a JSON body -&gt; 201. Also a session-cookie POST with no Origin header -&gt; 201.
+- **Expected:** 415 for non-JSON content types; ideally an Origin/Sec-Fetch-Site check on cookie-authenticated writes.
+- **Actual:** Accepted. Not exploitable today because the required crm-* headers force a CORS preflight, but it removes a layer of CSRF protection. (The login endpoint is protected and rejects cross-site requests.)
+- **Suggested fix:** Require application/json on write endpoints; check Origin/Sec-Fetch-Site for cookie sessions.
+
+### BUG-14 [Low] Stage order has gaps after a stage is deleted
+- **Layer:** Backend  |  **Area:** Pipelines
+- **Steps / request:** Create a pipeline with stages A, B, C; delete B; read the pipeline.
+- **Expected:** order values 0, 1.
+- **Actual:** Remaining stages keep order 0, 2 until the next reorder call. Harmless unless a client assumes consecutive values.
+- **Suggested fix:** Renumber on delete.
+
+### BUG-15 [Low] An unknown Crm-Org-Id header value is accepted silently
+- **Layer:** Backend  |  **Area:** Headers
+- **Steps / request:** Any GET with the header crm-org-id: nope
+- **Expected:** 400/403 for an organization that does not exist.
+- **Actual:** 200, treated as the default organization.
+- **Suggested fix:** Validate the header against the user&#x27;s organizations.
+
+### BUG-16 [Low] Every page has the same browser title, &#x27;CRM Dashboard&#x27;
+- **Layer:** Frontend  |  **Area:** All pages (accessibility)
+- **Steps / request:** Open Pipelines, Contacts, Deals, Reports; read the tab title or document.title.
+- **Expected:** A distinct title per page, e.g. &#x27;Pipelines - Vercel 3 - CRM&#x27; (WCAG 2.4.2 Page Titled).
+- **Actual:** &#x27;CRM Dashboard&#x27; everywhere (not-found pages are the only ones that differ). Tabs, history and screen readers cannot tell pages apart.
+- **Suggested fix:** Set a per-route title.
+
+### BUG-17 [Low] Heading levels skip from h1 to h3
+- **Layer:** Frontend  |  **Area:** Reports, Automation, Outbox, Products, My work (accessibility)
+- **Steps / request:** Open the pages listed and inspect the headings, or run any heading-outline checker.
+- **Expected:** Levels step down one at a time (h1, h2, h3).
+- **Actual:** h1 is followed directly by h3 (WCAG 1.3.1).
+- **Suggested fix:** Use h2 for section headings, or restyle with CSS instead of changing the level.
+
+### BUG-18 [Low] One form field has no label
+- **Layer:** Frontend  |  **Area:** Files page (accessibility)
+- **Steps / request:** Open the Files page and inspect inputs for a label, aria-label or aria-labelledby.
+- **Expected:** Every control has an accessible name.
+- **Actual:** One input has none, so a screen reader announces it as an unnamed edit field.
+- **Suggested fix:** Add a visible label or aria-label.
+
+### BUG-19 [Low] Escape closes the dialog and discards typed input without warning
+- **Layer:** Frontend  |  **Area:** New pipeline dialog
+- **Steps / request:** Open New pipeline, type a name and stages, press Escape.
+- **Expected:** Either keep the draft or ask before discarding.
+- **Actual:** Closes immediately; the draft is lost. (Focus correctly returns to the trigger button.)
+- **Suggested fix:** Confirm when the form is dirty.
+
+### BUG-20 [Low] Table cells are truncated on mobile
+- **Layer:** Frontend  |  **Area:** Pipelines table at 375 px
+- **Steps / request:** Open Pipelines at 375 px width.
+- **Expected:** Names and dates readable, or the row opens to show the full value.
+- **Actual:** Names show as &#x27;Enterpri...&#x27; and the Updated column as &#x27;Oct 1, 2...&#x27;. There is no horizontal page scroll.
+- **Suggested fix:** Allow wrapping or stack the row on narrow screens.
+</script>
+  
+<article class="bug med" data-layer="Backend" data-sev="Medium" id="BUG-01">
+  <div class="head"><span class="id">BUG-01</span><span class="tag Medium">Medium</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-01" aria-label="Copy BUG-01 as Markdown">Copy</button></div>
+  <h3>A null byte in the search query returns HTTP 500</h3>
+  <div class="area">Search (contacts, companies, deals, files)</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">GET /api/crm/v1/contacts?q=a%00b   (same on /companies, /deals, /files)</span></dd>
+    <dt>Expected</dt><dd>400 validation error, or the search ignores the character.</dd>
+    <dt>Actual</dt><dd>500 internal_error. Other special characters (% \ ( [ * $ quotes, newlines) are handled fine. The UI search box would show a generic failure.</dd>
+    <dt>Suggested fix</dt><dd>Strip or reject U+0000 in query-string params before they reach the database layer.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-01">### BUG-01 [Medium] A null byte in the search query returns HTTP 500
+- **Layer:** Backend  |  **Area:** Search (contacts, companies, deals, files)
+- **Steps / request:** GET /api/crm/v1/contacts?q=a%00b   (same on /companies, /deals, /files)
+- **Expected:** 400 validation error, or the search ignores the character.
+- **Actual:** 500 internal_error. Other special characters (% \ ( [ * $ quotes, newlines) are handled fine. The UI search box would show a generic failure.
+- **Suggested fix:** Strip or reject U+0000 in query-string params before they reach the database layer.
+</script>
+</article>
+<article class="bug med" data-layer="Frontend" data-sev="Medium" id="BUG-02">
+  <div class="head"><span class="id">BUG-02</span><span class="tag Medium">Medium</span>
+    <span class="layer Frontend">Frontend</span>
+    <button class="copy" type="button" data-md="md-BUG-02" aria-label="Copy BUG-02 as Markdown">Copy</button></div>
+  <h3>Expired session on submit shows a raw API message and leaves the dialog open</h3>
+  <div class="area">Session handling</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Sign in, open Pipelines &gt; New pipeline, fill the form, clear cookies (or let the session expire), press Create pipeline.</span></dd>
+    <dt>Expected</dt><dd>Redirect to /login?next=... or a clear &#x27;Your session expired, sign in again&#x27; message that keeps the draft.</dd>
+    <dt>Actual</dt><dd>Dialog stays open and shows &#x27;A secret API key or Dashboard session is required&#x27; (developer wording). No sign-in prompt. Reloading goes to the login page and the draft is lost. A normal page load redirects correctly.</dd>
+    <dt>Suggested fix</dt><dd>Handle 401 from the API client centrally: redirect to login with next=, and show a user-facing message.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-02">### BUG-02 [Medium] Expired session on submit shows a raw API message and leaves the dialog open
+- **Layer:** Frontend  |  **Area:** Session handling
+- **Steps / request:** Sign in, open Pipelines &gt; New pipeline, fill the form, clear cookies (or let the session expire), press Create pipeline.
+- **Expected:** Redirect to /login?next=... or a clear &#x27;Your session expired, sign in again&#x27; message that keeps the draft.
+- **Actual:** Dialog stays open and shows &#x27;A secret API key or Dashboard session is required&#x27; (developer wording). No sign-in prompt. Reloading goes to the login page and the draft is lost. A normal page load redirects correctly.
+- **Suggested fix:** Handle 401 from the API client centrally: redirect to login with next=, and show a user-facing message.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-03">
+  <div class="head"><span class="id">BUG-03</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-03" aria-label="Copy BUG-03 as Markdown">Copy</button></div>
+  <h3>Contact phone number is not validated</h3>
+  <div class="area">Contacts</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /contacts {&quot;firstName&quot;:&quot;T&quot;,&quot;phone&quot;:&quot;abc&quot;}  (also &quot;1&quot; and a 40-digit string)</span></dd>
+    <dt>Expected</dt><dd>400 for values that are not phone numbers (or normalise to E.164).</dd>
+    <dt>Actual</dt><dd>201, stored as entered.</dd>
+    <dt>Suggested fix</dt><dd>Validate and normalise phone numbers.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-03">### BUG-03 [Low] Contact phone number is not validated
+- **Layer:** Backend  |  **Area:** Contacts
+- **Steps / request:** POST /contacts {&quot;firstName&quot;:&quot;T&quot;,&quot;phone&quot;:&quot;abc&quot;}  (also &quot;1&quot; and a 40-digit string)
+- **Expected:** 400 for values that are not phone numbers (or normalise to E.164).
+- **Actual:** 201, stored as entered.
+- **Suggested fix:** Validate and normalise phone numbers.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-04">
+  <div class="head"><span class="id">BUG-04</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-04" aria-label="Copy BUG-04 as Markdown">Copy</button></div>
+  <h3>Company phone and domain are not validated or normalised</h3>
+  <div class="area">Companies</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /companies {&quot;name&quot;:&quot;x&quot;,&quot;phone&quot;:&quot;xyz&quot;,&quot;domain&quot;:&quot;not a domain&quot;}   also domain &quot;https://example.com/path&quot; and &quot;EXAMPLE.com&quot;</span></dd>
+    <dt>Expected</dt><dd>400 for invalid values; domain stored as a lower-case hostname.</dd>
+    <dt>Actual</dt><dd>201. &#x27;not a domain&#x27; and a full URL are stored verbatim; &#x27;EXAMPLE.com&#x27; keeps its case (contact emails are lower-cased).</dd>
+    <dt>Suggested fix</dt><dd>Validate hostname, strip scheme and path, lower-case; validate phone as above.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-04">### BUG-04 [Low] Company phone and domain are not validated or normalised
+- **Layer:** Backend  |  **Area:** Companies
+- **Steps / request:** POST /companies {&quot;name&quot;:&quot;x&quot;,&quot;phone&quot;:&quot;xyz&quot;,&quot;domain&quot;:&quot;not a domain&quot;}   also domain &quot;https://example.com/path&quot; and &quot;EXAMPLE.com&quot;
+- **Expected:** 400 for invalid values; domain stored as a lower-case hostname.
+- **Actual:** 201. &#x27;not a domain&#x27; and a full URL are stored verbatim; &#x27;EXAMPLE.com&#x27; keeps its case (contact emails are lower-cased).
+- **Suggested fix:** Validate hostname, strip scheme and path, lower-case; validate phone as above.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-05">
+  <div class="head"><span class="id">BUG-05</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-05" aria-label="Copy BUG-05 as Markdown">Copy</button></div>
+  <h3>Whitespace-only first name is accepted</h3>
+  <div class="area">Contacts</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /contacts {&quot;firstName&quot;:&quot;   &quot;}</span></dd>
+    <dt>Expected</dt><dd>400, as for an empty name (pipeline names are trimmed and rejected).</dd>
+    <dt>Actual</dt><dd>201 with a blank-looking contact.</dd>
+    <dt>Suggested fix</dt><dd>Trim, then require at least 1 character.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-05">### BUG-05 [Low] Whitespace-only first name is accepted
+- **Layer:** Backend  |  **Area:** Contacts
+- **Steps / request:** POST /contacts {&quot;firstName&quot;:&quot;   &quot;}
+- **Expected:** 400, as for an empty name (pipeline names are trimmed and rejected).
+- **Actual:** 201 with a blank-looking contact.
+- **Suggested fix:** Trim, then require at least 1 character.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-06">
+  <div class="head"><span class="id">BUG-06</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-06" aria-label="Copy BUG-06 as Markdown">Copy</button></div>
+  <h3>ownerActorId is not checked against real users</h3>
+  <div class="area">Contacts</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /contacts {&quot;firstName&quot;:&quot;T&quot;,&quot;ownerActorId&quot;:&quot;nope&quot;}</span></dd>
+    <dt>Expected</dt><dd>400/404 when the user does not exist in the workspace.</dd>
+    <dt>Actual</dt><dd>201. &#x27;nope&#x27; then appears as an owner in the contacts.by_owner report.</dd>
+    <dt>Suggested fix</dt><dd>Verify the actor exists and is a member of the workspace.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-06">### BUG-06 [Low] ownerActorId is not checked against real users
+- **Layer:** Backend  |  **Area:** Contacts
+- **Steps / request:** POST /contacts {&quot;firstName&quot;:&quot;T&quot;,&quot;ownerActorId&quot;:&quot;nope&quot;}
+- **Expected:** 400/404 when the user does not exist in the workspace.
+- **Actual:** 201. &#x27;nope&#x27; then appears as an owner in the contacts.by_owner report.
+- **Suggested fix:** Verify the actor exists and is a member of the workspace.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-07">
+  <div class="head"><span class="id">BUG-07</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-07" aria-label="Copy BUG-07 as Markdown">Copy</button></div>
+  <h3>Inconsistent field length limits</h3>
+  <div class="area">Contacts, Companies</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /companies with a 300-character name; POST /contacts with a 300-character email.</span></dd>
+    <dt>Expected</dt><dd>Limits consistent with the rest of the API (pipeline name 120, contact name 200) and email at most 254.</dd>
+    <dt>Actual</dt><dd>Company name has no practical limit (300 accepted); a 300-character email is accepted (RFC limit is 254).</dd>
+    <dt>Suggested fix</dt><dd>Set explicit maximums on every string field.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-07">### BUG-07 [Low] Inconsistent field length limits
+- **Layer:** Backend  |  **Area:** Contacts, Companies
+- **Steps / request:** POST /companies with a 300-character name; POST /contacts with a 300-character email.
+- **Expected:** Limits consistent with the rest of the API (pipeline name 120, contact name 200) and email at most 254.
+- **Actual:** Company name has no practical limit (300 accepted); a 300-character email is accepted (RFC limit is 254).
+- **Suggested fix:** Set explicit maximums on every string field.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-08">
+  <div class="head"><span class="id">BUG-08</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-08" aria-label="Copy BUG-08 as Markdown">Copy</button></div>
+  <h3>Control characters are accepted and stored in names</h3>
+  <div class="area">All string fields</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /pipelines {&quot;name&quot;:&quot;a\u0000b&quot;,&quot;stages&quot;:[{&quot;name&quot;:&quot;s&quot;}]}   also &quot;\n&quot;, &quot;\r\nX-Evil: 1&quot;, &quot;\u0001&quot;</span></dd>
+    <dt>Expected</dt><dd>400 for control characters in single-line fields.</dd>
+    <dt>Actual</dt><dd>201, stored verbatim. The UI renders them safely, but logs, CSV exports and other tools can be confused.</dd>
+    <dt>Suggested fix</dt><dd>Reject or strip control characters (U+0000-U+001F, U+007F) in single-line fields.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-08">### BUG-08 [Low] Control characters are accepted and stored in names
+- **Layer:** Backend  |  **Area:** All string fields
+- **Steps / request:** POST /pipelines {&quot;name&quot;:&quot;a\u0000b&quot;,&quot;stages&quot;:[{&quot;name&quot;:&quot;s&quot;}]}   also &quot;\n&quot;, &quot;\r\nX-Evil: 1&quot;, &quot;\u0001&quot;
+- **Expected:** 400 for control characters in single-line fields.
+- **Actual:** 201, stored verbatim. The UI renders them safely, but logs, CSV exports and other tools can be confused.
+- **Suggested fix:** Reject or strip control characters (U+0000-U+001F, U+007F) in single-line fields.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-09">
+  <div class="head"><span class="id">BUG-09</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-09" aria-label="Copy BUG-09 as Markdown">Copy</button></div>
+  <h3>Invalid UTF-8 is accepted and silently replaced</h3>
+  <div class="area">Request parsing</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /pipelines with raw body bytes {&quot;name&quot;:&quot;\xff\xfe&quot;,...} and content-type application/json</span></dd>
+    <dt>Expected</dt><dd>400 &#x27;body is not valid UTF-8&#x27;.</dd>
+    <dt>Actual</dt><dd>201; the name is stored as two U+FFFD replacement characters. A lone surrogate becomes three.</dd>
+    <dt>Suggested fix</dt><dd>Decode strictly (fatal on invalid sequences).</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-09">### BUG-09 [Low] Invalid UTF-8 is accepted and silently replaced
+- **Layer:** Backend  |  **Area:** Request parsing
+- **Steps / request:** POST /pipelines with raw body bytes {&quot;name&quot;:&quot;\xff\xfe&quot;,...} and content-type application/json
+- **Expected:** 400 &#x27;body is not valid UTF-8&#x27;.
+- **Actual:** 201; the name is stored as two U+FFFD replacement characters. A lone surrogate becomes three.
+- **Suggested fix:** Decode strictly (fatal on invalid sequences).
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-10">
+  <div class="head"><span class="id">BUG-10</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-10" aria-label="Copy BUG-10 as Markdown">Copy</button></div>
+  <h3>The 120-character name limit counts UTF-16 units, not characters</h3>
+  <div class="area">Validation</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /pipelines {&quot;name&quot;:&quot;&lt;100 x U+1F600&gt;&quot;,...}</span></dd>
+    <dt>Expected</dt><dd>Accepted: 100 characters is under the 120 limit.</dd>
+    <dt>Actual</dt><dd>400 &#x27;Too big: expected string to have &lt;=120 characters&#x27; (the string is 200 UTF-16 units).</dd>
+    <dt>Suggested fix</dt><dd>Count code points (or grapheme clusters), not string length.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-10">### BUG-10 [Low] The 120-character name limit counts UTF-16 units, not characters
+- **Layer:** Backend  |  **Area:** Validation
+- **Steps / request:** POST /pipelines {&quot;name&quot;:&quot;&lt;100 x U+1F600&gt;&quot;,...}
+- **Expected:** Accepted: 100 characters is under the 120 limit.
+- **Actual:** 400 &#x27;Too big: expected string to have &lt;=120 characters&#x27; (the string is 200 UTF-16 units).
+- **Suggested fix:** Count code points (or grapheme clusters), not string length.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-11">
+  <div class="head"><span class="id">BUG-11</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-11" aria-label="Copy BUG-11 as Markdown">Copy</button></div>
+  <h3>Oversized request bodies sometimes get an empty 502 instead of 413</h3>
+  <div class="area">Proxy / API</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST a 10 MB JSON body to /pipelines several times. Observed once in about 5 attempts. The limit sits between 1 MB and 2 MB.</span></dd>
+    <dt>Expected</dt><dd>Always 413 with the JSON error body.</dd>
+    <dt>Actual</dt><dd>Usually 413; intermittently an empty 502 from the proxy (the app closes the connection while the client is still uploading). The service stays healthy.</dd>
+    <dt>Suggested fix</dt><dd>Reject on Content-Length before reading the body, or drain the request before closing.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-11">### BUG-11 [Low] Oversized request bodies sometimes get an empty 502 instead of 413
+- **Layer:** Backend  |  **Area:** Proxy / API
+- **Steps / request:** POST a 10 MB JSON body to /pipelines several times. Observed once in about 5 attempts. The limit sits between 1 MB and 2 MB.
+- **Expected:** Always 413 with the JSON error body.
+- **Actual:** Usually 413; intermittently an empty 502 from the proxy (the app closes the connection while the client is still uploading). The service stays healthy.
+- **Suggested fix:** Reject on Content-Length before reading the body, or drain the request before closing.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-12">
+  <div class="head"><span class="id">BUG-12</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-12" aria-label="Copy BUG-12 as Markdown">Copy</button></div>
+  <h3>TRACE returns a bare 500</h3>
+  <div class="area">HTTP</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">TRACE /api/crm/v1/pipelines</span></dd>
+    <dt>Expected</dt><dd>405 or 404 in the standard JSON error format (TRACE should be disabled).</dd>
+    <dt>Actual</dt><dd>500 &#x27;Internal Server Error&#x27; as plain text.</dd>
+    <dt>Suggested fix</dt><dd>Disable TRACE at the proxy or add a route that returns 405.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-12">### BUG-12 [Low] TRACE returns a bare 500
+- **Layer:** Backend  |  **Area:** HTTP
+- **Steps / request:** TRACE /api/crm/v1/pipelines
+- **Expected:** 405 or 404 in the standard JSON error format (TRACE should be disabled).
+- **Actual:** 500 &#x27;Internal Server Error&#x27; as plain text.
+- **Suggested fix:** Disable TRACE at the proxy or add a route that returns 405.
+</script>
+</article>
+<article class="bug" data-layer="Hardening" data-sev="Low" id="BUG-13">
+  <div class="head"><span class="id">BUG-13</span><span class="tag Low">Low</span>
+    <span class="layer Hardening">Hardening</span>
+    <button class="copy" type="button" data-md="md-BUG-13" aria-label="Copy BUG-13 as Markdown">Copy</button></div>
+  <h3>text/plain bodies are parsed as JSON; mutating calls without an Origin header are accepted</h3>
+  <div class="area">Request handling</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">POST /pipelines with content-type: text/plain and a JSON body -&gt; 201. Also a session-cookie POST with no Origin header -&gt; 201.</span></dd>
+    <dt>Expected</dt><dd>415 for non-JSON content types; ideally an Origin/Sec-Fetch-Site check on cookie-authenticated writes.</dd>
+    <dt>Actual</dt><dd>Accepted. Not exploitable today because the required crm-* headers force a CORS preflight, but it removes a layer of CSRF protection. (The login endpoint is protected and rejects cross-site requests.)</dd>
+    <dt>Suggested fix</dt><dd>Require application/json on write endpoints; check Origin/Sec-Fetch-Site for cookie sessions.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-13">### BUG-13 [Low] text/plain bodies are parsed as JSON; mutating calls without an Origin header are accepted
+- **Layer:** Hardening  |  **Area:** Request handling
+- **Steps / request:** POST /pipelines with content-type: text/plain and a JSON body -&gt; 201. Also a session-cookie POST with no Origin header -&gt; 201.
+- **Expected:** 415 for non-JSON content types; ideally an Origin/Sec-Fetch-Site check on cookie-authenticated writes.
+- **Actual:** Accepted. Not exploitable today because the required crm-* headers force a CORS preflight, but it removes a layer of CSRF protection. (The login endpoint is protected and rejects cross-site requests.)
+- **Suggested fix:** Require application/json on write endpoints; check Origin/Sec-Fetch-Site for cookie sessions.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-14">
+  <div class="head"><span class="id">BUG-14</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-14" aria-label="Copy BUG-14 as Markdown">Copy</button></div>
+  <h3>Stage order has gaps after a stage is deleted</h3>
+  <div class="area">Pipelines</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Create a pipeline with stages A, B, C; delete B; read the pipeline.</span></dd>
+    <dt>Expected</dt><dd>order values 0, 1.</dd>
+    <dt>Actual</dt><dd>Remaining stages keep order 0, 2 until the next reorder call. Harmless unless a client assumes consecutive values.</dd>
+    <dt>Suggested fix</dt><dd>Renumber on delete.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-14">### BUG-14 [Low] Stage order has gaps after a stage is deleted
+- **Layer:** Backend  |  **Area:** Pipelines
+- **Steps / request:** Create a pipeline with stages A, B, C; delete B; read the pipeline.
+- **Expected:** order values 0, 1.
+- **Actual:** Remaining stages keep order 0, 2 until the next reorder call. Harmless unless a client assumes consecutive values.
+- **Suggested fix:** Renumber on delete.
+</script>
+</article>
+<article class="bug" data-layer="Backend" data-sev="Low" id="BUG-15">
+  <div class="head"><span class="id">BUG-15</span><span class="tag Low">Low</span>
+    <span class="layer Backend">Backend</span>
+    <button class="copy" type="button" data-md="md-BUG-15" aria-label="Copy BUG-15 as Markdown">Copy</button></div>
+  <h3>An unknown Crm-Org-Id header value is accepted silently</h3>
+  <div class="area">Headers</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Any GET with the header crm-org-id: nope</span></dd>
+    <dt>Expected</dt><dd>400/403 for an organization that does not exist.</dd>
+    <dt>Actual</dt><dd>200, treated as the default organization.</dd>
+    <dt>Suggested fix</dt><dd>Validate the header against the user&#x27;s organizations.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-15">### BUG-15 [Low] An unknown Crm-Org-Id header value is accepted silently
+- **Layer:** Backend  |  **Area:** Headers
+- **Steps / request:** Any GET with the header crm-org-id: nope
+- **Expected:** 400/403 for an organization that does not exist.
+- **Actual:** 200, treated as the default organization.
+- **Suggested fix:** Validate the header against the user&#x27;s organizations.
+</script>
+</article>
+<article class="bug" data-layer="Frontend" data-sev="Low" id="BUG-16">
+  <div class="head"><span class="id">BUG-16</span><span class="tag Low">Low</span>
+    <span class="layer Frontend">Frontend</span>
+    <button class="copy" type="button" data-md="md-BUG-16" aria-label="Copy BUG-16 as Markdown">Copy</button></div>
+  <h3>Every page has the same browser title, &#x27;CRM Dashboard&#x27;</h3>
+  <div class="area">All pages (accessibility)</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Open Pipelines, Contacts, Deals, Reports; read the tab title or document.title.</span></dd>
+    <dt>Expected</dt><dd>A distinct title per page, e.g. &#x27;Pipelines - Vercel 3 - CRM&#x27; (WCAG 2.4.2 Page Titled).</dd>
+    <dt>Actual</dt><dd>&#x27;CRM Dashboard&#x27; everywhere (not-found pages are the only ones that differ). Tabs, history and screen readers cannot tell pages apart.</dd>
+    <dt>Suggested fix</dt><dd>Set a per-route title.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-16">### BUG-16 [Low] Every page has the same browser title, &#x27;CRM Dashboard&#x27;
+- **Layer:** Frontend  |  **Area:** All pages (accessibility)
+- **Steps / request:** Open Pipelines, Contacts, Deals, Reports; read the tab title or document.title.
+- **Expected:** A distinct title per page, e.g. &#x27;Pipelines - Vercel 3 - CRM&#x27; (WCAG 2.4.2 Page Titled).
+- **Actual:** &#x27;CRM Dashboard&#x27; everywhere (not-found pages are the only ones that differ). Tabs, history and screen readers cannot tell pages apart.
+- **Suggested fix:** Set a per-route title.
+</script>
+</article>
+<article class="bug" data-layer="Frontend" data-sev="Low" id="BUG-17">
+  <div class="head"><span class="id">BUG-17</span><span class="tag Low">Low</span>
+    <span class="layer Frontend">Frontend</span>
+    <button class="copy" type="button" data-md="md-BUG-17" aria-label="Copy BUG-17 as Markdown">Copy</button></div>
+  <h3>Heading levels skip from h1 to h3</h3>
+  <div class="area">Reports, Automation, Outbox, Products, My work (accessibility)</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Open the pages listed and inspect the headings, or run any heading-outline checker.</span></dd>
+    <dt>Expected</dt><dd>Levels step down one at a time (h1, h2, h3).</dd>
+    <dt>Actual</dt><dd>h1 is followed directly by h3 (WCAG 1.3.1).</dd>
+    <dt>Suggested fix</dt><dd>Use h2 for section headings, or restyle with CSS instead of changing the level.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-17">### BUG-17 [Low] Heading levels skip from h1 to h3
+- **Layer:** Frontend  |  **Area:** Reports, Automation, Outbox, Products, My work (accessibility)
+- **Steps / request:** Open the pages listed and inspect the headings, or run any heading-outline checker.
+- **Expected:** Levels step down one at a time (h1, h2, h3).
+- **Actual:** h1 is followed directly by h3 (WCAG 1.3.1).
+- **Suggested fix:** Use h2 for section headings, or restyle with CSS instead of changing the level.
+</script>
+</article>
+<article class="bug" data-layer="Frontend" data-sev="Low" id="BUG-18">
+  <div class="head"><span class="id">BUG-18</span><span class="tag Low">Low</span>
+    <span class="layer Frontend">Frontend</span>
+    <button class="copy" type="button" data-md="md-BUG-18" aria-label="Copy BUG-18 as Markdown">Copy</button></div>
+  <h3>One form field has no label</h3>
+  <div class="area">Files page (accessibility)</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Open the Files page and inspect inputs for a label, aria-label or aria-labelledby.</span></dd>
+    <dt>Expected</dt><dd>Every control has an accessible name.</dd>
+    <dt>Actual</dt><dd>One input has none, so a screen reader announces it as an unnamed edit field.</dd>
+    <dt>Suggested fix</dt><dd>Add a visible label or aria-label.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-18">### BUG-18 [Low] One form field has no label
+- **Layer:** Frontend  |  **Area:** Files page (accessibility)
+- **Steps / request:** Open the Files page and inspect inputs for a label, aria-label or aria-labelledby.
+- **Expected:** Every control has an accessible name.
+- **Actual:** One input has none, so a screen reader announces it as an unnamed edit field.
+- **Suggested fix:** Add a visible label or aria-label.
+</script>
+</article>
+<article class="bug" data-layer="Frontend" data-sev="Low" id="BUG-19">
+  <div class="head"><span class="id">BUG-19</span><span class="tag Low">Low</span>
+    <span class="layer Frontend">Frontend</span>
+    <button class="copy" type="button" data-md="md-BUG-19" aria-label="Copy BUG-19 as Markdown">Copy</button></div>
+  <h3>Escape closes the dialog and discards typed input without warning</h3>
+  <div class="area">New pipeline dialog</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Open New pipeline, type a name and stages, press Escape.</span></dd>
+    <dt>Expected</dt><dd>Either keep the draft or ask before discarding.</dd>
+    <dt>Actual</dt><dd>Closes immediately; the draft is lost. (Focus correctly returns to the trigger button.)</dd>
+    <dt>Suggested fix</dt><dd>Confirm when the form is dirty.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-19">### BUG-19 [Low] Escape closes the dialog and discards typed input without warning
+- **Layer:** Frontend  |  **Area:** New pipeline dialog
+- **Steps / request:** Open New pipeline, type a name and stages, press Escape.
+- **Expected:** Either keep the draft or ask before discarding.
+- **Actual:** Closes immediately; the draft is lost. (Focus correctly returns to the trigger button.)
+- **Suggested fix:** Confirm when the form is dirty.
+</script>
+</article>
+<article class="bug" data-layer="Frontend" data-sev="Low" id="BUG-20">
+  <div class="head"><span class="id">BUG-20</span><span class="tag Low">Low</span>
+    <span class="layer Frontend">Frontend</span>
+    <button class="copy" type="button" data-md="md-BUG-20" aria-label="Copy BUG-20 as Markdown">Copy</button></div>
+  <h3>Table cells are truncated on mobile</h3>
+  <div class="area">Pipelines table at 375 px</div>
+  <dl class="kv">
+    <dt>Steps</dt><dd><span class="repro">Open Pipelines at 375 px width.</span></dd>
+    <dt>Expected</dt><dd>Names and dates readable, or the row opens to show the full value.</dd>
+    <dt>Actual</dt><dd>Names show as &#x27;Enterpri...&#x27; and the Updated column as &#x27;Oct 1, 2...&#x27;. There is no horizontal page scroll.</dd>
+    <dt>Suggested fix</dt><dd>Allow wrapping or stack the row on narrow screens.</dd>
+  </dl>
+  <script type="text/plain" id="md-BUG-20">### BUG-20 [Low] Table cells are truncated on mobile
+- **Layer:** Frontend  |  **Area:** Pipelines table at 375 px
+- **Steps / request:** Open Pipelines at 375 px width.
+- **Expected:** Names and dates readable, or the row opens to show the full value.
+- **Actual:** Names show as &#x27;Enterpri...&#x27; and the Updated column as &#x27;Oct 1, 2...&#x27;. There is no horizontal page scroll.
+- **Suggested fix:** Allow wrapping or stack the row on narrow screens.
+</script>
+</article>
+
+  <h2>Design questions</h2>
+  <p class="lede">Not defects as such. Each needs a product decision on whether the current behaviour is intended.</p>
+  <ul class="design"><li><b>D-1 Duplicates are allowed everywhere</b>Pipelines (even differing only by case), contacts (same email in any case), companies and close-reason labels can be duplicated. Three parallel creates of the same pipeline name made three pipelines. Stage names within a pipeline and close-reason codes ARE unique. Decide which should be unique, for example contact email.</li><li><b>D-2 Stages can be added to an archived pipeline</b>The page says an archived pipeline &#x27;takes no new deals&#x27;, but its stages can still be changed.</li><li><b>D-3 Import cannot update existing records</b>onDuplicate supports only &#x27;create&#x27; (default) and &#x27;reject&#x27;. A re-import always creates duplicates unless reject is used; there is no update or skip mode.</li><li><b>D-4 Archiving with dependants is allowed</b>A pipeline with open deals, and a company with contacts and deals, can be archived. Deleting them is correctly blocked with 409.</li><li><b>D-5 Moving a deal to its current stage returns 200</b>A no-op is accepted and succeeds rather than reporting &#x27;already in this stage&#x27;.</li><li><b>D-6 Removing an in-use close reason is allowed</b>Deals keep the old code, which is reasonable, but the UI does not warn how many deals use it.</li></ul>
+
+  <h2>Checked and working</h2>
+  <ul class="plain"><li>Delete guards: a stage with open deals, a pipeline with any deals, a company with references and the last active stage are all blocked with 409.</li><li>Deal state machine: won, lost and reopen enforce valid transitions; closed deals cannot move or close twice; three parallel &#x27;won&#x27; calls give one 200 and two 409s.</li><li>Close reasons: outcome-specific, exact-code match, code format, 50-reason cap, duplicate code rejected.</li><li>Money: integer minor units, no negatives, safe-integer maximum, uppercase ISO currency.</li><li>Tenant isolation: another project&#x27;s records return 404 for read, edit and delete; no session returns 401; bad project header returns 403; no data leaks through cursors or reports.</li><li>Pagination: signed cursors bound to resource and project; every tampered cursor returns 400; no duplicates or gaps at limits 1, 7, 25, 100.</li><li>Injection: XSS payloads in names and URL parameters never execute and are never reflected into the DOM; SQL, NoSQL and regex strings in search are inert; no open redirect through login ?next=.</li><li>Uploads: presigned S3 flow works; type allowlist and 25 MB cap enforced; filenames are labels only (ID-based storage keys).</li><li>Imports and exports: 1,500-row import OK; BOM, CRLF, quoted commas and newlines, unicode OK; per-row errors are accurate; &#x27;reject&#x27; mode blocks duplicates; exported CSV neutralises formula cells and re-imports losslessly.</li><li>Resilience: offline submit keeps the draft and a retry makes exactly one record; acting on a record deleted in another tab shows a clear error; double-click on Create makes one pipeline; no layout overflow from hostile names at desktop or 375 px.</li><li>Dialog accessibility and keyboard: modal, labelled, focus trapped and restored; create works with keyboard only; behaviour matches in Chromium and Firefox (WebKit differs only in Safari&#x27;s own focus rule).</li></ul>
+
+  <h2>Not tested</h2>
+  <ul class="plain"><li>Member and other non-owner roles (only one account existed): permissions in Settings, member management, API keys.</li><li>Automation, Properties, Audit, Catalog products and Outbox beyond layout and accessibility checks.</li><li>Real screen readers (NVDA, VoiceOver, TalkBack) and Safari on macOS or iOS hardware.</li><li>Export file expiry after 7 days; load and performance testing (deliberately out of scope).</li></ul>
+
+  <footer>Most items above have an automated regression test in the crm-qa-suite folder; the rest (such as the truncated mobile table) were checked by hand. Known bugs are written as expected failures, so once one is fixed its test fails until the marker is removed. This report contains no credentials.</footer>
+</div>
+
+<script>
+(function(){
+  var chips=document.querySelectorAll('.chip[data-f]'), bugs=document.querySelectorAll('.bug'), count=document.getElementById('shown');
+  function apply(f){
+    var n=0;
+    bugs.forEach(function(b){var ok=f==='all'||b.dataset.layer===f||b.dataset.sev===f; b.hidden=!ok; if(ok)n++;});
+    chips.forEach(function(c){c.setAttribute('aria-pressed',String(c.dataset.f===f));});
+    count.textContent=n+' of '+bugs.length+' shown';
+  }
+  chips.forEach(function(c){c.addEventListener('click',function(){apply(c.dataset.f);});});
+  function copyText(t,btn){
+    var done=function(){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1400);};
+    var fallback=function(){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){btn.textContent='Select and copy manually';}document.body.removeChild(ta);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fallback);}else{fallback();}
+  }
+  document.querySelectorAll('.copy[data-md]').forEach(function(b){b.addEventListener('click',function(){copyText(document.getElementById(b.dataset.md).textContent,b);});});
+  apply('all');
+})();
+</script>
+

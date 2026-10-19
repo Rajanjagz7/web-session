@@ -1,0 +1,6 @@
+pytest>=8
+requests>=2.31
+pytest-html>=4
+defusedxml>=0.7   # used by scripts/check_gates.py
+# optional: Allure results (run with --alluredir=../allure-results)
+allure-pytest>=2.13

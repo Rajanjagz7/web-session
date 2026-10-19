@@ -1,0 +1,18 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1000} });
+const p = await c.newPage();
+await p.goto('https://dev.clinic1.ai/auth/sign-in');
+await p.getByLabel('Email address').fill('Jainamb@softwareco.com');
+await p.getByLabel('Password').first().fill('Test@123');
+await p.locator('button[type="submit"]').first().click();
+await p.getByText('Sunrise Family Medical').first().click();
+await p.waitForURL(/sunrise-family-medical.*dashboard/, { timeout: 40000 });
+await p.waitForTimeout(6000);
+await c.storageState({ path: 'playwright/.auth/tz-user.json' });
+const flat = t => t.split('\n').filter(Boolean).join(' | ');
+console.log(flat(await p.locator('body').innerText()).slice(300, 1800));
+console.log('periods:'); await p.getByRole('combobox').first().click(); console.log(await p.getByRole('option').allInnerTexts());
+await p.keyboard.press('Escape');
+await p.screenshot({ path:'test-results/walk/dash-now.png', fullPage:true });
+await b.close();

@@ -1,0 +1,39 @@
+﻿count before: 1
+
+-- invalid-value checks (expect 400, no note created) --
+  missing note text                      -> 400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"code": "custom", "path": [], "message": "Provide note text or at least one attachment"
+  missing entityId                       -> 400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"expected": "string", "code": "invalid_type", "path": ["entityId"], "message": "Invalid
+  invalid entityType enum                -> 400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"code": "invalid_value", "values": ["job", "installer"], "path": ["entityType"], "messa
+  invalid visibility enum                -> 400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"code": "invalid_value", "values": ["internal", "external"], "path": ["visibility"], "m
+  entityId wrong length                  -> 400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"origin": "string", "code": "too_small", "minimum": 24, "inclusive": true, "exact": tru
+  entityId well-formed but unknown job   -> 404 {"success": false, "statusCode": 404, "message": "Job not found", "data": null, "error": {"code": "not_found"}}
+  empty note html                        -> 201 {"success": true, "statusCode": 201, "message": "Note added successfully", "data": {"note": {"id": "6ab67a416c68441e7dd29dcd", "entityType": "job", "entityId": "6ab24e097541fdf3f7a498fc", "visibility": "internal", "note"
+  note as number not string              -> 400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"expected": "string", "code": "invalid_type", "path": ["note"], "message": "Invalid inp
+
+count after negative cases: 2 (expected same as before=1)
+
+-- valid create + read-back + count check --
+create -> 201 {"success": true, "statusCode": 201, "message": "Note added successfully", "data": {"note": {"id": "6ab67a426c68441e7dd29dd9", "entityType": "job", "entityId": "6ab24e097541fdf3f7a498fc", "visibility": "internal", "note": "<p>API regression check 1790343745 - safe to delete</p>", "attachments": [], "isChecked": false, "createdBy": {"id": "6a38ef2ea07431960aae2009", "name": "Admin User"}, "isEdited
+count after create: 3 (expected 2)
+read-back match: [
+ {
+  "id": "6ab67a426c68441e7dd29dd9",
+  "entityType": "job",
+  "entityId": "6ab24e097541fdf3f7a498fc",
+  "visibility": "internal",
+  "note": "<p>API regression check 1790343745 - safe to delete</p>",
+  "attachments": [],
+  "isChecked": false,
+  "createdBy": {
+   "id": "6a38ef2ea07431960aae2009",
+   "name": "Admin User"
+  },
+  "isEdited": false,
+  "createdAt": "2026-09-25T13:42:26.477Z",
+  "updatedAt": "2026-09-25T13:42:26.477Z",
+  "canModify": true
+ }
+]
+
+-- XSS in note body: is it stored raw or sanitised? --
+stored raw: "<p><img src=x onerror=alert(1)> marker-1790343746</p>"

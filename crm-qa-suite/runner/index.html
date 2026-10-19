@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM QA Runner</title>
+<style>
+  :root { --bg:#f7f7f9; --card:#fff; --fg:#1b1d22; --muted:#626874; --line:#dcdfe5; --accent:#4f46e5; --ok:#117a43; --bad:#b42318; --warn:#9a6700; --log:#101114; --logfg:#d7dae0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14151a; --card:#1c1e25; --fg:#eceef2; --muted:#9aa1ad; --line:#2f333d; --accent:#8b86ff; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; --log:#0b0c0f; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; }
+  header, main { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 24px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: var(--muted); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); flex: 1 1 200px; }
+  select, input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+  button { font: inherit; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #badge { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; }
+  #badge.ok { color: var(--ok); border-color: var(--ok); } #badge.bad { color: var(--bad); border-color: var(--bad); } #badge.run { color: var(--warn); border-color: var(--warn); }
+  pre { background: var(--log); color: var(--logfg); padding: 12px; border-radius: 8px; max-height: 360px; overflow: auto; margin: 12px 0 0; font: 12.5px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+  ul { margin: 0; padding-left: 18px; } a { color: var(--accent); }
+  .msg { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CRM QA Runner</h1>
+  <p class="sub">Run the automated tests, watch the log, and open the reports. Local only (127.0.0.1).</p>
+</header>
+<main>
+  <section aria-labelledby="run-h">
+    <h2 id="run-h">Run tests</h2>
+    <div class="row">
+      <label>Suite
+        <select id="suite"><option value="all">API + UI</option><option value="api">API only</option><option value="ui">UI only</option></select>
+      </label>
+      <label>Case type
+        <select id="marker">
+          <option value="all">All</option><option value="positive">Positive</option><option value="negative">Negative</option>
+          <option value="edge">Edge</option><option value="boundary">Boundary</option><option value="security">Security</option>
+          <option value="known_bug">Known bugs</option>
+        </select>
+      </label>
+      <button id="run">Run</button>
+    </div>
+    <p class="msg" id="runmsg" role="status"></p>
+    <p>Status: <span id="badge">idle</span> <span id="what"></span></p>
+    <pre id="log" aria-live="off" tabindex="0" aria-label="Test log">No run yet.</pre>
+  </section>
+
+  <section aria-labelledby="rep-h">
+    <h2 id="rep-h">Reports</h2>
+    <ul id="reports"><li>None yet.</li></ul>
+  </section>
+
+  <section aria-labelledby="cfg-h">
+    <h2 id="cfg-h">Settings</h2>
+    <form id="cfg" autocomplete="off">
+      <div class="row">
+        <label>Base URL <input name="CRM_BASE_URL" required></label>
+        <label>Project ID <input name="CRM_PROJECT_ID" required></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label>Organization <input name="CRM_ORG_ID"></label>
+        <label>Mode <select name="CRM_ENV_MODE"><option>live</option><option>test</option></select></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label>Test account email <input name="CRM_EMAIL" type="email"></label>
+        <label>Password <input name="CRM_PASSWORD" type="password" autocomplete="new-password" placeholder="(unchanged)"></label>
+      </div>
+      <p class="msg">The password is stored only in the git-ignored <code>.env</code> file and is never shown again.</p>
+      <button type="submit" class="secondary">Save settings</button> <span class="msg" id="cfgmsg" role="status"></span>
+    </form>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const api = async (path, opts) => (await fetch(path, opts)).json();
+const post = (path, body) => api(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+async function loadConfig() {
+  const c = await api('/api/config');
+  for (const el of $('cfg').elements) if (el.name && el.name !== 'CRM_PASSWORD' && c[el.name] !== undefined) el.value = c[el.name];
+  $('cfg').elements.CRM_PASSWORD.placeholder = c.passwordSet ? '(saved - leave blank to keep)' : '(not set)';
+}
+$('cfg').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData($('cfg')).entries());
+  const r = await post('/api/config', body);
+  $('cfgmsg').textContent = r.saved ? 'Saved.' : (r.error || 'Failed');
+  $('cfg').elements.CRM_PASSWORD.value = '';
+  loadConfig();
+});
+$('run').addEventListener('click', async () => {
+  const r = await post('/api/run', { suite: $('suite').value, marker: $('marker').value });
+  $('runmsg').textContent = r.started ? 'Started.' : (r.error || 'Could not start');
+  poll();
+});
+
+function renderReports(r) {
+  const ul = $('reports'); ul.replaceChildren();
+  const add = (href, text) => { const li = document.createElement('li'); const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = text; li.append(a); ul.append(li); };
+  if (r.uiReport) add('/reports/ui-html/index.html', 'UI report (Playwright: screenshots, traces, video)');
+  for (const f of r.files) add('/reports/' + encodeURIComponent(f), f);
+  if (!ul.children.length) { const li = document.createElement('li'); li.textContent = 'None yet.'; ul.append(li); }
+}
+async function poll() {
+  const s = await api('/api/status');
+  const b = $('badge');
+  b.className = s.running ? 'run' : (s.exit === null ? '' : s.exit === 0 ? 'ok' : 'bad');
+  b.textContent = s.running ? 'running' : (s.exit === null ? 'idle' : s.exit === 0 ? 'passed (gates ok)' : 'failed');
+  $('what').textContent = s.what ? `(${s.what})` : '';
+  const log = $('log');
+  if (s.log.length) { const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 30; log.textContent = s.log.join('\n'); if (stick) log.scrollTop = log.scrollHeight; }
+  renderReports(await api('/api/reports'));
+  if (s.running) setTimeout(poll, 1500);
+}
+loadConfig(); poll();
+</script>
+</body>
+</html>

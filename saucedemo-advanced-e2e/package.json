@@ -1,0 +1,22 @@
+{
+  "name": "saucedemo-advanced-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "8-layer Playwright framework for Sauce Demo (UI) + FakeStoreAPI (API)",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test src/tests/ui",
+    "test:api": "playwright test src/tests/api",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:smoke": "playwright test --grep @Smoke",
+    "test:p0": "playwright test --grep @P0",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.14.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.0"
+  }
+}

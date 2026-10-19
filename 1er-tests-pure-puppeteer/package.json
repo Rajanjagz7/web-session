@@ -1,0 +1,9 @@
+{
+  "name": "nsw-jobs-pure-puppeteer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RebateM8 NSW job creation using raw Puppeteer (no test runner).",
+  "scripts": {
+    "test": "node run.js"
+  }
+}

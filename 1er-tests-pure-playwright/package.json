@@ -1,0 +1,13 @@
+{
+  "name": "nsw-jobs-pure-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RebateM8 NSW QA suite using raw Playwright (no @playwright/test runner).",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "dependencies": {
+    "playwright": "^1.62.1",
+    "dotenv": "^16.4.5"
+  }
+}

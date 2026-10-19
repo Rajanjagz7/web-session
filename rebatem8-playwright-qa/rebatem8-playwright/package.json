@@ -1,0 +1,16 @@
+{
+  "name": "rebatem8-nsw-playwright-qa",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test tests/api.spec.ts --project=chromium",
+    "test:auth": "playwright test tests/auth.spec.ts tests/resilience.spec.ts tests/accessibility.spec.ts",
+    "test:modules": "playwright test tests/modules.spec.ts",
+    "test:session": "playwright test tests/session.spec.ts",
+    "test:cross-browser": "CROSS_BROWSER=1 playwright test",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {"@playwright/test": "1.58.2", "typescript": "5.9.3", "@types/node": "24.10.1"}
+}

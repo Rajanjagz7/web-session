@@ -1,0 +1,122 @@
+﻿nested empty objects -> 400
+{
+ "success": false,
+ "statusCode": 400,
+ "message": "Invalid request",
+ "data": null,
+ "error": {
+  "code": "validation_error",
+  "details": [
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "name"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "email"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "phoneNumber"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   }
+  ]
+ }
+}
+
+-- small_business customerType (different customer shape) --
+400 {
+ "success": false,
+ "statusCode": 400,
+ "message": "Invalid request",
+ "data": null,
+ "error": {
+  "code": "validation_error",
+  "details": [
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "name"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "email"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "phoneNumber"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   }
+  ]
+ }
+}
+
+-- hot_water_heat_pump activityType (systemType / different equip shape) --
+400 {
+ "success": false,
+ "statusCode": 400,
+ "message": "Invalid request",
+ "data": null,
+ "error": {
+  "code": "validation_error",
+  "details": [
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "name"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "email"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "customer",
+     "phoneNumber"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   }
+  ]
+ }
+}
+
+-- extra unknown top-level field --
+400 {"success": false, "statusCode": 400, "message": "Invalid request", "data": null, "error": {"code": "validation_error", "details": [{"code": "unrecognized_keys", "keys": ["totallyMadeUpField", "escValue", "status"], "path": [], "message": "Unrecognized keys: \"totallyMadeUpField\", \"escValue\", \"status\""}]}}

@@ -1,0 +1,558 @@
+[
+ {
+  "field": "Customer Name",
+  "scenario": "valid",
+  "typed": "Olivia Nguyen",
+  "kept": "Olivia Nguyen",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "1 char",
+  "typed": "A",
+  "kept": "A",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "spaces only",
+  "typed": "   ",
+  "kept": "   ",
+  "filled": false,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "digits only",
+  "typed": "12345",
+  "kept": "12345",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "apostrophe/hyphen",
+  "typed": "Siobhan O'Brien-Smith",
+  "kept": "Siobhan O'Brien-Smith",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "accented",
+  "typed": "Nguyễn Văn An",
+  "kept": "Nguyễn Văn An",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "emoji",
+  "typed": "Olivia 🙂",
+  "kept": "Olivia 🙂",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "HTML",
+  "typed": "<b>Olivia</b>",
+  "kept": "<b>Olivia</b>",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "100 chars",
+  "typed": "NguyenNguyen...(100 chars)",
+  "kept": "NguyenNguyen...(100 chars)",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Name",
+  "scenario": "258 chars",
+  "typed": "NguyenNguyen...(258 chars)",
+  "kept": "NguyenNguyen...(258 chars)",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "valid",
+  "typed": "olivia.nguyen@yopmail.com",
+  "kept": "olivia.nguyen@yopmail.com",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "uppercase",
+  "typed": "Olivia.NGUYEN@YOPMAIL.COM",
+  "kept": "Olivia.NGUYEN@YOPMAIL.COM",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "no @",
+  "typed": "olivia.yopmail.com",
+  "kept": "olivia.yopmail.com",
+  "filled": true,
+  "own": [
+   "Enter a valid email"
+  ]
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "no local part",
+  "typed": "@yopmail.com",
+  "kept": "@yopmail.com",
+  "filled": true,
+  "own": [
+   "Enter a valid email"
+  ]
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "no domain",
+  "typed": "olivia@",
+  "kept": "olivia@",
+  "filled": true,
+  "own": [
+   "Enter a valid email"
+  ]
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "no TLD",
+  "typed": "olivia@yopmail",
+  "kept": "olivia@yopmail",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "double dot",
+  "typed": "olivia..nguyen@yopmail.com",
+  "kept": "olivia..nguyen@yopmail.com",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "space inside",
+  "typed": "olivia nguyen@yopmail.com",
+  "kept": "olivia nguyen@yopmail.com",
+  "filled": true,
+  "own": [
+   "Enter a valid email"
+  ]
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "surrounding spaces",
+  "typed": "  olivia@yopmail.com  ",
+  "kept": "olivia@yopmail.com",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "plus alias",
+  "typed": "olivia+jobs@yopmail.com",
+  "kept": "olivia+jobs@yopmail.com",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Email",
+  "scenario": "65-char local part",
+  "typed": "aaaaaaaaaaaa...(77 chars)",
+  "kept": "aaaaaaaaaaaa...(77 chars)",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "valid mobile 9 digits",
+  "typed": "412345678",
+  "kept": "+61 (41) 2345 678",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "8 digits",
+  "typed": "41234567",
+  "kept": "+61 (41) 2345 67",
+  "filled": true,
+  "own": [
+   "Phone number must be 9 digits for Australia"
+  ]
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "10 digits",
+  "typed": "4123456789",
+  "kept": "+61 (41) 2345 6789",
+  "filled": true,
+  "own": [
+   "Phone number must be 9 digits for Australia"
+  ]
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "leading 0",
+  "typed": "0412345678",
+  "kept": "+61 (04) 1234 5678",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "+61 prefix",
+  "typed": "+61412345678",
+  "kept": "+61 (61) 4123 4567",
+  "filled": true,
+  "own": [
+   "Phone number must be 9 digits for Australia"
+  ]
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "landline 9 digits",
+  "typed": "298765432",
+  "kept": "+61 (29) 8765 432",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "letters",
+  "typed": "abcdefghi",
+  "kept": "+61",
+  "filled": false,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "spaces",
+  "typed": "412 345 678",
+  "kept": "+61 (41) 2345 678",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "dashes",
+  "typed": "412-345-678",
+  "kept": "+61 (41) 2345 678",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Customer Phone",
+  "scenario": "all zeros",
+  "typed": "000000000",
+  "kept": "+61 (00) 0000 000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "valid ABN",
+  "typed": "33102417032",
+  "kept": "33102417032",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "bad-checksum ABN",
+  "typed": "12345678901",
+  "kept": "12345678901",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "9-digit ACN",
+  "typed": "004085616",
+  "kept": "004085616",
+  "filled": true,
+  "own": [
+   "ABN/ACN must be exactly 11 digits"
+  ]
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "10 digits",
+  "typed": "3310241703",
+  "kept": "3310241703",
+  "filled": true,
+  "own": [
+   "ABN/ACN must be exactly 11 digits"
+  ]
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "12 digits",
+  "typed": "331024170321",
+  "kept": "33102417032",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "with spaces",
+  "typed": "33 102 417 032",
+  "kept": "33102417",
+  "filled": true,
+  "own": [
+   "ABN/ACN must be exactly 11 digits"
+  ]
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "letters",
+  "typed": "ABCDEFGHIJK",
+  "kept": "",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "all zeros",
+  "typed": "00000000000",
+  "kept": "00000000000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "ABN/ACN",
+  "scenario": "negative",
+  "typed": "-3310241703",
+  "kept": "3310241703",
+  "filled": true,
+  "own": [
+   "ABN/ACN must be exactly 11 digits"
+  ]
+ },
+ {
+  "field": "Postcode",
+  "scenario": "valid NSW",
+  "typed": "2000",
+  "kept": "2000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "valid NSW regional",
+  "typed": "2650",
+  "kept": "2650",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "VIC postcode",
+  "typed": "3000",
+  "kept": "3000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "QLD postcode",
+  "typed": "4000",
+  "kept": "4000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "3 digits",
+  "typed": "200",
+  "kept": "200",
+  "filled": true,
+  "own": [
+   "Postcode must be exactly 4 digits"
+  ]
+ },
+ {
+  "field": "Postcode",
+  "scenario": "5 digits",
+  "typed": "20000",
+  "kept": "2000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "letters",
+  "typed": "abcd",
+  "kept": "",
+  "filled": false,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "all zeros",
+  "typed": "0000",
+  "kept": "0000",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Postcode",
+  "scenario": "with space",
+  "typed": "2 000",
+  "kept": "200",
+  "filled": true,
+  "own": [
+   "Postcode must be exactly 4 digits"
+  ]
+ },
+ {
+  "field": "Postcode",
+  "scenario": "negative",
+  "typed": "-200",
+  "kept": "200",
+  "filled": true,
+  "own": [
+   "Postcode must be exactly 4 digits"
+  ]
+ },
+ {
+  "field": "Own Reference",
+  "scenario": "typical",
+  "typed": "REF-2026-0142",
+  "kept": "REF-2026-0142",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Own Reference",
+  "scenario": "spaces only",
+  "typed": "   ",
+  "kept": "   ",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Own Reference",
+  "scenario": "HTML",
+  "typed": "<i>REF</i>",
+  "kept": "<i>REF</i>",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Own Reference",
+  "scenario": "258 chars",
+  "typed": "NguyenNguyen...(258 chars)",
+  "kept": "NguyenNguyen...(258 chars)",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "valid future",
+  "typed": "15-12-2026",
+  "kept": "15-12-2026",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "today",
+  "typed": "24-09-2026",
+  "kept": "24-09-2026",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "past",
+  "typed": "01-01-2020",
+  "kept": "01-01-2020",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "31 Dec",
+  "typed": "31-12-2026",
+  "kept": "31-12-2026",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "29 Feb non-leap",
+  "typed": "29-02-2027",
+  "kept": "29-02-2027",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "31 Apr",
+  "typed": "31-04-2027",
+  "kept": "31-04-2027",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "day 00",
+  "typed": "00-01-2027",
+  "kept": "00-01-2027",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "month 13",
+  "typed": "15-13-2026",
+  "kept": "15-13-2026",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "single digits",
+  "typed": "1-1-2027",
+  "kept": "1-1-2027",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "slashes",
+  "typed": "15/12/2026",
+  "kept": "15/12/2026",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "letters",
+  "typed": "ab-cd-efgh",
+  "kept": "ab-cd-efgh",
+  "filled": true,
+  "own": []
+ },
+ {
+  "field": "Installation Date",
+  "scenario": "year 1900",
+  "typed": "15-12-1900",
+  "kept": "15-12-1900",
+  "filled": true,
+  "own": []
+ }
+]

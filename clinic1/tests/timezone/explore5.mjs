@@ -1,0 +1,10 @@
+import { request } from '@playwright/test';
+import fs from 'fs';
+const o='https://sunrise-family-medical.dev.clinic1.ai';
+const ctx = await request.newContext({ storageState:'playwright/.auth/tz-user.json', baseURL:o });
+const cid='6a32753a139744ccb3181d73';
+const get = async (u)=>{const r=await ctx.get(u); const t=await r.text(); return {s:r.status(),t};};
+let r=await get(`/api/v1/clinic/location?clinicId=${cid}&page=1&limit=50`);
+fs.writeFileSync('test-results/tz-locations.json', r.t); console.log(r.s, r.t.slice(0,3000));
+r=await get(`/api/v1/practitioner/web?clinicId=${cid}&fromDate=2026-10-06&toDate=2026-10-07&page=1&limit=10&includeInstr`);
+fs.writeFileSync('test-results/tz-prac.json', r.t); console.log(r.s, r.t.slice(0,3500));

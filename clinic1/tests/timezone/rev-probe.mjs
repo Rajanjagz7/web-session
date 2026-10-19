@@ -1,0 +1,12 @@
+import fs from 'fs';
+import { api, invoiceBody, paymentBody, post } from './seed-lib.mjs';
+const c = await api();
+const tpl = JSON.parse(fs.readFileSync('test-results/invoice-post.json','utf8'));
+const log = JSON.parse(fs.readFileSync('test-results/seed-log.json','utf8')).filter(x=>x.month===1);
+const a = log[0]; console.log('using', a.patient, a.start, a.id);
+const iso = new Date(a.start+':00+11:00').toISOString();
+const ri = await post(c,'/api/v1/invoice', invoiceBody(tpl,a.patientId,a.id,iso));
+const ti = ri.t; console.log('invoice', ri.s, ti.slice(0,200));
+const invId = JSON.parse(ti).response.invoice._id;
+const rp = await post(c,'/api/v1/payment', paymentBody(invId,a.patientId,iso));
+console.log('payment', rp.s, rp.t.slice(0,250));

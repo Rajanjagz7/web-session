@@ -1,0 +1,18 @@
+{
+  "name": "stc-security-e2e",
+  "version": "1.0.0",
+  "description": "Playwright E2E Automation Suite for STC - Security Sprint 1",
+  "scripts": {
+    "test": "playwright test",
+    "test:dev": "cross-env TEST_ENV=dev playwright test",
+    "test:stage": "cross-env TEST_ENV=stage playwright test",
+    "test:auth": "playwright test tests/auth.spec.ts",
+    "test:users": "playwright test tests/user-management.spec.ts",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.0",
+    "dotenv": "^16.4.5"
+  }
+}

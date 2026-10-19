@@ -1,0 +1,51 @@
+﻿42 still to fix
+[  1/42] M8N000205 -> M8N000237  (201)
+[  2/42] M8N000204 -> M8N000238  (201)
+[  3/42] M8N000203 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[  4/42] M8N000201 -> M8N000239  (201)
+[  5/42] M8N000200 -> M8N000240  (201)
+[  6/42] M8N000198 -> M8N000241  (201)
+[  7/42] M8N000190 -> M8N000242  (201)
+[  8/42] M8N000189 -> M8N000243  (201)
+[  9/42] M8N000186 -> M8N000244  (201)
+[ 10/42] M8N000185 -> M8N000245  (201)
+[ 11/42] M8N000182 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[ 12/42] M8N000181 -> M8N000246  (201)
+[ 13/42] M8N000178 -> M8N000247  (201)
+[ 14/42] M8N000177 -> M8N000248  (201)
+[ 15/42] M8N000176 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[ 16/42] M8N000174 -> M8N000249  (201)
+[ 17/42] M8N000173 -> M8N000250  (201)
+[ 18/42] M8N000171 -> M8N000251  (201)
+[ 19/42] M8N000170 -> M8N000252  (201)
+[ 20/42] M8N000169 -> M8N000253  (201)
+[ 21/42] M8N000166 -> M8N000254  (201)
+[ 22/42] M8N000165 -> M8N000255  (201)
+[ 23/42] M8N000162 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[ 24/42] M8N000161 -> M8N000256  (201)
+[ 25/42] M8N000158 -> M8N000257  (201)
+[ 26/42] M8N000157 -> M8N000258  (201)
+[ 27/42] M8N000156 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[ 28/42] M8N000154 -> M8N000259  (201)
+[ 29/42] M8N000153 -> M8N000260  (201)
+[ 30/42] M8N000151 -> M8N000261  (201)
+[ 31/42] M8N000150 -> M8N000262  (201)
+[ 32/42] M8N000149 -> M8N000263  (201)
+[ 33/42] M8N000146 -> M8N000264  (201)
+[ 34/42] M8N000145 -> M8N000265  (201)
+[ 35/42] M8N000142 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[ 36/42] M8N000141 -> M8N000266  (201)
+[ 37/42] M8N000138 -> M8N000267  (201)
+[ 38/42] M8N000197 -> M8N000268  (201)
+[ 39/42] M8N000196 -> FAILED: {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","value  (400)
+[ 40/42] M8N000194 -> M8N000269  (201)
+[ 41/42] M8N000193 -> M8N000270  (201)
+[ 42/42] M8N000191 -> M8N000271  (201)
+
+35 created OK, 7 still failed
+
+deleting 35 original bad-data jobs...
+  delete chunk 0-25: 200 {"success":true,"statusCode":200,"message":"Jobs deleted successfully","data":{"deletedCount":25,"requested":25,"notFound":[]}}
+  delete chunk 25-35: 200 {"success":true,"statusCode":200,"message":"Jobs deleted successfully","data":{"deletedCount":10,"requested":10,"notFound":[]}}
+
+deleted_total=35, count before this pass=248, final=248

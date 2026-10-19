@@ -1,0 +1,6 @@
+.env.nsw-jobs
+test-results/
+playwright-report/
+__pycache__/
+*.pyc
+.pytest_cache/

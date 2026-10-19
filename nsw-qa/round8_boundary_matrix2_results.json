@@ -1,0 +1,158 @@
+[
+ {
+  "n": 1,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "valid",
+  "value": "6",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0f56c68441e7dd2a4b3\", \"jobNumber\": \"M8N000198\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0f56c68441e7dd2a4b0\", \"activityType\": \"",
+  "jobNumber": "M8N000198",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 6}]"
+ },
+ {
+  "n": 2,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "zero",
+  "value": "0",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0f56c68441e7dd2a4c4\", \"jobNumber\": \"M8N000199\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0f56c68441e7dd2a4c1\", \"activityType\": \"",
+  "jobNumber": "M8N000199",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 0}]"
+ },
+ {
+  "n": 3,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "negative",
+  "value": "-5",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0f66c68441e7dd2a4d5\", \"jobNumber\": \"M8N000200\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0f66c68441e7dd2a4d2\", \"activityType\": \"",
+  "jobNumber": "M8N000200",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": -5}]"
+ },
+ {
+  "n": 4,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "very large",
+  "value": "999999",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0f76c68441e7dd2a4e6\", \"jobNumber\": \"M8N000201\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0f76c68441e7dd2a4e3\", \"activityType\": \"",
+  "jobNumber": "M8N000201",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 999999}]"
+ },
+ {
+  "n": 5,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "string number",
+  "value": "'6'",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"expected\": \"number\", \"code\": \"invalid_type\", \"path\": [\"equipmentQuoted\", 0, \"coolingCapacityKw\"], \"message\": \"Invalid input: expected number, received string\"}]}}"
+ },
+ {
+  "n": 6,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "null",
+  "value": "None",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"expected\": \"number\", \"code\": \"invalid_type\", \"path\": [\"equipmentQuoted\", 0, \"coolingCapacityKw\"], \"message\": \"Invalid input: expected number, received null\"}]}}"
+ },
+ {
+  "n": 7,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "float",
+  "value": "6.5",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0fa6c68441e7dd2a4f9\", \"jobNumber\": \"M8N000202\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0fa6c68441e7dd2a4f6\", \"activityType\": \"",
+  "jobNumber": "M8N000202",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 6.5}]"
+ },
+ {
+  "n": 8,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "scientific notation",
+  "value": "'1e3'",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"expected\": \"number\", \"code\": \"invalid_type\", \"path\": [\"equipmentQuoted\", 0, \"coolingCapacityKw\"], \"message\": \"Invalid input: expected number, received string\"}]}}"
+ },
+ {
+  "n": 9,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "NaN string",
+  "value": "'NaN'",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"expected\": \"number\", \"code\": \"invalid_type\", \"path\": [\"equipmentQuoted\", 0, \"coolingCapacityKw\"], \"message\": \"Invalid input: expected number, received string\"}]}}"
+ },
+ {
+  "n": 10,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "Infinity string",
+  "value": "'Infinity'",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"expected\": \"number\", \"code\": \"invalid_type\", \"path\": [\"equipmentQuoted\", 0, \"coolingCapacityKw\"], \"message\": \"Invalid input: expected number, received string\"}]}}"
+ },
+ {
+  "n": 11,
+  "field": "equipmentQuoted.0.coolingCapacityKw",
+  "label": "omitted",
+  "value": "'__OMIT__'",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0fc6c68441e7dd2a50f\", \"jobNumber\": \"M8N000203\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0fc6c68441e7dd2a50c\", \"activityType\": \"",
+  "jobNumber": "M8N000203",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0}]"
+ },
+ {
+  "n": 12,
+  "field": "ownReference",
+  "label": "valid",
+  "value": "'REF-357744'",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0fd6c68441e7dd2a521\", \"jobNumber\": \"M8N000204\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0fd6c68441e7dd2a51e\", \"activityType\": \"",
+  "jobNumber": "M8N000204",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 6}]"
+ },
+ {
+  "n": 13,
+  "field": "ownReference",
+  "label": "empty string",
+  "value": "''",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0fe6c68441e7dd2a533\", \"jobNumber\": \"M8N000205\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0fe6c68441e7dd2a530\", \"activityType\": \"",
+  "jobNumber": "M8N000205",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 6}]"
+ },
+ {
+  "n": 14,
+  "field": "ownReference",
+  "label": "null",
+  "value": "None",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"expected\": \"string\", \"code\": \"invalid_type\", \"path\": [\"ownReference\"], \"message\": \"Invalid input: expected string, received null\"}]}}"
+ },
+ {
+  "n": 15,
+  "field": "ownReference",
+  "label": "omitted",
+  "value": "'__OMIT__'",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b0ff6c68441e7dd2a545\", \"jobNumber\": \"M8N000206\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b0ff6c68441e7dd2a542\", \"activityType\": \"",
+  "jobNumber": "M8N000206",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 6}]"
+ },
+ {
+  "n": 16,
+  "field": "ownReference",
+  "label": "very long (600 chars)",
+  "value": "'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  "status": 400,
+  "response": "{\"success\": false, \"statusCode\": 400, \"message\": \"Invalid request\", \"data\": null, \"error\": {\"code\": \"validation_error\", \"details\": [{\"origin\": \"string\", \"code\": \"too_big\", \"maximum\": 100, \"inclusive\": true, \"path\": [\"ownReference\"], \"message\": \"Too big: expected string to have <=100 characters\"}]}}"
+ },
+ {
+  "n": 17,
+  "field": "ownReference",
+  "label": "null byte",
+  "value": "'REF\\x00X'",
+  "status": 201,
+  "response": "{\"success\": true, \"statusCode\": 201, \"message\": \"Job created successfully\", \"data\": {\"job\": {\"id\": \"6ab6b1016c68441e7dd2a558\", \"jobNumber\": \"M8N000207\", \"status\": \"engagement_sent\", \"installerId\": \"6aace061972e326f8fef7aae\", \"contractorGroupId\": [], \"createdBy\": \"6a38ef2ea07431960aae2009\", \"customerId\": \"6ab6b1016c68441e7dd2a555\", \"activityType\": \"",
+  "jobNumber": "M8N000207",
+  "stored_equipment_or_ref": "[{\"originalEquipment\": \"Installation of a New Air Conditioner\", \"brand\": \"KELVINATOR\", \"model\": \"KWH60CRF\", \"heatingCapacityKw\": 0, \"coolingCapacityKw\": 6}]"
+ }
+]

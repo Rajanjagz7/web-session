@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "chrome-devtools-mcp": "^1.8.0",
+    "puppeteer": "^25.9.0"
+  },
+  "allowScripts": {
+    "puppeteer@25.9.0": true
+  }
+}

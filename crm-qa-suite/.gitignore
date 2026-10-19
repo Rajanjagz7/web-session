@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+reports/*
+!reports/.gitkeep
+node_modules/
+__pycache__/
+.pytest_cache/
+ui/.auth/
+ui/test-results/
+ui/playwright-report/
+allure-results/
+runner/.runner-state.json

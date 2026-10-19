@@ -1,0 +1,182 @@
+[
+ {
+  "id": "E01",
+  "case": "ABN with invalid checksum (11 digits)",
+  "name": "Oliver Bennett",
+  "expected": "blocked",
+  "result": "CREATED",
+  "searched_for": "Oliver Bennett",
+  "list_rows": [
+   "    M8N000105   Engagement Sent  Oliver Bennett BAWA Residential - +61 424619501  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Hea"
+  ]
+ },
+ {
+  "id": "E02",
+  "case": "ABN valid checksum typed with spaces",
+  "name": "Grace Whitaker",
+  "expected": "created",
+  "result": "BLOCKED",
+  "errors": [
+   "ABN/ACN must be exactly 11 digits",
+   "Action Required"
+  ]
+ },
+ {
+  "id": "E03",
+  "case": "Email without a TLD",
+  "name": "Harper Collins",
+  "expected": "blocked",
+  "result": "BLOCKED",
+  "errors": [
+   "Action Required",
+   "Error"
+  ]
+ },
+ {
+  "id": "E04",
+  "case": "Email with consecutive dots",
+  "name": "Thomas Reid",
+  "expected": "blocked",
+  "result": "BLOCKED",
+  "errors": [
+   "Action Required",
+   "Error"
+  ]
+ },
+ {
+  "id": "E05",
+  "case": "Email with trailing space",
+  "name": "Chloe Watson",
+  "expected": "created (trimmed)",
+  "result": "CREATED",
+  "searched_for": "Chloe Watson",
+  "list_rows": [
+   "    M8N000106   Engagement Sent  Chloe Watson BAWA Residential - +61 424619505  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heati"
+  ]
+ },
+ {
+  "id": "E06",
+  "case": "Customer phone is an NSW landline (02)",
+  "name": "Henry Clarke",
+  "expected": "PO decision",
+  "result": "CREATED",
+  "searched_for": "Henry Clarke",
+  "list_rows": [
+   "    M8N000107   Engagement Sent  Henry Clarke BAWA Residential - +61 298765432  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heati"
+  ]
+ },
+ {
+  "id": "E07",
+  "case": "Customer name is a single character",
+  "name": "J",
+  "expected": "PO decision",
+  "result": "CREATED",
+  "searched_for": "j.2461957",
+  "list_rows": [
+   "    M8N000108   Engagement Sent  J BAWA Residential - +61 424619507  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heating & Coolin"
+  ]
+ },
+ {
+  "id": "E08",
+  "case": "Name with apostrophe, hyphen and diacritic",
+  "name": "Siobhán O'Brien-Nguyễn",
+  "expected": "created, shown correctly",
+  "result": "CREATED",
+  "searched_for": "Siobhán O'Brien-Nguyễn",
+  "list_rows": [
+   "    M8N000109   Engagement Sent  Siobhán O'Brien-Nguyễn BAWA Residential - +61 424619508  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sy"
+  ]
+ },
+ {
+  "id": "E08",
+  "case": "Name with apostrophe, hyphen and diacritic",
+  "result": "SCRIPT-ERROR",
+  "detail": "UnicodeEncodeError: 'charmap' codec can't encode character '\\u1ec5' in position 97: character maps to <undefined>"
+ },
+ {
+  "id": "E09",
+  "case": "Installation date 29-02-2027 (not a leap year)",
+  "name": "Isabella Hart",
+  "expected": "blocked",
+  "result": "CREATED",
+  "searched_for": "Isabella Hart",
+  "list_rows": [
+   "    M8N000110   Engagement Sent  Isabella Hart BAWA Residential - +61 424619509  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heat"
+  ]
+ },
+ {
+  "id": "E10",
+  "case": "Installation date 29-02-2028 (leap year)",
+  "name": "Matilda Grant",
+  "expected": "created",
+  "result": "CREATED",
+  "searched_for": "Matilda Grant",
+  "list_rows": [
+   "    M8N000111   Engagement Sent  Matilda Grant BAWA Residential - +61 424619510  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heat"
+  ]
+ },
+ {
+  "id": "E11",
+  "case": "Second product added but left blank",
+  "name": "William Foster",
+  "expected": "blocked",
+  "result": "BLOCKED",
+  "errors": [
+   "Action Required",
+   "Brand is required",
+   "Model is required",
+   "Original equipment is required"
+  ]
+ },
+ {
+  "id": "E12",
+  "case": "Double-click Send Engagement Letter",
+  "expected": "1 job",
+  "result": "1 job(s) created",
+  "list_rows": [
+   "    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Service Desk Cnr Park & Level, 1"
+  ]
+ },
+ {
+  "id": "S01",
+  "case": "Search: job ID in lowercase ('m8n000078')",
+  "rows": 1,
+  "first_row": "    M8N000078   Site Assessment and Nomination Requested  Harrison Doyle BAWA Residential - +61 412987654  Big",
+  "server_errors": []
+ },
+ {
+  "id": "S02",
+  "case": "Search: job ID with surrounding spaces ('  M8N000078  ')",
+  "rows": 1,
+  "first_row": "No Data Found  Try adjusting your filters or search criteria.",
+  "server_errors": []
+ },
+ {
+  "id": "S03",
+  "case": "Search: partial customer name ('Harrison')",
+  "rows": 1,
+  "first_row": "    M8N000078   Site Assessment and Nomination Requested  Harrison Doyle BAWA Residential - +61 412987654  Big",
+  "server_errors": []
+ },
+ {
+  "id": "S04",
+  "case": "Search: phone number ('412987654')",
+  "rows": 1,
+  "first_row": "    M8N000078   Site Assessment and Nomination Requested  Harrison Doyle BAWA Residential - +61 412987654  Big",
+  "server_errors": []
+ },
+ {
+  "id": "S05",
+  "case": "Search: SQL wildcard ('%')",
+  "rows": 10,
+  "first_row": "    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Service Desk Cnr Park ",
+  "server_errors": []
+ },
+ {
+  "id": "S06",
+  "case": "Search: single quote (\"'\")",
+  "rows": 10,
+  "first_row": "    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Service Desk Cnr Park ",
+  "server_errors": []
+ }
+]

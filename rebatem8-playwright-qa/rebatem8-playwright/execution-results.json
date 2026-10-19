@@ -1,0 +1,1303 @@
+{
+  "target": "https://nswdev.rebatem8.com.au",
+  "scope": "Chromium only; final result per test after any explicitly documented corrections",
+  "runs": [
+    {
+      "started": "2026-09-14T05:55:14.848Z",
+      "durationMs": 597108.657,
+      "expected": 47,
+      "unexpected": 42,
+      "skipped": 0,
+      "flaky": 0
+    },
+    {
+      "started": "2026-09-14T06:08:24.829Z",
+      "durationMs": 155601.041,
+      "expected": 31,
+      "unexpected": 4,
+      "skipped": 0,
+      "flaky": 0
+    }
+  ],
+  "summary": {
+    "total": 89,
+    "passed": 71,
+    "failed": 18,
+    "skipped": 0
+  },
+  "tests": [
+    {
+      "id": "UI-320",
+      "title": "UI-320 | Edge | Login is usable at 320x568",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 3,
+      "status": "passed",
+      "durationMs": 4006,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "UI-375",
+      "title": "UI-375 | Edge | Login is usable at 375x812",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 3,
+      "status": "passed",
+      "durationMs": 3839,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "UI-768",
+      "title": "UI-768 | Edge | Login is usable at 768x1024",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 3,
+      "status": "passed",
+      "durationMs": 3937,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "UI-1440",
+      "title": "UI-1440 | Edge | Login is usable at 1440x900",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 3,
+      "status": "passed",
+      "durationMs": 3724,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "A11Y-001",
+      "title": "A11Y-001 | Accessibility | Email has a programmatically associated label",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 12,
+      "status": "failed",
+      "durationMs": 10514,
+      "errors": [
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: getByLabel('Email ID', { exact: true })\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByLabel('Email ID', { exact: true })\n\n\n  11 |\n  12 | test('A11Y-001 | Accessibility | Email has a programmatically associated label',async({page})=>{\n> 13 |   await new LoginPage(page).open();await expect(page.getByLabel('Email ID',{exact:true})).toBeVisible();\n     |                                                                                           ^\n  14 | });\n  15 | test('A11Y-002 | Accessibility | Password has a programmatically associated label',async({page})=>{\n  16 |   await new LoginPage(page).open();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();\n    at tests/accessibility.spec.ts:13:91"
+      ],
+      "network": []
+    },
+    {
+      "id": "A11Y-002",
+      "title": "A11Y-002 | Accessibility | Password has a programmatically associated label",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 15,
+      "status": "failed",
+      "durationMs": 11556,
+      "errors": [
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: getByLabel('Password', { exact: true })\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByLabel('Password', { exact: true })\n\n\n  14 | });\n  15 | test('A11Y-002 | Accessibility | Password has a programmatically associated label',async({page})=>{\n> 16 |   await new LoginPage(page).open();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();\n     |                                                                                           ^\n  17 | });\n  18 | test('A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button',async({page})=>{\n  19 |   await new LoginPage(page).open();const toggle=page.getByRole('button',{name:/show password|reveal password|toggle password/i});\n    at tests/accessibility.spec.ts:16:91"
+      ],
+      "network": []
+    },
+    {
+      "id": "A11Y-003",
+      "title": "A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 18,
+      "status": "failed",
+      "durationMs": 11625,
+      "errors": [
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('button', { name: /show password|reveal password|toggle password/i })\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" with timeout 8000ms\n  - waiting for getByRole('button', { name: /show password|reveal password|toggle password/i })\n\n\n  18 | test('A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button',async({page})=>{\n  19 |   await new LoginPage(page).open();const toggle=page.getByRole('button',{name:/show password|reveal password|toggle password/i});\n> 20 |   await expect(toggle).toBeVisible();await toggle.focus();await expect(toggle).toBeFocused();\n     |                        ^\n  21 | });\n  22 | test('A11Y-004 | Accessibility | Validation errors identify invalid fields',async({page})=>{\n  23 |   const login=new LoginPage(page);await login.open();await login.submit.click();\n    at tests/accessibility.spec.ts:20:24"
+      ],
+      "network": []
+    },
+    {
+      "id": "A11Y-004",
+      "title": "A11Y-004 | Accessibility | Validation errors identify invalid fields",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 22,
+      "status": "failed",
+      "durationMs": 10721,
+      "errors": [
+        "Error: expect(locator).toHaveAttribute(expected) failed\n\nLocator:  locator('input[name=\"email\"]')\nExpected: \"true\"\nReceived: \"\"\nTimeout:  8000ms\n\nCall log:\n  - Expect \"toHaveAttribute\" with timeout 8000ms\n  - waiting for locator('input[name=\"email\"]')\n    12 × locator resolved to <input value=\"\" type=\"text\" name=\"email\" autocomplete=\"off\" placeholder=\"Email ID\" class=\"input input-md h-11 input-invalid\"/>\n       - unexpected value \"null\"\n\n\n  22 | test('A11Y-004 | Accessibility | Validation errors identify invalid fields',async({page})=>{\n  23 |   const login=new LoginPage(page);await login.open();await login.submit.click();\n> 24 |   await expect(login.email).toHaveAttribute('aria-invalid','true');\n     |                             ^\n  25 |   await expect(login.password).toHaveAttribute('aria-invalid','true');\n  26 |   const ids=await login.email.getAttribute('aria-describedby');expect(ids).toBeTruthy();\n  27 |   for(const id of ids!.split(/\\s+/)) await expect(page.locator(`[id=\"${id}\"]`)).toBeVisible();\n    at tests/accessibility.spec.ts:24:29"
+      ],
+      "network": []
+    },
+    {
+      "id": "A11Y-005",
+      "title": "A11Y-005 | Positive | Keyboard tab order reaches email, password, submit",
+      "project": "chromium",
+      "file": "accessibility.spec.ts",
+      "line": 29,
+      "status": "passed",
+      "durationMs": 2622,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-001",
+      "title": "AUTH-001 | Positive | Login page renders over HTTPS",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 3,
+      "status": "passed",
+      "durationMs": 2760,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-002",
+      "title": "AUTH-002 | Negative | Both fields empty",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 3913,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-003",
+      "title": "AUTH-003 | Negative | Email empty",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 2653,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-004",
+      "title": "AUTH-004 | Negative | Password empty",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 3634,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-005",
+      "title": "AUTH-005 | Negative | Email whitespace only",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 2610,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-006",
+      "title": "AUTH-006 | Negative | Email missing at sign",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 2608,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-007",
+      "title": "AUTH-007 | Negative | Email missing local part",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 3592,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-008",
+      "title": "AUTH-008 | Negative | Email missing domain",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 3580,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-009",
+      "title": "AUTH-009 | Negative | Email multiple at signs",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 2591,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-010",
+      "title": "AUTH-010 | Negative | Email embedded space",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 3673,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-011",
+      "title": "AUTH-011 | Negative | Email consecutive dots",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "failed",
+      "durationMs": 11644,
+      "errors": [
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('.form-explain').first()\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"soft toBeVisible\" with timeout 8000ms\n  - waiting for locator('.form-explain').first()\n\n\n  31 |   await page.route(LOGIN_API, async r => {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});\n  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();\n> 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();\n     |                                                            ^\n  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();\n  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();\n  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);\n    at tests/auth.spec.ts:33:60",
+        "Error: Invalid form must not submit a login request\n\nexpect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 1\n\n  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();\n  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();\n> 36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);\n     |                                                                 ^\n  37 |   expect(dialogOpened).toBe(false); await expect(page).toHaveURL(/\\/log-in$/);\n  38 | });\n  39 |\n    at tests/auth.spec.ts:36:65"
+      ],
+      "network": []
+    },
+    {
+      "id": "AUTH-012",
+      "title": "AUTH-012 | Negative | Email leading dot",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "failed",
+      "durationMs": 12455,
+      "errors": [
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('.form-explain').first()\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"soft toBeVisible\" with timeout 8000ms\n  - waiting for locator('.form-explain').first()\n\n\n  31 |   await page.route(LOGIN_API, async r => {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});\n  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();\n> 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();\n     |                                                            ^\n  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();\n  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();\n  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);\n    at tests/auth.spec.ts:33:60",
+        "Error: Invalid form must not submit a login request\n\nexpect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 1\n\n  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();\n  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();\n> 36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);\n     |                                                                 ^\n  37 |   expect(dialogOpened).toBe(false); await expect(page).toHaveURL(/\\/log-in$/);\n  38 | });\n  39 |\n    at tests/auth.spec.ts:36:65"
+      ],
+      "network": []
+    },
+    {
+      "id": "AUTH-013",
+      "title": "AUTH-013 | Negative | Email trailing local dot",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "failed",
+      "durationMs": 11831,
+      "errors": [
+        "Error: expect(locator).toBeVisible() failed\n\nLocator: locator('.form-explain').first()\nExpected: visible\nTimeout: 8000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"soft toBeVisible\" with timeout 8000ms\n  - waiting for locator('.form-explain').first()\n\n\n  31 |   await page.route(LOGIN_API, async r => {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});\n  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();\n> 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();\n     |                                                            ^\n  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();\n  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();\n  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);\n    at tests/auth.spec.ts:33:60",
+        "Error: Invalid form must not submit a login request\n\nexpect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 1\n\n  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();\n  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();\n> 36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);\n     |                                                                 ^\n  37 |   expect(dialogOpened).toBe(false); await expect(page).toHaveURL(/\\/log-in$/);\n  38 | });\n  39 |\n    at tests/auth.spec.ts:36:65"
+      ],
+      "network": []
+    },
+    {
+      "id": "AUTH-014",
+      "title": "AUTH-014 | Negative | Markup entered as email",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 27,
+      "status": "passed",
+      "durationMs": 2591,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-015",
+      "title": "AUTH-015 | Positive | Valid credentials reach Jobs using Enter",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 40,
+      "status": "passed",
+      "durationMs": 6285,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-016",
+      "title": "AUTH-016 | Negative LIVE | Incorrect password is rejected",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 47,
+      "status": "passed",
+      "durationMs": 3062,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-017",
+      "title": "AUTH-017 | Negative LIVE | Nonexistent account is rejected",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 56,
+      "status": "passed",
+      "durationMs": 2833,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-018",
+      "title": "AUTH-018 | Edge | Password reveal toggle preserves input and remasks",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 65,
+      "status": "passed",
+      "durationMs": 2614,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-019",
+      "title": "AUTH-019 | Positive | Validation clears when inputs are corrected",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 73,
+      "status": "passed",
+      "durationMs": 4040,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-20",
+      "title": "AUTH-20 | Edge MOCK | Syntactically valid email 1 reaches authentication",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 82,
+      "status": "passed",
+      "durationMs": 3602,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-21",
+      "title": "AUTH-21 | Edge MOCK | Syntactically valid email 2 reaches authentication",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 82,
+      "status": "passed",
+      "durationMs": 3744,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-22",
+      "title": "AUTH-22 | Edge MOCK | Syntactically valid email 3 reaches authentication",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 82,
+      "status": "passed",
+      "durationMs": 3850,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-023",
+      "title": "AUTH-023 | Edge MOCK | Long and Unicode passwords are not silently truncated",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 88,
+      "status": "passed",
+      "durationMs": 3658,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "AUTH-024",
+      "title": "AUTH-024 | Edge MOCK | Password leading/trailing spaces are preserved",
+      "project": "chromium",
+      "file": "auth.spec.ts",
+      "line": 95,
+      "status": "passed",
+      "durationMs": 3632,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "MOD-001",
+      "title": "MOD-001 | Positive LIVE | Dashboard loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3891,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  -  1\n+ Received  + 58\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/installer/filter/list\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-tracking\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-count\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-breakdown\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/top-product\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-rebate\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/avg-complete-time\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-tracking\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-count\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-breakdown\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/top-product\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-rebate\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/avg-complete-time\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/dashboard/job-tracking\",\n+     \"status\": 404,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78",
+        "Error: No uncaught JavaScript errors\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 4\n\n- Array []\n+ Array [\n+   \"Cannot read properties of undefined (reading 'length')\",\n+   \"Cannot read properties of undefined (reading 'length')\",\n+ ]\n\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n  17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n> 18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n     |                                                     ^\n  19 |   });\n  20 | }\n  21 |\n    at tests/modules.spec.ts:18:53"
+      ],
+      "network": [
+        {
+          "path": "/dashboard",
+          "failures": [
+            {
+              "path": "/api/v1/installer/filter/list",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-tracking",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-count",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-breakdown",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/top-product",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-rebate",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/avg-complete-time",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-tracking",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-count",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-breakdown",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/top-product",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-rebate",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/avg-complete-time",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/dashboard/job-tracking",
+              "status": 404
+            }
+          ],
+          "requests": 15,
+          "crashes": [
+            "Cannot read properties of undefined (reading 'length')",
+            "Cannot read properties of undefined (reading 'length')"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MOD-002",
+      "title": "MOD-002 | Positive LIVE | Projects loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3538,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  -  1\n+ Received  + 14\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/installer/filter/list\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/site/list\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/site/list\",\n+     \"status\": 404,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/projects",
+          "failures": [
+            {
+              "path": "/api/v1/installer/filter/list",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/site/list",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/site/list",
+              "status": 404
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-003",
+      "title": "MOD-003 | Positive LIVE | All loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3652,
+      "errors": [],
+      "network": [
+        {
+          "path": "/jobs",
+          "failures": [],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-004",
+      "title": "MOD-004 | Positive LIVE | In Progress loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3622,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/jobs\",\n+     \"status\": 400,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/in-progress-jobs",
+          "failures": [
+            {
+              "path": "/api/v1/jobs",
+              "status": 400
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-005",
+      "title": "MOD-005 | Positive LIVE | Action Required loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3791,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/jobs\",\n+     \"status\": 400,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/action-Required-jobs",
+          "failures": [
+            {
+              "path": "/api/v1/jobs",
+              "status": 400
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-006",
+      "title": "MOD-006 | Positive LIVE | Being Assessed loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 12757,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/jobs\",\n+     \"status\": 400,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/being-assessed-jobs",
+          "failures": [
+            {
+              "path": "/api/v1/jobs",
+              "status": 400
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-007",
+      "title": "MOD-007 | Positive LIVE | Completed loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3673,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/jobs\",\n+     \"status\": 400,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/completed-jobs",
+          "failures": [
+            {
+              "path": "/api/v1/jobs",
+              "status": 400
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-008",
+      "title": "MOD-008 | Positive LIVE | Archived loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3763,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/jobs\",\n+     \"status\": 400,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/archived-jobs",
+          "failures": [
+            {
+              "path": "/api/v1/jobs",
+              "status": 400
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-010",
+      "title": "MOD-010 | Positive LIVE | Installers loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3833,
+      "errors": [],
+      "network": [
+        {
+          "path": "/installer",
+          "failures": [],
+          "requests": 2,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-011",
+      "title": "MOD-011 | Positive LIVE | Installer Users loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3544,
+      "errors": [],
+      "network": [
+        {
+          "path": "/installeruser",
+          "failures": [],
+          "requests": 3,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-012",
+      "title": "MOD-012 | Positive LIVE | Matrix loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3120,
+      "errors": [],
+      "network": [
+        {
+          "path": "/matrix",
+          "failures": [],
+          "requests": 2,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-013",
+      "title": "MOD-013 | Positive LIVE | Admin Users loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3247,
+      "errors": [],
+      "network": [
+        {
+          "path": "/admin-users",
+          "failures": [],
+          "requests": 2,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-014",
+      "title": "MOD-014 | Positive LIVE | CMS loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3734,
+      "errors": [],
+      "network": [
+        {
+          "path": "/privacypolicy",
+          "failures": [],
+          "requests": 2,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-015",
+      "title": "MOD-015 | Positive LIVE | Activity loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3152,
+      "errors": [],
+      "network": [
+        {
+          "path": "/activity",
+          "failures": [],
+          "requests": 2,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-016",
+      "title": "MOD-016 | Positive LIVE | Products loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3166,
+      "errors": [],
+      "network": [
+        {
+          "path": "/products",
+          "failures": [],
+          "requests": 3,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-017",
+      "title": "MOD-017 | Positive LIVE | Rebates loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3752,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/rebate/installer/list\",\n+     \"status\": 404,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/rebates",
+          "failures": [
+            {
+              "path": "/api/v1/rebate/installer/list",
+              "status": 404
+            }
+          ],
+          "requests": 2,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-018",
+      "title": "MOD-018 | Positive LIVE | Calculator loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "passed",
+      "durationMs": 3606,
+      "errors": [],
+      "network": [
+        {
+          "path": "/rebates/calculator",
+          "failures": [],
+          "requests": 1,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-019",
+      "title": "MOD-019 | Positive LIVE | Statistics loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3575,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  -  1\n+ Received  + 14\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/installer/filter/list\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/calculator-usage/installer/list\",\n+     \"status\": 404,\n+   },\n+   Object {\n+     \"path\": \"/api/v1/calculator-usage/installer/list\",\n+     \"status\": 404,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/rebates/statistics",
+          "failures": [
+            {
+              "path": "/api/v1/installer/filter/list",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/calculator-usage/installer/list",
+              "status": 404
+            },
+            {
+              "path": "/api/v1/calculator-usage/installer/list",
+              "status": 404
+            }
+          ],
+          "requests": 4,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-020",
+      "title": "MOD-020 | Positive LIVE | Invoices loads with healthy data requests",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 6,
+      "status": "failed",
+      "durationMs": 3557,
+      "errors": [
+        "Error: No failed API requests while loading this module\n\nexpect(received).toEqual(expected) // deep equality\n\n- Expected  - 1\n+ Received  + 6\n\n- Array []\n+ Array [\n+   Object {\n+     \"path\": \"/api/v1/invoice/list\",\n+     \"status\": 404,\n+   },\n+ ]\n\n  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});\n  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);\n> 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);\n     |                                                                              ^\n  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);\n  19 |   });\n  20 | }\n    at tests/modules.spec.ts:17:78"
+      ],
+      "network": [
+        {
+          "path": "/invoices",
+          "failures": [
+            {
+              "path": "/api/v1/invoice/list",
+              "status": 404
+            }
+          ],
+          "requests": 3,
+          "crashes": []
+        }
+      ]
+    },
+    {
+      "id": "MOD-LOGS",
+      "title": "MOD-LOGS | Characterization LIVE | Exception Logs currently redirects this account to access-denied",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 22,
+      "status": "passed",
+      "durationMs": 2591,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SEARCH-001",
+      "title": "SEARCH-001 | Edge LIVE | Installers no-match search and clear",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 29,
+      "status": "passed",
+      "durationMs": 7956,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SEARCH-002",
+      "title": "SEARCH-002 | Edge LIVE | Matrix no-match search and clear",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 29,
+      "status": "passed",
+      "durationMs": 5013,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SEARCH-003",
+      "title": "SEARCH-003 | Edge LIVE | Admin Users no-match search and clear",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 29,
+      "status": "passed",
+      "durationMs": 4488,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SEARCH-004",
+      "title": "SEARCH-004 | Edge LIVE | Activity no-match search and clear",
+      "project": "chromium",
+      "file": "modules.spec.ts",
+      "line": 29,
+      "status": "failed",
+      "durationMs": 4758,
+      "errors": [
+        "Error: Search HTTP status must be 200\n\nexpect(received).toBe(expected) // Object.is equality\n\nExpected: 200\nReceived: 400\n\n  32 |   const marker='qa_no_match_7d9f2c_20260914';\n  33 |   const response=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===module.searchEndpoint&&decodeURIComponent(r.url()).includes(marker));\n> 34 |   await search.fill(marker);const r=await response;expect(r.status(),'Search HTTP status must be 200').toBe(200);\n     |                                                                                                        ^\n  35 |   await expect(page.getByRole('heading',{name:/no data found|no .*found/i}).first()).toBeVisible();\n  36 |   const reset=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===module.searchEndpoint&&!decodeURIComponent(r.url()).includes(marker));\n  37 |   await search.clear();expect((await reset).ok()).toBe(true);await expect(search).toHaveValue('');\n    at tests/modules.spec.ts:34:104"
+      ],
+      "network": []
+    },
+    {
+      "id": "RES-001",
+      "title": "RES-001 | Negative MOCK | HTTP 401 gives feedback and permits retry",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 7,
+      "status": "passed",
+      "durationMs": 3743,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "RES-002",
+      "title": "RES-002 | Negative MOCK | HTTP 429 gives feedback and permits retry",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 7,
+      "status": "passed",
+      "durationMs": 3578,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "RES-003",
+      "title": "RES-003 | Negative MOCK | HTTP 500 gives feedback and permits retry",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 7,
+      "status": "passed",
+      "durationMs": 2645,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "RES-004",
+      "title": "RES-004 | Negative MOCK | HTTP 503 gives feedback and permits retry",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 7,
+      "status": "passed",
+      "durationMs": 3853,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "RES-005",
+      "title": "RES-005 | Edge MOCK | Double submit sends only one pending login request",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 14,
+      "status": "passed",
+      "durationMs": 3883,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "RES-006",
+      "title": "RES-006 | Negative MOCK | Network failure restores login and displays error",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 28,
+      "status": "passed",
+      "durationMs": 3638,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "RES-007",
+      "title": "RES-007 | Edge MOCK | Non-JSON gateway error does not crash login",
+      "project": "chromium",
+      "file": "resilience.spec.ts",
+      "line": 35,
+      "status": "passed",
+      "durationMs": 2575,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-001",
+      "title": "GUARD-001 | Negative LIVE | Anonymous access to Dashboard is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2654,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-002",
+      "title": "GUARD-002 | Negative LIVE | Anonymous access to Projects is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 3117,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-003",
+      "title": "GUARD-003 | Negative LIVE | Anonymous access to All is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2858,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-004",
+      "title": "GUARD-004 | Negative LIVE | Anonymous access to In Progress is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 3064,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-005",
+      "title": "GUARD-005 | Negative LIVE | Anonymous access to Action Required is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2610,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-006",
+      "title": "GUARD-006 | Negative LIVE | Anonymous access to Being Assessed is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2807,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-007",
+      "title": "GUARD-007 | Negative LIVE | Anonymous access to Completed is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 3098,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-008",
+      "title": "GUARD-008 | Negative LIVE | Anonymous access to Archived is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2531,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-009",
+      "title": "GUARD-009 | Negative LIVE | Anonymous access to Exception Logs is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2547,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-010",
+      "title": "GUARD-010 | Negative LIVE | Anonymous access to Installers is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2570,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-011",
+      "title": "GUARD-011 | Negative LIVE | Anonymous access to Installer Users is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 3080,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-012",
+      "title": "GUARD-012 | Negative LIVE | Anonymous access to Matrix is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2798,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-013",
+      "title": "GUARD-013 | Negative LIVE | Anonymous access to Admin Users is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2556,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-014",
+      "title": "GUARD-014 | Negative LIVE | Anonymous access to CMS is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2992,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-015",
+      "title": "GUARD-015 | Negative LIVE | Anonymous access to Activity is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2850,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-016",
+      "title": "GUARD-016 | Negative LIVE | Anonymous access to Products is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2747,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-017",
+      "title": "GUARD-017 | Negative LIVE | Anonymous access to Rebates is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2522,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-018",
+      "title": "GUARD-018 | Negative LIVE | Anonymous access to Calculator is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2530,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-019",
+      "title": "GUARD-019 | Negative LIVE | Anonymous access to Statistics is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2887,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "GUARD-020",
+      "title": "GUARD-020 | Negative LIVE | Anonymous access to Invoices is blocked",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 12,
+      "status": "passed",
+      "durationMs": 2525,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SESSION-001",
+      "title": "SESSION-001 | Positive LIVE | Authenticated Jobs survives refresh",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 9,
+      "status": "passed",
+      "durationMs": 6151,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SESSION-002",
+      "title": "SESSION-002 | Positive LIVE | Authenticated login URL redirects to Jobs",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 13,
+      "status": "passed",
+      "durationMs": 3140,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SESSION-003",
+      "title": "SESSION-003 | Negative MOCK | Server-rejected session redirects to login",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 23,
+      "status": "passed",
+      "durationMs": 2707,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SESSION-004",
+      "title": "SESSION-004 | Positive LIVE | New tab in the same context retains authentication",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 20,
+      "status": "passed",
+      "durationMs": 3533,
+      "errors": [],
+      "network": []
+    },
+    {
+      "id": "SESSION-005",
+      "title": "SESSION-005 | Negative LIVE | Sign out blocks deep links and browser Back",
+      "project": "chromium",
+      "file": "session.spec.ts",
+      "line": 31,
+      "status": "passed",
+      "durationMs": 7904,
+      "errors": [],
+      "network": []
+    }
+  ]
+}

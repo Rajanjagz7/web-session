@@ -1,0 +1,850 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RebateM8 NSW | QA execution</title><style>body{font:15px system-ui;background:#f4f6fa;color:#1c2940;margin:0}main{max-width:1160px;margin:40px auto;padding:0 24px}h1{font-size:36px;margin-bottom:8px}.eyebrow{color:#526982;text-transform:uppercase;letter-spacing:2px}.cards{display:flex;gap:16px;margin:24px 0}.card{background:white;padding:22px;border-radius:12px;flex:1}.card b{display:block;font-size:32px}input,select{padding:12px;border:1px solid #cad3df;border-radius:8px;margin:0 8px 20px 0}input{width:55%}.case{background:white;border:1px solid #dfe5ed;border-radius:8px;margin-bottom:8px;padding:14px}summary{cursor:pointer;font-weight:600}.badge{display:inline-block;width:70px;color:#137348}.failed .badge,.timedOut .badge{color:#b42318}small{float:right;color:#64748b}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f6fa;padding:16px;font-size:12px}footer{padding:24px 0;color:#526982}a{color:#155e75}</style><main><div class="eyebrow">Quality assurance · Chromium · 14 September 2026</div><h1>RebateM8 NSW test execution</h1><p>Target: nswdev.rebatem8.com.au · Login, session, accessibility and read-only module coverage</p><div class="cards"><div class="card"><b>89</b>Executed cases</div><div class="card"><b>71</b>Passed</div><div class="card"><b>18</b>Failed</div><div class="card"><b>46</b>Additional planned cases</div></div><p>Results below are the latest execution for each case. MOCK outcomes validate frontend behavior only. Planned cases are not counted as executed. See TEST-REPORT.md for issue grouping and limitations.</p><input id="q" placeholder="Search test ID, module or scenario" aria-label="Search tests"><select id="s" aria-label="Filter results"><option value="">All results</option><option value="passed">Passed</option><option value="failed">Failed</option><option value="timedOut">Timed out</option></select><details class="case passed" data-search="ui-320 | edge | login is usable at 320x568"><summary><span class="badge">passed</span> UI-320 | Edge | Login is usable at 320x568 <small>4.0s</small></summary><p>accessibility.spec.ts:3 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="ui-375 | edge | login is usable at 375x812"><summary><span class="badge">passed</span> UI-375 | Edge | Login is usable at 375x812 <small>3.8s</small></summary><p>accessibility.spec.ts:3 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="ui-768 | edge | login is usable at 768x1024"><summary><span class="badge">passed</span> UI-768 | Edge | Login is usable at 768x1024 <small>3.9s</small></summary><p>accessibility.spec.ts:3 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="ui-1440 | edge | login is usable at 1440x900"><summary><span class="badge">passed</span> UI-1440 | Edge | Login is usable at 1440x900 <small>3.7s</small></summary><p>accessibility.spec.ts:3 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="a11y-001 | accessibility | email has a programmatically associated label"><summary><span class="badge">failed</span> A11Y-001 | Accessibility | Email has a programmatically associated label <small>10.5s</small></summary><p>accessibility.spec.ts:12 · chromium</p><pre>Error: expect(locator).toBeVisible() failed
+
+Locator: getByLabel('Email ID', { exact: true })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect &quot;toBeVisible&quot; with timeout 8000ms
+  - waiting for getByLabel('Email ID', { exact: true })
+
+
+  11 |
+  12 | test('A11Y-001 | Accessibility | Email has a programmatically associated label',async({page})=&gt;{
+&gt; 13 |   await new LoginPage(page).open();await expect(page.getByLabel('Email ID',{exact:true})).toBeVisible();
+     |                                                                                           ^
+  14 | });
+  15 | test('A11Y-002 | Accessibility | Password has a programmatically associated label',async({page})=&gt;{
+  16 |   await new LoginPage(page).open();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();
+    at tests/accessibility.spec.ts:13:91</pre></details>
+<details class="case failed" data-search="a11y-002 | accessibility | password has a programmatically associated label"><summary><span class="badge">failed</span> A11Y-002 | Accessibility | Password has a programmatically associated label <small>11.6s</small></summary><p>accessibility.spec.ts:15 · chromium</p><pre>Error: expect(locator).toBeVisible() failed
+
+Locator: getByLabel('Password', { exact: true })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect &quot;toBeVisible&quot; with timeout 8000ms
+  - waiting for getByLabel('Password', { exact: true })
+
+
+  14 | });
+  15 | test('A11Y-002 | Accessibility | Password has a programmatically associated label',async({page})=&gt;{
+&gt; 16 |   await new LoginPage(page).open();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();
+     |                                                                                           ^
+  17 | });
+  18 | test('A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button',async({page})=&gt;{
+  19 |   await new LoginPage(page).open();const toggle=page.getByRole('button',{name:/show password|reveal password|toggle password/i});
+    at tests/accessibility.spec.ts:16:91</pre></details>
+<details class="case failed" data-search="a11y-003 | accessibility | reveal password has a keyboard-accessible named button"><summary><span class="badge">failed</span> A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button <small>11.6s</small></summary><p>accessibility.spec.ts:18 · chromium</p><pre>Error: expect(locator).toBeVisible() failed
+
+Locator: getByRole('button', { name: /show password|reveal password|toggle password/i })
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect &quot;toBeVisible&quot; with timeout 8000ms
+  - waiting for getByRole('button', { name: /show password|reveal password|toggle password/i })
+
+
+  18 | test('A11Y-003 | Accessibility | Reveal password has a keyboard-accessible named button',async({page})=&gt;{
+  19 |   await new LoginPage(page).open();const toggle=page.getByRole('button',{name:/show password|reveal password|toggle password/i});
+&gt; 20 |   await expect(toggle).toBeVisible();await toggle.focus();await expect(toggle).toBeFocused();
+     |                        ^
+  21 | });
+  22 | test('A11Y-004 | Accessibility | Validation errors identify invalid fields',async({page})=&gt;{
+  23 |   const login=new LoginPage(page);await login.open();await login.submit.click();
+    at tests/accessibility.spec.ts:20:24</pre></details>
+<details class="case failed" data-search="a11y-004 | accessibility | validation errors identify invalid fields"><summary><span class="badge">failed</span> A11Y-004 | Accessibility | Validation errors identify invalid fields <small>10.7s</small></summary><p>accessibility.spec.ts:22 · chromium</p><pre>Error: expect(locator).toHaveAttribute(expected) failed
+
+Locator:  locator('input[name=&quot;email&quot;]')
+Expected: &quot;true&quot;
+Received: &quot;&quot;
+Timeout:  8000ms
+
+Call log:
+  - Expect &quot;toHaveAttribute&quot; with timeout 8000ms
+  - waiting for locator('input[name=&quot;email&quot;]')
+    12 × locator resolved to &lt;input value=&quot;&quot; type=&quot;text&quot; name=&quot;email&quot; autocomplete=&quot;off&quot; placeholder=&quot;Email ID&quot; class=&quot;input input-md h-11 input-invalid&quot;/&gt;
+       - unexpected value &quot;null&quot;
+
+
+  22 | test('A11Y-004 | Accessibility | Validation errors identify invalid fields',async({page})=&gt;{
+  23 |   const login=new LoginPage(page);await login.open();await login.submit.click();
+&gt; 24 |   await expect(login.email).toHaveAttribute('aria-invalid','true');
+     |                             ^
+  25 |   await expect(login.password).toHaveAttribute('aria-invalid','true');
+  26 |   const ids=await login.email.getAttribute('aria-describedby');expect(ids).toBeTruthy();
+  27 |   for(const id of ids!.split(/\s+/)) await expect(page.locator(`[id=&quot;${id}&quot;]`)).toBeVisible();
+    at tests/accessibility.spec.ts:24:29</pre></details>
+<details class="case passed" data-search="a11y-005 | positive | keyboard tab order reaches email, password, submit"><summary><span class="badge">passed</span> A11Y-005 | Positive | Keyboard tab order reaches email, password, submit <small>2.6s</small></summary><p>accessibility.spec.ts:29 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-001 | positive | login page renders over https"><summary><span class="badge">passed</span> AUTH-001 | Positive | Login page renders over HTTPS <small>2.8s</small></summary><p>auth.spec.ts:3 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-002 | negative | both fields empty"><summary><span class="badge">passed</span> AUTH-002 | Negative | Both fields empty <small>3.9s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-003 | negative | email empty"><summary><span class="badge">passed</span> AUTH-003 | Negative | Email empty <small>2.7s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-004 | negative | password empty"><summary><span class="badge">passed</span> AUTH-004 | Negative | Password empty <small>3.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-005 | negative | email whitespace only"><summary><span class="badge">passed</span> AUTH-005 | Negative | Email whitespace only <small>2.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-006 | negative | email missing at sign"><summary><span class="badge">passed</span> AUTH-006 | Negative | Email missing at sign <small>2.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-007 | negative | email missing local part"><summary><span class="badge">passed</span> AUTH-007 | Negative | Email missing local part <small>3.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-008 | negative | email missing domain"><summary><span class="badge">passed</span> AUTH-008 | Negative | Email missing domain <small>3.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-009 | negative | email multiple at signs"><summary><span class="badge">passed</span> AUTH-009 | Negative | Email multiple at signs <small>2.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-010 | negative | email embedded space"><summary><span class="badge">passed</span> AUTH-010 | Negative | Email embedded space <small>3.7s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="auth-011 | negative | email consecutive dots"><summary><span class="badge">failed</span> AUTH-011 | Negative | Email consecutive dots <small>11.6s</small></summary><p>auth.spec.ts:27 · chromium</p><pre>Error: expect(locator).toBeVisible() failed
+
+Locator: locator('.form-explain').first()
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect &quot;soft toBeVisible&quot; with timeout 8000ms
+  - waiting for locator('.form-explain').first()
+
+
+  31 |   await page.route(LOGIN_API, async r =&gt; {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});
+  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();
+&gt; 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();
+     |                                                            ^
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+    at tests/auth.spec.ts:33:60
+
+Error: Invalid form must not submit a login request
+
+expect(received).toBe(expected) // Object.is equality
+
+Expected: 0
+Received: 1
+
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+&gt; 36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+     |                                                                 ^
+  37 |   expect(dialogOpened).toBe(false); await expect(page).toHaveURL(/\/log-in$/);
+  38 | });
+  39 |
+    at tests/auth.spec.ts:36:65</pre></details>
+<details class="case failed" data-search="auth-012 | negative | email leading dot"><summary><span class="badge">failed</span> AUTH-012 | Negative | Email leading dot <small>12.5s</small></summary><p>auth.spec.ts:27 · chromium</p><pre>Error: expect(locator).toBeVisible() failed
+
+Locator: locator('.form-explain').first()
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect &quot;soft toBeVisible&quot; with timeout 8000ms
+  - waiting for locator('.form-explain').first()
+
+
+  31 |   await page.route(LOGIN_API, async r =&gt; {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});
+  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();
+&gt; 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();
+     |                                                            ^
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+    at tests/auth.spec.ts:33:60
+
+Error: Invalid form must not submit a login request
+
+expect(received).toBe(expected) // Object.is equality
+
+Expected: 0
+Received: 1
+
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+&gt; 36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+     |                                                                 ^
+  37 |   expect(dialogOpened).toBe(false); await expect(page).toHaveURL(/\/log-in$/);
+  38 | });
+  39 |
+    at tests/auth.spec.ts:36:65</pre></details>
+<details class="case failed" data-search="auth-013 | negative | email trailing local dot"><summary><span class="badge">failed</span> AUTH-013 | Negative | Email trailing local dot <small>11.8s</small></summary><p>auth.spec.ts:27 · chromium</p><pre>Error: expect(locator).toBeVisible() failed
+
+Locator: locator('.form-explain').first()
+Expected: visible
+Timeout: 8000ms
+Error: element(s) not found
+
+Call log:
+  - Expect &quot;soft toBeVisible&quot; with timeout 8000ms
+  - waiting for locator('.form-explain').first()
+
+
+  31 |   await page.route(LOGIN_API, async r =&gt; {calls++; await r.fulfill({status:401,json:{message:'Invalid credentials'}});});
+  32 |   const login = new LoginPage(page); await login.open(); await login.fill(c.email,c.password); await login.submit.click();
+&gt; 33 |   await expect.soft(page.locator('.form-explain').first()).toBeVisible();
+     |                                                            ^
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+  36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+    at tests/auth.spec.ts:33:60
+
+Error: Invalid form must not submit a login request
+
+expect(received).toBe(expected) // Object.is equality
+
+Expected: 0
+Received: 1
+
+  34 |   if(c.error) await expect(page.getByText(c.error,{exact:true})).toBeVisible();
+  35 |   if(c.id === '002') await expect(page.getByText('Please Enter Your Password',{exact:true})).toBeVisible();
+&gt; 36 |   expect(calls, 'Invalid form must not submit a login request').toBe(0);
+     |                                                                 ^
+  37 |   expect(dialogOpened).toBe(false); await expect(page).toHaveURL(/\/log-in$/);
+  38 | });
+  39 |
+    at tests/auth.spec.ts:36:65</pre></details>
+<details class="case passed" data-search="auth-014 | negative | markup entered as email"><summary><span class="badge">passed</span> AUTH-014 | Negative | Markup entered as email <small>2.6s</small></summary><p>auth.spec.ts:27 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-015 | positive | valid credentials reach jobs using enter"><summary><span class="badge">passed</span> AUTH-015 | Positive | Valid credentials reach Jobs using Enter <small>6.3s</small></summary><p>auth.spec.ts:40 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-016 | negative live | incorrect password is rejected"><summary><span class="badge">passed</span> AUTH-016 | Negative LIVE | Incorrect password is rejected <small>3.1s</small></summary><p>auth.spec.ts:47 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-017 | negative live | nonexistent account is rejected"><summary><span class="badge">passed</span> AUTH-017 | Negative LIVE | Nonexistent account is rejected <small>2.8s</small></summary><p>auth.spec.ts:56 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-018 | edge | password reveal toggle preserves input and remasks"><summary><span class="badge">passed</span> AUTH-018 | Edge | Password reveal toggle preserves input and remasks <small>2.6s</small></summary><p>auth.spec.ts:65 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-019 | positive | validation clears when inputs are corrected"><summary><span class="badge">passed</span> AUTH-019 | Positive | Validation clears when inputs are corrected <small>4.0s</small></summary><p>auth.spec.ts:73 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-20 | edge mock | syntactically valid email 1 reaches authentication"><summary><span class="badge">passed</span> AUTH-20 | Edge MOCK | Syntactically valid email 1 reaches authentication <small>3.6s</small></summary><p>auth.spec.ts:82 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-21 | edge mock | syntactically valid email 2 reaches authentication"><summary><span class="badge">passed</span> AUTH-21 | Edge MOCK | Syntactically valid email 2 reaches authentication <small>3.7s</small></summary><p>auth.spec.ts:82 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-22 | edge mock | syntactically valid email 3 reaches authentication"><summary><span class="badge">passed</span> AUTH-22 | Edge MOCK | Syntactically valid email 3 reaches authentication <small>3.9s</small></summary><p>auth.spec.ts:82 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-023 | edge mock | long and unicode passwords are not silently truncated"><summary><span class="badge">passed</span> AUTH-023 | Edge MOCK | Long and Unicode passwords are not silently truncated <small>3.7s</small></summary><p>auth.spec.ts:88 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="auth-024 | edge mock | password leading/trailing spaces are preserved"><summary><span class="badge">passed</span> AUTH-024 | Edge MOCK | Password leading/trailing spaces are preserved <small>3.6s</small></summary><p>auth.spec.ts:95 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="mod-001 | positive live | dashboard loads with healthy data requests"><summary><span class="badge">failed</span> MOD-001 | Positive LIVE | Dashboard loads with healthy data requests <small>3.9s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/dashboard&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/installer/filter/list&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-tracking&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-count&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-breakdown&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/top-product&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-rebate&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/avg-complete-time&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-tracking&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-count&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-breakdown&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/top-product&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-rebate&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/avg-complete-time&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/dashboard/job-tracking&quot;,
+        &quot;status&quot;: 404
+      }
+    ],
+    &quot;requests&quot;: 15,
+    &quot;crashes&quot;: [
+      &quot;Cannot read properties of undefined (reading 'length')&quot;,
+      &quot;Cannot read properties of undefined (reading 'length')&quot;
+    ]
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 58
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/installer/filter/list&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-tracking&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-count&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-breakdown&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/top-product&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-rebate&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/avg-complete-time&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-tracking&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-count&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-breakdown&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/top-product&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-rebate&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/avg-complete-time&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/dashboard/job-tracking&quot;,
++     &quot;status&quot;: 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78
+
+Error: No uncaught JavaScript errors
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 4
+
+- Array []
++ Array [
++   &quot;Cannot read properties of undefined (reading 'length')&quot;,
++   &quot;Cannot read properties of undefined (reading 'length')&quot;,
++ ]
+
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+  17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+&gt; 18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+     |                                                     ^
+  19 |   });
+  20 | }
+  21 |
+    at tests/modules.spec.ts:18:53</pre></details>
+<details class="case failed" data-search="mod-002 | positive live | projects loads with healthy data requests"><summary><span class="badge">failed</span> MOD-002 | Positive LIVE | Projects loads with healthy data requests <small>3.5s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/projects&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/installer/filter/list&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/site/list&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/site/list&quot;,
+        &quot;status&quot;: 404
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 14
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/installer/filter/list&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/site/list&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/site/list&quot;,
++     &quot;status&quot;: 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case passed" data-search="mod-003 | positive live | all loads with healthy data requests"><summary><span class="badge">passed</span> MOD-003 | Positive LIVE | All loads with healthy data requests <small>3.7s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/jobs&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="mod-004 | positive live | in progress loads with healthy data requests"><summary><span class="badge">failed</span> MOD-004 | Positive LIVE | In Progress loads with healthy data requests <small>3.6s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/in-progress-jobs&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/jobs&quot;,
+        &quot;status&quot;: 400
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/jobs&quot;,
++     &quot;status&quot;: 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case failed" data-search="mod-005 | positive live | action required loads with healthy data requests"><summary><span class="badge">failed</span> MOD-005 | Positive LIVE | Action Required loads with healthy data requests <small>3.8s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/action-Required-jobs&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/jobs&quot;,
+        &quot;status&quot;: 400
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/jobs&quot;,
++     &quot;status&quot;: 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case failed" data-search="mod-006 | positive live | being assessed loads with healthy data requests"><summary><span class="badge">failed</span> MOD-006 | Positive LIVE | Being Assessed loads with healthy data requests <small>12.8s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/being-assessed-jobs&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/jobs&quot;,
+        &quot;status&quot;: 400
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/jobs&quot;,
++     &quot;status&quot;: 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case failed" data-search="mod-007 | positive live | completed loads with healthy data requests"><summary><span class="badge">failed</span> MOD-007 | Positive LIVE | Completed loads with healthy data requests <small>3.7s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/completed-jobs&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/jobs&quot;,
+        &quot;status&quot;: 400
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/jobs&quot;,
++     &quot;status&quot;: 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case failed" data-search="mod-008 | positive live | archived loads with healthy data requests"><summary><span class="badge">failed</span> MOD-008 | Positive LIVE | Archived loads with healthy data requests <small>3.8s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/archived-jobs&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/jobs&quot;,
+        &quot;status&quot;: 400
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/jobs&quot;,
++     &quot;status&quot;: 400,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case passed" data-search="mod-010 | positive live | installers loads with healthy data requests"><summary><span class="badge">passed</span> MOD-010 | Positive LIVE | Installers loads with healthy data requests <small>3.8s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/installer&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 2,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="mod-011 | positive live | installer users loads with healthy data requests"><summary><span class="badge">passed</span> MOD-011 | Positive LIVE | Installer Users loads with healthy data requests <small>3.5s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/installeruser&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 3,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="mod-012 | positive live | matrix loads with healthy data requests"><summary><span class="badge">passed</span> MOD-012 | Positive LIVE | Matrix loads with healthy data requests <small>3.1s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/matrix&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 2,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="mod-013 | positive live | admin users loads with healthy data requests"><summary><span class="badge">passed</span> MOD-013 | Positive LIVE | Admin Users loads with healthy data requests <small>3.2s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/admin-users&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 2,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="mod-014 | positive live | cms loads with healthy data requests"><summary><span class="badge">passed</span> MOD-014 | Positive LIVE | CMS loads with healthy data requests <small>3.7s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/privacypolicy&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 2,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="mod-015 | positive live | activity loads with healthy data requests"><summary><span class="badge">passed</span> MOD-015 | Positive LIVE | Activity loads with healthy data requests <small>3.2s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/activity&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 2,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="mod-016 | positive live | products loads with healthy data requests"><summary><span class="badge">passed</span> MOD-016 | Positive LIVE | Products loads with healthy data requests <small>3.2s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/products&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 3,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="mod-017 | positive live | rebates loads with healthy data requests"><summary><span class="badge">failed</span> MOD-017 | Positive LIVE | Rebates loads with healthy data requests <small>3.8s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/rebates&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/rebate/installer/list&quot;,
+        &quot;status&quot;: 404
+      }
+    ],
+    &quot;requests&quot;: 2,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/rebate/installer/list&quot;,
++     &quot;status&quot;: 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case passed" data-search="mod-018 | positive live | calculator loads with healthy data requests"><summary><span class="badge">passed</span> MOD-018 | Positive LIVE | Calculator loads with healthy data requests <small>3.6s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/rebates/calculator&quot;,
+    &quot;failures&quot;: [],
+    &quot;requests&quot;: 1,
+    &quot;crashes&quot;: []
+  }
+]</pre><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="mod-019 | positive live | statistics loads with healthy data requests"><summary><span class="badge">failed</span> MOD-019 | Positive LIVE | Statistics loads with healthy data requests <small>3.6s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/rebates/statistics&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/installer/filter/list&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/calculator-usage/installer/list&quot;,
+        &quot;status&quot;: 404
+      },
+      {
+        &quot;path&quot;: &quot;/api/v1/calculator-usage/installer/list&quot;,
+        &quot;status&quot;: 404
+      }
+    ],
+    &quot;requests&quot;: 4,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  -  1
++ Received  + 14
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/installer/filter/list&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/calculator-usage/installer/list&quot;,
++     &quot;status&quot;: 404,
++   },
++   Object {
++     &quot;path&quot;: &quot;/api/v1/calculator-usage/installer/list&quot;,
++     &quot;status&quot;: 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case failed" data-search="mod-020 | positive live | invoices loads with healthy data requests"><summary><span class="badge">failed</span> MOD-020 | Positive LIVE | Invoices loads with healthy data requests <small>3.6s</small></summary><p>modules.spec.ts:6 · chromium</p><pre>[
+  {
+    &quot;path&quot;: &quot;/invoices&quot;,
+    &quot;failures&quot;: [
+      {
+        &quot;path&quot;: &quot;/api/v1/invoice/list&quot;,
+        &quot;status&quot;: 404
+      }
+    ],
+    &quot;requests&quot;: 3,
+    &quot;crashes&quot;: []
+  }
+]</pre><pre>Error: No failed API requests while loading this module
+
+expect(received).toEqual(expected) // deep equality
+
+- Expected  - 1
++ Received  + 6
+
+- Array []
++ Array [
++   Object {
++     &quot;path&quot;: &quot;/api/v1/invoice/list&quot;,
++     &quot;status&quot;: 404,
++   },
++ ]
+
+  15 |     await testInfo.attach('network-health.json',{body:JSON.stringify({path:module.path,failures,requests,crashes},null,2),contentType:'application/json'});
+  16 |     expect(requests,'An authenticated page must verify its session/data').toBeGreaterThan(0);
+&gt; 17 |     expect.soft(failures,'No failed API requests while loading this module').toEqual([]);
+     |                                                                              ^
+  18 |     expect(crashes,'No uncaught JavaScript errors').toEqual([]);
+  19 |   });
+  20 | }
+    at tests/modules.spec.ts:17:78</pre></details>
+<details class="case passed" data-search="mod-logs | characterization live | exception logs currently redirects this account to access-denied"><summary><span class="badge">passed</span> MOD-LOGS | Characterization LIVE | Exception Logs currently redirects this account to access-denied <small>2.6s</small></summary><p>modules.spec.ts:22 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="search-001 | edge live | installers no-match search and clear"><summary><span class="badge">passed</span> SEARCH-001 | Edge LIVE | Installers no-match search and clear <small>8.0s</small></summary><p>modules.spec.ts:29 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="search-002 | edge live | matrix no-match search and clear"><summary><span class="badge">passed</span> SEARCH-002 | Edge LIVE | Matrix no-match search and clear <small>5.0s</small></summary><p>modules.spec.ts:29 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="search-003 | edge live | admin users no-match search and clear"><summary><span class="badge">passed</span> SEARCH-003 | Edge LIVE | Admin Users no-match search and clear <small>4.5s</small></summary><p>modules.spec.ts:29 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case failed" data-search="search-004 | edge live | activity no-match search and clear"><summary><span class="badge">failed</span> SEARCH-004 | Edge LIVE | Activity no-match search and clear <small>4.8s</small></summary><p>modules.spec.ts:29 · chromium</p><pre>Error: Search HTTP status must be 200
+
+expect(received).toBe(expected) // Object.is equality
+
+Expected: 200
+Received: 400
+
+  32 |   const marker='qa_no_match_7d9f2c_20260914';
+  33 |   const response=page.waitForResponse(r=&gt;r.request().method()==='GET'&amp;&amp;new URL(r.url()).pathname===module.searchEndpoint&amp;&amp;decodeURIComponent(r.url()).includes(marker));
+&gt; 34 |   await search.fill(marker);const r=await response;expect(r.status(),'Search HTTP status must be 200').toBe(200);
+     |                                                                                                        ^
+  35 |   await expect(page.getByRole('heading',{name:/no data found|no .*found/i}).first()).toBeVisible();
+  36 |   const reset=page.waitForResponse(r=&gt;r.request().method()==='GET'&amp;&amp;new URL(r.url()).pathname===module.searchEndpoint&amp;&amp;!decodeURIComponent(r.url()).includes(marker));
+  37 |   await search.clear();expect((await reset).ok()).toBe(true);await expect(search).toHaveValue('');
+    at tests/modules.spec.ts:34:104</pre></details>
+<details class="case passed" data-search="res-001 | negative mock | http 401 gives feedback and permits retry"><summary><span class="badge">passed</span> RES-001 | Negative MOCK | HTTP 401 gives feedback and permits retry <small>3.7s</small></summary><p>resilience.spec.ts:7 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="res-002 | negative mock | http 429 gives feedback and permits retry"><summary><span class="badge">passed</span> RES-002 | Negative MOCK | HTTP 429 gives feedback and permits retry <small>3.6s</small></summary><p>resilience.spec.ts:7 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="res-003 | negative mock | http 500 gives feedback and permits retry"><summary><span class="badge">passed</span> RES-003 | Negative MOCK | HTTP 500 gives feedback and permits retry <small>2.6s</small></summary><p>resilience.spec.ts:7 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="res-004 | negative mock | http 503 gives feedback and permits retry"><summary><span class="badge">passed</span> RES-004 | Negative MOCK | HTTP 503 gives feedback and permits retry <small>3.9s</small></summary><p>resilience.spec.ts:7 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="res-005 | edge mock | double submit sends only one pending login request"><summary><span class="badge">passed</span> RES-005 | Edge MOCK | Double submit sends only one pending login request <small>3.9s</small></summary><p>resilience.spec.ts:14 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="res-006 | negative mock | network failure restores login and displays error"><summary><span class="badge">passed</span> RES-006 | Negative MOCK | Network failure restores login and displays error <small>3.6s</small></summary><p>resilience.spec.ts:28 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="res-007 | edge mock | non-json gateway error does not crash login"><summary><span class="badge">passed</span> RES-007 | Edge MOCK | Non-JSON gateway error does not crash login <small>2.6s</small></summary><p>resilience.spec.ts:35 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-001 | negative live | anonymous access to dashboard is blocked"><summary><span class="badge">passed</span> GUARD-001 | Negative LIVE | Anonymous access to Dashboard is blocked <small>2.7s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-002 | negative live | anonymous access to projects is blocked"><summary><span class="badge">passed</span> GUARD-002 | Negative LIVE | Anonymous access to Projects is blocked <small>3.1s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-003 | negative live | anonymous access to all is blocked"><summary><span class="badge">passed</span> GUARD-003 | Negative LIVE | Anonymous access to All is blocked <small>2.9s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-004 | negative live | anonymous access to in progress is blocked"><summary><span class="badge">passed</span> GUARD-004 | Negative LIVE | Anonymous access to In Progress is blocked <small>3.1s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-005 | negative live | anonymous access to action required is blocked"><summary><span class="badge">passed</span> GUARD-005 | Negative LIVE | Anonymous access to Action Required is blocked <small>2.6s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-006 | negative live | anonymous access to being assessed is blocked"><summary><span class="badge">passed</span> GUARD-006 | Negative LIVE | Anonymous access to Being Assessed is blocked <small>2.8s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-007 | negative live | anonymous access to completed is blocked"><summary><span class="badge">passed</span> GUARD-007 | Negative LIVE | Anonymous access to Completed is blocked <small>3.1s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-008 | negative live | anonymous access to archived is blocked"><summary><span class="badge">passed</span> GUARD-008 | Negative LIVE | Anonymous access to Archived is blocked <small>2.5s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-009 | negative live | anonymous access to exception logs is blocked"><summary><span class="badge">passed</span> GUARD-009 | Negative LIVE | Anonymous access to Exception Logs is blocked <small>2.5s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-010 | negative live | anonymous access to installers is blocked"><summary><span class="badge">passed</span> GUARD-010 | Negative LIVE | Anonymous access to Installers is blocked <small>2.6s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-011 | negative live | anonymous access to installer users is blocked"><summary><span class="badge">passed</span> GUARD-011 | Negative LIVE | Anonymous access to Installer Users is blocked <small>3.1s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-012 | negative live | anonymous access to matrix is blocked"><summary><span class="badge">passed</span> GUARD-012 | Negative LIVE | Anonymous access to Matrix is blocked <small>2.8s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-013 | negative live | anonymous access to admin users is blocked"><summary><span class="badge">passed</span> GUARD-013 | Negative LIVE | Anonymous access to Admin Users is blocked <small>2.6s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-014 | negative live | anonymous access to cms is blocked"><summary><span class="badge">passed</span> GUARD-014 | Negative LIVE | Anonymous access to CMS is blocked <small>3.0s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-015 | negative live | anonymous access to activity is blocked"><summary><span class="badge">passed</span> GUARD-015 | Negative LIVE | Anonymous access to Activity is blocked <small>2.9s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-016 | negative live | anonymous access to products is blocked"><summary><span class="badge">passed</span> GUARD-016 | Negative LIVE | Anonymous access to Products is blocked <small>2.7s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-017 | negative live | anonymous access to rebates is blocked"><summary><span class="badge">passed</span> GUARD-017 | Negative LIVE | Anonymous access to Rebates is blocked <small>2.5s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-018 | negative live | anonymous access to calculator is blocked"><summary><span class="badge">passed</span> GUARD-018 | Negative LIVE | Anonymous access to Calculator is blocked <small>2.5s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-019 | negative live | anonymous access to statistics is blocked"><summary><span class="badge">passed</span> GUARD-019 | Negative LIVE | Anonymous access to Statistics is blocked <small>2.9s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="guard-020 | negative live | anonymous access to invoices is blocked"><summary><span class="badge">passed</span> GUARD-020 | Negative LIVE | Anonymous access to Invoices is blocked <small>2.5s</small></summary><p>session.spec.ts:12 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="session-001 | positive live | authenticated jobs survives refresh"><summary><span class="badge">passed</span> SESSION-001 | Positive LIVE | Authenticated Jobs survives refresh <small>6.2s</small></summary><p>session.spec.ts:9 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="session-002 | positive live | authenticated login url redirects to jobs"><summary><span class="badge">passed</span> SESSION-002 | Positive LIVE | Authenticated login URL redirects to Jobs <small>3.1s</small></summary><p>session.spec.ts:13 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="session-003 | negative mock | server-rejected session redirects to login"><summary><span class="badge">passed</span> SESSION-003 | Negative MOCK | Server-rejected session redirects to login <small>2.7s</small></summary><p>session.spec.ts:23 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="session-004 | positive live | new tab in the same context retains authentication"><summary><span class="badge">passed</span> SESSION-004 | Positive LIVE | New tab in the same context retains authentication <small>3.5s</small></summary><p>session.spec.ts:20 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details>
+<details class="case passed" data-search="session-005 | negative live | sign out blocks deep links and browser back"><summary><span class="badge">passed</span> SESSION-005 | Negative LIVE | Sign out blocks deep links and browser Back <small>7.9s</small></summary><p>session.spec.ts:31 · chromium</p><p>All assertions passed. See the TypeScript source for the exact contract.</p></details><footer>No passwords, session state or authenticated page snapshots are included in this report.</footer></main><script>const q=document.querySelector('#q'),s=document.querySelector('#s');function filter(){for(const x of document.querySelectorAll('.case'))x.hidden=!(x.dataset.search.includes(q.value.toLowerCase())&&(!s.value||x.classList.contains(s.value)));}q.addEventListener('input',filter);s.addEventListener('change',filter);</script></html>

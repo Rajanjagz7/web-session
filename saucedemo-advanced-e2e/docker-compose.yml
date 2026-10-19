@@ -1,0 +1,11 @@
+services:
+  shard-1:
+    build: .
+    command: npx playwright test --shard=1/2
+    volumes:
+      - ./results/shard-1:/app/test-results
+  shard-2:
+    build: .
+    command: npx playwright test --shard=2/2
+    volumes:
+      - ./results/shard-2:/app/test-results

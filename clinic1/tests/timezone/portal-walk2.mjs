@@ -1,0 +1,18 @@
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+const LOC = process.argv[2] || 'BRISBANE HEALTH CLINIC';
+const b = await chromium.launch({ headless: false });
+const p = await (await b.newContext({ viewport:{width:1280,height:1000} })).newPage();
+let n=0;
+p.on('request',r=>{if(/availability\/optimized|slot-counts|monthly-availability/.test(r.url())) console.log('REQ HEADERS',r.url().split('?')[0].split('/').pop(),JSON.stringify(r.headers()));});
+p.on('response', async r=>{const u=r.url(); if(/dev\.clinic1\.ai\/api\//.test(u)&&r.request().method()!=='OPTIONS'){let t='';try{t=await r.text()}catch{}; console.log('  api',r.status(),r.request().method(),u.replace(/https:\/\/[^/]+/,'').slice(0,190)); if(/slot|availab|calendar|schedule/i.test(u)) fs.writeFileSync(`test-results/walk/portal2-api-${n++}.json`,JSON.stringify({url:u,body:t}));}});
+const show=async(l)=>{await p.waitForTimeout(3500);console.log('\n== '+l);console.log((await p.locator('body').innerText()).replace(/\n+/g,' | ').replace(/.*Complete the steps[^|]*\|/,'').slice(0,700));await p.screenshot({path:`test-results/walk/portal2-${l}.png`});};
+const cont=()=>p.getByRole('button',{name:/continue|next/i}).first().click();
+await p.goto('https://booking.dev.clinic1.ai/online-booking/sCYjCtj7'); await p.waitForTimeout(4000);
+await p.getByText(LOC,{exact:true}).first().click(); await cont(); await show('2-profession');
+const prof = p.locator('main, body').getByText(/Therapy|Physio|Psycholog|Podiatry|Dietetic|Massage/).first();
+await prof.click(); await cont(); await show('3-practitioner');
+await p.getByText('Petra Hughes').first().click(); await cont(); await show('4-setup');
+console.log(await p.locator('button, [role=button], [role=radio], [role=combobox]').evaluateAll(l=>l.map(x=>((x.innerText||x.getAttribute('aria-label')||'').trim().split(String.fromCharCode(10))[0])).filter(Boolean).slice(0,60)));
+await p.getByText('6',{exact:true}).first().click(); await p.waitForTimeout(1500); await show('5-date-6');
+await b.close();

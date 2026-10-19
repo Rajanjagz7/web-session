@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1000}, storageState:'playwright/.auth/tz-user.json' });
+const p = await c.newPage();
+await p.goto('https://sunrise-family-medical.dev.clinic1.ai/dashboard'); await p.waitForTimeout(5000);
+await p.getByRole('combobox').first().click(); await p.getByRole('option',{name:/BRISBANE/i}).click(); await p.waitForTimeout(2500);
+await p.getByRole('combobox').filter({ hasText: 'Week' }).first().click().catch(()=>{});
+console.log(await p.getByRole('option').allInnerTexts());
+await p.getByRole('option',{name:/Year/i}).first().click(); await p.waitForTimeout(6000);
+await p.screenshot({ path:'test-results/walk/dash-year.png', fullPage:true });
+await b.close();

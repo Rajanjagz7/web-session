@@ -1,0 +1,899 @@
+
+Running 76 tests using 1 worker
+
+[Name 1-char] field holds: "A"
+[Name 1-char] Result: job CREATED.
+  ok  1 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:27:7 › Add Job - new boundary & negative values (round 2) › Customer name: a single character is a valid-looking minimum boundary (24.9s)
+[Name numeric-only] Result: job CREATED.
+  ok  2 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:36:7 › Add Job - new boundary & negative values (round 2) › Customer name: purely numeric digits accepted as a "name" (23.6s)
+[Email long] field holds length: 262
+[Email long local-part] Result: job CREATED.
+  ok  3 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:43:7 › Add Job - new boundary & negative values (round 2) › Email: extremely long local-part (250+ chars) (27.6s)
+[Email multi-@] submission blocked: true
+  ok  4 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:53:7 › Add Job - new boundary & negative values (round 2) › Email: multiple @ symbols is rejected (23.3s)
+[Email no TLD] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok  5 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:64:7 › Add Job - new boundary & negative values (round 2) › Email: missing top-level domain (no ".xxx") is handled (26.2s)
+[Postcode 5-digit] field holds: "2000"
+[Postcode too-long] Result: job CREATED.
+  ok  6 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:71:7 › Add Job - new boundary & negative values (round 2) › Postcode: too long (5 digits) is handled (25.1s)
+[Postcode decimal] field holds: "2000"
+[Postcode decimal] Result: job CREATED.
+  ok  7 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:80:7 › Add Job - new boundary & negative values (round 2) › Postcode: decimal value is handled (25.9s)
+[ABN spaces] typed "123 456 789 01" -> field holds "123456789"
+[ABN embedded spaces] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+ABN/ACN must be exactly 11 digits
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok  8 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:89:7 › Add Job - new boundary & negative values (round 2) › ABN/ACN: embedded spaces are handled (25.1s)
+  ok  9 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:100:7 › Add Job - new boundary & negative values (round 2) › ABN/ACN: exactly 10 digits (one short of the required 11) is rejected (22.0s)
+[Own ref 500-char] field holds length: 504
+[Own reference 500-char] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 10 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:109:7 › Add Job - new boundary & negative values (round 2) › Own reference: isolated extreme length (500 chars, no other confounding long fields) (27.7s)
+[Phone with +61 prefix] typed "+61412345678" -> field holds "+61 (61) 4123 4567"
+[Phone with +61 prefix] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+Phone number must be 9 digits for Australia
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 11 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:119:7 › Add Job - new boundary & negative values (round 2) › Phone: typing a "+61" country-code prefix into the national-number field is handled (27.2s)
+[Address typed-not-selected] submission blocked: true
+  ok 12 [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts:131:7 › Add Job - new boundary & negative values (round 2) › Site address: valid search term typed but no suggestion selected before submit (25.0s)
+[ABN negative-sign] typed "-1234567890" -> field holds "1234567890"
+[ABN negative-sign] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+ABN/ACN must be exactly 11 digits
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 13 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:27:7 › Add Job - per-field boundary, invalid & negative values › ABN/ACN: negative-sign prefix is handled (accepted/stripped/rejected - documents actual behaviour) (25.3s)
+[ABN letters] typed "1234ABCD901" -> field holds "1234901"
+[ABN letters] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+ABN/ACN must be exactly 11 digits
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 14 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:38:7 › Add Job - per-field boundary, invalid & negative values › ABN/ACN: letters mixed with digits are handled (24.9s)
+[ABN all-zeros] Result: job CREATED.
+[ABN all-zeros] job created: true
+  ok 15 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:49:7 › Add Job - per-field boundary, invalid & negative values › ABN/ACN: all-zeros (11 digits) is a syntactically valid but meaningless ABN (23.4s)
+[Postcode negative-sign] typed "-200" -> field holds "200"
+[Postcode negative-sign] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+Postcode must be exactly 4 digits
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 16 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:57:7 › Add Job - per-field boundary, invalid & negative values › Postcode: negative-sign prefix is handled (20.4s)
+[Postcode letters] typed "ABCD" -> field holds ""
+[Postcode letters] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+Postcode is required
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 17 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:68:7 › Add Job - per-field boundary, invalid & negative values › Postcode: letters are handled (20.0s)
+[Postcode all-zeros] Result: job CREATED.
+[Postcode all-zeros] job created: true
+  ok 18 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:79:7 › Add Job - per-field boundary, invalid & negative values › Postcode: all-zeros (0000) is a syntactically valid but nonexistent postcode (20.1s)
+[Phone negative/decimal] typed "-41.234.567" -> field holds "+61 (41) 2345 67"
+[Phone negative/decimal] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+Phone number must be 9 digits for Australia
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 19 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:87:7 › Add Job - per-field boundary, invalid & negative values › Phone: negative-sign and decimal characters are handled (19.4s)
+[Date non-numeric] typed "AB-CD-EFGH" -> field holds "AB-CD-EFGH"
+[Date non-numeric] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+Installation date is required
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 20 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:99:7 › Add Job - per-field boundary, invalid & negative values › Installation date (wizard field): non-numeric characters are handled (21.0s)
+[Date year 0001] field holds "01-01-0001"
+[Date year 9999] field holds "31-12-9999"
+[Date extreme years] Result: job CREATED.
+  ok 21 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:111:7 › Add Job - per-field boundary, invalid & negative values › Installation date (wizard field): extreme boundary years 0001 and 9999 (20.3s)
+[Date incomplete] typed "15-13" -> field holds "15-13"
+[Date incomplete] Result: job CREATED.
+  ok 22 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:129:7 › Add Job - per-field boundary, invalid & negative values › Installation date (wizard field): incomplete date is handled (20.8s)
+[Address gibberish] suggestion count: 0
+  ok 23 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:140:7 › Add Job - per-field boundary, invalid & negative values › Site address: a nonsense search string returns no suggestions and the field stays required (21.6s)
+[Own reference negative/decimal] field holds "-999.50"
+[Own reference negative/decimal] Result: job CREATED.
+  ok 24 [chromium] › tests-nsw-jobs\add-job-field-boundaries.spec.ts:163:7 › Add Job - per-field boundary, invalid & negative values › Own reference: a negative number and a decimal are accepted as free text (20.2s)
+  ok 25 [chromium] › tests-nsw-jobs\auth.spec.ts:8:7 › Admin login - API › valid credentials succeed (1.0s)
+  ok 26 [chromium] › tests-nsw-jobs\auth.spec.ts:13:7 › Admin login - API › wrong password is rejected with a generic message (525ms)
+  ok 27 [chromium] › tests-nsw-jobs\auth.spec.ts:22:7 › Admin login - API › nonexistent email returns the SAME generic message as wrong password (anti-enumeration) (232ms)
+  ok 28 [chromium] › tests-nsw-jobs\auth.spec.ts:33:7 › Admin login - UI › wrong password shows the generic error and does not log in (5.2s)
+  ok 29 [chromium] › tests-nsw-jobs\auth.spec.ts:42:7 › Admin login - UI › valid credentials reach the Jobs screen (7.4s)
+  ok 30 [chromium] › tests-nsw-jobs\auth.spec.ts:57:7 › OTP request/verify - API (public, no login required) › request for a nonexistent phone returns a generic anti-enumeration message (250ms)
+  ok 31 [chromium] › tests-nsw-jobs\auth.spec.ts:66:7 › OTP request/verify - API (public, no login required) › verify with an obviously wrong code is rejected (229ms)
+  ok 32 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:89:9 › Valid job creation - Australian data › Valid Job 1: Heating & Cooling / Residential / Phone lead / Sydney CBD (19.8s)
+  ok 33 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:89:9 › Valid job creation - Australian data › Valid Job 2: Hot Water Heat Pump / Residential / Website lead / Artarmon (24.2s)
+  ok 34 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:89:9 › Valid job creation - Australian data › Valid Job 3: Heating & Cooling / Small Business / Referral lead / North Sydney (24.8s)
+  ok 35 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:89:9 › Valid job creation - Australian data › Valid Job 4: Hot Water Heat Pump / Small Business / Email lead / St Leonards (27.3s)
+  ok 36 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:89:9 › Valid job creation - Australian data › Valid Job 5: Heating & Cooling / Residential / Phone lead / Dulwich Hill (20.4s)
+  ok 37 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:89:9 › Valid job creation - Australian data › Valid Job 6: Hot Water Heat Pump / Residential / Referral lead / Punchbowl (21.4s)
+  ok 38 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:133:7 › Invalid field formats › Invalid Job 1: malformed email is rejected (19.1s)
+  x  39 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:142:7 › Invalid field formats › Invalid Job 2: ABN/ACN too short (5 digits) is rejected (47.2m)
+  ok 40 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:151:7 › Invalid field formats › Invalid Job 3: ABN/ACN over 11 digits is silently truncated, not rejected (28.0s)
+  ok 41 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:168:7 › Invalid field formats › Invalid Job 4: Email and Phone left blank amid otherwise valid data (21.8s)
+  ok 42 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:183:7 › Negative / edge cases › Negative Job 1: fully empty form shows every required-field error (11.2s)
+  ok 43 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:207:7 › Negative / edge cases › Negative Job 2: Installer (company) left blank, everything else valid (18.5s)
+  ok 44 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:230:7 › Negative / edge cases › Negative Job 3: Site address left blank, everything else valid (18.8s)
+  ok 45 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:252:7 › Negative / edge cases › Negative Job 4: extremely long Customer Name and Own Reference do not crash the form (24.0s)
+  ok 46 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:281:7 › Negative / edge cases › Negative Job 5: HTML/script-injection style Customer Name is handled safely (27.6s)
+[Negative 6] Customer name field holds: "!@#!$)(@$&%$*9^&*()_+-=[]{}|;:'<>,.?/~"
+[Negative 6] Own reference field holds: "!@#!$)(@$&%$*9^&*()_+-=[]{}|;:'<>,.?/~"
+[Negative 6] Result: job CREATED with special-character customer name/own reference (no validation blocked it).
+  ok 47 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:320:7 › Negative / edge cases: special characters & symbol boundary values › Negative Job 6: special characters in Customer name and Own reference (33.1s)
+[Negative 7] Phone field holds after typing special characters: "+61 (9)"
+[Negative 7] ABN/ACN field holds after special characters: ""
+[Negative 7] Postcode field holds after special characters: ""
+[Negative 7] Result: submission BLOCKED. Dialog validation text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+Phone number must be 9 digits for Australia
+*
+ABN/ACN
+ABN/ACN is required
+* Site address
+Add Manual Address
+Full installation address
+Site address is required
+*
+Postcode
+Postcode is required
+*
+Activity type
+Select activity type
+Activity type is required
+*
+Building type
+Select building type
+Building type is required
+*
+Method of lead generation
+Select method
+Method of lead generation is required
+*
+Own reference
+Own reference is required
+*
+Installation date
+Installation date is required
+*
+Installer (company)
+Select installer
+Installer (company) is required
+Send engagement letter & fact sheet
+  ok 48 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:357:7 › Negative / edge cases: special characters & symbol boundary values › Negative Job 7: special characters in numeric-only required fields (Phone, ABN/ACN, Postcode) (17.4s)
+  ok 49 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:388:7 › Negative / edge cases: special characters & symbol boundary values › Negative Job 8: special characters in Email local-part are rejected (22.7s)
+[Edge 1] Postcode field holds: "2000"
+[Edge 1] Result: job CREATED.
+  ok 50 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:429:7 › Additional edge cases & boundary values › Edge Case 1: Postcode too short (2 digits) (26.3s)
+[Edge 2] Result: job CREATED.
+  ok 51 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:438:7 › Additional edge cases & boundary values › Edge Case 2: Postcode from a different state than the selected address (NSW address, VIC postcode) (26.9s)
+[Edge 3] Customer name field holds: "" (length 0)
+[Edge 3] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+Customer name is required
+*
+Email
+*
+Phone
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+Own reference is required
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 52 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:448:7 › Additional edge cases & boundary values › Edge Case 3: whitespace-only Customer name and Own reference (25.1s)
+[Edge 4] Result: job CREATED.
+  ok 53 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:457:7 › Additional edge cases & boundary values › Edge Case 4: SQL-injection style Customer name is handled safely (29.5s)
+[Edge 5] Customer name field holds: "陈伟 🏠 Müller Nguyễn"
+[Edge 5] Result: job CREATED.
+  ok 54 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:471:7 › Additional edge cases & boundary values › Edge Case 5: Unicode and emoji in Customer name (23.4s)
+[Edge 6] Result: job CREATED.
+  ok 55 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:480:7 › Additional edge cases & boundary values › Edge Case 6: duplicate ABN, Phone and Email reused from Valid Job 1 (24.4s)
+[Edge 7] Installation date field holds: "24-08-2026"
+[Edge 7] Result: job CREATED.
+  ok 56 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:497:7 › Additional edge cases & boundary values › Edge Case 7: Installation date in the past (31.2s)
+[Edge 8] Installation date field holds: "24-08-2026"
+[Edge 8] Result: job CREATED.
+  ok 57 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:506:7 › Additional edge cases & boundary values › Edge Case 8: calendar-invalid date (31-02-2026, February has no 31st) (24.1s)
+[Edge 9] Phone field holds: "+61 (41) 234"
+[Edge 9] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+Phone number must be 9 digits for Australia
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 58 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:515:7 › Additional edge cases & boundary values › Edge Case 9: Phone number too short (5 digits) (27.4s)
+[Edge 10] Phone field holds: "+61 (41) 2345 6789"
+[Edge 10] Result: submission BLOCKED. Dialog text:
+Add Job
+1
+Engagement
+Products
+Team
+
+Only the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock when the job status is Good to Go.
+
+*
+Customer name
+*
+Email
+*
+Phone
+Phone number must be 9 digits for Australia
+*
+ABN/ACN
+* Site address
+Add Manual Address
+Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia
+*
+Postcode
+*
+Activity type
+Heating & Cooling
+*
+Building type
+Residential Building
+*
+Method of lead generation
+Phone
+*
+Own reference
+*
+Installation date
+*
+Installer (company)
+Rajan Testing Company
+Equipment to be quoted
+PRODUCT 1
+*
+Original equipment
+No existing system (new installation)
+*
+Brand
+ACTRON AIR
+*
+Model
+CAY500T - ELY500T
++ Add another product
+Send engagement letter & fact sheet
+  ok 59 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:524:7 › Additional edge cases & boundary values › Edge Case 10: Phone number too long (12 digits) (26.5s)
+  ok 60 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 1: 2 products via "+ Add another product" (27.8s)
+  ok 61 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 2: 3 products via "+ Add another product" (39.4s)
+  ok 62 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 3: 2 products via "+ Add another product" (26.9s)
+  ok 63 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 4: 4 products via "+ Add another product" (34.8s)
+  ok 64 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 5: 3 products via "+ Add another product" (30.4s)
+  ok 65 [chromium] › tests-nsw-jobs\notes.spec.ts:14:7 › Notes › a fully empty note (no text, no attachment) is rejected (1.7s)
+  ok 66 [chromium] › tests-nsw-jobs\notes.spec.ts:26:7 › Notes › a valid text-only note is created successfully (1.4s)
+  ok 67 [chromium] › tests-nsw-jobs\notes.spec.ts:49:7 › Notes › KNOWN BUG (BUG-08): submitting a note via the UI with the Internal toggle untouched sends visibility=internal (22.7s)
+  ok 68 [chromium] › tests-nsw-jobs\notes.spec.ts:79:7 › Notes › an explicit external note is created with external visibility (939ms)
+  ok 69 [chromium] › tests-nsw-jobs\notes.spec.ts:91:7 › Notes › an explicit internal note is created with internal visibility (904ms)
+  ok 70 [chromium] › tests-nsw-jobs\post-sign-editing.spec.ts:30:7 › KNOWN BUGS (BUG-02): "Save" fires zero network requests on signed-job edit tabs › Job Information tab: editing Own Reference and clicking Save fires no request (18.3s)
+  ok 71 [chromium] › tests-nsw-jobs\post-sign-editing.spec.ts:43:7 › KNOWN BUGS (BUG-02): "Save" fires zero network requests on signed-job edit tabs › Post Install Details tab: editing CES Number and clicking Save fires no request (18.4s)
+  ok 72 [chromium] › tests-nsw-jobs\post-sign-editing.spec.ts:56:7 › KNOWN BUGS (BUG-02): "Save" fires zero network requests on signed-job edit tabs › Products tab: editing an existing product via its pencil icon and clicking Save fires no request (27.1s)
+  ok 73 [chromium] › tests-nsw-jobs\post-sign-editing.spec.ts:79:7 › KNOWN BUG (BUG-07): no duplicate-serial-number detection › two products on the same job can share an identical serial number (35.2s)
+  ok 74 [chromium] › tests-nsw-jobs\soft-delete.spec.ts:36:7 › Job soft-delete & restore › full delete -> excluded from list -> 404 on direct access -> visible in trash -> restore -> reappears (3.5s)
+  ok 75 [chromium] › tests-nsw-jobs\soft-delete.spec.ts:82:7 › Job soft-delete & restore › delete is idempotent - deleting an already-deleted job reports it correctly, not as an error (1.8s)
+  ok 76 [chromium] › tests-nsw-jobs\soft-delete.spec.ts:100:7 › Job soft-delete & restore › deleting a nonexistent job id reports it in notFound (753ms)
+
+
+  1) [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:142:7 › Invalid field formats › Invalid Job 2: ABN/ACN too short (5 digits) is rejected 
+
+    Test timeout of 60000ms exceeded.
+
+    Tearing down "context" exceeded the test timeout of 60000ms.
+
+    Error: locator.fill: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for getByPlaceholder(/email/i)
+
+
+       at helpers.ts:8
+
+       6 | export async function login(page: Page) {
+       7 |   await page.goto('/log-in');
+    >  8 |   await page.getByPlaceholder(/email/i).fill(EMAIL);
+         |                                         ^
+       9 |   await page.getByPlaceholder(/password/i).fill(PASSWORD);
+      10 |   await page.getByRole('button', { name: /log ?in|sign ?in/i }).click();
+      11 |   await page.getByRole('button', { name: /add job/i }).waitFor({ state: 'visible', timeout: 20_000 });
+        at login (C:\Users\Baps\Downloads\rajan backup\1er-tests\tests-nsw-jobs\helpers.ts:8:41)
+        at C:\Users\Baps\Downloads\rajan backup\1er-tests\tests-nsw-jobs\create-15-jobs.spec.ts:143:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\create-15-jobs-Invalid-fie-0efe8--short-5-digits-is-rejected-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\create-15-jobs-Invalid-fie-0efe8--short-5-digits-is-rejected-chromium\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\create-15-jobs-Invalid-fie-0efe8--short-5-digits-is-rejected-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\create-15-jobs-Invalid-fie-0efe8--short-5-digits-is-rejected-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  Slow test file: [chromium] › tests-nsw-jobs\add-job-field-boundaries-2.spec.ts (5.1m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  1 failed
+    [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:142:7 › Invalid field formats › Invalid Job 2: ABN/ACN too short (5 digits) is rejected 
+  75 passed (1.2h)

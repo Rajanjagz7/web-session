@@ -1,0 +1,58 @@
+﻿== stored details / engagement delivery
+M8N000132 H&C / Residential / Wentworthville
+   status=site_assessment_and_nomination_requested engagement={"factSheetEmail": {"to": "priya.raman.30359@yopmail.com", "status": "sent", "sentAt": "2026-09-25T09:59:36.981Z", "attempts": 1}, "email": {"to": "priya.raman.30359@yopmail.com", "status": "sent", "sentAt": "2026-09-25T09:59:36.981Z", "attempts": 1}, "sms": {"to": "+61424938972", "status": "sent", "sentAt": "2026-09-25T09:59:37.393Z", "attempts": 1}}
+   address: street#='14' name='Station' type='Street' suburb='Wentworthville' pc='2145' | entered pc=2145
+   installDate=2026-10-14T00:00:00.000Z entered=14-10-2026 | newSystem entered=None stored=None
+   rebate: esc=0 escValue=0 total=0
+   customer={"id": "6ab646047be3e3aa922521df", "name": "Priya Raman", "email": "priya.raman.30359@yopmail.com", "phoneNumber": "424938972", "countryCode": "+61", "flagCode": "AU", "abnAcn": "49478258643", "isActive": true}
+   equipment=[{"originalEquipment": "Installation of a New Air Conditioner", "brand": "KELVINATOR", "model": "KWH60CRF", "heatingCapacityKw": 0, "coolingCapacityKw": 6}]
+M8N000133 H&C / Small Business / Manly
+   status=engagement_sent engagement={"factSheetEmail": {"to": "daniel.30414@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:00:34.402Z", "attempts": 1}, "email": {"to": "daniel.30414@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:00:34.402Z", "attempts": 1}, "sms": {"to": "+61429326759", "status": "sent", "sentAt": "2026-09-25T10:00:34.794Z", "attempts": 1}}
+   address: street#='10' name='The' type='Corso' suburb='Manly' pc='2095' | entered pc=2095
+   installDate=2026-10-28T00:00:00.000Z entered=28-10-2026 | newSystem entered=None stored=None
+   rebate: esc=0 escValue=0 total=0
+   customer={"id": "6ab6463c7be3e3aa92252251", "name": "Harbourside Cafe Pty Ltd", "email": "daniel.30414@yopmail.com", "phoneNumber": "429326759", "countryCode": "+61", "flagCode": "AU", "abnAcn": "87473035647", "businessType": "", "authFirstName": "Daniel", "authLastNam
+   equipment=[{"originalEquipment": "Installation of a New Air Conditioner", "brand": "GREE", "model": "GJC18AG-K6DRNG1A", "heatingCapacityKw": 0, "coolingCapacityKw": 5.3}]
+M8N000134 H&C / Residential / 2 products / Newcastle
+   status=engagement_sent engagement={"factSheetEmail": {"to": "liam.o.brien.30472@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:01:35.720Z", "attempts": 1}, "email": {"to": "liam.o.brien.30472@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:01:35.720Z", "attempts": 1}, "sms": {"to": "+61474468114", "status": "sent", "sentAt": "2026-09-25T10:01:36.108Z", "attempts": 1}}
+   address: street#='45' name='Hunter' type='Street' suburb='Newcastle West' pc='2300' | entered pc=2300
+   installDate=2026-11-11T00:00:00.000Z entered=11-11-2026 | newSystem entered=None stored=None
+   rebate: esc=0 escValue=0 total=0
+   customer={"id": "6ab646787be3e3aa92252316", "name": "Liam O'Brien", "email": "liam.o.brien.30472@yopmail.com", "phoneNumber": "474468114", "countryCode": "+61", "flagCode": "AU", "abnAcn": "55508026030", "isActive": true}
+   equipment=[{"originalEquipment": "Installation of a New Air Conditioner", "brand": "AUX", "model": "ARV-H180-NR1B-AU", "heatingCapacityKw": 21.5, "coolingCapacityKw": 18.1}, {"originalEquipment": "Installation of a New Air Conditioner", "brand": "DEVANTI", "model": "WAC-05C-WH", "heatingCapacityKw": 0, "cooli
+M8N000135 HWHP / Residential / Parramatta
+   status=engagement_sent engagement={"factSheetEmail": {"to": "thomas.nguyen.32149@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:30:14.253Z", "attempts": 1}, "email": {"to": "thomas.nguyen.32149@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:30:14.253Z", "attempts": 1}, "sms": {"to": "+61438235506", "status": "sent", "sentAt": "2026-09-25T10:30:14.625Z", "attempts": 1}}
+   address: street#='21' name='Macquarie' type='Street' suburb='Parramatta' pc='2150' | entered pc=2150
+   installDate=2026-10-21T00:00:00.000Z entered=21-10-2026 | newSystem entered=Heat pump stored=heat_pump
+   rebate: esc=0 escValue=0 total=0
+   customer={"id": "6ab64d307be3e3aa9225283b", "name": "Thomas Nguyen", "email": "thomas.nguyen.32149@yopmail.com", "phoneNumber": "438235506", "countryCode": "+61", "flagCode": "AU", "abnAcn": "82811580363", "isActive": true}
+   equipment=[{"originalEquipment": "Brand New Install", "brand": "FORSSMAN", "model": "EHPSV315-RE"}]
+M8N000136 HWHP / Small Business / Hornsby
+   status=engagement_sent engagement={"factSheetEmail": {"to": "sarah.32230@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:31:42.007Z", "attempts": 1}, "email": {"to": "sarah.32230@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:31:42.007Z", "attempts": 1}, "sms": {"to": "+61451954290", "status": "sent", "sentAt": "2026-09-25T10:31:42.416Z", "attempts": 1}}
+   address: street#='5' name='Hunter' type='Street' suburb='Hornsby' pc='2077' | entered pc=2077
+   installDate=2026-11-04T00:00:00.000Z entered=04-11-2026 | newSystem entered=None stored=heat_pump
+   rebate: esc=0 escValue=0 total=0
+   customer={"id": "6ab64d887be3e3aa92252885", "name": "Blue Gum Veterinary Clinic Pty Ltd", "email": "sarah.32230@yopmail.com", "phoneNumber": "451954290", "countryCode": "+61", "flagCode": "AU", "abnAcn": "72357614371", "businessType": "", "authFirstName": "Sarah", "aut
+   equipment=[{"originalEquipment": "Brand New Install", "brand": "SOLARBUILD", "model": "NA32-260A"}]
+M8N000137 HWHP / Residential / Wollongong
+   status=engagement_sent engagement={"factSheetEmail": {"to": "aisha.khan.32326@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:33:06.437Z", "attempts": 1}, "email": {"to": "aisha.khan.32326@yopmail.com", "status": "sent", "sentAt": "2026-09-25T10:33:06.437Z", "attempts": 1}, "sms": {"to": "+61439538780", "status": "sent", "sentAt": "2026-09-25T10:33:06.923Z", "attempts": 1}}
+   address: street#='100' name='Crown' type='Street' suburb='Wollongong' pc='2500' | entered pc=2500
+   installDate=2026-11-18T00:00:00.000Z entered=18-11-2026 | newSystem entered=Heat pump stored=heat_pump
+   rebate: esc=0 escValue=0 total=0
+   customer={"id": "6ab64ddc7be3e3aa922528cf", "name": "Aisha Khan", "email": "aisha.khan.32326@yopmail.com", "phoneNumber": "439538780", "countryCode": "+61", "flagCode": "AU", "abnAcn": "73051717637", "isActive": true}
+   equipment=[{"originalEquipment": "Brand New Install", "brand": "ECONOVA", "model": "ECON-260RVW-2.0E"}]
+
+== rebate values on later-stage jobs (for comparison)
+   nomination_signed              M8N000130 esc=22 escValue=264 prc=660 total=924 eng={"factSheetEmail": {"to": "calcwebjob1@yopmail.com", "status": "sent", "sentAt": "2026-09-25T09:20:29.431Z", "attempts": 1}, "email": {"to": "calcwebjob1@yopmai
+   nomination_signed              M8N000126 esc=0 escValue=0 prc=0 total=0 eng={"factSheetEmail": {"to": "testmobilejob2@yopmail.com", "status": "sent", "sentAt": "2026-09-25T06:17:25.702Z", "attempts": 1}, "email": {"to": "testmobilejob2@
+   photos_started                 M8N000104 esc=0 escValue=0 prc=2580 total=2580 eng={"factSheetEmail": {"to": "mobilecalcjob1@yopmail.com", "status": "sent", "sentAt": "2026-09-24T05:34:54.857Z", "attempts": 1}, "email": {"to": "mobilecalcjob1@
+   photos_started                 M8N000072 esc=0 escValue=0 prc=217 total=217 eng={"factSheetEmail": {"to": "ava.robertson.70306409@yopmail.com", "status": "sent", "sentAt": "2026-09-22T09:45:30.453Z", "attempts": 1}, "email": {"to": "ava.rob
+   photos_complete                M8N000032 esc=42 escValue=504 prc=0 total=504 eng={"factSheetEmail": {"to": "rubymartin@yopmail.com", "status": "sent", "sentAt": "2026-09-08T10:28:23.884Z", "attempts": 1}, "email": {"to": "rubymartin@yopmail.
+
+== Jobs list rows
+   M8N000132: rows=1 missing=[] |  M8N000132 Site Assessment and Nomination Requested Priya Raman BAWA Residential - +61 424938972 14 Station St, Wentworthville NSW 2145, Australia Wentworthville Heating & Cooling 14/10/2026 - - -
+   M8N000133: rows=1 missing=[] |  M8N000133 Engagement Sent Harbourside Cafe Pty Ltd Belinda Test Co Business - +61 429326759 10 The Corso, Manly NSW 2095, Australia Manly Heating & Cooling 28/10/2026 - - -
+   M8N000134: rows=1 missing=[] |  M8N000134 Engagement Sent Liam O'Brien Birds HVAC Residential - +61 474468114 45 Hunter St, Newcastle West NSW 2300, Australia Newcastle West Heating & Cooling 11/11/2026 - - -
+   M8N000135: rows=1 missing=[] |  M8N000135 Engagement Sent Thomas Nguyen Belinda HVAC NSW Residential - +61 438235506 21 Macquarie St, Parramatta NSW 2150, Australia Parramatta Hot Water Heat Pump 21/10/2026 - - -
+   M8N000136: rows=1 missing=[] |  M8N000136 Engagement Sent Blue Gum Veterinary Clinic Pty Ltd Belinda Testing Business - +61 451954290 5 Hunter St, Hornsby NSW 2077, Australia Hornsby Hot Water Heat Pump 04/11/2026 - - -
+   M8N000137: rows=1 missing=[] |  M8N000137 Engagement Sent Aisha Khan Birvis HVAC Residential - +61 439538780 100 Crown St, Wollongong NSW 2500, Australia Wollongong Hot Water Heat Pump 18/11/2026 - - -

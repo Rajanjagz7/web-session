@@ -1,0 +1,15 @@
+{
+  "name": "crm-qa-ui",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project=chromium",
+    "report": "playwright show-report ../reports/ui-html",
+    "install:browsers": "playwright install --with-deps chromium firefox webkit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.0.0",
+    "allure-playwright": "^3.0.0"
+  }
+}

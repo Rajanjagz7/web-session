@@ -1,0 +1,105 @@
+[
+ {
+  "id": "NSW-STG-63",
+  "verdict": "ERROR",
+  "detail": "script error: Locator.wait_for: Timeout 15000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Job Information\", exact=True) to be visible\n"
+ },
+ {
+  "id": "NSW-STG-15",
+  "verdict": "STILL_OPEN",
+  "detail": "ABN typed with spaces '33 102 417 032' -> field now shows '33102417'"
+ },
+ {
+  "id": "NSW-STG-26",
+  "verdict": "STILL_OPEN",
+  "detail": "9-digit ACN '004085616' -> field value '004085616', '11 digits' error shown: True"
+ },
+ {
+  "id": "NSW-STG-29",
+  "verdict": "STILL_OPEN",
+  "detail": "phone '000000000' -> field shows '+61 (00) 0000 000'"
+ },
+ {
+  "id": "NSW-STG-20",
+  "verdict": "FIXED",
+  "detail": "phone '0412247248' (leading 0, 10 digits) -> field shows '+61 (00) 0000 0000'"
+ },
+ {
+  "id": "NSW-STG-22",
+  "verdict": "FIXED",
+  "detail": "phone '+61413247248' -> field shows '+61 (00) 0000 0000', 9-digit error shown: False"
+ },
+ {
+  "id": "NSW-STG-16",
+  "verdict": "STILL_OPEN",
+  "detail": "email 'regr.notld.743126@yopmail' (no TLD) -> inline validation shown: False"
+ },
+ {
+  "id": "NSW-STG-27",
+  "verdict": "STILL_OPEN",
+  "detail": "postcode '3000' (VIC) -> NSW-range error shown: False"
+ },
+ {
+  "id": "NSW-STG-28",
+  "verdict": "STILL_OPEN",
+  "detail": "date '31-04-2027' (no such day) -> field shows '', error shown: False"
+ },
+ {
+  "id": "NSW-STG-30 / NSW-STG-31",
+  "verdict": "STILL_OPEN",
+  "detail": "Own Reference 258 'A's -> field now holds 258 chars"
+ },
+ {
+  "id": "NSW-STG-47",
+  "verdict": "STILL_OPEN",
+  "detail": "'Model is required' visible right after picking Brand (before touching Model): True"
+ },
+ {
+  "id": "NSW-STG-35",
+  "verdict": "STILL_OPEN",
+  "detail": "Cooling Capacity typed '5,5' -> field now shows '55' (bug: silently becomes 55)"
+ },
+ {
+  "id": "NSW-STG-36",
+  "verdict": "STILL_OPEN",
+  "detail": "Heating Capacity '65.01' kW -> 'must be under 65kW' error shown: False"
+ },
+ {
+  "id": "NSW-STG-37",
+  "verdict": "STILL_OPEN",
+  "detail": "Warranty Period '9999' -> field shows '9999'"
+ },
+ {
+  "id": "NSW-STG-21",
+  "verdict": "FIXED_OR_NO_REPRO",
+  "detail": "after switching BAWA -> Owl HVAC, inspection-installer options: ['Gopika Jani', 'MWeb Plumber', 'Mobile Plumber', 'Mobile Ref Mech', 'iWeb Ref Mech', 'iWeb Electrician', 'Mobile Electrician', 'Mobile Salesperson', 'iWeb Salesperson', 'iWeb Contractor', 'Mobile Contractor', 'Test Tester', 'Sangita Plumby', 'Tester Mobile', 'Test Mobile New'] (was: 'Belinda Baker')",
+  "screenshot": "regr-21-installer-switch.png"
+ },
+ {
+  "id": "NSW-STG-21",
+  "verdict": "ERROR",
+  "detail": "script error: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"dialog\").get_by_placeholder(\"Enter customer name\")\n    - locator resolved to <input value=\"\" type=\"text\" autocomplete=\"off\" name=\"customerName\" placeholder=\"Enter Customer Name\" class=\"input input-md h-11 focus:ring-sky-950 focus-within:ring-sky-950 focus-within:border-sky-950 focus:border-sky-950\"/>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div tabindex=\"-1\" role=\"option\" class=\"select-option\" aria-selected=\"false\" id=\"react-select-15-option-2\">…</div> from <div class=\" [&_.input]:bg-white [&_.select__control]:bg-white [&_.react-tel-input_input]:bg-white\">…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div tabindex=\"-1\" role=\"option\" class=\"select-option\" aria-selected=\"false\" id=\"react-select-15-option-2\">…</div> from <div class=\" [&_.input]:bg-white [&_.select__control]:bg-white [&_.react-tel-input_input]:bg-white\">…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    56 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div tabindex=\"-1\" role=\"option\" class=\"select-option\" aria-selected=\"false\" id=\"react-select-15-option-2\">…</div> from <div class=\" [&_.input]:bg-white [&_.select__control]:bg-white [&_.react-tel-input_input]:bg-white\">…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+ },
+ {
+  "id": "NSW-STG-43",
+  "verdict": "BLOCKED_COULD_NOT_TEST",
+  "detail": "'10 The Corso Manly' job submission -> blocked (verify streetName via API next)",
+  "screenshot": "regr-43-address-submit.png"
+ },
+ {
+  "id": "NSW-STG-09",
+  "verdict": "ERROR",
+  "detail": "script error: Locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"option\", name=\"Small Business Site\", exact=True)\n"
+ },
+ {
+  "id": "NSW-STG-08",
+  "verdict": "STILL_OPEN",
+  "detail": "Esc pressed while Activity type dropdown open -> whole drawer closed: True",
+  "screenshot": "regr-08-esc-drawer.png"
+ },
+ {
+  "id": "NSW-STG-23",
+  "verdict": "STILL_OPEN",
+  "detail": "reload after typing a name -> native confirm dialog shown: False ([])"
+ }
+]

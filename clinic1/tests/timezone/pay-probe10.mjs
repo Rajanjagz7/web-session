@@ -1,0 +1,13 @@
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1300}, storageState:'playwright/.auth/tz-user.json', timezoneId:'Australia/Sydney' });
+const p = await c.newPage();
+p.on('request', r => { if (r.method()==='POST' && /\/api\/v1\/invoice$/.test(r.url())) { fs.writeFileSync('test-results/invoice-post.json', r.postData()); console.log('captured invoice POST', r.postData().length,'bytes'); } });
+await p.goto('https://sunrise-family-medical.dev.clinic1.ai/appointments/booking-list'); await p.waitForTimeout(5000);
+await p.getByRole('combobox').first().click(); await p.getByRole('option',{name:/BRISBANE/i}).click(); await p.waitForTimeout(3000);
+await p.getByPlaceholder(/Search patient/i).fill('Priya Nandakumar'); await p.waitForTimeout(4000);
+await p.locator('tbody tr').first().locator('button').last().click(); await p.waitForTimeout(1000);
+await p.getByRole('menuitem',{name:'Pay'}).click(); await p.waitForTimeout(4500);
+await p.getByRole('button',{name:'Pay',exact:true}).click(); await p.waitForTimeout(5000);
+await b.close();

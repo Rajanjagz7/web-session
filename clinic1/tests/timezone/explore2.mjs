@@ -1,0 +1,15 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const p = await (await b.newContext()).newPage();
+p.on('response', async r => { if (r.request().method()==='POST') console.log(r.status(), r.url(), (await r.text().catch(()=>'')).slice(0,300)); });
+await p.goto('https://dev.clinic1.ai/auth/sign-in');
+await p.waitForTimeout(2000);
+console.log(await p.locator('input').evaluateAll(l=>l.map(i=>[i.type,i.name,i.placeholder])));
+await p.locator('input[type="email"], input[name="email"]').first().fill('Jainamb@softwareco.com');
+await p.locator('input[type="password"]').first().fill('Test@123');
+await p.locator('button[type="submit"]').first().click();
+await p.waitForTimeout(8000);
+console.log(p.url());
+console.log((await p.locator('body').innerText()).slice(0,600));
+await p.screenshot({ path: 'test-results/tz-login.png' });
+await b.close();

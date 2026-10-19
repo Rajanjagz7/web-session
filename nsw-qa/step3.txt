@@ -1,0 +1,36 @@
+﻿== Installers: status filter comparison ==
+no filter total: 15
+  status='New contact': total=11 wrong_rows=set()
+  status='Allocated': total=1 wrong_rows=set()
+  status='Sent jot form link': total=0 wrong_rows=set()
+  status='Received Jot Form': total=0 wrong_rows=set()
+  status='Onboarding booked': total=0 wrong_rows=set()
+  status='Onboarded': total=0 wrong_rows=set()
+  status='Further training needed': total=0 wrong_rows=set()
+  status='Not completing jobs': total=0 wrong_rows=set()
+  status='Dormant': total=0 wrong_rows=set()
+  status='Turned Inactive': total=0 wrong_rows=set()
+  status='Lost': total=0 wrong_rows=set()
+  status='TBC': total=0 wrong_rows=set()
+  status='TBC 2': total=0 wrong_rows=set()
+
+== Installers: assignedPerson filter A vs B vs none ==
+  assignedPerson=<real id>: total=3
+  assignedPerson=<fake id>: total=0 (should be 0 or different from real)
+  filtered total == unfiltered total? False (True would mean filter is ignored)
+
+== Installers: unknown/garbage param ==
+  unknown param -> 200, total=15
+
+== Installers: unknown status filter value ==
+  status=NotARealStatus -> 200 {"success": true, "statusCode": 200, "message": "Installers fetched successfully", "data": {"installers": [{"id": "6ab34fcff9ea6129bf4333c5", "installerCode": "I01-00017", "companyName": "BAWA", "abn"
+
+== Jobs: required-param behaviour (no params at all) ==
+  GET /jobs (no query params) -> 200 total=178
+
+== Pagination: totalCount vs actual rows returned, all endpoints ==
+  /api/v1/jobs: declared total=178, actual unique rows walked=178, match=True
+  /api/v1/installers: declared total=15, actual unique rows walked=15, match=True
+  /api/v1/users?roleType=admin_user: declared total=1, actual unique rows walked=1, match=True
+  /api/v1/matrix: declared total=5, actual unique rows walked=5, match=True
+  /api/v1/activity-logs: declared total=153, actual unique rows walked=153, match=True

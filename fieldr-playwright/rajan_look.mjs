@@ -1,0 +1,17 @@
+import { chromium } from "@playwright/test";
+import dotenv from "dotenv";
+import fs from "fs";
+const env = dotenv.parse(fs.readFileSync("C:/Users/Baps/Downloads/rajan backup/fieldr-qa/pw/.env"));
+const BASE = env.FLDR_BASE_URL;
+const browser = await chromium.launch({ headless: true });
+const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+const bad = [];
+page.on("response", (r) => { if (r.status() >= 400) bad.push(`${r.status()} ${r.request().method()} ${r.url().replace(BASE, "").slice(0, 100)}`); });
+page.on("console", (m) => { if (m.type() === "error") bad.push("console: " + m.text().slice(0, 140)); });
+const resp = await page.goto(BASE + "/login", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(6000);
+console.log("status:", resp?.status(), "| url:", page.url().replace(BASE, ""), "| title:", await page.title());
+console.log("body:", (await page.locator("body").innerText()).replace(/\n+/g, " | ").slice(0, 400));
+console.log("problems:", bad.slice(0, 12));
+await page.screenshot({ path: "C:/Users/Baps/AppData/Local/Temp/claude/c--Users-Baps-Downloads-rajan-backup/4080ed99-fcc1-4297-8820-b9fd19f50d55/scratchpad/rajan_login.png" });
+await browser.close();

@@ -1,0 +1,22 @@
+﻿-- array body on object endpoint --
+400 {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"expected":"object","code":"invalid_type","path":[],"message":"Invalid input: expected object, received array"}]}}
+
+-- malformed JSON: trailing comma --
+500 {"success":false,"statusCode":500,"message":"Internal server error","data":null,"error":{"code":"internal_error"}}
+
+-- malformed JSON: unquoted key --
+500 {"success":false,"statusCode":500,"message":"Internal server error","data":null,"error":{"code":"internal_error"}}
+
+-- malformed JSON: line break inside string --
+500 {"success":false,"statusCode":500,"message":"Internal server error","data":null,"error":{"code":"internal_error"}}
+
+-- wrong Content-Type (text/plain) with valid JSON body --
+400 {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"expected":"object","code":"invalid_type","path":[],"message":"Invalid input: expected object, received undefined"}]}}
+
+-- 0-byte body, Content-Length 0 --
+400 {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"expected":"string","code":"invalid_type","path":["installerId"],"message":"Invalid input: expected string, received undefined"},
+
+-- duplicate keys (last-wins is standard JSON parser behaviour, just confirming) --
+400 {"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["heating_cooling","hot_water_heat_pump"],"path":["activityType"],"message":"Invalid option: expected one of \"heating_cooling\"|\"hot_water_heat_p
+
+count before=249 after=249 delta=0 (every case above should be 4xx, count must be unchanged)

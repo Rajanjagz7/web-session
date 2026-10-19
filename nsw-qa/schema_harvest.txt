@@ -1,0 +1,87 @@
+﻿POST /jobs {} -> 400
+{
+ "success": false,
+ "statusCode": 400,
+ "message": "Invalid request",
+ "data": null,
+ "error": {
+  "code": "validation_error",
+  "details": [
+   {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+     "installerId"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+   },
+   {
+    "code": "invalid_value",
+    "values": [
+     "heating_cooling",
+     "hot_water_heat_pump"
+    ],
+    "path": [
+     "activityType"
+    ],
+    "message": "Invalid option: expected one of \"heating_cooling\"|\"hot_water_heat_pump\""
+   },
+   {
+    "code": "invalid_value",
+    "values": [
+     "residential",
+     "small_business",
+     "business"
+    ],
+    "path": [
+     "customerType"
+    ],
+    "message": "Invalid option: expected one of \"residential\"|\"small_business\"|\"business\""
+   },
+   {
+    "expected": "object",
+    "code": "invalid_type",
+    "path": [
+     "customer"
+    ],
+    "message": "Invalid input: expected object, received undefined"
+   }
+  ]
+ }
+}
+
+-- installer members (for siteInspectionInstallerId) --
+{
+ "success": true,
+ "statusCode": 200,
+ "message": "Members fetched successfully",
+ "data": {
+  "members": [
+   {
+    "id": "6aace061972e326f8fef7ab1",
+    "firstName": "Riya",
+    "lastName": "Smith",
+    "name": "Riya Smith",
+    "email": "riyasmith@yopmail.com",
+    "countryCode": "+61",
+    "phoneNumber": "0482929299",
+    "flagCode": "AU",
+    "roleType": "user",
+    "licences": [
+     {
+      "trade": "Plumber",
+      "licenceNumber": "1233",
+      "completedDate": "2026-09-01T00:00:00.000Z",
+      "expiryDate": "2030-09-30T00:00:00.000Z",
+      "status": "valid",
+      "gas": false,
+      "registeredCompany": {
+       "name": "NSW",
+       "abn": "45433432222",
+       "address": "1880 Trent Avenue",
+       "phoneNumber": "0437373737",
+       "countryCode": "+61",
+       "flagCode":
+
+-- baseline valid job (minimal, from round 6 shape) --
+201 {"success": true, "statusCode": 201, "message": "Job created successfully", "data": {"job": {"id": "6ab6afc16c68441e7dd2a044", "jobNumber": "M8N000138", "status": "engagement_sent", "installerId": "6aace061972e326f8fef7aae", "contractorGroupId": [], "createdBy": "6a38ef2ea07431960aae2009", "customerId": "6ab6afc16c68441e7dd2a041", "activityType": "heating_cooling", "customerType": "residential", "certificateRequirements": {"ccew": "required", "coc": "not_required", "cocGas": "not_required", "refrigerantEvidence": "required"}, "methodOfLeadGeneration": "Customer initiated contact", "installatio

@@ -1,0 +1,110 @@
+﻿captured entity_id: 6ab24e097541fdf3f7a498fc
+before status: 200 {"success":true,"statusCode":200,"message":"Notes fetched successfully","data":{"notes":[],"total":0,"skip":0,"limit":50,"isNext":false}}
+count before: 0
+--- after clicking Add Note ---
+Dashboard
+Projects
+Jobs
+All
+In Progress
+Action Required
+Being Assessed
+Completed
+Archived
+Exception Logs
+Installers
+Installer Users
+Matrix
+Admin Users
+CMS
+Activity
+Rebates
+Products
+Rebates
+Calculator
+Statistics
+Invoices
+Master Admin
+Admin User
+Isla Fitzgerald
+
+Job ID: M8N000071
+
+$0
+
+ESC
+
+$0
+
+PRC
+
+$0
+
+STC
+
+$0
+
+Total
+
+Existing Unit Photos
+Pending
+Decommission Unit Photos
+Pending
+New Unit Photos
+Pending
+Customer Signature
+Pending
+Installer Signature
+Pending
+CoC
+Completed
+CCEW
+Completed
+Tax Invoice
+Completed
+Missing Evidence (See Notes)
+N/A
+Job Information
+Products
+Post Install Details
+Tasks
+Photos
+Notes
+Documents
+Audit Checklist
+Activity Logs
+No Data Found
+
+Try adjusting your filters or search criteria.
+
+Internal
+Admin User
+Attachment
+
+
+
+
+Add Note
+textareas: 0 | all inputs: []
+count after: 1
+writes captured:
+  POST https://nswstage.rebatem8.com.au/api/v1/notes {"attachments":[],"note":"<p>QA regression check 1790342996 - safe to delete</p>","visibility":"internal","entityId":"6ab24e097541fdf3f7a498fc","entityType":"job"}
+read-back match: [
+ {
+  "id": "6ab6776b6c68441e7dd29d5f",
+  "entityType": "job",
+  "entityId": "6ab24e097541fdf3f7a498fc",
+  "visibility": "internal",
+  "note": "<p>QA regression check 1790342996 - safe to delete</p>",
+  "attachments": [],
+  "isChecked": false,
+  "createdBy": {
+   "id": "6a38ef2ea07431960aae2009",
+   "name": "Admin User"
+  },
+  "isEdited": false,
+  "createdAt": "2026-09-25T13:30:19.033Z",
+  "updatedAt": "2026-09-25T13:30:19.033Z",
+  "canModify": true
+ }
+]

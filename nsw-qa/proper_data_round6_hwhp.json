@@ -1,0 +1,846 @@
+[
+ {
+  "n": 2,
+  "label": "HWHP / Residential / Parramatta",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "products_entered": [
+   {
+    "originalEquipment": "Brand New Install",
+    "brand": "FORSSMAN",
+    "model": "EHPSV315-RE",
+    "block_text": "PRODUCT 1\n*\nOriginal Equipment\nBrand New Install\n*\nBrand\nFORSSMAN\n*\nModel\noption EHPSV315-RE, selected.\nEHPSV315-RE\nModel is required\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Warranty Period": ""
+    }
+   }
+  ],
+  "created": true,
+  "entered": {
+   "activityType": "Hot Water Heat Pump",
+   "buildingType": "Residential Building",
+   "newSystem": "Heat pump",
+   "customerName": "Thomas Nguyen",
+   "email": "thomas.nguyen.32149@yopmail.com",
+   "phone": "438235506",
+   "abnAcn": "82811580363",
+   "addressSearch": "21 Macquarie Street Parramatta",
+   "postcode": "2150",
+   "leadMethod": "Online advertisement",
+   "ownReference": "Q-26-0413",
+   "installationDate": "21-10-2026",
+   "addressSelected": "21 Macquarie St, Parramatta NSW 2150, Australia",
+   "installer": "Belinda HVAC NSW",
+   "siteInspectionInstaller": "Belinda Baker"
+  },
+  "writes": [
+   {
+    "method": "POST",
+    "path": "/jobs",
+    "status": 201,
+    "req": "{\"installerId\":\"6a8cdb19b8d206d202429740\",\"siteInspectionInstallerId\":\"6a7b1c0259748eb7dec5923b\",\"activityType\":\"hot_water_heat_pump\",\"customerType\":\"residential\",\"methodOfLeadGeneration\":\"Online advertisement\",\"ownReference\":\"Q-26-0413\",\"installationDate\":\"2026-10-21\",\"systemType\":\"heat_pump\",\"customer\":{\"name\":\"Thomas Nguyen\",\"email\":\"thomas.nguyen.32149@yopmail.com\",\"phoneNumber\":\"438235506\",\"countryCode\":\"+61\",\"flagCode\":\"AU\",\"abnAcn\":\"82811580363\"},\"address\":{\"fullAddress\":\"21 Macquarie St, Parramatta NSW 2150, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"21\",\"streetName\":\"Macquarie\",\"streetType\":\"Street\",\"suburb\":\"Parramatta\",\"state\":\"NSW\",\"postcode\":\"2150\"},\"equipmentQuoted\":[{\"originalEquipment\":\"Brand New Install\",\"brand\":\"FORSSMAN\",\"model\":\"EHPSV315-RE\"}],\"createdFrom\":\"add_job\"}",
+    "resp": "{\"success\":true,\"statusCode\":201,\"message\":\"Job created successfully\",\"data\":{\"job\":{\"id\":\"6ab64d307be3e3aa9225283e\",\"jobNumber\":\"M8N000135\",\"status\":\"engagement_sent\",\"installerId\":\"6a8cdb19b8d206d202429740\",\"siteInspectionInstaller\":{\"_id\":\"6a7b1c0259748eb7dec5923b\"},\"contractorGroupId\":[],\"createdBy\":\"6a38ef2ea07431960aae2009\",\"customerId\":\"6ab64d307be3e3aa9225283b\",\"activityType\":\"hot_water_heat_pump\",\"customerType\":\"residential\",\"systemType\":\"heat_pump\",\"certificateRequirements\":{\"ccew\":\"not_required\",\"coc\":\"required\",\"cocGas\":\"not_required\",\"refrigerantEvidence\":\"not_required\"},\"methodOfLeadGeneration\":\"Online advertisement\",\"ownReference\":\"Q-26-0413\",\"installationDate\":\"2026-10-21T00:00:00.000Z\",\"createdFrom\":\"add_job\",\"address\":{\"fullAddress\":\"21 Macquarie St, Parramatta NSW 2150, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"21\",\"streetName\":\"Macquarie\",\"streetType\":\"Street\",\"suburb\":\"Parramatta\",\"state\":\"NSW\",\"postcode\":\"2150\",\"location\":{\"type\":\"Point\",\"coordinates\":[150.999406,-33.8145942]}},\"equipmentQuoted\":[{\"originalEquipment\":\"Brand New Install\",\"brand\":\"FORSSMAN\",\"model\":\"EHPSV315-RE\"}],\"engagement\":{\"factSheetEmail\":{\"status\":\"pending\",\"attempts\":0},\"email\":{\"status\":\"pending\",\"attempts\":0},\"sms\":{\"status\":\"pending\",\"attempts\":0}},\"isActive\":true,\"isDeleted\":false,\"createdAt\":\"2026-09-25T10:30:08.075Z\",\"updatedAt\":\"2026-09-25T10:30:08.075Z\"},\"customer\":{\"id\":\"6ab64d307be3e3aa9225283b\",\"name\":\"Thomas Nguyen\",\"email\":\"thomas.nguyen"
+   }
+  ],
+  "errors_4xx_5xx": [],
+  "console_errors": [],
+  "jobNumber": "M8N000135",
+  "stored": {
+   "id": "6ab64d307be3e3aa9225283e",
+   "jobNumber": "M8N000135",
+   "status": "engagement_sent",
+   "installerId": "6a8cdb19b8d206d202429740",
+   "siteInspectionInstaller": {
+    "_id": "6a7b1c0259748eb7dec5923b",
+    "name": "Belinda Baker"
+   },
+   "contractorGroupId": [],
+   "createdBy": "6a38ef2ea07431960aae2009",
+   "customerId": "6ab64d307be3e3aa9225283b",
+   "activityType": "hot_water_heat_pump",
+   "customerType": "residential",
+   "systemType": "heat_pump",
+   "certificateRequirements": {
+    "ccew": "not_required",
+    "coc": "required",
+    "cocGas": "not_required",
+    "refrigerantEvidence": "not_required"
+   },
+   "methodOfLeadGeneration": "Online advertisement",
+   "ownReference": "Q-26-0413",
+   "installationDate": "2026-10-21T00:00:00.000Z",
+   "createdFrom": "add_job",
+   "address": {
+    "fullAddress": "21 Macquarie St, Parramatta NSW 2150, Australia",
+    "isManual": false,
+    "unitType": "",
+    "unitNumber": "",
+    "streetNumber": "21",
+    "streetName": "Macquarie",
+    "streetType": "Street",
+    "suburb": "Parramatta",
+    "state": "NSW",
+    "postcode": "2150",
+    "location": {
+     "type": "Point",
+     "coordinates": [
+      150.999406,
+      -33.8145942
+     ]
+    }
+   },
+   "equipmentQuoted": [
+    {
+     "originalEquipment": "Brand New Install",
+     "brand": "FORSSMAN",
+     "model": "EHPSV315-RE"
+    }
+   ],
+   "engagement": {
+    "factSheetEmail": {
+     "to": "thomas.nguyen.32149@yopmail.com",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:30:14.253Z",
+     "attempts": 1
+    },
+    "email": {
+     "to": "thomas.nguyen.32149@yopmail.com",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:30:14.253Z",
+     "attempts": 1
+    },
+    "sms": {
+     "to": "+61438235506",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:30:14.625Z",
+     "attempts": 1
+    }
+   },
+   "isActive": true,
+   "isDeleted": false,
+   "createdAt": "2026-09-25T10:30:08.075Z",
+   "updatedAt": "2026-09-25T10:30:14.625Z",
+   "customer": {
+    "id": "6ab64d307be3e3aa9225283b",
+    "name": "Thomas Nguyen",
+    "email": "thomas.nguyen.32149@yopmail.com",
+    "phoneNumber": "438235506",
+    "countryCode": "+61",
+    "flagCode": "AU",
+    "abnAcn": "82811580363",
+    "isActive": true
+   },
+   "installer": {
+    "id": "6a8cdb19b8d206d202429740",
+    "companyName": "Belinda HVAC NSW",
+    "installerCode": "I01-00009"
+   },
+   "hasProducts": false,
+   "escCertificates": 0,
+   "prcCertificates": 0,
+   "escValue": 0,
+   "prcValue": 0,
+   "stcValue": 0,
+   "totalRebate": 0
+  },
+  "checks": {
+   "activityType": {
+    "entered": "Hot Water Heat Pump",
+    "match": "MISSING",
+    "where": []
+   },
+   "buildingType": {
+    "entered": "Residential Building",
+    "match": "MISSING",
+    "where": []
+   },
+   "newSystem": {
+    "entered": "Heat pump",
+    "match": "MISSING",
+    "where": []
+   },
+   "customerName": {
+    "entered": "Thomas Nguyen",
+    "match": "exact",
+    "where": [
+     "customer.name"
+    ]
+   },
+   "email": {
+    "entered": "thomas.nguyen.32149@yopmail.com",
+    "match": "exact",
+    "where": [
+     "engagement.factSheetEmail.to",
+     "engagement.email.to",
+     "customer.email"
+    ]
+   },
+   "phone": {
+    "entered": "438235506",
+    "match": "exact",
+    "where": [
+     "customer.phoneNumber"
+    ]
+   },
+   "abnAcn": {
+    "entered": "82811580363",
+    "match": "exact",
+    "where": [
+     "customer.abnAcn"
+    ]
+   },
+   "addressSearch": {
+    "entered": "21 Macquarie Street Parramatta",
+    "match": "MISSING",
+    "where": []
+   },
+   "postcode": {
+    "entered": "2150",
+    "match": "exact",
+    "where": [
+     "address.postcode"
+    ]
+   },
+   "leadMethod": {
+    "entered": "Online advertisement",
+    "match": "exact",
+    "where": [
+     "methodOfLeadGeneration"
+    ]
+   },
+   "ownReference": {
+    "entered": "Q-26-0413",
+    "match": "exact",
+    "where": [
+     "ownReference"
+    ]
+   },
+   "installationDate": {
+    "entered": "21-10-2026",
+    "match": "MISSING",
+    "where": []
+   },
+   "addressSelected": {
+    "entered": "21 Macquarie St, Parramatta NSW 2150, Australia",
+    "match": "exact",
+    "where": [
+     "address.fullAddress"
+    ]
+   },
+   "installer": {
+    "entered": "Belinda HVAC NSW",
+    "match": "exact",
+    "where": [
+     "installer.companyName"
+    ]
+   },
+   "siteInspectionInstaller": {
+    "entered": "Belinda Baker",
+    "match": "exact",
+    "where": [
+     "siteInspectionInstaller.name"
+    ]
+   },
+   "product1.brand": {
+    "entered": "FORSSMAN",
+    "match": "exact",
+    "where": [
+     "equipmentQuoted[0].brand"
+    ]
+   },
+   "product1.model": {
+    "entered": "EHPSV315-RE",
+    "match": "exact",
+    "where": [
+     "equipmentQuoted[0].model"
+    ]
+   }
+  }
+ },
+ {
+  "n": 4,
+  "label": "HWHP / Small Business / Hornsby",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "products_entered": [
+   {
+    "originalEquipment": "Brand New Install",
+    "brand": "SOLARBUILD",
+    "model": "NA32-260A",
+    "block_text": "PRODUCT 1\n*\nOriginal Equipment\nBrand New Install\n*\nBrand\nSOLARBUILD\n*\nModel\noption NA32-260A, selected.\nNA32-260A\nModel is required\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Warranty Period": ""
+    }
+   }
+  ],
+  "created": true,
+  "entered": {
+   "activityType": "Hot Water Heat Pump",
+   "buildingType": "Small Business Site",
+   "businessName": "Blue Gum Veterinary Clinic Pty Ltd",
+   "signatoryFirstName": "Sarah",
+   "signatoryLastName": "O'Connor",
+   "signatoryPosition": "Practice Manager",
+   "signatoryPhone": "451954290",
+   "signatoryEmail": "sarah.32230@yopmail.com",
+   "abnAcn": "72357614371",
+   "addressSearch": "5 Hunter Street Hornsby",
+   "postcode": "2077",
+   "leadMethod": "Email campaign",
+   "ownReference": "Q-26-0415",
+   "installationDate": "04-11-2026",
+   "addressSelected": "5 Hunter St, Hornsby NSW 2077, Australia",
+   "installer": "Belinda Testing",
+   "siteInspectionInstaller": "Belinda Baker"
+  },
+  "writes": [
+   {
+    "method": "POST",
+    "path": "/jobs",
+    "status": 201,
+    "req": "{\"installerId\":\"6a7d556a828afff2984903e0\",\"siteInspectionInstallerId\":\"6a7b1c0259748eb7dec5923b\",\"activityType\":\"hot_water_heat_pump\",\"customerType\":\"business\",\"methodOfLeadGeneration\":\"Email campaign\",\"ownReference\":\"Q-26-0415\",\"installationDate\":\"2026-11-04\",\"customer\":{\"name\":\"Blue Gum Veterinary Clinic Pty Ltd\",\"email\":\"sarah.32230@yopmail.com\",\"phoneNumber\":\"451954290\",\"countryCode\":\"+61\",\"flagCode\":\"AU\",\"abnAcn\":\"72357614371\",\"businessType\":\"\",\"authFirstName\":\"Sarah\",\"authLastName\":\"O'Connor\",\"authSignPosition\":\"Practice Manager\"},\"address\":{\"fullAddress\":\"5 Hunter St, Hornsby NSW 2077, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"5\",\"streetName\":\"Hunter\",\"streetType\":\"Street\",\"suburb\":\"Hornsby\",\"state\":\"NSW\",\"postcode\":\"2077\"},\"equipmentQuoted\":[{\"originalEquipment\":\"Brand New Install\",\"brand\":\"SOLARBUILD\",\"model\":\"NA32-260A\"}],\"createdFrom\":\"add_job\"}",
+    "resp": "{\"success\":true,\"statusCode\":201,\"message\":\"Job created successfully\",\"data\":{\"job\":{\"id\":\"6ab64d887be3e3aa92252888\",\"jobNumber\":\"M8N000136\",\"status\":\"engagement_sent\",\"installerId\":\"6a7d556a828afff2984903e0\",\"siteInspectionInstaller\":{\"_id\":\"6a7b1c0259748eb7dec5923b\"},\"contractorGroupId\":[],\"createdBy\":\"6a38ef2ea07431960aae2009\",\"customerId\":\"6ab64d887be3e3aa92252885\",\"activityType\":\"hot_water_heat_pump\",\"customerType\":\"business\",\"systemType\":\"heat_pump\",\"certificateRequirements\":{\"ccew\":\"not_required\",\"coc\":\"required\",\"cocGas\":\"not_required\",\"refrigerantEvidence\":\"not_required\"},\"methodOfLeadGeneration\":\"Email campaign\",\"ownReference\":\"Q-26-0415\",\"installationDate\":\"2026-11-04T00:00:00.000Z\",\"createdFrom\":\"add_job\",\"address\":{\"fullAddress\":\"5 Hunter St, Hornsby NSW 2077, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"5\",\"streetName\":\"Hunter\",\"streetType\":\"Street\",\"suburb\":\"Hornsby\",\"state\":\"NSW\",\"postcode\":\"2077\",\"location\":{\"type\":\"Point\",\"coordinates\":[151.1001487,-33.7050299]}},\"equipmentQuoted\":[{\"originalEquipment\":\"Brand New Install\",\"brand\":\"SOLARBUILD\",\"model\":\"NA32-260A\"}],\"engagement\":{\"factSheetEmail\":{\"status\":\"pending\",\"attempts\":0},\"email\":{\"status\":\"pending\",\"attempts\":0},\"sms\":{\"status\":\"pending\",\"attempts\":0}},\"isActive\":true,\"isDeleted\":false,\"createdAt\":\"2026-09-25T10:31:36.657Z\",\"updatedAt\":\"2026-09-25T10:31:36.657Z\"},\"customer\":{\"id\":\"6ab64d887be3e3aa92252885\",\"name\":\"Blue Gum Veterinary Clinic Pty Ltd\",\"email\":\"sarah.32230@yo"
+   }
+  ],
+  "errors_4xx_5xx": [],
+  "console_errors": [],
+  "jobNumber": "M8N000136",
+  "stored": {
+   "id": "6ab64d887be3e3aa92252888",
+   "jobNumber": "M8N000136",
+   "status": "engagement_sent",
+   "installerId": "6a7d556a828afff2984903e0",
+   "siteInspectionInstaller": {
+    "_id": "6a7b1c0259748eb7dec5923b",
+    "name": "Belinda Baker"
+   },
+   "contractorGroupId": [],
+   "createdBy": "6a38ef2ea07431960aae2009",
+   "customerId": "6ab64d887be3e3aa92252885",
+   "activityType": "hot_water_heat_pump",
+   "customerType": "business",
+   "systemType": "heat_pump",
+   "certificateRequirements": {
+    "ccew": "not_required",
+    "coc": "required",
+    "cocGas": "not_required",
+    "refrigerantEvidence": "not_required"
+   },
+   "methodOfLeadGeneration": "Email campaign",
+   "ownReference": "Q-26-0415",
+   "installationDate": "2026-11-04T00:00:00.000Z",
+   "createdFrom": "add_job",
+   "address": {
+    "fullAddress": "5 Hunter St, Hornsby NSW 2077, Australia",
+    "isManual": false,
+    "unitType": "",
+    "unitNumber": "",
+    "streetNumber": "5",
+    "streetName": "Hunter",
+    "streetType": "Street",
+    "suburb": "Hornsby",
+    "state": "NSW",
+    "postcode": "2077",
+    "location": {
+     "type": "Point",
+     "coordinates": [
+      151.1001487,
+      -33.7050299
+     ]
+    }
+   },
+   "equipmentQuoted": [
+    {
+     "originalEquipment": "Brand New Install",
+     "brand": "SOLARBUILD",
+     "model": "NA32-260A"
+    }
+   ],
+   "engagement": {
+    "factSheetEmail": {
+     "to": "sarah.32230@yopmail.com",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:31:42.007Z",
+     "attempts": 1
+    },
+    "email": {
+     "to": "sarah.32230@yopmail.com",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:31:42.007Z",
+     "attempts": 1
+    },
+    "sms": {
+     "to": "+61451954290",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:31:42.416Z",
+     "attempts": 1
+    }
+   },
+   "isActive": true,
+   "isDeleted": false,
+   "createdAt": "2026-09-25T10:31:36.657Z",
+   "updatedAt": "2026-09-25T10:31:42.416Z",
+   "customer": {
+    "id": "6ab64d887be3e3aa92252885",
+    "name": "Blue Gum Veterinary Clinic Pty Ltd",
+    "email": "sarah.32230@yopmail.com",
+    "phoneNumber": "451954290",
+    "countryCode": "+61",
+    "flagCode": "AU",
+    "abnAcn": "72357614371",
+    "businessType": "",
+    "authFirstName": "Sarah",
+    "authLastName": "O'Connor",
+    "authSignPosition": "Practice Manager",
+    "isActive": true
+   },
+   "installer": {
+    "id": "6a7d556a828afff2984903e0",
+    "companyName": "Belinda Testing",
+    "installerCode": "I01-00008"
+   },
+   "hasProducts": false,
+   "escCertificates": 0,
+   "prcCertificates": 0,
+   "escValue": 0,
+   "prcValue": 0,
+   "stcValue": 0,
+   "totalRebate": 0
+  },
+  "checks": {
+   "activityType": {
+    "entered": "Hot Water Heat Pump",
+    "match": "MISSING",
+    "where": []
+   },
+   "buildingType": {
+    "entered": "Small Business Site",
+    "match": "MISSING",
+    "where": []
+   },
+   "businessName": {
+    "entered": "Blue Gum Veterinary Clinic Pty Ltd",
+    "match": "exact",
+    "where": [
+     "customer.name"
+    ]
+   },
+   "signatoryFirstName": {
+    "entered": "Sarah",
+    "match": "exact",
+    "where": [
+     "customer.authFirstName"
+    ]
+   },
+   "signatoryLastName": {
+    "entered": "O'Connor",
+    "match": "exact",
+    "where": [
+     "customer.authLastName"
+    ]
+   },
+   "signatoryPosition": {
+    "entered": "Practice Manager",
+    "match": "exact",
+    "where": [
+     "customer.authSignPosition"
+    ]
+   },
+   "signatoryPhone": {
+    "entered": "451954290",
+    "match": "exact",
+    "where": [
+     "customer.phoneNumber"
+    ]
+   },
+   "signatoryEmail": {
+    "entered": "sarah.32230@yopmail.com",
+    "match": "exact",
+    "where": [
+     "engagement.factSheetEmail.to",
+     "engagement.email.to",
+     "customer.email"
+    ]
+   },
+   "abnAcn": {
+    "entered": "72357614371",
+    "match": "exact",
+    "where": [
+     "customer.abnAcn"
+    ]
+   },
+   "addressSearch": {
+    "entered": "5 Hunter Street Hornsby",
+    "match": "MISSING",
+    "where": []
+   },
+   "postcode": {
+    "entered": "2077",
+    "match": "exact",
+    "where": [
+     "address.postcode"
+    ]
+   },
+   "leadMethod": {
+    "entered": "Email campaign",
+    "match": "exact",
+    "where": [
+     "methodOfLeadGeneration"
+    ]
+   },
+   "ownReference": {
+    "entered": "Q-26-0415",
+    "match": "exact",
+    "where": [
+     "ownReference"
+    ]
+   },
+   "installationDate": {
+    "entered": "04-11-2026",
+    "match": "MISSING",
+    "where": []
+   },
+   "addressSelected": {
+    "entered": "5 Hunter St, Hornsby NSW 2077, Australia",
+    "match": "exact",
+    "where": [
+     "address.fullAddress"
+    ]
+   },
+   "installer": {
+    "entered": "Belinda Testing",
+    "match": "exact",
+    "where": [
+     "installer.companyName"
+    ]
+   },
+   "siteInspectionInstaller": {
+    "entered": "Belinda Baker",
+    "match": "exact",
+    "where": [
+     "siteInspectionInstaller.name"
+    ]
+   },
+   "product1.brand": {
+    "entered": "SOLARBUILD",
+    "match": "exact",
+    "where": [
+     "equipmentQuoted[0].brand"
+    ]
+   },
+   "product1.model": {
+    "entered": "NA32-260A",
+    "match": "exact",
+    "where": [
+     "equipmentQuoted[0].model"
+    ]
+   }
+  }
+ },
+ {
+  "n": 6,
+  "label": "HWHP / Residential / Wollongong",
+  "installer_options": [
+   "BAWA",
+   "Belinda HVAC NSW",
+   "Belinda Test Co",
+   "Belinda Testing",
+   "Birds HVAC",
+   "Birvis HVAC",
+   "Emily Harris",
+   "Kiwi HVAC",
+   "Margherita HVAC",
+   "NSW Energies",
+   "Owl HVAC Services",
+   "Pro Mobile HVAC",
+   "Shivoham HVAC Solution",
+   "Testing Company",
+   "Zero HVAC"
+  ],
+  "products_entered": [
+   {
+    "originalEquipment": "Brand New Install",
+    "brand": "ECONOVA",
+    "model": "ECON-260RVW-2.0E",
+    "block_text": "PRODUCT 1\n*\nOriginal Equipment\nBrand New Install\n*\nBrand\nECONOVA\n*\nModel\noption ECON-260RVW-2.0E, selected.\nECON-260RVW-2.0E\nModel is required\nWarranty Period",
+    "inputs": {
+     "?": "",
+     "Enter Warranty Period": ""
+    }
+   }
+  ],
+  "created": true,
+  "entered": {
+   "activityType": "Hot Water Heat Pump",
+   "buildingType": "Residential Building",
+   "newSystem": "Heat pump",
+   "customerName": "Aisha Khan",
+   "email": "aisha.khan.32326@yopmail.com",
+   "phone": "439538780",
+   "abnAcn": "73051717637",
+   "addressSearch": "100 Crown Street Wollongong",
+   "postcode": "2500",
+   "leadMethod": "Social media",
+   "ownReference": "Q-26-0417",
+   "installationDate": "18-11-2026",
+   "addressSelected": "100 Crown St, Wollongong NSW 2500, Australia",
+   "installer": "Birvis HVAC",
+   "siteInspectionInstaller": "Plumber Test"
+  },
+  "writes": [
+   {
+    "method": "POST",
+    "path": "/jobs",
+    "status": 201,
+    "req": "{\"installerId\":\"6a70647f4743e64cab732ce6\",\"siteInspectionInstallerId\":\"6a7083864743e64cab7335ff\",\"activityType\":\"hot_water_heat_pump\",\"customerType\":\"residential\",\"methodOfLeadGeneration\":\"Social media\",\"ownReference\":\"Q-26-0417\",\"installationDate\":\"2026-11-18\",\"systemType\":\"heat_pump\",\"customer\":{\"name\":\"Aisha Khan\",\"email\":\"aisha.khan.32326@yopmail.com\",\"phoneNumber\":\"439538780\",\"countryCode\":\"+61\",\"flagCode\":\"AU\",\"abnAcn\":\"73051717637\"},\"address\":{\"fullAddress\":\"100 Crown St, Wollongong NSW 2500, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"100\",\"streetName\":\"Crown\",\"streetType\":\"Street\",\"suburb\":\"Wollongong\",\"state\":\"NSW\",\"postcode\":\"2500\"},\"equipmentQuoted\":[{\"originalEquipment\":\"Brand New Install\",\"brand\":\"ECONOVA\",\"model\":\"ECON-260RVW-2.0E\"}],\"createdFrom\":\"add_job\"}",
+    "resp": "{\"success\":true,\"statusCode\":201,\"message\":\"Job created successfully\",\"data\":{\"job\":{\"id\":\"6ab64ddc7be3e3aa922528d2\",\"jobNumber\":\"M8N000137\",\"status\":\"engagement_sent\",\"installerId\":\"6a70647f4743e64cab732ce6\",\"siteInspectionInstaller\":{\"_id\":\"6a7083864743e64cab7335ff\"},\"contractorGroupId\":[],\"createdBy\":\"6a38ef2ea07431960aae2009\",\"customerId\":\"6ab64ddc7be3e3aa922528cf\",\"activityType\":\"hot_water_heat_pump\",\"customerType\":\"residential\",\"systemType\":\"heat_pump\",\"certificateRequirements\":{\"ccew\":\"not_required\",\"coc\":\"required\",\"cocGas\":\"not_required\",\"refrigerantEvidence\":\"not_required\"},\"methodOfLeadGeneration\":\"Social media\",\"ownReference\":\"Q-26-0417\",\"installationDate\":\"2026-11-18T00:00:00.000Z\",\"createdFrom\":\"add_job\",\"address\":{\"fullAddress\":\"100 Crown St, Wollongong NSW 2500, Australia\",\"isManual\":false,\"unitType\":\"\",\"unitNumber\":\"\",\"streetNumber\":\"100\",\"streetName\":\"Crown\",\"streetType\":\"Street\",\"suburb\":\"Wollongong\",\"state\":\"NSW\",\"postcode\":\"2500\",\"location\":{\"type\":\"Point\",\"coordinates\":[150.8970579,-34.4252038]}},\"equipmentQuoted\":[{\"originalEquipment\":\"Brand New Install\",\"brand\":\"ECONOVA\",\"model\":\"ECON-260RVW-2.0E\"}],\"engagement\":{\"factSheetEmail\":{\"status\":\"pending\",\"attempts\":0},\"email\":{\"status\":\"pending\",\"attempts\":0},\"sms\":{\"status\":\"pending\",\"attempts\":0}},\"isActive\":true,\"isDeleted\":false,\"createdAt\":\"2026-09-25T10:33:00.939Z\",\"updatedAt\":\"2026-09-25T10:33:00.939Z\"},\"customer\":{\"id\":\"6ab64ddc7be3e3aa922528cf\",\"name\":\"Aisha Khan\",\"email\":\"aisha.khan.32326@yopmail."
+   }
+  ],
+  "errors_4xx_5xx": [],
+  "console_errors": [],
+  "jobNumber": "M8N000137",
+  "stored": {
+   "id": "6ab64ddc7be3e3aa922528d2",
+   "jobNumber": "M8N000137",
+   "status": "engagement_sent",
+   "installerId": "6a70647f4743e64cab732ce6",
+   "siteInspectionInstaller": {
+    "_id": "6a7083864743e64cab7335ff",
+    "name": "Plumber Test"
+   },
+   "contractorGroupId": [],
+   "createdBy": "6a38ef2ea07431960aae2009",
+   "customerId": "6ab64ddc7be3e3aa922528cf",
+   "activityType": "hot_water_heat_pump",
+   "customerType": "residential",
+   "systemType": "heat_pump",
+   "certificateRequirements": {
+    "ccew": "not_required",
+    "coc": "required",
+    "cocGas": "not_required",
+    "refrigerantEvidence": "not_required"
+   },
+   "methodOfLeadGeneration": "Social media",
+   "ownReference": "Q-26-0417",
+   "installationDate": "2026-11-18T00:00:00.000Z",
+   "createdFrom": "add_job",
+   "address": {
+    "fullAddress": "100 Crown St, Wollongong NSW 2500, Australia",
+    "isManual": false,
+    "unitType": "",
+    "unitNumber": "",
+    "streetNumber": "100",
+    "streetName": "Crown",
+    "streetType": "Street",
+    "suburb": "Wollongong",
+    "state": "NSW",
+    "postcode": "2500",
+    "location": {
+     "type": "Point",
+     "coordinates": [
+      150.8970579,
+      -34.4252038
+     ]
+    }
+   },
+   "equipmentQuoted": [
+    {
+     "originalEquipment": "Brand New Install",
+     "brand": "ECONOVA",
+     "model": "ECON-260RVW-2.0E"
+    }
+   ],
+   "engagement": {
+    "factSheetEmail": {
+     "to": "aisha.khan.32326@yopmail.com",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:33:06.437Z",
+     "attempts": 1
+    },
+    "email": {
+     "to": "aisha.khan.32326@yopmail.com",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:33:06.437Z",
+     "attempts": 1
+    },
+    "sms": {
+     "to": "+61439538780",
+     "status": "sent",
+     "sentAt": "2026-09-25T10:33:06.923Z",
+     "attempts": 1
+    }
+   },
+   "isActive": true,
+   "isDeleted": false,
+   "createdAt": "2026-09-25T10:33:00.939Z",
+   "updatedAt": "2026-09-25T10:33:06.924Z",
+   "customer": {
+    "id": "6ab64ddc7be3e3aa922528cf",
+    "name": "Aisha Khan",
+    "email": "aisha.khan.32326@yopmail.com",
+    "phoneNumber": "439538780",
+    "countryCode": "+61",
+    "flagCode": "AU",
+    "abnAcn": "73051717637",
+    "isActive": true
+   },
+   "installer": {
+    "id": "6a70647f4743e64cab732ce6",
+    "companyName": "Birvis HVAC",
+    "installerCode": "I01-00006"
+   },
+   "hasProducts": false,
+   "escCertificates": 0,
+   "prcCertificates": 0,
+   "escValue": 0,
+   "prcValue": 0,
+   "stcValue": 0,
+   "totalRebate": 0
+  },
+  "checks": {
+   "activityType": {
+    "entered": "Hot Water Heat Pump",
+    "match": "MISSING",
+    "where": []
+   },
+   "buildingType": {
+    "entered": "Residential Building",
+    "match": "MISSING",
+    "where": []
+   },
+   "newSystem": {
+    "entered": "Heat pump",
+    "match": "MISSING",
+    "where": []
+   },
+   "customerName": {
+    "entered": "Aisha Khan",
+    "match": "exact",
+    "where": [
+     "customer.name"
+    ]
+   },
+   "email": {
+    "entered": "aisha.khan.32326@yopmail.com",
+    "match": "exact",
+    "where": [
+     "engagement.factSheetEmail.to",
+     "engagement.email.to",
+     "customer.email"
+    ]
+   },
+   "phone": {
+    "entered": "439538780",
+    "match": "exact",
+    "where": [
+     "customer.phoneNumber"
+    ]
+   },
+   "abnAcn": {
+    "entered": "73051717637",
+    "match": "exact",
+    "where": [
+     "customer.abnAcn"
+    ]
+   },
+   "addressSearch": {
+    "entered": "100 Crown Street Wollongong",
+    "match": "MISSING",
+    "where": []
+   },
+   "postcode": {
+    "entered": "2500",
+    "match": "exact",
+    "where": [
+     "address.postcode"
+    ]
+   },
+   "leadMethod": {
+    "entered": "Social media",
+    "match": "exact",
+    "where": [
+     "methodOfLeadGeneration"
+    ]
+   },
+   "ownReference": {
+    "entered": "Q-26-0417",
+    "match": "exact",
+    "where": [
+     "ownReference"
+    ]
+   },
+   "installationDate": {
+    "entered": "18-11-2026",
+    "match": "MISSING",
+    "where": []
+   },
+   "addressSelected": {
+    "entered": "100 Crown St, Wollongong NSW 2500, Australia",
+    "match": "exact",
+    "where": [
+     "address.fullAddress"
+    ]
+   },
+   "installer": {
+    "entered": "Birvis HVAC",
+    "match": "exact",
+    "where": [
+     "installer.companyName"
+    ]
+   },
+   "siteInspectionInstaller": {
+    "entered": "Plumber Test",
+    "match": "exact",
+    "where": [
+     "siteInspectionInstaller.name"
+    ]
+   },
+   "product1.brand": {
+    "entered": "ECONOVA",
+    "match": "exact",
+    "where": [
+     "equipmentQuoted[0].brand"
+    ]
+   },
+   "product1.model": {
+    "entered": "ECON-260RVW-2.0E",
+    "match": "exact",
+    "where": [
+     "equipmentQuoted[0].model"
+    ]
+   }
+  }
+ }
+]

@@ -1,0 +1,4056 @@
+[
+ {
+  "id": "6ab6b1016c68441e7dd2a558",
+  "jobNumber": "M8N000207",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b1016c68441e7dd2a555",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "REF\u0000X",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:36:01.399Z",
+  "updatedAt": "2026-09-25T17:36:08.113Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b1016c68441e7dd2a555",
+   "name": "Boundary Test2 17",
+   "email": "boundary2.test.357744.17@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0ff6c68441e7dd2a545",
+  "jobNumber": "M8N000206",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0ff6c68441e7dd2a542",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:59.938Z",
+  "updatedAt": "2026-09-25T17:36:09.562Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0ff6c68441e7dd2a542",
+   "name": "Boundary Test2 15",
+   "email": "boundary2.test.357744.15@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0fe6c68441e7dd2a533",
+  "jobNumber": "M8N000205",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0fe6c68441e7dd2a530",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:58.552Z",
+  "updatedAt": "2026-09-25T17:36:05.043Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0fe6c68441e7dd2a530",
+   "name": "Boundary Test2 13",
+   "email": "boundary2.test.357744.13@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0fd6c68441e7dd2a521",
+  "jobNumber": "M8N000204",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0fd6c68441e7dd2a51e",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "REF-357744",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:57.531Z",
+  "updatedAt": "2026-09-25T17:36:02.847Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0fd6c68441e7dd2a51e",
+   "name": "Boundary Test2 12",
+   "email": "boundary2.test.357744.12@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0fc6c68441e7dd2a50f",
+  "jobNumber": "M8N000203",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0fc6c68441e7dd2a50c",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM2-357744-11",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:56.520Z",
+  "updatedAt": "2026-09-25T17:36:03.820Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0fc6c68441e7dd2a50c",
+   "name": "Boundary Test2 11",
+   "email": "boundary2.test.357744.11@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0fa6c68441e7dd2a4f9",
+  "jobNumber": "M8N000202",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0fa6c68441e7dd2a4f6",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM2-357744-7",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:54.254Z",
+  "updatedAt": "2026-09-25T17:36:00.398Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0fa6c68441e7dd2a4f6",
+   "name": "Boundary Test2 7",
+   "email": "boundary2.test.357744.7@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0f76c68441e7dd2a4e6",
+  "jobNumber": "M8N000201",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0f76c68441e7dd2a4e3",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM2-357744-4",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:51.961Z",
+  "updatedAt": "2026-09-25T17:35:58.527Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0f76c68441e7dd2a4e3",
+   "name": "Boundary Test2 4",
+   "email": "boundary2.test.357744.4@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0f66c68441e7dd2a4d5",
+  "jobNumber": "M8N000200",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0f66c68441e7dd2a4d2",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM2-357744-3",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:50.984Z",
+  "updatedAt": "2026-09-25T17:35:56.821Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0f66c68441e7dd2a4d2",
+   "name": "Boundary Test2 3",
+   "email": "boundary2.test.357744.3@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0f56c68441e7dd2a4c4",
+  "jobNumber": "M8N000199",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0f56c68441e7dd2a4c1",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM2-357744-2",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:49.986Z",
+  "updatedAt": "2026-09-25T17:35:55.920Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0f56c68441e7dd2a4c1",
+   "name": "Boundary Test2 2",
+   "email": "boundary2.test.357744.2@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0f56c68441e7dd2a4b3",
+  "jobNumber": "M8N000198",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0f56c68441e7dd2a4b0",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM2-357744-1",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:35:49.008Z",
+  "updatedAt": "2026-09-25T17:35:54.991Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0f56c68441e7dd2a4b0",
+   "name": "Boundary Test2 1",
+   "email": "boundary2.test.357744.1@yopmail.com",
+   "phoneNumber": "4357744",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a76c68441e7dd2a408",
+  "jobNumber": "M8N000190",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a76c68441e7dd2a405",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-77",
+  "installationDate": "2027-01-03T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:31.122Z",
+  "updatedAt": "2026-09-25T17:34:43.364Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a76c68441e7dd2a405",
+   "name": "Boundary Test 77",
+   "email": "boundary.test.357605.77@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a56c68441e7dd2a3f6",
+  "jobNumber": "M8N000189",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a56c68441e7dd2a3f3",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-75",
+  "installationDate": "2026-12-15T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:29.720Z",
+  "updatedAt": "2026-09-25T17:34:45.465Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a56c68441e7dd2a3f3",
+   "name": "Boundary Test 75",
+   "email": "boundary.test.357605.75@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a46c68441e7dd2a3e3",
+  "jobNumber": "M8N000188",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a46c68441e7dd2a3e0",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-73",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:28.305Z",
+  "updatedAt": "2026-09-25T17:34:44.145Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a46c68441e7dd2a3e0",
+   "name": "Boundary Test 73",
+   "email": "boundary.test.357605.73@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a36c68441e7dd2a3d0",
+  "jobNumber": "M8N000187",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a36c68441e7dd2a3cd",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-72",
+  "installationDate": "1970-01-01T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:27.323Z",
+  "updatedAt": "2026-09-25T17:34:41.209Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a36c68441e7dd2a3cd",
+   "name": "Boundary Test 72",
+   "email": "boundary.test.357605.72@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a16c68441e7dd2a3bd",
+  "jobNumber": "M8N000186",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a16c68441e7dd2a3ba",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-70",
+  "installationDate": "9999-12-31T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:25.921Z",
+  "updatedAt": "2026-09-25T17:34:36.487Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a16c68441e7dd2a3ba",
+   "name": "Boundary Test 70",
+   "email": "boundary.test.357605.70@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a06c68441e7dd2a3ab",
+  "jobNumber": "M8N000185",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a06c68441e7dd2a3a8",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-69",
+  "installationDate": "1970-01-01T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:24.853Z",
+  "updatedAt": "2026-09-25T17:34:28.068Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a06c68441e7dd2a3a8",
+   "name": "Boundary Test 69",
+   "email": "boundary.test.357605.69@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b09f6c68441e7dd2a399",
+  "jobNumber": "M8N000184",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b09f6c68441e7dd2a396",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-68",
+  "installationDate": "1900-01-01T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:23.853Z",
+  "updatedAt": "2026-09-25T17:34:35.570Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b09f6c68441e7dd2a396",
+   "name": "Boundary Test 68",
+   "email": "boundary.test.357605.68@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b09d6c68441e7dd2a384",
+  "jobNumber": "M8N000183",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b09d6c68441e7dd2a381",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-64",
+  "installationDate": "2026-05-01T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:21.663Z",
+  "updatedAt": "2026-09-25T17:34:34.670Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b09d6c68441e7dd2a381",
+   "name": "Boundary Test 64",
+   "email": "boundary.test.357605.64@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b09c6c68441e7dd2a372",
+  "jobNumber": "M8N000182",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b09c6c68441e7dd2a36f",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-63",
+  "installationDate": "2027-03-01T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:20.673Z",
+  "updatedAt": "2026-09-25T17:34:31.780Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b09c6c68441e7dd2a36f",
+   "name": "Boundary Test 63",
+   "email": "boundary.test.357605.63@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b09b6c68441e7dd2a361",
+  "jobNumber": "M8N000181",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b09b6c68441e7dd2a35e",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-62",
+  "installationDate": "2028-02-29T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:19.666Z",
+  "updatedAt": "2026-09-25T17:34:33.934Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b09b6c68441e7dd2a35e",
+   "name": "Boundary Test 62",
+   "email": "boundary.test.357605.62@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b09a6c68441e7dd2a34f",
+  "jobNumber": "M8N000180",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b09a6c68441e7dd2a34c",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-61",
+  "installationDate": "2026-12-15T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:18.696Z",
+  "updatedAt": "2026-09-25T17:34:37.554Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b09a6c68441e7dd2a34c",
+   "name": "Boundary Test 61",
+   "email": "boundary.test.357605.61@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0996c68441e7dd2a33e",
+  "jobNumber": "M8N000179",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0996c68441e7dd2a33b",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-60",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:17.699Z",
+  "updatedAt": "2026-09-25T17:34:28.265Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0996c68441e7dd2a33b",
+   "name": "Boundary Test 60",
+   "email": "boundary.357605@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0986c68441e7dd2a32b",
+  "jobNumber": "M8N000178",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0986c68441e7dd2a328",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-58",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:16.286Z",
+  "updatedAt": "2026-09-25T17:34:28.572Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0986c68441e7dd2a328",
+   "name": "Boundary Test 58",
+   "email": "boundary+tag.357605@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0966c68441e7dd2a318",
+  "jobNumber": "M8N000177",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0966c68441e7dd2a315",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-56",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:14.899Z",
+  "updatedAt": "2026-09-25T17:34:26.414Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0966c68441e7dd2a315",
+   "name": "Boundary Test 56",
+   "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa357605@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0926c68441e7dd2a2fc",
+  "jobNumber": "M8N000176",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0926c68441e7dd2a2f9",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-47",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:10.568Z",
+  "updatedAt": "2026-09-25T17:34:24.026Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0926c68441e7dd2a2f9",
+   "name": "Boundary Test 47",
+   "email": "boundary.valid.357605@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0916c68441e7dd2a2e9",
+  "jobNumber": "M8N000175",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0916c68441e7dd2a2e6",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-45",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:09.175Z",
+  "updatedAt": "2026-09-25T17:34:21.191Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0916c68441e7dd2a2e6",
+   "name": "Boundary Test 45",
+   "email": "boundary.test.357605.45@yopmail.com",
+   "phoneNumber": "4.12e8",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0906c68441e7dd2a2d8",
+  "jobNumber": "M8N000174",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0906c68441e7dd2a2d5",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-44",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:08.199Z",
+  "updatedAt": "2026-09-25T17:34:22.628Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0906c68441e7dd2a2d5",
+   "name": "Boundary Test 44",
+   "email": "boundary.test.357605.44@yopmail.com",
+   "phoneNumber": "412 345 678",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b08f6c68441e7dd2a2c6",
+  "jobNumber": "M8N000173",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b08f6c68441e7dd2a2c3",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-43",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:07.140Z",
+  "updatedAt": "2026-09-25T17:34:24.990Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b08f6c68441e7dd2a2c3",
+   "name": "Boundary Test 43",
+   "email": "boundary.test.357605.43@yopmail.com",
+   "phoneNumber": "abcdefghi",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b08c6c68441e7dd2a2af",
+  "jobNumber": "M8N000172",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b08c6c68441e7dd2a2ac",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-38",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:04.477Z",
+  "updatedAt": "2026-09-25T17:34:18.838Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b08c6c68441e7dd2a2ac",
+   "name": "Boundary Test 38",
+   "email": "boundary.test.357605.38@yopmail.com",
+   "phoneNumber": "0298765432",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b08b6c68441e7dd2a29d",
+  "jobNumber": "M8N000171",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b08b6c68441e7dd2a29a",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-37",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:03.466Z",
+  "updatedAt": "2026-09-25T17:34:17.678Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b08b6c68441e7dd2a29a",
+   "name": "Boundary Test 37",
+   "email": "boundary.test.357605.37@yopmail.com",
+   "phoneNumber": "000000000",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b08a6c68441e7dd2a28b",
+  "jobNumber": "M8N000170",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b08a6c68441e7dd2a288",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-36",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:02.430Z",
+  "updatedAt": "2026-09-25T17:34:15.134Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b08a6c68441e7dd2a288",
+   "name": "Boundary Test 36",
+   "email": "boundary.test.357605.36@yopmail.com",
+   "phoneNumber": "+61412345678",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0896c68441e7dd2a279",
+  "jobNumber": "M8N000169",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0896c68441e7dd2a276",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-35",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:01.450Z",
+  "updatedAt": "2026-09-25T17:34:13.044Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0896c68441e7dd2a276",
+   "name": "Boundary Test 35",
+   "email": "boundary.test.357605.35@yopmail.com",
+   "phoneNumber": "0412345678",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0886c68441e7dd2a268",
+  "jobNumber": "M8N000168",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0886c68441e7dd2a265",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-34",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:00.467Z",
+  "updatedAt": "2026-09-25T17:34:09.452Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0886c68441e7dd2a265",
+   "name": "Boundary Test 34",
+   "email": "boundary.test.357605.34@yopmail.com",
+   "phoneNumber": "4123456789",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0876c68441e7dd2a256",
+  "jobNumber": "M8N000167",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0876c68441e7dd2a253",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-33",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:59.468Z",
+  "updatedAt": "2026-09-25T17:34:12.099Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0876c68441e7dd2a253",
+   "name": "Boundary Test 33",
+   "email": "boundary.test.357605.33@yopmail.com",
+   "phoneNumber": "41234567",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0866c68441e7dd2a244",
+  "jobNumber": "M8N000166",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0866c68441e7dd2a241",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-32",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:58.486Z",
+  "updatedAt": "2026-09-25T17:34:11.076Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0866c68441e7dd2a241",
+   "name": "Boundary Test 32",
+   "email": "boundary.test.357605.32@yopmail.com",
+   "phoneNumber": "412345678",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0856c68441e7dd2a232",
+  "jobNumber": "M8N000165",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0856c68441e7dd2a22f",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-31",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:57.491Z",
+  "updatedAt": "2026-09-25T17:34:07.285Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0856c68441e7dd2a22f",
+   "name": "Boundary Test 31",
+   "email": "boundary.test.357605.31@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "\uff13\uff13\uff11\uff10\uff12\uff14\uff11\uff17\uff10\uff13\uff12",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0846c68441e7dd2a220",
+  "jobNumber": "M8N000164",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0846c68441e7dd2a21d",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-30",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:56.512Z",
+  "updatedAt": "2026-09-25T17:34:05.049Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0846c68441e7dd2a21d",
+   "name": "Boundary Test 30",
+   "email": "boundary.test.357605.30@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "ABCDEFGHIJK",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0836c68441e7dd2a20e",
+  "jobNumber": "M8N000163",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0836c68441e7dd2a20b",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-29",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:55.520Z",
+  "updatedAt": "2026-09-25T17:34:06.181Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0836c68441e7dd2a20b",
+   "name": "Boundary Test 29",
+   "email": "boundary.test.357605.29@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0826c68441e7dd2a1fb",
+  "jobNumber": "M8N000162",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0826c68441e7dd2a1f8",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-27",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:54.099Z",
+  "updatedAt": "2026-09-25T17:34:01.621Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0826c68441e7dd2a1f8",
+   "name": "Boundary Test 27",
+   "email": "boundary.test.357605.27@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0816c68441e7dd2a1e9",
+  "jobNumber": "M8N000161",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0816c68441e7dd2a1e6",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-26",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:53.087Z",
+  "updatedAt": "2026-09-25T17:34:00.435Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0816c68441e7dd2a1e6",
+   "name": "Boundary Test 26",
+   "email": "boundary.test.357605.26@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33-102-417-032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0806c68441e7dd2a1d7",
+  "jobNumber": "M8N000160",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0806c68441e7dd2a1d4",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-25",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:52.081Z",
+  "updatedAt": "2026-09-25T17:34:02.572Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0806c68441e7dd2a1d4",
+   "name": "Boundary Test 25",
+   "email": "boundary.test.357605.25@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33 102 417 032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b07f6c68441e7dd2a1c6",
+  "jobNumber": "M8N000159",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b07f6c68441e7dd2a1c3",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-24",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:51.093Z",
+  "updatedAt": "2026-09-25T17:34:03.728Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b07f6c68441e7dd2a1c3",
+   "name": "Boundary Test 24",
+   "email": "boundary.test.357605.24@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "12345678901",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b07e6c68441e7dd2a1b3",
+  "jobNumber": "M8N000158",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b07e6c68441e7dd2a1b0",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-23",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:50.100Z",
+  "updatedAt": "2026-09-25T17:33:59.453Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b07e6c68441e7dd2a1b0",
+   "name": "Boundary Test 23",
+   "email": "boundary.test.357605.23@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "00000000000",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b07d6c68441e7dd2a1a2",
+  "jobNumber": "M8N000157",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b07d6c68441e7dd2a19f",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-22",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:49.094Z",
+  "updatedAt": "2026-09-25T17:33:57.095Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b07d6c68441e7dd2a19f",
+   "name": "Boundary Test 22",
+   "email": "boundary.test.357605.22@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "331024170321",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b07c6c68441e7dd2a190",
+  "jobNumber": "M8N000156",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b07c6c68441e7dd2a18d",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-21",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:48.067Z",
+  "updatedAt": "2026-09-25T17:33:57.936Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b07c6c68441e7dd2a18d",
+   "name": "Boundary Test 21",
+   "email": "boundary.test.357605.21@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "3310241703",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b07b6c68441e7dd2a17f",
+  "jobNumber": "M8N000155",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b07b6c68441e7dd2a17c",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-20",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:47.065Z",
+  "updatedAt": "2026-09-25T17:33:53.586Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b07b6c68441e7dd2a17c",
+   "name": "Boundary Test 20",
+   "email": "boundary.test.357605.20@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "004085616",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b07a6c68441e7dd2a16d",
+  "jobNumber": "M8N000154",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b07a6c68441e7dd2a16a",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-19",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:46.064Z",
+  "updatedAt": "2026-09-25T17:33:55.659Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b07a6c68441e7dd2a16a",
+   "name": "Boundary Test 19",
+   "email": "boundary.test.357605.19@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0786c68441e7dd2a15a",
+  "jobNumber": "M8N000153",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0786c68441e7dd2a157",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-17",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "\ud83d\ude42\ud83d\ude42\ud83d\ude42\ud83d\ude42",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:44.676Z",
+  "updatedAt": "2026-09-25T17:33:54.721Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0786c68441e7dd2a157",
+   "name": "Boundary Test 17",
+   "email": "boundary.test.357605.17@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0776c68441e7dd2a146",
+  "jobNumber": "M8N000152",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0776c68441e7dd2a143",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-15",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "-2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:43.274Z",
+  "updatedAt": "2026-09-25T17:33:52.228Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0776c68441e7dd2a143",
+   "name": "Boundary Test 15",
+   "email": "boundary.test.357605.15@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0766c68441e7dd2a135",
+  "jobNumber": "M8N000151",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0766c68441e7dd2a132",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-14",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000.5",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:42.288Z",
+  "updatedAt": "2026-09-25T17:33:51.028Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0766c68441e7dd2a132",
+   "name": "Boundary Test 14",
+   "email": "boundary.test.357605.14@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0756c68441e7dd2a123",
+  "jobNumber": "M8N000150",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0756c68441e7dd2a120",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-13",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "abcd",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:41.276Z",
+  "updatedAt": "2026-09-25T17:33:50.241Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0756c68441e7dd2a120",
+   "name": "Boundary Test 13",
+   "email": "boundary.test.357605.13@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0746c68441e7dd2a111",
+  "jobNumber": "M8N000149",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0746c68441e7dd2a10e",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-12",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "02000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:40.294Z",
+  "updatedAt": "2026-09-25T17:33:48.644Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0746c68441e7dd2a10e",
+   "name": "Boundary Test 12",
+   "email": "boundary.test.357605.12@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0736c68441e7dd2a100",
+  "jobNumber": "M8N000148",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0736c68441e7dd2a0fd",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-11",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:39.315Z",
+  "updatedAt": "2026-09-25T17:33:46.819Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0736c68441e7dd2a0fd",
+   "name": "Boundary Test 11",
+   "email": "boundary.test.357605.11@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0716c68441e7dd2a0ec",
+  "jobNumber": "M8N000147",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0716c68441e7dd2a0e9",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-9",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:37.891Z",
+  "updatedAt": "2026-09-25T17:33:45.314Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0716c68441e7dd2a0e9",
+   "name": "Boundary Test 9",
+   "email": "boundary.test.357605.9@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0706c68441e7dd2a0db",
+  "jobNumber": "M8N000146",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0706c68441e7dd2a0d8",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-8",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:36.880Z",
+  "updatedAt": "2026-09-25T17:33:43.420Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0706c68441e7dd2a0d8",
+   "name": "Boundary Test 8",
+   "email": "boundary.test.357605.8@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b06f6c68441e7dd2a0c9",
+  "jobNumber": "M8N000145",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b06f6c68441e7dd2a0c6",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-7",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "20000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:35.877Z",
+  "updatedAt": "2026-09-25T17:33:44.103Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b06f6c68441e7dd2a0c6",
+   "name": "Boundary Test 7",
+   "email": "boundary.test.357605.7@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b06e6c68441e7dd2a0b7",
+  "jobNumber": "M8N000144",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b06e6c68441e7dd2a0b4",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-6",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "200",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:34.848Z",
+  "updatedAt": "2026-09-25T17:33:42.233Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b06e6c68441e7dd2a0b4",
+   "name": "Boundary Test 6",
+   "email": "boundary.test.357605.6@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b06d6c68441e7dd2a0a6",
+  "jobNumber": "M8N000143",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b06d6c68441e7dd2a0a3",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-5",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "0000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:33.833Z",
+  "updatedAt": "2026-09-25T17:33:40.838Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b06d6c68441e7dd2a0a3",
+   "name": "Boundary Test 5",
+   "email": "boundary.test.357605.5@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b06c6c68441e7dd2a095",
+  "jobNumber": "M8N000142",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b06c6c68441e7dd2a092",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-4",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "3000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:32.798Z",
+  "updatedAt": "2026-09-25T17:33:38.935Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b06c6c68441e7dd2a092",
+   "name": "Boundary Test 4",
+   "email": "boundary.test.357605.4@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b06b6c68441e7dd2a084",
+  "jobNumber": "M8N000141",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b06b6c68441e7dd2a081",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-3",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2999",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:31.767Z",
+  "updatedAt": "2026-09-25T17:33:37.900Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b06b6c68441e7dd2a081",
+   "name": "Boundary Test 3",
+   "email": "boundary.test.357605.3@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b06a6c68441e7dd2a073",
+  "jobNumber": "M8N000140",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b06a6c68441e7dd2a070",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-2",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "1999",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:30.672Z",
+  "updatedAt": "2026-09-25T17:33:36.439Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b06a6c68441e7dd2a070",
+   "name": "Boundary Test 2",
+   "email": "boundary.test.357605.2@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0696c68441e7dd2a062",
+  "jobNumber": "M8N000139",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0696c68441e7dd2a05f",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-1",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:33:29.653Z",
+  "updatedAt": "2026-09-25T17:33:35.759Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0696c68441e7dd2a05f",
+   "name": "Boundary Test 1",
+   "email": "boundary.test.357605.1@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6afc16c68441e7dd2a044",
+  "jobNumber": "M8N000138",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6afc16c68441e7dd2a041",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "installationDate": "2026-12-01T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:30:41.917Z",
+  "updatedAt": "2026-09-25T17:30:48.206Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6afc16c68441e7dd2a041",
+   "name": "Schema Probe",
+   "email": "schema.probe@yopmail.com",
+   "phoneNumber": "400000001",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0b06c68441e7dd2a48d",
+  "jobNumber": "M8N000197",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0b06c68441e7dd2a48a",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-89",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:40.791Z",
+  "updatedAt": "2026-09-25T17:34:52.234Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0b06c68441e7dd2a48a",
+   "name": "Padded Name",
+   "email": "boundary.test.357605.89@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0af6c68441e7dd2a47c",
+  "jobNumber": "M8N000196",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0af6c68441e7dd2a479",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-88",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:39.782Z",
+  "updatedAt": "2026-09-25T17:34:49.891Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0af6c68441e7dd2a479",
+   "name": "123456",
+   "email": "boundary.test.357605.88@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0ae6c68441e7dd2a46b",
+  "jobNumber": "M8N000195",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0ae6c68441e7dd2a468",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-87",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:38.771Z",
+  "updatedAt": "2026-09-25T17:34:51.111Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0ae6c68441e7dd2a468",
+   "name": "<script>alert(1)</script>",
+   "email": "boundary.test.357605.87@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0ad6c68441e7dd2a45a",
+  "jobNumber": "M8N000194",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0ad6c68441e7dd2a457",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-86",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:37.746Z",
+  "updatedAt": "2026-09-25T17:34:48.568Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0ad6c68441e7dd2a457",
+   "name": "Test\u0000Name",
+   "email": "boundary.test.357605.86@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0ac6c68441e7dd2a448",
+  "jobNumber": "M8N000193",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0ac6c68441e7dd2a445",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-85",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:36.748Z",
+  "updatedAt": "2026-09-25T17:34:53.295Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0ac6c68441e7dd2a445",
+   "name": "\ud83d\ude42 Test",
+   "email": "boundary.test.357605.85@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0aa6c68441e7dd2a434",
+  "jobNumber": "M8N000192",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0aa6c68441e7dd2a431",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-83",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:34.869Z",
+  "updatedAt": "2026-09-25T17:34:46.345Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0aa6c68441e7dd2a431",
+   "name": "A",
+   "email": "boundary.test.357605.83@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ },
+ {
+  "id": "6ab6b0a86c68441e7dd2a41a",
+  "jobNumber": "M8N000191",
+  "status": "engagement_sent",
+  "installerId": "6aace061972e326f8fef7aae",
+  "contractorGroupId": [],
+  "createdBy": "6a38ef2ea07431960aae2009",
+  "customerId": "6ab6b0a86c68441e7dd2a417",
+  "activityType": "heating_cooling",
+  "customerType": "residential",
+  "certificateRequirements": {
+   "ccew": "required",
+   "coc": "not_required",
+   "cocGas": "not_required",
+   "refrigerantEvidence": "required"
+  },
+  "methodOfLeadGeneration": "Customer initiated contact",
+  "ownReference": "BVM-357605-78",
+  "installationDate": "2026-12-10T00:00:00.000Z",
+  "createdFrom": "add_job",
+  "address": {
+   "fullAddress": "1 George St, Sydney NSW 2000, Australia",
+   "isManual": false,
+   "streetNumber": "1",
+   "streetName": "George",
+   "streetType": "Street",
+   "suburb": "Sydney",
+   "state": "NSW",
+   "postcode": "2000",
+   "location": {
+    "type": "Point",
+    "coordinates": [
+     151.2073737,
+     -33.8732232
+    ]
+   }
+  },
+  "isActive": true,
+  "isDeleted": false,
+  "createdAt": "2026-09-25T17:34:32.104Z",
+  "updatedAt": "2026-09-25T17:34:42.297Z",
+  "hasProducts": false,
+  "customer": {
+   "id": "6ab6b0a86c68441e7dd2a417",
+   "name": "Boundary Valid Name",
+   "email": "boundary.test.357605.78@yopmail.com",
+   "phoneNumber": "4357605",
+   "countryCode": "+61",
+   "flagCode": "AU",
+   "abnAcn": "33102417032",
+   "isActive": true
+  },
+  "installer": {
+   "id": "6aace061972e326f8fef7aae",
+   "companyName": "Testing Company",
+   "installerCode": "I01-00014"
+  }
+ }
+]

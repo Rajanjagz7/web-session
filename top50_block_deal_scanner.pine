@@ -1,0 +1,69 @@
+//@version=6
+indicator("Top 50 Block Deal Scanner", shorttitle="Top50 Scan", overlay=true)
+
+// ───────── Inputs ─────────
+// TradingView format: "&" and "-" become "_"  (M&M -> M_M, BAJAJ-AUTO -> BAJAJ_AUTO)
+list1 = input.text_area("RELIANCE,HDFCBANK,ICICIBANK,INFY,TCS,BHARTIARTL,SBIN,ITC,LT,KOTAKBANK,AXISBANK,HINDUNILVR,BAJFINANCE,M_M,MARUTI,SUNPHARMA,HCLTECH,TITAN,ULTRACEMCO,NTPC,TMPV,POWERGRID,ONGC,TATASTEEL,ADANIPORTS", "Stocks 1-25 (comma separated)")
+list2 = input.text_area("ADANIENT,ASIANPAINT,BAJAJFINSV,BAJAJ_AUTO,BEL,COALINDIA,JSWSTEEL,NESTLEIND,GRASIM,HINDALCO,TECHM,WIPRO,CIPLA,DRREDDY,EICHERMOT,SBILIFE,HDFCLIFE,APOLLOHOSP,TATACONSUM,TRENT,ETERNAL,JIOFIN,SHRIRAMFIN,INDIGO,MAXHEALTH", "Stocks 26-50 (comma separated)")
+page     = input.string("1-25", "Scan group", options=["1-25", "26-50"])
+exch     = input.string("NSE", "Exchange prefix")
+volMult  = input.float(3.0, "Block volume = X times 20D avg", minval=1.0, step=0.5)
+len      = input.int(20, "Average volume length", minval=5)
+onlyHits = input.bool(false, "Show only stocks with volume spike")
+maxRows  = input.int(25, "Rows to show", minval=5, maxval=25)
+
+// ───────── Data request (runs on each symbol, daily) ─────────
+f() =>
+    av  = ta.sma(volume, len)[1]
+    chg = (close - close[1]) / close[1] * 100
+    [volume, av, chg]
+
+syms   = str.split(page == "1-25" ? list1 : list2, ",")
+names  = array.new_string()
+ratios = array.new_float()
+chgs   = array.new_float()
+
+for s in syms
+    sym = str.trim(s)
+    if sym != ""
+        [v, av, ch] = request.security(exch + ":" + sym, "D", f(), ignore_invalid_symbol=true)
+        array.push(names, sym)
+        array.push(ratios, nz(v / av))
+        array.push(chgs, nz(ch))
+
+// ───────── Ranked table ─────────
+var table tb = table.new(position.top_right, 5, 27, bgcolor=color.new(color.black, 15), border_width=1, border_color=color.new(color.gray, 60))
+
+if barstate.islast and array.size(ratios) > 0
+    table.clear(tb, 0, 0, 4, 26)
+    table.cell(tb, 0, 0, "#",      text_color=color.white, text_size=size.small)
+    table.cell(tb, 1, 0, "Stock",  text_color=color.white, text_size=size.small)
+    table.cell(tb, 2, 0, "Chg %",  text_color=color.white, text_size=size.small)
+    table.cell(tb, 3, 0, "Vol x",  text_color=color.white, text_size=size.small)
+    table.cell(tb, 4, 0, "Signal", text_color=color.white, text_size=size.small)
+
+    order  = array.sort_indices(ratios, order.descending)
+    row    = 1
+    hits   = 0
+    alertMsg = ""
+    for i = 0 to array.size(order) - 1
+        k     = array.get(order, i)
+        r     = array.get(ratios, k)
+        ch    = array.get(chgs, k)
+        isHit = r >= volMult
+        sig   = isHit ? (ch >= 0 ? "BLOCK BUY" : "BLOCK SELL") : r >= volMult / 2 ? "Watch" : "-"
+        sigCol = isHit ? (ch >= 0 ? color.lime : color.red) : r >= volMult / 2 ? color.yellow : color.gray
+        if isHit
+            hits += 1
+            alertMsg += array.get(names, k) + " (" + str.tostring(r, "#.#") + "x, " + str.tostring(ch, "#.##") + "%) "
+        if row <= maxRows and (not onlyHits or isHit)
+            table.cell(tb, 0, row, str.tostring(row), text_color=color.gray, text_size=size.small)
+            table.cell(tb, 1, row, array.get(names, k), text_color=color.white, text_size=size.small)
+            table.cell(tb, 2, row, str.tostring(ch, "#.##"), text_color=ch >= 0 ? color.lime : color.red, text_size=size.small)
+            table.cell(tb, 3, row, str.tostring(r, "#.#") + "x", text_color=isHit ? color.orange : color.white, text_size=size.small)
+            table.cell(tb, 4, row, sig, text_color=sigCol, text_size=size.small)
+            row += 1
+    if onlyHits and hits == 0
+        table.cell(tb, 1, 1, "No spikes today", text_color=color.gray, text_size=size.small)
+    if hits > 0
+        alert("Block-deal volume (" + page + "): " + alertMsg, alert.freq_once_per_bar_close)

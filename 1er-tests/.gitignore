@@ -1,0 +1,6 @@
+node_modules/
+test-results/
+playwright-report/
+nsw-jobs-report/
+.env
+.env.nsw-jobs

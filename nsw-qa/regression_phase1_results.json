@@ -1,0 +1,182 @@
+[
+ {
+  "id": "NSW-STG-01",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /dashboard/job-count -> 404"
+ },
+ {
+  "id": "NSW-STG-02",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /site/list -> 404"
+ },
+ {
+  "id": "NSW-STG-03",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /invoice/list -> 404"
+ },
+ {
+  "id": "NSW-STG-04",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /installer/filter/list -> 404"
+ },
+ {
+  "id": "NSW-STG-42",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /rebate/installer/list -> 404"
+ },
+ {
+  "id": "NSW-STG-25",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /audit/checklist?jobId=... -> 404"
+ },
+ {
+  "id": "NSW-STG-07",
+  "verdict": "FIXED",
+  "detail": "first GET /auth/me right after login -> 200"
+ },
+ {
+  "id": "NSW-STG-38",
+  "verdict": "FIXED",
+  "detail": "logout=200, GET /auth/me with old token after logout -> 401"
+ },
+ {
+  "id": "NSW-STG-39",
+  "verdict": "STILL_OPEN",
+  "detail": "refresh1=200 (script needed data={} body); replay OLD refresh token after rotation -> 200, still reusable"
+ },
+ {
+  "id": "NSW-STG-40",
+  "verdict": "STILL_OPEN",
+  "detail": "12x wrong-password attempts -> statuses=[401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 401]"
+ },
+ {
+  "id": "NSW-STG-44",
+  "verdict": "STILL_OPEN",
+  "detail": "POST login (form-urlencoded) -> 200"
+ },
+ {
+  "id": "NSW-STG-45",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /log-in headers has CSP=False; headers=['accept-ranges', 'connection', 'content-length', 'content-type', 'date', 'etag', 'last-modified', 'permissions-policy', 'referrer-policy', 'server', 'strict-transport-security', 'x-content-type-options', 'x-frame-options']"
+ },
+ {
+  "id": "NSW-STG-52",
+  "verdict": "STILL_OPEN",
+  "detail": "login with padded-space email -> 400"
+ },
+ {
+  "id": "NSW-STG-41",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /installers/not-an-id/members -> 500"
+ },
+ {
+  "id": "NSW-STG-48",
+  "verdict": "STILL_OPEN",
+  "detail": "invalid paging -> ['skip=200', 'limit-neg=200', 'limit-zero=200', 'skip-text=200', 'limit-text=200']"
+ },
+ {
+  "id": "NSW-STG-49",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /jobs?sortType=sideways -> 200"
+ },
+ {
+  "id": "NSW-STG-50",
+  "verdict": "STILL_OPEN",
+  "detail": "GET nonexistent installer members -> 200 members=[]"
+ },
+ {
+  "id": "NSW-STG-54",
+  "verdict": "STILL_OPEN",
+  "detail": "unrecognised status filter -> 200, identical_to_unfiltered=True"
+ },
+ {
+  "id": "NSW-STG-17",
+  "verdict": "STILL_OPEN",
+  "detail": "search padded jobnumber -> total=0"
+ },
+ {
+  "id": "NSW-STG-18",
+  "verdict": "STILL_OPEN",
+  "detail": "search 'Siobhan' (accent-insensitive check) -> total=0"
+ },
+ {
+  "id": "NSW-STG-19",
+  "verdict": "FIXED",
+  "detail": "search '%' -> total=1, unfiltered total=255"
+ },
+ {
+  "id": "NSW-STG-24",
+  "verdict": "STILL_OPEN",
+  "detail": "status tabs -> ['Install In Progress=400', 'Action Required=400', 'Being Assessed=400', 'Complete=400', 'Archived=400']"
+ },
+ {
+  "id": "NSW-STG-33",
+  "verdict": "INCONCLUSIVE",
+  "detail": "search by address/installer/activity (no live match expected in test data) -> ['George%20St=0', 'BAWA=0', 'Heating%20%26%20Cooling=0']"
+ },
+ {
+  "id": "NSW-STG-34",
+  "verdict": "STILL_OPEN",
+  "detail": "GET /jobs/M8N999999 -> 400"
+ },
+ {
+  "id": "NSW-STG-51",
+  "verdict": "INFO_ONLY",
+  "detail": "oldest 5 job numbers -> ['M800001', 'M800002', 'M800003', 'M800004', 'M800005']; non-M8N count=5"
+ },
+ {
+  "id": "NSW-STG-13 / NSW-STG-61",
+  "verdict": "STILL_OPEN",
+  "detail": "POST /jobs installationDate=2027-02-29 (not leap year) -> 201"
+ },
+ {
+  "id": "NSW-STG-14 / NSW-STG-59",
+  "verdict": "STILL_OPEN",
+  "detail": "POST /jobs abnAcn=12345678901 (bad checksum) -> 201"
+ },
+ {
+  "id": "NSW-STG-32",
+  "verdict": "STILL_OPEN",
+  "detail": "duplicate job (same customer/site/installer) -> first=201, second=201"
+ },
+ {
+  "id": "NSW-STG-56",
+  "verdict": "STILL_OPEN",
+  "detail": "POST /jobs customer.name='   ' -> 500"
+ },
+ {
+  "id": "NSW-STG-57",
+  "verdict": "STILL_OPEN",
+  "detail": "malformed JSON bodies -> ['trailing comma=500', 'unquoted key=500', 'raw newline in string=500']"
+ },
+ {
+  "id": "NSW-STG-58",
+  "verdict": "STILL_OPEN",
+  "detail": "postcode edge cases -> [\"''=201\", \"'   '=201\", \"'0000'=201\", \"'3000'=201\", \"'1999'=201\", \"'abcd'=201\", \"'2000.5'=201\", \"'-2000'=201\"]"
+ },
+ {
+  "id": "NSW-STG-60",
+  "verdict": "STILL_OPEN",
+  "detail": "phone edge cases -> [\"'abcdefghi'=201\", \"'412 987 600'=201\", \"'4.12e8'=201\", \"'41298760'=201\", \"'4129876001'=201\", \"'0412987600'=201\"]"
+ },
+ {
+  "id": "NSW-STG-62",
+  "verdict": "STILL_OPEN",
+  "detail": "POST /jobs coolingCapacityKw=-5 -> 201"
+ },
+ {
+  "id": "NSW-STG-53",
+  "verdict": "STILL_OPEN",
+  "detail": "corrected field shape (entityType/entityId/visibility, not jobId); XSS payload stored raw and returned as-is in list"
+ },
+ {
+  "id": "NSW-STG-55",
+  "verdict": "STILL_OPEN",
+  "detail": "corrected field shape; POST /notes note='<p></p>' -> 201 Created, still accepted"
+ },
+ {
+  "id": "NSW-STG-46",
+  "verdict": "FIXED",
+  "detail": "corrected limit=100 (was 200, hit API max); 78 brands, zero case-duplicates now"
+ }
+]

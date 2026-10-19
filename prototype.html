@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northwind Bank Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --surface-2:#F6F7F9; --line:#E4E7EC; --line-2:#D5DAE1;
+  --text:#0F172A; --text-2:#475467; --text-3:#8A94A6;
+  --brand:#0B5FFF; --brand-2:#E8F0FF; --brand-ink:#0A3FA8;
+  --ink:#0B1B3A;            /* hero / card navy */
+  --ok:#0E9F6E; --ok-bg:#E7F7F0; --warn:#B7791F; --warn-bg:#FFF6E5; --bad:#D92D20; --bad-bg:#FEEFEE;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.06);
+  --radius:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B0F17; --surface:#121826; --surface-2:#182033; --line:#232C3F; --line-2:#2E3950;
+    --text:#E8ECF3; --text-2:#A9B3C5; --text-3:#6F7A90;
+    --brand:#4C8DFF; --brand-2:#16264A; --brand-ink:#9DBEFF; --ink:#0E2350;
+    --ok:#3CCB97; --ok-bg:#10291F; --warn:#E3A846; --warn-bg:#2B2210; --bad:#F2675C; --bad-bg:#2E1515;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B0F17; --surface:#121826; --surface-2:#182033; --line:#232C3F; --line-2:#2E3950;
+  --text:#E8ECF3; --text-2:#A9B3C5; --text-3:#6F7A90;
+  --brand:#4C8DFF; --brand-2:#16264A; --brand-ink:#9DBEFF; --ink:#0E2350;
+  --ok:#3CCB97; --ok-bg:#10291F; --warn:#E3A846; --warn-bg:#2B2210; --bad:#F2675C; --bad-bg:#2E1515;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input,select{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+
+/* ---------- Shell ---------- */
+.shell{display:grid;grid-template-columns:260px 1fr 300px;height:100vh}
+.side{border-right:1px solid var(--line);background:var(--surface);overflow:auto;padding:18px 14px}
+.logo{display:flex;align-items:center;gap:10px;padding:4px 6px 18px;font-weight:700;font-size:15px}
+.logo-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),#5B8CFF);display:grid;place-items:center;color:#fff}
+.side h6{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);font-weight:600;margin:16px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 8px;border-radius:8px;color:var(--text-2);font-size:13px}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{background:var(--brand-2);color:var(--brand-ink);font-weight:600}
+.nav-item .n{font-size:11px;color:var(--text-3);width:18px}
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0}
+.shell>*{min-height:0}
+.topbar{display:flex;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--surface)}
+.topbar .crumb{font-size:13px;color:var(--text-2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .crumb b{color:var(--text)}
+.btn-ghost{height:32px;padding:0 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);font-size:12.5px;display:inline-flex;align-items:center;gap:6px;color:var(--text-2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-3)}
+.canvas{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px}
+.notes{border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:22px 20px}
+.notes h3{font-size:16px;margin-bottom:6px}
+.notes .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--brand-2);color:var(--brand-ink);margin-bottom:12px}
+.notes p{color:var(--text-2);font-size:13px;margin-bottom:14px}
+.notes ul{list-style:none;display:grid;gap:10px;margin-bottom:18px}
+.notes li{font-size:13px;color:var(--text-2);padding-left:20px;position:relative}
+.notes li::before{content:"";position:absolute;left:4px;top:7px;width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.notes .flow{border-top:1px solid var(--line);padding-top:14px}
+.notes .flow h6{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+.chip-link{display:inline-flex;margin:0 6px 6px 0;font-size:12px;padding:5px 10px;border:1px solid var(--line-2);border-radius:20px;color:var(--text-2)}
+.chip-link:hover{border-color:var(--brand);color:var(--brand)}
+
+/* ---------- Phone ---------- */
+.phone{width:390px;height:812px;border-radius:52px;background:#0A0F1C;padding:12px;box-shadow:0 0 0 1px var(--line-2),0 30px 60px rgba(16,24,40,.18);flex-shrink:0}
+.screen{position:relative;width:100%;height:100%;border-radius:40px;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+.status{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:13px;font-weight:600;flex-shrink:0}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:110px;height:30px;border-radius:20px;background:#0A0F1C;z-index:5}
+.body{flex:1;overflow:auto;padding:4px 18px 24px;scrollbar-width:none}
+.body::-webkit-scrollbar{display:none}
+.tabbar{display:flex;justify-content:space-around;padding:8px 6px 22px;background:var(--surface);border-top:1px solid var(--line);flex-shrink:0}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:var(--text-3);width:64px}
+.tab.on{color:var(--brand);font-weight:600}
+.appbar{display:flex;align-items:center;gap:10px;padding:6px 0 14px}
+.appbar h2{font-size:18px;font-weight:700;flex:1}
+.icon-btn{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--text);position:relative}
+.dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--bad);border:2px solid var(--surface)}
+
+/* ---------- Components ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.hero{background:radial-gradient(120% 120% at 100% 0%,#2A5BD7 0%,var(--ink) 60%);color:#fff;border-radius:20px;padding:20px;position:relative;overflow:hidden}
+.hero small{opacity:.75;font-size:12px}
+.hero .amt{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:4px 0 14px}
+.hero .row{display:flex;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.14)}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0}
+.qa{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;color:var(--text-2)}
+.qa span.i{width:52px;height:52px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--brand)}
+.qa:hover span.i{border-color:var(--brand)}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 10px}
+.sec h4{font-size:14px;font-weight:600}
+.sec a,.link{font-size:12.5px;color:var(--brand);font-weight:500;cursor:pointer}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left}
+.li+.li{border-top:1px solid var(--line)}
+button.li:hover{background:var(--surface-2)}
+.av{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:600;font-size:13px;flex-shrink:0}
+.li .t{flex:1;min-width:0}
+.li .t b{display:block;font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .t span{font-size:12px;color:var(--text-3)}
+.li .r{text-align:right;font-weight:600;font-size:13.5px}
+.li .r span{display:block;font-weight:400;font-size:11.5px;color:var(--text-3)}
+.pos{color:var(--ok)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.b-ok{background:var(--ok-bg);color:var(--ok)} .b-warn{background:var(--warn-bg);color:var(--warn)} .b-bad{background:var(--bad-bg);color:var(--bad)} .b-info{background:var(--brand-2);color:var(--brand-ink)}
+.btn{height:50px;border-radius:14px;font-weight:600;font-size:15px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s}
+.btn:active{transform:scale(.985)}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:var(--surface);border:1px solid var(--line-2)}
+.btn-danger{background:var(--bad-bg);color:var(--bad)}
+.field{display:block;margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:500;color:var(--text-2);margin-bottom:6px}
+.input{width:100%;height:50px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);padding:0 14px;font-size:15px;outline:none}
+.input:focus{border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-2)}
+.hint{font-size:12px;color:var(--text-3);margin-top:6px}
+.hint.err{color:var(--bad)}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;height:34px;border-radius:9px;font-size:12.5px;font-weight:500;color:var(--text-2)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.toggle{width:44px;height:26px;border-radius:20px;background:var(--line-2);position:relative;transition:background .2s;flex-shrink:0}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .2s}
+.toggle.on{background:var(--brand)} .toggle.on::after{left:21px}
+.bar{height:8px;background:var(--surface-2);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:8px}
+.muted{color:var(--text-3)} .small{font-size:12px}
+.center{text-align:center}
+.stack{display:grid;gap:12px}
+.banner{display:flex;gap:10px;padding:12px 14px;border-radius:12px;font-size:12.5px;align-items:flex-start}
+.toast{position:absolute;left:18px;right:18px;bottom:96px;background:var(--text);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:13px;display:flex;gap:8px;align-items:center;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;z-index:20}
+.toast.show{opacity:1;transform:none}
+.sheet-bg{position:absolute;inset:0;background:rgba(10,15,28,.45);z-index:10;display:flex;align-items:flex-end}
+.sheet{background:var(--surface);width:100%;border-radius:24px 24px 0 0;padding:10px 18px 30px}
+.grab{width:40px;height:4px;border-radius:4px;background:var(--line-2);margin:0 auto 14px}
+
+/* Bank card */
+.bcard{aspect-ratio:1.586;border-radius:18px;padding:18px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;transition:filter .3s}
+.bcard.frozen{filter:grayscale(.9) brightness(.9)}
+.bcard .chip{width:36px;height:27px;border-radius:6px;background:linear-gradient(135deg,#F3D58A,#C9A24A)}
+.bcard .pan{font-size:17px;letter-spacing:.14em}
+.frost{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;background:rgba(10,15,28,.7);font-weight:600;font-size:13px}
+
+/* OTP + keypad */
+.otp{display:flex;gap:8px;justify-content:center;margin:18px 0}
+.otp input{width:46px;height:56px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);text-align:center;font-size:22px;font-weight:600;outline:none}
+.otp input:focus{border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-2)}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.keypad button{height:52px;border-radius:12px;font-size:22px;font-weight:500}
+.keypad button:hover{background:var(--surface-2)}
+.amount-big{font-size:44px;font-weight:700;letter-spacing:-.02em;text-align:center;margin-top:16px}
+
+/* Slide to confirm */
+.slider{position:relative;height:58px;border-radius:16px;background:var(--brand-2);overflow:hidden;user-select:none;touch-action:none}
+.slider .lbl{position:absolute;inset:0;display:grid;place-items:center;font-weight:600;color:var(--brand-ink);font-size:14px}
+.slider .fill{position:absolute;left:0;top:0;bottom:0;background:var(--brand);opacity:.18}
+.slider .knob{position:absolute;top:5px;left:5px;width:48px;height:48px;border-radius:12px;background:var(--brand);color:#fff;display:grid;place-items:center;cursor:grab;box-shadow:0 2px 6px rgba(11,95,255,.4)}
+
+/* Success */
+.check{width:84px;height:84px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;margin:40px auto 18px;animation:pop .4s ease-out}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* ---------- Desktop console ---------- */
+.desk{width:1080px;max-width:100%;min-height:680px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:grid;grid-template-columns:200px 1fr}
+.desk-side{background:var(--ink);color:#C8D3EA;padding:16px 12px;font-size:13px}
+.desk-side .it{padding:8px 10px;border-radius:8px;display:flex;gap:8px;align-items:center}
+.desk-side .it.on{background:rgba(255,255,255,.1);color:#fff;font-weight:600}
+.desk-main{padding:22px 24px;background:var(--bg);min-width:0;container-type:inline-size}
+.desk-grid{display:grid;grid-template-columns:1fr 290px;gap:14px;align-items:start}
+@container (max-width:860px){.desk-grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+td.nw{white-space:nowrap}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi small{color:var(--text-3);font-size:12px}
+.kpi b{display:block;font-size:22px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:11px 12px;border-bottom:1px solid var(--line)}
+tr.sel td{background:var(--brand-2)}
+tbody tr{cursor:pointer} tbody tr:hover td{background:var(--surface-2)}
+.risk{display:inline-block;width:46px;height:6px;border-radius:6px;background:var(--surface-2);vertical-align:middle;margin-right:6px;overflow:hidden}
+.risk i{display:block;height:100%}
+
+/* ---------- Overview ---------- */
+.overview{width:100%;max-width:1100px}
+.overview h1{font-size:24px;letter-spacing:-.01em}
+.overview>p{color:var(--text-2);margin:6px 0 22px}
+.ov-group{margin-bottom:26px}
+.ov-group h6{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:10px}
+.ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.ov-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px;transition:.15s}
+.ov-card:hover{border-color:var(--brand);box-shadow:var(--shadow);transform:translateY(-1px)}
+.ov-card b{font-size:14px}
+.ov-card span{font-size:12.5px;color:var(--text-2)}
+.ov-card .k{font-size:11px;color:var(--text-3)}
+
+/* ---------- Responsive ---------- */
+.mobile-only{display:none!important}
+@media (min-width:821px){html,body{overflow:hidden}}
+@media (max-width:1180px){.shell{grid-template-columns:230px 1fr}.notes{display:none}}
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr;height:auto;min-height:100vh}
+  .side{display:none}
+  .canvas{padding:16px}
+  .phone{width:100%;max-width:390px;height:780px;padding:0;background:none;box-shadow:none;border-radius:0}
+  .screen{border-radius:24px;border:1px solid var(--line)}
+  .notch{display:none}
+  .desk{grid-template-columns:1fr}.desk-side{display:none}.kpis{grid-template-columns:repeat(2,1fr)}
+  .desk-main{overflow-x:auto}
+  .mobile-only{display:inline-flex!important}
+  .topbar .crumb{display:none}
+  #themeBtn{margin-left:auto}
+}
+.mnav{position:fixed;inset:0;background:var(--surface);z-index:50;overflow:auto;padding:16px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <main class="stage">
+    <div class="topbar">
+      <button class="btn-ghost" id="backBtn" aria-label="Back">← Back</button>
+      <button class="btn-ghost" id="allBtn">All screens</button>
+      <button class="btn-ghost mobile-only" id="menuBtn">Menu</button>
+      <div class="crumb" id="crumb"></div>
+      <button class="btn-ghost" id="themeBtn" aria-label="Toggle theme">◐ Theme</button>
+    </div>
+    <div class="canvas" id="canvas"></div>
+  </main>
+  <aside class="notes" id="notes"></aside>
+</div>
+
+<script>
+/* ================= Icons ================= */
+const P = {
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  bill:'<path d="M4 2v20l3-2 3 2 3-2 3 2 3-2V2l-3 2-3-2-3 2-3-2z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  swap:'<path d="M7 4 3 8l4 4"/><path d="M3 8h14"/><path d="m17 20 4-4-4-4"/><path d="M21 16H7"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff:'<path d="M9.9 4.2A10 10 0 0 1 12 4c6.5 0 10 8 10 8a17 17 0 0 1-2.2 3.2M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/>',
+  chev:'<path d="m9 18 6-6-6-6"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+  lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+  snow:'<path d="M12 2v20M4.9 4.9l14.2 14.2M2 12h20M4.9 19.1 19.1 4.9"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  face:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M9 9h.01M15 9h.01M9.5 15a3.5 3.5 0 0 0 5 0"/>',
+  alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  pig:'<path d="M19 9c1 0 2 1 2 2v2h-2l-1 3h-2v2h-3v-2h-3v2H7v-2.5A6 6 0 0 1 5 11c0-3.3 3.1-6 7-6 2.6 0 4.9 1.2 6 3"/><path d="M15 10h.01"/>',
+  doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+  flag:'<path d="M4 22V4s1-1 4-1 5 2 8 2 4-1 4-1v11s-1 1-4 1-5-2-8-2-4 1-4 1"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+};
+const I = (n,s=20,sw=1.8)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+
+/* ================= Data ================= */
+const fmt = (n,d=2)=> '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const S = {  // prototype state
+  hide:false, frozen:false, payee:null, amount:'', note:'', speed:'standard', from:'chk',
+  txnId:0, toastMsg:'', sheet:null, alertSel:0, alerts:null, cardLimit:2500, online:true, intl:false,
+  notif:{tx:true,low:true,mkt:false}, otpBad:false
+};
+const accounts = [
+  {id:'chk', name:'Everyday Checking', mask:'4821', bal:8240.55, type:'Checking'},
+  {id:'sav', name:'High-Yield Savings', mask:'9930', bal:24310.00, type:'Savings · 4.15% APY'},
+  {id:'cc',  name:'Platinum Credit', mask:'1107', bal:-1284.20, type:'Credit · due Oct 22'},
+];
+const payees = [
+  {id:1,name:'Maya Chen',sub:'Northwind ••• 3302',c:'#E0EAFF',f:'#2952CC'},
+  {id:2,name:'Leo Martins',sub:'Chase ••• 7718',c:'#FCE7F3',f:'#BE185D'},
+  {id:3,name:'Priya Nair',sub:'Northwind ••• 0451',c:'#DCFCE7',f:'#15803D'},
+  {id:4,name:'Sam Okafor',sub:'Wells Fargo ••• 2290',c:'#FEF3C7',f:'#B45309'},
+  {id:5,name:'Landlord – Oakview',sub:'BoA ••• 6610',c:'#EDE9FE',f:'#6D28D9'},
+];
+const txns = [
+  {id:1,m:'Whole Foods Market',cat:'Groceries',d:'Today, 9:41',a:-86.42,ic:'WF',c:'#DCFCE7',f:'#15803D',status:'Pending'},
+  {id:2,m:'Payroll – Acme Inc.',cat:'Income',d:'Today, 6:00',a:3420.00,ic:'AC',c:'#E0EAFF',f:'#2952CC',status:'Posted'},
+  {id:3,m:'Spotify',cat:'Subscriptions',d:'Yesterday',a:-11.99,ic:'SP',c:'#DCFCE7',f:'#166534',status:'Posted'},
+  {id:4,m:'Uber',cat:'Transport',d:'Oct 5',a:-24.10,ic:'UB',c:'#F1F5F9',f:'#0F172A',status:'Posted'},
+  {id:5,m:'Maya Chen',cat:'Transfer',d:'Oct 4',a:-120.00,ic:'MC',c:'#E0EAFF',f:'#2952CC',status:'Posted'},
+  {id:6,m:'Blue Bottle Coffee',cat:'Dining',d:'Oct 4',a:-6.75,ic:'BB',c:'#E0F2FE',f:'#0369A1',status:'Posted'},
+  {id:7,m:'Con Edison',cat:'Utilities',d:'Oct 2',a:-142.30,ic:'CE',c:'#FEF3C7',f:'#B45309',status:'Posted'},
+  {id:8,m:'Amazon',cat:'Shopping',d:'Oct 1',a:-58.99,ic:'AM',c:'#FFEDD5',f:'#C2410C',status:'Posted'},
+];
+const spend = [
+  {k:'Housing',v:1850,c:'#0B5FFF'},{k:'Groceries',v:612,c:'#0E9F6E'},{k:'Dining',v:384,c:'#F59E0B'},
+  {k:'Transport',v:226,c:'#8B5CF6'},{k:'Subscriptions',v:94,c:'#EC4899'},{k:'Other',v:318,c:'#94A3B8'},
+];
+const alertsSeed = [
+  {id:'AL-20931',cust:'Daniel Reyes',acct:'••4821',amt:4950,type:'Card not present',geo:'Lagos, NG',score:92,age:'2m',status:'Open'},
+  {id:'AL-20928',cust:'Hannah Kim',acct:'••7764',amt:1200,type:'New payee + large transfer',geo:'Austin, US',score:78,age:'9m',status:'Open'},
+  {id:'AL-20925',cust:'Omar Haddad',acct:'••3019',amt:310,type:'Velocity – 6 txns / 5 min',geo:'Toronto, CA',score:64,age:'14m',status:'Open'},
+  {id:'AL-20919',cust:'Grace Liu',acct:'••5582',amt:89.9,type:'Device change',geo:'Seattle, US',score:41,age:'31m',status:'Open'},
+  {id:'AL-20914',cust:'Marco Bianchi',acct:'••1146',amt:2300,type:'Wire to new country',geo:'Milan, IT',score:71,age:'48m',status:'Escalated'},
+];
+S.alerts = alertsSeed.map(a=>({...a}));
+
+/* ================= Screen chrome helpers ================= */
+const av = (txt,c,f)=>`<span class="av" style="background:${c};color:${f}">${txt}</span>`;
+const money = n => S.hide ? '••••' : (n<0?'−':'')+fmt(n);
+const tabbar = on => `<nav class="tabbar">${[
+  ['home','Home','home'],['payHub','Pay','send'],['cards','Cards','card'],['insights','Insights','chart'],['profile','Profile','user']
+].map(([id,l,ic])=>`<button class="tab ${on===id?'on':''}" data-go="${id}">${I(ic,22)}${l}</button>`).join('')}</nav>`;
+const appbar = (title,{back=null,right=''}={}) => `<div class="appbar">${back?`<button class="icon-btn" data-go="${back}" aria-label="Back">${I('back',18)}</button>`:''}<h2>${title}</h2>${right}</div>`;
+
+/* ================= Screens ================= */
+const screens = {
+/* ---- Onboarding & access ---- */
+welcome:{group:'Access',title:'Welcome',device:'phone',
+  note:'First impression. One primary action, one secondary. Trust signals (FDIC, encryption) sit below the fold, not in the way.',
+  points:['Single primary CTA keeps intent clear','Security reassurance without jargon','Large tap targets (50px) for thumbs'],
+  links:['login','openAccount'],
+  render:()=>`<div class="body" style="display:flex;flex-direction:column;padding-top:40px">
+    <div class="logo-mark" style="width:56px;height:56px;border-radius:16px">${I('shield',28,2)}</div>
+    <h1 style="font-size:30px;letter-spacing:-.02em;line-height:1.15;margin:26px 0 10px">Banking that's<br>clear, calm and<br>always on.</h1>
+    <p class="muted" style="font-size:15px">Check balances, move money and stay in control of your cards — in a few taps.</p>
+    <div style="flex:1"></div>
+    <div class="stack">
+      <button class="btn btn-primary" data-go="login">Sign in</button>
+      <button class="btn btn-secondary" data-go="openAccount">Open an account</button>
+      <p class="center small muted" style="margin-top:6px">${I('lock',12)} Member FDIC · 256-bit encryption</p>
+    </div></div>`},
+
+login:{group:'Access',title:'Sign in',device:'phone',
+  note:'Biometrics first, password as fallback. Errors are inline and specific, never a generic “something went wrong”.',
+  points:['Face ID offered upfront for returning users','Show/hide password toggle','“Remember me” defaults to device-only'],
+  links:['otp','welcome'],
+  render:()=>`<div class="body">
+    ${appbar('',{back:'welcome'})}
+    <h1 style="font-size:24px;margin-bottom:4px">Welcome back</h1>
+    <p class="muted" style="margin-bottom:22px">Sign in to Northwind</p>
+    <div class="field"><label for="uid">User ID</label><input id="uid" class="input" value="alex.morgan" autocomplete="username"></div>
+    <div class="field"><label for="pw">Password</label>
+      <div style="position:relative"><input id="pw" class="input" type="password" value="password123" autocomplete="current-password">
+      <button data-act="togglePw" style="position:absolute;right:12px;top:14px;color:var(--text-3)" aria-label="Show password">${I('eye',20)}</button></div>
+      <p class="hint" style="text-align:right"><a class="link">Forgot password?</a></p></div>
+    <button class="btn btn-primary" data-act="login">Continue</button>
+    <div style="display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--text-3);font-size:12px"><hr style="flex:1;border:0;border-top:1px solid var(--line)">or<hr style="flex:1;border:0;border-top:1px solid var(--line)"></div>
+    <button class="btn btn-secondary" data-go="home">${I('face',20)} Sign in with Face ID</button>
+  </div>`},
+
+otp:{group:'Access',title:'Verify (2FA)',device:'phone',
+  note:'Six-digit code with auto-advance, paste support and auto-submit. Wrong code shows inline error. Try 123456.',
+  points:['Auto-focus next box; Backspace moves back','Paste a full code into any box','Resend timer prevents spam'],
+  links:['home','login'],
+  render:()=>`<div class="body">
+    ${appbar('',{back:'login'})}
+    <div class="av" style="width:52px;height:52px;border-radius:16px;background:var(--brand-2);color:var(--brand)">${I('shield',24)}</div>
+    <h1 style="font-size:22px;margin:16px 0 4px">Enter verification code</h1>
+    <p class="muted">We sent a 6-digit code to <b style="color:var(--text)">(•••) •••-4410</b></p>
+    <div class="otp" id="otp">${'<input inputmode="numeric" maxlength="1" aria-label="Digit">'.repeat(6)}</div>
+    <p class="hint center ${S.otpBad?'err':''}" id="otpHint">${S.otpBad?'That code didn’t match. Try 123456.':'Prototype tip: use 123456'}</p>
+    <div style="height:18px"></div>
+    <button class="btn btn-primary" data-act="verify">Verify</button>
+    <p class="center small muted" style="margin-top:16px">Didn’t get it? <span id="resend">Resend in 0:30</span></p>
+  </div>`},
+
+openAccount:{group:'Access',title:'Open account',device:'phone',
+  note:'Progressive onboarding: one topic per step, a visible progress bar and a clear time estimate reduce drop-off.',
+  points:['Step 2 of 4 with time estimate','Only asks what’s needed now','Explains why SSN is required'],
+  links:['welcome','home'],
+  render:()=>`<div class="body">
+    ${appbar('Open an account',{back:'welcome'})}
+    <div class="bar" style="margin-bottom:6px"><i style="width:50%;background:var(--brand)"></i></div>
+    <p class="small muted" style="margin-bottom:20px">Step 2 of 4 · about 3 minutes left</p>
+    <h3 style="font-size:18px;margin-bottom:14px">Tell us about you</h3>
+    <div class="field"><label>Legal first name</label><input class="input" value="Alex"></div>
+    <div class="field"><label>Legal last name</label><input class="input" value="Morgan"></div>
+    <div class="field"><label>Date of birth</label><input class="input" placeholder="MM / DD / YYYY"></div>
+    <div class="field"><label>Social Security number</label><input class="input" placeholder="•••-••-••••">
+      <p class="hint">${I('lock',12)} Required by federal law to verify identity. It won’t affect your credit score.</p></div>
+    <button class="btn btn-primary" data-go="home" style="margin-top:6px">Continue</button>
+  </div>`},
+
+/* ---- Everyday banking ---- */
+home:{group:'Everyday',title:'Home',device:'phone',tab:true,
+  note:'The answer to “how much do I have?” is the first thing you see. Quick actions cover the four most common jobs.',
+  points:['Tap the eye to hide balances in public','Pending items labelled, not hidden','Proactive insight card, dismissible'],
+  links:['accountDetail','transfer','txnDetail','notifications'],
+  render:()=>`<div class="body">
+    <div class="appbar"><span class="av" style="background:var(--brand-2);color:var(--brand)">AM</span>
+      <div style="flex:1"><div class="small muted">Good morning</div><b>Alex Morgan</b></div>
+      <button class="icon-btn" data-go="notifications" aria-label="Notifications">${I('bell',18)}<i class="dot"></i></button></div>
+    <div class="hero">
+      <div style="display:flex;justify-content:space-between;align-items:center"><small>Total available</small>
+        <button data-act="hide" style="color:#fff;opacity:.85" aria-label="Toggle balance visibility">${I(S.hide?'eyeoff':'eye',18)}</button></div>
+      <div class="amt num">${money(32550.55)}</div>
+      <div class="row"><span class="pill">${I('chart',14)} +$1,284 this month</span><span class="pill">3 accounts</span></div>
+    </div>
+    <div class="quick">
+      <button class="qa" data-go="transfer"><span class="i">${I('send')}</span>Send</button>
+      <button class="qa" data-go="bills"><span class="i">${I('bill')}</span>Pay bills</button>
+      <button class="qa" data-act="sheetMove"><span class="i">${I('swap')}</span>Move</button>
+      <button class="qa" data-go="cards"><span class="i">${I('card')}</span>Cards</button>
+    </div>
+    <div class="sec"><h4>Accounts</h4><a data-go="accountDetail">See all</a></div>
+    <div class="list">${accounts.map(a=>`<button class="li" data-go="accountDetail">
+      ${av(I(a.id==='cc'?'card':a.id==='sav'?'pig':'home',18),'var(--brand-2)','var(--brand)')}
+      <div class="t"><b>${a.name}</b><span>${a.type} · ••${a.mask}</span></div>
+      <div class="r num">${money(a.bal)}</div></button>`).join('')}</div>
+    <div class="banner" style="background:var(--warn-bg);color:var(--warn);margin-top:14px">${I('alert',18)}
+      <div><b>Electric bill is $38 higher than usual.</b><br><span style="opacity:.85">Con Edison · due Oct 14</span></div></div>
+    <div class="sec"><h4>Recent activity</h4><a data-go="accountDetail">View all</a></div>
+    <div class="list">${txns.slice(0,4).map(txRow).join('')}</div>
+  </div>${tabbar('home')}`},
+
+accountDetail:{group:'Everyday',title:'Account & activity',device:'phone',
+  note:'Account details with searchable, filterable activity grouped by day. Account/routing numbers are one tap to copy.',
+  points:['Search + category chips','Copy routing number with feedback','Statements one tap away'],
+  links:['txnDetail','home'],
+  render:()=>`<div class="body">
+    ${appbar('Everyday Checking',{back:'home',right:`<button class="icon-btn" aria-label="Statements">${I('doc',18)}</button>`})}
+    <div class="card" style="text-align:center">
+      <div class="small muted">Available balance</div>
+      <div class="num" style="font-size:30px;font-weight:700;margin:4px 0">${money(8240.55)}</div>
+      <div class="small muted">Current ${money(8326.97)} · 1 pending</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
+        <button class="btn-ghost" data-act="copy">${I('copy',14)} Routing 021000021</button>
+        <button class="btn-ghost" data-act="copy">${I('copy',14)} Acct ••4821</button></div>
+    </div>
+    <div style="position:relative;margin:16px 0 10px"><span style="position:absolute;left:14px;top:15px;color:var(--text-3)">${I('search',18)}</span>
+      <input class="input" id="txSearch" placeholder="Search transactions" style="padding-left:42px"></div>
+    <div style="display:flex;gap:6px;overflow:auto;margin-bottom:12px;scrollbar-width:none" id="chips">
+      ${['All','Income','Groceries','Dining','Transfer','Utilities'].map((c,i)=>`<button class="badge ${i?'':'b-info'}" data-chip="${c}" style="padding:6px 12px;border:1px solid var(--line);${i?'background:var(--surface)':''}">${c}</button>`).join('')}</div>
+    <div class="list" id="txList">${txns.map(txRow).join('')}</div>
+  </div>`},
+
+txnDetail:{group:'Everyday',title:'Transaction detail',device:'phone',
+  note:'Everything a customer needs to recognise a charge, plus a clear path to dispute it — the #1 support-call driver.',
+  points:['Merchant, category, location and status','Pending explained in plain language','Dispute flow starts here'],
+  links:['dispute','accountDetail'],
+  render:()=>{const t=txns.find(x=>x.id===S.txnId)||txns[0];return `<div class="body">
+    ${appbar('',{back:'accountDetail'})}
+    <div class="center">${av(t.ic,t.c,t.f).replace('class="av"','class="av" style="width:64px;height:64px;font-size:18px;border-radius:20px;margin:0 auto;background:'+t.c+';color:'+t.f+'"')}
+      <div style="font-size:15px;font-weight:600;margin-top:12px">${t.m}</div>
+      <div class="num ${t.a>0?'pos':''}" style="font-size:34px;font-weight:700;margin:4px 0">${t.a>0?'+':'−'}${fmt(t.a)}</div>
+      <span class="badge ${t.status==='Pending'?'b-warn':'b-ok'}">${t.status}</span></div>
+    ${t.status==='Pending'?`<div class="banner" style="background:var(--surface-2);margin-top:16px">${I('alert',16)}<span class="muted">Pending charges usually post within 1–3 business days. The final amount may change (e.g. tips).</span></div>`:''}
+    <div class="list" style="margin-top:16px">
+      ${[['Date',t.d],['Category',t.cat],['Account','Everyday Checking ••4821'],['Card','Debit ••7782'],['Reference','NW-'+(482193+t.id)]].map(([k,v])=>`<div class="li"><div class="t"><span>${k}</span></div><div class="r" style="font-weight:500">${v}</div></div>`).join('')}
+    </div>
+    <div class="stack" style="margin-top:16px">
+      <button class="btn btn-secondary">${I('doc',18)} Download receipt</button>
+      <button class="btn btn-danger" data-go="dispute">${I('flag',18)} I don’t recognise this</button>
+    </div></div>`}},
+
+dispute:{group:'Everyday',title:'Report a charge',device:'phone',
+  note:'Guided dispute with reason picker. Offers to freeze the card in the same flow when fraud is suspected.',
+  points:['Plain-language reasons','Inline card-freeze for fraud','Sets expectation: decision in 10 days'],
+  links:['txnDetail','cards'],
+  render:()=>`<div class="body">
+    ${appbar('Report a charge',{back:'txnDetail'})}
+    <p class="muted" style="margin-bottom:14px">What happened with this transaction?</p>
+    <div class="list" id="reasons">${['I didn’t make this purchase','I was charged twice','Wrong amount','Item not received','Cancelled subscription still charged'].map((r,i)=>`<label class="li" style="cursor:pointer"><input type="radio" name="r" ${i?'':'checked'} style="accent-color:var(--brand);width:18px;height:18px"><div class="t"><b>${r}</b></div></label>`).join('')}</div>
+    <div class="card" style="margin-top:14px;display:flex;gap:12px;align-items:center">
+      <div class="t" style="flex:1"><b style="font-size:13.5px">Freeze debit card ••7782</b><div class="small muted">Recommended if your card may be compromised</div></div>
+      <button class="toggle ${S.frozen?'on':''}" data-act="freeze" aria-label="Freeze card"></button></div>
+    <p class="small muted" style="margin:14px 0">We’ll issue a provisional credit within 2 business days and a decision within 10.</p>
+    <button class="btn btn-primary" data-act="submitDispute">Submit report</button>
+  </div>`},
+
+/* ---- Payments ---- */
+payHub:{group:'Payments',title:'Pay & transfer hub',device:'phone',tab:true,
+  note:'All money-movement in one place, grouped by intent rather than by rail (Zelle, ACH, wire).',
+  points:['Recent payees for one-tap repeat','Scheduled payments visible','Limits shown before they bite'],
+  links:['transfer','bills'],
+  render:()=>`<div class="body">
+    ${appbar('Pay & transfer')}
+    <div class="stack">
+      ${[['send','Send to someone','Instantly to email or phone','transfer'],['swap','Move between accounts','Your Northwind accounts','transfer'],['bill','Pay a bill','Utilities, cards, rent','bills'],['doc','Wire transfer','Domestic & international','transfer']].map(([ic,t,s,g])=>`<button class="li card" style="border-radius:14px" data-go="${g}">${av(I(ic,18),'var(--brand-2)','var(--brand)')}<div class="t"><b>${t}</b><span>${s}</span></div>${I('chev',18)}</button>`).join('')}
+    </div>
+    <div class="sec"><h4>Scheduled</h4><a>Manage</a></div>
+    <div class="list">
+      <div class="li">${av('OV','#EDE9FE','#6D28D9')}<div class="t"><b>Rent – Oakview</b><span>Monthly · next Nov 1</span></div><div class="r num">$1,850.00</div></div>
+      <div class="li">${av('SV','var(--brand-2)','var(--brand)')}<div class="t"><b>To Savings</b><span>Every Friday</span></div><div class="r num">$200.00</div></div>
+    </div>
+    <p class="small muted center" style="margin-top:14px">Daily send limit: $2,500 · $2,380 remaining</p>
+  </div>${tabbar('payHub')}`},
+
+transfer:{group:'Payments',title:'Send – choose payee',device:'phone',
+  note:'Recipient picker with search and recents. New payees trigger an extra verification step later.',
+  points:['Recents on top','Search filters live','Add new payee clearly separated'],
+  links:['amount','payHub'],
+  render:()=>`<div class="body">
+    ${appbar('Send money',{back:'payHub'})}
+    <div style="position:relative;margin-bottom:14px"><span style="position:absolute;left:14px;top:15px;color:var(--text-3)">${I('search',18)}</span>
+      <input class="input" id="paySearch" placeholder="Name, email or phone" style="padding-left:42px"></div>
+    <div style="display:flex;gap:14px;overflow:auto;margin-bottom:6px;scrollbar-width:none">
+      ${payees.slice(0,4).map(p=>`<button data-payee="${p.id}" style="display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;width:62px">${av(p.name.split(' ').map(x=>x[0]).join('').slice(0,2),p.c,p.f).replace('class="av"','class="av" style="width:54px;height:54px;border-radius:50%;background:'+p.c+';color:'+p.f+'"')}${p.name.split(' ')[0]}</button>`).join('')}
+    </div>
+    <div class="sec"><h4>All payees</h4></div>
+    <div class="list" id="payList">${payees.map(p=>`<button class="li" data-payee="${p.id}">${av(p.name.split(' ').map(x=>x[0]).join('').slice(0,2),p.c,p.f)}<div class="t"><b>${p.name}</b><span>${p.sub}</span></div>${I('chev',18)}</button>`).join('')}</div>
+    <button class="btn btn-secondary" style="margin-top:14px">${I('plus',18)} Add new payee</button>
+  </div>`},
+
+amount:{group:'Payments',title:'Send – amount',device:'phone',
+  note:'Custom keypad with live validation against balance and daily limit. Continue is disabled until the amount is valid.',
+  points:['Source account switcher','Inline limit/balance errors','Optional note & speed choice'],
+  links:['review','transfer'],
+  render:()=>{const p=S.payee||payees[0];const a=parseFloat(S.amount||'0');const err=a>2380?'Exceeds your remaining daily limit ($2,380)':a>8240.55?'Not enough funds':'';
+  return `<div class="body" style="display:flex;flex-direction:column">
+    ${appbar('',{back:'transfer'})}
+    <div class="center">${av(p.name.split(' ').map(x=>x[0]).join('').slice(0,2),p.c,p.f).replace('class="av"','class="av" style="margin:0 auto;border-radius:50%;width:48px;height:48px;background:'+p.c+';color:'+p.f+'"')}
+      <div style="margin-top:8px;font-weight:600">${p.name}</div><div class="small muted">${p.sub}</div></div>
+    <div class="amount-big num" id="amt" style="color:${a?'var(--text)':'var(--text-3)'}">$${S.amount||'0'}</div>
+    <p class="hint center ${err?'err':''}" id="amtHint">${err||'From Everyday Checking · '+fmt(8240.55)+' available'}</p>
+    <div class="seg" style="margin:14px 0 4px">
+      <button class="${S.speed==='standard'?'on':''}" data-speed="standard">Standard · free</button>
+      <button class="${S.speed==='instant'?'on':''}" data-speed="instant">Instant · $1.50</button></div>
+    <div class="keypad" id="keypad">${['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k=>`<button data-key="${k}">${k}</button>`).join('')}</div>
+    <button class="btn btn-primary" data-go="review" style="margin-top:10px" ${!a||err?'disabled':''}>Review</button>
+  </div>`}},
+
+review:{group:'Payments',title:'Send – review & confirm',device:'phone',
+  note:'A full summary before money moves. Slide-to-confirm prevents accidental taps; a first-time-payee warning addresses scam risk.',
+  points:['Everything editable from here','Scam warning for new payees','Slide (or Enter key) to confirm'],
+  links:['success','amount'],
+  render:()=>{const p=S.payee||payees[0];const a=parseFloat(S.amount||'250');const fee=S.speed==='instant'?1.5:0;return `<div class="body" style="display:flex;flex-direction:column">
+    ${appbar('Review transfer',{back:'amount'})}
+    <div class="card center"><div class="small muted">You’re sending</div><div class="num" style="font-size:34px;font-weight:700">${fmt(a)}</div><div class="small muted">to ${p.name}</div></div>
+    <div class="list" style="margin-top:12px">
+      ${[['From','Everyday Checking ••4821'],['To',p.name+' · '+p.sub.split(' ').pop()],['Arrives',S.speed==='instant'?'In minutes':'1–2 business days'],['Fee',fee?fmt(fee):'Free'],['Total',fmt(a+fee)]].map(([k,v],i)=>`<div class="li"><div class="t"><span>${k}</span></div><div class="r" style="${i===4?'':'font-weight:500'}">${v}</div></div>`).join('')}
+    </div>
+    <div class="banner" style="background:var(--warn-bg);color:var(--warn);margin-top:12px">${I('shield',18)}<div><b>Only send to people you know.</b> Northwind will never ask you to move money to “protect” it.</div></div>
+    <div style="flex:1;min-height:16px"></div>
+    <div class="slider" id="slider" tabindex="0" role="button" aria-label="Slide to send"><div class="fill" id="sfill"></div><div class="lbl">Slide to send ${fmt(a+fee)}</div><div class="knob" id="knob">${I('chev',22,2.4)}</div></div>
+  </div>`}},
+
+success:{group:'Payments',title:'Send – success',device:'phone',
+  note:'Clear confirmation with reference number and next steps. No dead end: share receipt, send again, or go home.',
+  points:['Reference ID for support','Share/download receipt','Undo window for 30s (standard only)'],
+  links:['home','transfer'],
+  render:()=>{const p=S.payee||payees[0];const a=parseFloat(S.amount||'250');return `<div class="body center" style="display:flex;flex-direction:column">
+    <div class="check">${I('check',40,2.6)}</div>
+    <h1 style="font-size:22px">Money sent</h1>
+    <p class="muted" style="margin:6px 0 20px"><b style="color:var(--text)">${fmt(a)}</b> to ${p.name} ${S.speed==='instant'?'— arriving in minutes':'— arriving in 1–2 business days'}</p>
+    <div class="list" style="text-align:left">
+      <div class="li"><div class="t"><span>Reference</span></div><div class="r">NW-TX-88310</div></div>
+      <div class="li"><div class="t"><span>Date</span></div><div class="r" style="font-weight:500">Oct 7, 2026</div></div></div>
+    ${S.speed==='standard'?'<p class="small muted" style="margin-top:12px">Changed your mind? You can cancel for the next 30 seconds.</p>':''}
+    <div style="flex:1"></div>
+    <div class="stack"><button class="btn btn-primary" data-act="doneSend">Done</button><button class="btn btn-secondary">Share receipt</button></div>
+  </div>`}},
+
+bills:{group:'Payments',title:'Pay bills',device:'phone',
+  note:'Bills sorted by due date with status. Autopay is a toggle, not a buried setting.',
+  points:['Due-soon highlighted','Autopay per biller','Bulk “Pay all due”'],
+  links:['payHub','home'],
+  render:()=>`<div class="body">
+    ${appbar('Bills',{back:'payHub',right:`<button class="icon-btn" aria-label="Add biller">${I('plus',18)}</button>`})}
+    <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="flex:1"><div class="small muted">Due in next 14 days</div><div class="num" style="font-size:22px;font-weight:700">$1,476.50</div></div>
+      <button class="btn btn-primary" style="width:auto;padding:0 16px;height:40px;font-size:13px" data-act="payAll">Pay all due</button></div>
+    <div class="list">
+      ${[['CE','Con Edison','Due Oct 14','$142.30','b-warn','Due soon','#FEF3C7','#B45309',false],['NW','Platinum Credit','Due Oct 22','$1,284.20','b-info','Scheduled','var(--brand-2)','var(--brand)',true],['VZ','Verizon','Due Oct 25','$50.00','b-ok','Autopay','#FEE2E2','#B91C1C',true],['GE','Geico','Paid Oct 1','$118.00','b-ok','Paid','#E0F2FE','#0369A1',false]].map(([ic,n,d,a,b,bl,c,f,auto])=>`<div class="li">${av(ic,c,f)}<div class="t"><b>${n}</b><span>${d} · <span class="badge ${b}">${bl}</span></span></div><div class="r num">${a}<span>Autopay <button class="toggle ${auto?'on':''}" data-act="tog" style="transform:scale(.7);vertical-align:middle;margin-right:-8px" aria-label="Autopay"></button></span></div></div>`).join('')}
+    </div>
+  </div>`},
+
+/* ---- Cards ---- */
+cards:{group:'Cards',title:'Card controls',device:'phone',tab:true,
+  note:'Freeze, limits and channel controls are instant and reversible, so customers self-serve instead of calling.',
+  points:['Freeze toggles the card visual','Spending limit slider with live value','Online / international toggles'],
+  links:['dispute','home'],
+  render:()=>`<div class="body">
+    ${appbar('Cards',{right:`<button class="icon-btn" aria-label="Add card">${I('plus',18)}</button>`})}
+    <div class="bcard ${S.frozen?'frozen':''}" style="background:linear-gradient(135deg,#1E3A8A,#0B1B3A 55%,#0B5FFF 140%)">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>Northwind</b><span class="small" style="opacity:.8">Debit</span></div>
+      <div class="chip"></div>
+      <div><div class="pan num">•••• •••• •••• 7782</div><div style="display:flex;justify-content:space-between;font-size:12px;opacity:.85;margin-top:6px"><span>ALEX MORGAN</span><span>09/29</span></div></div>
+      ${S.frozen?`<div class="frost">${I('snow',18)}&nbsp;Card frozen</div>`:''}
+    </div>
+    <div class="quick" style="grid-template-columns:repeat(3,1fr)">
+      <button class="qa" data-act="freeze"><span class="i" style="${S.frozen?'background:var(--brand);color:#fff;border-color:var(--brand)':''}">${I('snow')}</span>${S.frozen?'Unfreeze':'Freeze'}</button>
+      <button class="qa" data-act="sheetPin"><span class="i">${I('lock')}</span>Show PIN</button>
+      <button class="qa" data-act="sheetReplace"><span class="i">${I('swap')}</span>Replace</button>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px"><b style="font-size:13.5px">Monthly spending limit</b><b class="num" id="limVal">${fmt(S.cardLimit,0)}</b></div>
+      <input type="range" id="limit" min="500" max="10000" step="250" value="${S.cardLimit}" style="width:100%;accent-color:var(--brand)" aria-label="Spending limit">
+      <div class="small muted" style="display:flex;justify-content:space-between"><span>$500</span><span>Spent $1,142 this month</span><span>$10k</span></div>
+    </div>
+    <div class="list" style="margin-top:12px">
+      <div class="li"><div class="t"><b>Online purchases</b><span>E-commerce & in-app</span></div><button class="toggle ${S.online?'on':''}" data-act="online" aria-label="Online purchases"></button></div>
+      <div class="li"><div class="t"><b>International use</b><span>Outside the United States</span></div><button class="toggle ${S.intl?'on':''}" data-act="intl" aria-label="International"></button></div>
+      <div class="li"><div class="t"><b>Contactless</b><span>Tap to pay</span></div><button class="toggle on" data-act="tog" aria-label="Contactless"></button></div>
+    </div>
+  </div>${tabbar('cards')}`},
+
+/* ---- Insights & settings ---- */
+insights:{group:'Insights',title:'Spending insights',device:'phone',tab:true,
+  note:'Spending broken down by category with a single, plain-language takeaway. Budgets show progress, not just totals.',
+  points:['Donut + ranked list (no legend hunting)','Month switcher','Budget bars turn amber at 80%'],
+  links:['home','accountDetail'],
+  render:()=>{const tot=spend.reduce((s,x)=>s+x.v,0);let acc=0;const R=62,C=2*Math.PI*R;return `<div class="body">
+    ${appbar('Insights')}
+    <div class="seg" style="margin-bottom:14px"><button>Aug</button><button>Sep</button><button class="on">Oct</button></div>
+    <div class="card" style="display:flex;align-items:center;gap:16px">
+      <svg width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Spending by category"><g transform="rotate(-90 75 75)">
+        ${spend.map(s=>{const len=s.v/tot*C;const el=`<circle cx="75" cy="75" r="${R}" fill="none" stroke="${s.c}" stroke-width="18" stroke-dasharray="${len-2} ${C-len+2}" stroke-dashoffset="${-acc}"/>`;acc+=len;return el}).join('')}
+      </g><text x="75" y="70" text-anchor="middle" font-size="11" fill="var(--text-3)">Spent</text><text x="75" y="90" text-anchor="middle" font-size="18" font-weight="700" fill="var(--text)">$${tot.toLocaleString()}</text></svg>
+      <div style="flex:1;display:grid;gap:6px">${spend.slice(0,4).map(s=>`<div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><i style="width:8px;height:8px;border-radius:2px;background:${s.c}"></i><span style="flex:1">${s.k}</span><b class="num">$${s.v}</b></div>`).join('')}</div>
+    </div>
+    <div class="banner" style="background:var(--ok-bg);color:var(--ok);margin-top:12px">${I('chart',18)}<div>You spent <b>12% less</b> on dining than September. Nice.</div></div>
+    <div class="sec"><h4>Budgets</h4><a>Edit</a></div>
+    <div class="card stack">${[['Groceries',612,700],['Dining',384,400],['Transport',226,350]].map(([k,v,b])=>{const p=v/b;return `<div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${k}</span><span class="num muted">$${v} / $${b}</span></div><div class="bar"><i style="width:${Math.min(100,p*100)}%;background:${p>=.8?'var(--warn)':'var(--ok)'}"></i></div></div>`}).join('')}</div>
+  </div>${tabbar('insights')}`}},
+
+notifications:{group:'Insights',title:'Notifications',device:'phone',
+  note:'Security alerts are visually distinct and actionable inline (“Yes, it was me” / “No, secure my account”).',
+  points:['Security first, then money, then info','Inline actions, no deep links needed','Unread state is obvious'],
+  links:['home','cards'],
+  render:()=>`<div class="body">
+    ${appbar('Notifications',{back:'home',right:'<a class="link small">Mark all read</a>'})}
+    <div class="card" style="border-color:var(--bad);background:var(--bad-bg)" id="secAlert">
+      <div style="display:flex;gap:10px"><span style="color:var(--bad)">${I('alert',20)}</span><div><b>New sign-in from Chrome on Windows</b><div class="small muted">Denver, CO · 2 min ago</div></div></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-secondary" style="height:38px;font-size:13px" data-act="itWasMe">Yes, it was me</button><button class="btn" style="height:38px;font-size:13px;background:var(--bad);color:#fff" data-act="secure">No, secure account</button></div>
+    </div>
+    <div class="list" style="margin-top:12px">
+      ${[['send','Payroll deposited','+$3,420.00 to Everyday Checking','6:00 AM',true],['bill','Con Edison due in 7 days','$142.30 · Tap to pay','Yesterday',true],['pig','Savings goal reached','Emergency fund hit $20,000','Oct 5',false],['card','Card used online','$58.99 at Amazon','Oct 1',false]].map(([ic,t,s,d,u])=>`<div class="li">${av(I(ic,18),'var(--brand-2)','var(--brand)')}<div class="t"><b style="${u?'font-weight:600':''}">${t}</b><span>${s}</span></div><div class="r" style="font-weight:400"><span>${d}</span>${u?'<i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand)"></i>':''}</div></div>`).join('')}
+    </div>
+  </div>`},
+
+profile:{group:'Insights',title:'Profile & security',device:'phone',tab:true,
+  note:'Security settings up front with a health score, so customers know what to improve. Sign-out is clear but not dominant.',
+  points:['Security checklist with progress','Notification preferences inline','Dark mode follows system or override'],
+  links:['notifications','welcome'],
+  render:()=>`<div class="body">
+    ${appbar('Profile')}
+    <div class="card" style="display:flex;align-items:center;gap:12px"><span class="av" style="width:52px;height:52px;border-radius:50%;background:var(--brand-2);color:var(--brand);font-size:16px">AM</span>
+      <div style="flex:1"><b>Alex Morgan</b><div class="small muted">Customer since 2019 · alex.m@example.com</div></div>${I('chev',18)}</div>
+    <div class="card" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><b style="font-size:13.5px">Security strength</b><span class="badge b-ok">Good · 3/4</span></div>
+      <div class="bar"><i style="width:75%;background:var(--ok)"></i></div>
+      <div class="stack" style="margin-top:12px;gap:8px;font-size:13px">
+        <div style="display:flex;gap:8px;color:var(--ok)">${I('check',16)}<span style="color:var(--text)">Face ID enabled</span></div>
+        <div style="display:flex;gap:8px;color:var(--ok)">${I('check',16)}<span style="color:var(--text)">2-step verification</span></div>
+        <div style="display:flex;gap:8px;color:var(--ok)">${I('check',16)}<span style="color:var(--text)">Trusted device</span></div>
+        <div style="display:flex;gap:8px;color:var(--warn)">${I('alert',16)}<span style="color:var(--text)">Add a recovery contact</span> <a class="link" style="margin-left:auto">Add</a></div>
+      </div></div>
+    <div class="sec"><h4>Alerts</h4></div>
+    <div class="list">
+      ${[['tx','Every transaction','Push notification'],['low','Low balance','Below $500'],['mkt','Offers & news','Occasional']].map(([k,t,s])=>`<div class="li"><div class="t"><b>${t}</b><span>${s}</span></div><button class="toggle ${S.notif[k]?'on':''}" data-notif="${k}" aria-label="${t}"></button></div>`).join('')}
+    </div>
+    <div class="list" style="margin-top:12px">
+      <button class="li" data-act="theme">${av(I('settings',18),'var(--surface-2)','var(--text-2)')}<div class="t"><b>Appearance</b><span>Light / dark</span></div>${I('chev',18)}</button>
+      <button class="li" data-go="welcome">${av(I('logout',18),'var(--bad-bg)','var(--bad)')}<div class="t"><b style="color:var(--bad)">Sign out</b></div></button>
+    </div>
+  </div>${tabbar('profile')}`},
+
+/* ---- Back-office ---- */
+console:{group:'Back-office',title:'Fraud ops console',device:'desktop',
+  note:'Analyst view: KPIs, a risk-sorted alert queue and a side panel to decide. Approve/decline updates the queue live.',
+  points:['Risk score bar + numeric','Keyboard: ↑/↓ to move, A approve, D decline','Every decision is audit-logged'],
+  links:['home','notifications'],
+  render:()=>{const a=S.alerts[S.alertSel]||S.alerts[0];const open=S.alerts.filter(x=>x.status==='Open').length;return `<div class="desk">
+    <div class="desk-side"><div style="display:flex;gap:8px;align-items:center;color:#fff;font-weight:700;margin:2px 4px 18px"><span class="logo-mark" style="width:26px;height:26px">${I('shield',15,2)}</span>Northwind Ops</div>
+      ${[['grid','Overview'],['alert','Fraud alerts',1],['user','Customers'],['swap','Payments'],['doc','Audit log'],['settings','Settings']].map(([ic,l,on])=>`<div class="it ${on?'on':''}">${I(ic,16)}${l}</div>`).join('')}</div>
+    <div class="desk-main">
+      <div style="display:flex;align-items:center;gap:10px"><h2 style="font-size:20px;flex:1">Fraud alerts</h2><button class="btn-ghost">Export</button><button class="btn-ghost" style="background:var(--brand);color:#fff;border-color:var(--brand)">Assign to me</button></div>
+      <div class="kpis">
+        <div class="kpi"><small>Open alerts</small><b class="num">${open}</b></div>
+        <div class="kpi"><small>Avg. time to decision</small><b class="num">6m 12s</b></div>
+        <div class="kpi"><small>Blocked today</small><b class="num">$48,210</b></div>
+        <div class="kpi"><small>False-positive rate</small><b class="num">3.4%</b></div>
+      </div>
+      <div class="desk-grid">
+        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Alert</th><th>Customer</th><th>Type</th><th style="text-align:right">Amount</th><th>Risk</th><th>Status</th></tr></thead><tbody>
+          ${S.alerts.map((x,i)=>`<tr class="${i===S.alertSel?'sel':''}" data-alert="${i}"><td class="num nw">${x.id}<div class="small muted">${x.age} ago</div></td><td class="nw">${x.cust}<div class="small muted">${x.acct}</div></td><td>${x.type}</td><td class="num nw" style="text-align:right">${fmt(x.amt)}</td><td class="nw"><span class="risk"><i style="width:${x.score}%;background:${x.score>=75?'var(--bad)':x.score>=55?'var(--warn)':'var(--ok)'}"></i></span><span class="num">${x.score}</span></td><td><span class="badge ${x.status==='Open'?'b-info':x.status==='Escalated'?'b-warn':x.status==='Approved'?'b-ok':'b-bad'}">${x.status}</span></td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between"><b>${a.id}</b><span class="badge ${a.score>=75?'b-bad':a.score>=55?'b-warn':'b-ok'}">Risk ${a.score}</span></div>
+          <div class="num" style="font-size:26px;font-weight:700;margin:8px 0 2px">${fmt(a.amt)}</div><div class="small muted">${a.type}</div>
+          <div class="stack" style="gap:8px;margin:14px 0;font-size:13px">
+            ${[['Customer',a.cust],['Account',a.acct],['Location',a.geo],['Usual location','Chicago, US'],['Device','New · Android 14']].map(([k,v])=>`<div style="display:flex;justify-content:space-between"><span class="muted">${k}</span><span>${v}</span></div>`).join('')}
+          </div>
+          <div class="banner" style="background:var(--surface-2);margin-bottom:12px;font-size:12px">Customer was sent a “Was this you?” push 2m ago — no response yet.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-secondary" style="height:40px;font-size:13px" data-act="approve">Approve (A)</button><button class="btn" style="height:40px;font-size:13px;background:var(--bad);color:#fff" data-act="decline">Decline (D)</button></div>
+          <button class="btn-ghost" style="width:100%;justify-content:center;margin-top:8px" data-act="escalate">Escalate to L2</button>
+        </div>
+      </div>
+    </div></div>`}},
+};
+
+function txRow(t){return `<button class="li" data-txn="${t.id}" data-cat="${t.cat}" data-name="${t.m.toLowerCase()}">${av(t.ic,t.c,t.f)}<div class="t"><b>${t.m}</b><span>${t.cat} · ${t.d}</span></div><div class="r num ${t.a>0?'pos':''}">${S.hide?'••••':(t.a>0?'+':'−')+fmt(t.a)}${t.status==='Pending'?'<span>Pending</span>':''}</div></button>`}
+
+/* ================= Router ================= */
+const order = Object.keys(screens);
+let current = 'overview', history = [];
+const $ = s=>document.querySelector(s);
+function go(id,push=true){ if(id===current)return; if(push) history.push(current); current=id; S.sheet=null; render(); location.hash=id; }
+
+function render(){
+  // sidebar
+  const groups = {};
+  order.forEach((k,i)=>{(groups[screens[k].group] ||= []).push([k,i+1])});
+  $('#side').innerHTML = `<div class="logo"><span class="logo-mark">${I('shield',16,2.2)}</span>Northwind Bank<span class="badge b-info" style="margin-left:auto">Prototype</span></div>
+    <button class="nav-item ${current==='overview'?'active':''}" data-go="overview">${I('grid',16)} All screens</button>
+    ${Object.entries(groups).map(([g,items])=>`<h6>${g}</h6>${items.map(([k,n])=>`<button class="nav-item ${current===k?'active':''}" data-go="${k}"><span class="n">${String(n).padStart(2,'0')}</span>${screens[k].title}</button>`).join('')}`).join('')}`;
+  $('#backBtn').style.visibility = history.length? 'visible':'hidden';
+
+  if(current==='overview'){
+    $('#crumb').innerHTML = '<b>All screens</b> · '+order.length+' screens';
+    $('#canvas').innerHTML = `<div class="overview"><h1>Northwind Bank — UX prototype</h1><p>Click any screen to open it. Everything inside the screens is clickable: sign in, send money, freeze a card, triage fraud alerts.</p>
+      ${Object.entries(groups).map(([g,items])=>`<div class="ov-group"><h6>${g}</h6><div class="ov-grid">${items.map(([k,n])=>`<button class="ov-card" data-go="${k}"><span class="k">${String(n).padStart(2,'0')} · ${screens[k].device==='desktop'?'Desktop':'Mobile'}</span><b>${screens[k].title}</b><span>${screens[k].note.split('. ')[0].replace(/\.$/,'')}.</span></button>`).join('')}</div></div>`).join('')}</div>`;
+    $('#notes').innerHTML = `<span class="tag">Guide</span><h3>How to use</h3><p>Use the sidebar or the cards to jump to a screen. Back returns through your path. Theme toggles light/dark.</p>
+      <ul><li>Suggested flow: Welcome → Sign in → Verify (123456) → Home → Send</li><li>Card controls and fraud console keep their state as you navigate</li><li>Works at phone width; the frame becomes full-bleed</li></ul>`;
+    return;
+  }
+  const sc = screens[current];
+  const idx = order.indexOf(current)+1;
+  $('#crumb').innerHTML = `${sc.group} › <b>${sc.title}</b> <span class="muted">· ${idx}/${order.length}</span>`;
+  $('#canvas').innerHTML = sc.device==='desktop' ? sc.render() :
+    `<div class="phone"><div class="screen"><div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▲ ▮</span></div>${sc.render()}${sheetHTML()}<div class="toast" id="toast">${I('check',16)}<span></span></div></div></div>`;
+  $('#notes').innerHTML = `<span class="tag">${sc.group} · ${sc.device==='desktop'?'Desktop':'Mobile'}</span><h3>${sc.title}</h3><p>${sc.note}</p><ul>${sc.points.map(p=>`<li>${p}</li>`).join('')}</ul>
+    <div class="flow"><h6>Connected screens</h6>${sc.links.map(l=>`<button class="chip-link" data-go="${l}">${screens[l].title} →</button>`).join('')}</div>`;
+  mount();
+}
+
+function sheetHTML(){
+  if(!S.sheet) return '';
+  const body = {
+    pin:`<h3 style="margin-bottom:6px">Your card PIN</h3><p class="muted small" style="margin-bottom:16px">Make sure no one is looking at your screen.</p><div class="num center" style="font-size:40px;font-weight:700;letter-spacing:.3em;margin-bottom:18px">4 8 1 9</div><button class="btn btn-primary" data-act="closeSheet">Hide PIN</button>`,
+    replace:`<h3 style="margin-bottom:6px">Replace card ••7782</h3><p class="muted small" style="margin-bottom:14px">Why do you need a new card?</p><div class="stack" style="gap:8px">${['Lost','Stolen','Damaged'].map(r=>`<button class="btn btn-secondary" data-act="replaced">${r}</button>`).join('')}</div>`,
+    move:`<h3 style="margin-bottom:14px">Move between accounts</h3><div class="field"><label>From</label><select class="input"><option>Everyday Checking · $8,240.55</option></select></div><div class="field"><label>To</label><select class="input"><option>High-Yield Savings · $24,310.00</option></select></div><div class="field"><label>Amount</label><input class="input" value="$500.00"></div><button class="btn btn-primary" data-act="moved">Move $500.00</button>`,
+  }[S.sheet];
+  return `<div class="sheet-bg" data-act="closeSheet"><div class="sheet" onclick="event.stopPropagation()"><div class="grab"></div>${body}</div></div>`;
+}
+
+function toast(msg){const t=$('#toast');if(!t)return;t.querySelector('span').textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ================= Interactions ================= */
+const acts = {
+  login:()=>go('otp'), togglePw:()=>{const p=$('#pw');p.type=p.type==='password'?'text':'password'},
+  verify:()=>{const v=[...document.querySelectorAll('#otp input')].map(i=>i.value).join('');if(v==='123456'){S.otpBad=false;go('home')}else{S.otpBad=true;render()}},
+  hide:()=>{S.hide=!S.hide;render()},
+  copy:()=>toast('Copied to clipboard'),
+  freeze:()=>{S.frozen=!S.frozen;render();toast(S.frozen?'Card frozen — no new charges will go through':'Card unfrozen')},
+  online:()=>{S.online=!S.online;render()}, intl:()=>{S.intl=!S.intl;render();if(S.intl)toast('International use on for 30 days')},
+  tog:e=>e.currentTarget.classList.toggle('on'),
+  submitDispute:()=>{go('txnDetail');setTimeout(()=>toast('Report submitted · case #DS-4471'),50)},
+  doneSend:()=>{S.amount='';S.payee=null;history=[];go('home',false)},
+  payAll:()=>toast('3 bills scheduled for today'),
+  sheetPin:()=>{S.sheet='pin';render()}, sheetReplace:()=>{S.sheet='replace';render()}, sheetMove:()=>{S.sheet='move';render()},
+  closeSheet:()=>{S.sheet=null;render()},
+  replaced:()=>{S.sheet=null;render();toast('New card on its way · 3–5 days')},
+  moved:()=>{S.sheet=null;render();toast('$500.00 moved to Savings')},
+  itWasMe:()=>{$('#secAlert').outerHTML=`<div class="banner" style="background:var(--ok-bg);color:var(--ok)">${I('check',16)} Thanks — we’ve marked this device as trusted.</div>`},
+  secure:()=>{$('#secAlert').outerHTML=`<div class="banner" style="background:var(--bad-bg);color:var(--bad)">${I('lock',16)} Other sessions signed out. Please reset your password.</div>`},
+  theme:()=>toggleTheme(),
+  approve:()=>decide('Approved'), decline:()=>decide('Declined'), escalate:()=>decide('Escalated'),
+};
+function decide(st){S.alerts[S.alertSel].status=st;const nxt=S.alerts.findIndex((a,i)=>i>S.alertSel&&a.status==='Open');if(nxt>-1)S.alertSel=nxt;render()}
+
+function mount(){
+  // OTP boxes
+  const boxes=[...document.querySelectorAll('#otp input')];
+  boxes.forEach((b,i)=>{
+    b.addEventListener('input',()=>{b.value=b.value.replace(/\D/g,'').slice(-1);if(b.value&&boxes[i+1])boxes[i+1].focus();if(boxes.every(x=>x.value))acts.verify()});
+    b.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!b.value&&boxes[i-1])boxes[i-1].focus()});
+    b.addEventListener('paste',e=>{const d=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);if(d.length){e.preventDefault();d.split('').forEach((c,j)=>boxes[j]&&(boxes[j].value=c));if(d.length===6)acts.verify()}});
+  });
+  if(boxes[0]) boxes[0].focus();
+  const rs=$('#resend'); if(rs){let s=30;const t=setInterval(()=>{if(!document.body.contains(rs))return clearInterval(t);s--;rs.innerHTML=s>0?`Resend in 0:${String(s).padStart(2,'0')}`:'<a class="link">Resend code</a>';if(s<=0)clearInterval(t)},1000)}
+  // Search & chips
+  const filt=(q,cat)=>document.querySelectorAll('#txList .li').forEach(r=>{r.style.display=(!q||r.dataset.name.includes(q))&&(!cat||cat==='All'||r.dataset.cat===cat)?'':'none'});
+  let cat='All';
+  const ts=$('#txSearch'); if(ts) ts.addEventListener('input',()=>filt(ts.value.toLowerCase(),cat));
+  document.querySelectorAll('[data-chip]').forEach(c=>c.addEventListener('click',()=>{cat=c.dataset.chip;document.querySelectorAll('[data-chip]').forEach(x=>{x.classList.toggle('b-info',x===c);x.style.background=x===c?'':'var(--surface)'});filt((ts?.value||'').toLowerCase(),cat)}));
+  const ps=$('#paySearch'); if(ps) ps.addEventListener('input',()=>{const q=ps.value.toLowerCase();document.querySelectorAll('#payList .li').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')});
+  // Limit slider
+  const lim=$('#limit'); if(lim) lim.addEventListener('input',()=>{S.cardLimit=+lim.value;$('#limVal').textContent=fmt(S.cardLimit,0)});
+  lim&&lim.addEventListener('change',()=>toast('Limit updated to '+fmt(S.cardLimit,0)));
+  // Slide to confirm
+  const sl=$('#slider'),kn=$('#knob'),fl=$('#sfill');
+  if(sl){let drag=false,x0=0;const max=()=>sl.clientWidth-58;
+    const set=x=>{kn.style.left=(5+x)+'px';fl.style.width=(x+53)+'px'};
+    kn.addEventListener('pointerdown',e=>{drag=true;x0=e.clientX;kn.setPointerCapture(e.pointerId)});
+    kn.addEventListener('pointermove',e=>{if(!drag)return;set(Math.max(0,Math.min(max(),e.clientX-x0)))});
+    kn.addEventListener('pointerup',e=>{drag=false;const x=e.clientX-x0;if(x>=max()*.9){set(max());setTimeout(()=>go('success'),150)}else{kn.style.transition='left .2s';fl.style.transition='width .2s';set(0);setTimeout(()=>{kn.style.transition='';fl.style.transition=''},200)}});
+    sl.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();set(max());setTimeout(()=>go('success'),150)}});
+  }
+}
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-act],[data-payee],[data-txn],[data-key],[data-speed],[data-notif],[data-alert]');
+  if(!t)return;
+  const d=t.dataset;
+  if(d.go){go(d.go);$('.mnav')?.remove();return}
+  if(d.act){acts[d.act]?.({currentTarget:t});return}
+  if(d.payee){S.payee=payees.find(p=>p.id==d.payee);S.amount='';go('amount');return}
+  if(d.txn){S.txnId=+d.txn;go('txnDetail');return}
+  if(d.speed){S.speed=d.speed;render();return}
+  if(d.notif){S.notif[d.notif]=!S.notif[d.notif];t.classList.toggle('on');return}
+  if(d.alert){S.alertSel=+d.alert;render();return}
+  if(d.key){let a=S.amount;const k=d.key;
+    if(k==='⌫')a=a.slice(0,-1);else if(k==='.'){if(!a.includes('.'))a=(a||'0')+'.'}else{if(a.includes('.')&&a.split('.')[1].length>=2)return;if(a.replace('.','').length>=7)return;a=(a==='0'?'':a)+k}
+    S.amount=a;render();}
+});
+document.addEventListener('keydown',e=>{
+  if(current!=='console'||e.target.matches('input,select'))return;
+  if(e.key==='ArrowDown'){S.alertSel=Math.min(S.alerts.length-1,S.alertSel+1);render()}
+  if(e.key==='ArrowUp'){S.alertSel=Math.max(0,S.alertSel-1);render()}
+  if(e.key==='a')decide('Approved'); if(e.key==='d')decide('Declined');
+});
+
+$('#backBtn').onclick=()=>{if(history.length){current=history.pop();S.sheet=null;render();location.hash=current}};
+$('#allBtn').onclick=()=>go('overview');
+$('#menuBtn').onclick=()=>{const m=document.createElement('div');m.className='mnav';m.innerHTML=`<button class="btn-ghost" style="margin-bottom:10px" onclick="this.parentNode.remove()">Close</button>`+$('#side').innerHTML;document.body.appendChild(m)};
+function toggleTheme(){const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('nw-theme',r.dataset.theme)}catch(e){}}
+$('#themeBtn').onclick=toggleTheme;
+try{const t=localStorage.getItem('nw-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&h!==current&&(screens[h]||h==='overview')){history.push(current);current=h;render()}});
+const h0=location.hash.slice(1); if(screens[h0]) current=h0;
+render();
+</script>
+</body>
+</html>

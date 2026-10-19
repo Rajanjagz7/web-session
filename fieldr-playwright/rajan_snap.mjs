@@ -1,0 +1,15 @@
+import { chromium } from "@playwright/test";
+const BASE = "https://rajanjagz7.dev.fieldr.app";
+const STATE = "C:/Users/Baps/AppData/Local/Temp/claude/c--Users-Baps-Downloads-rajan-backup/4080ed99-fcc1-4297-8820-b9fd19f50d55/scratchpad/fieldr_rajan_state.json";
+const path = "/" + (process.argv[2] || "app/quote/list").replace(/^[/]+/, "");
+const lines = Number(process.argv[3] || 60);
+const browser = await chromium.launch({ headless: true });
+const ctx = await browser.newContext({ storageState: STATE, viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+await page.goto(BASE + path, { waitUntil: "domcontentloaded" });
+await page.locator("a[href^='/app/']").first().waitFor({ timeout: 25000 }).catch(() => {});
+await page.waitForTimeout(4000);
+console.log("url:", page.url().replace(BASE, ""));
+const snap = await page.locator("main, [role='main'], body").first().ariaSnapshot();
+console.log(snap.split("\n").slice(0, lines).join("\n"));
+await browser.close();

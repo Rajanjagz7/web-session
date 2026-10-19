@@ -1,0 +1,104 @@
+﻿[  1] OK  address.postcode                    valid NSW min 2000                     -> 201  M8N000139
+[  2] OK  address.postcode                    1999 (below NSW range)                 -> 201  M8N000140
+[  3] OK  address.postcode                    valid NSW max 2999                     -> 201  M8N000141
+[  4] OK  address.postcode                    3000 (VIC, above NSW range)            -> 201  M8N000142
+[  5] OK  address.postcode                    0000                                   -> 201  M8N000143
+[  6] OK  address.postcode                    length 3 (200)                         -> 201  M8N000144
+[  7] OK  address.postcode                    length 5 (20000)                       -> 201  M8N000145
+[  8] OK  address.postcode                    empty string                           -> 201  M8N000146
+[  9] OK  address.postcode                    whitespace                             -> 201  M8N000147
+[ 10] ERR address.postcode                    null                                   -> 400  
+[ 11] OK  address.postcode                    omitted                                -> 201  M8N000148
+[ 12] OK  address.postcode                    leading zero valid-looking             -> 201  M8N000149
+[ 13] OK  address.postcode                    non-numeric                            -> 201  M8N000150
+[ 14] OK  address.postcode                    float-looking                          -> 201  M8N000151
+[ 15] OK  address.postcode                    negative                               -> 201  M8N000152
+[ 16] ERR address.postcode                    as integer type                        -> 400  
+[ 17] OK  address.postcode                    emoji                                  -> 201  M8N000153
+[ 18] ERR address.postcode                    sql-ish                                -> 400  
+[ 19] OK  customer.abnAcn                     valid ABN (checksum-correct)           -> 201  M8N000154
+[ 20] OK  customer.abnAcn                     valid ACN, 9 digits                    -> 201  M8N000155
+[ 21] OK  customer.abnAcn                     10 digits (min-1 for ABN)              -> 201  M8N000156
+[ 22] OK  customer.abnAcn                     12 digits (max+1)                      -> 201  M8N000157
+[ 23] OK  customer.abnAcn                     all zeros                              -> 201  M8N000158
+[ 24] OK  customer.abnAcn                     checksum-invalid 11 digits             -> 201  M8N000159
+[ 25] OK  customer.abnAcn                     with spaces                            -> 201  M8N000160
+[ 26] OK  customer.abnAcn                     with dashes                            -> 201  M8N000161
+[ 27] OK  customer.abnAcn                     empty string                           -> 201  M8N000162
+[ 28] ERR customer.abnAcn                     null                                   -> 400  
+[ 29] OK  customer.abnAcn                     omitted                                -> 201  M8N000163
+[ 30] OK  customer.abnAcn                     letters                                -> 201  M8N000164
+[ 31] OK  customer.abnAcn                     unicode digits                         -> 201  M8N000165
+[ 32] OK  customer.phoneNumber                valid 9-digit mobile                   -> 201  M8N000166
+[ 33] OK  customer.phoneNumber                8 digits (min-1)                       -> 201  M8N000167
+[ 34] OK  customer.phoneNumber                10 digits (max+1)                      -> 201  M8N000168
+[ 35] OK  customer.phoneNumber                leading zero + 9 digits                -> 201  M8N000169
+[ 36] OK  customer.phoneNumber                with +61 prefix inline                 -> 201  M8N000170
+[ 37] OK  customer.phoneNumber                all zeros                              -> 201  M8N000171
+[ 38] OK  customer.phoneNumber                landline-looking 02                    -> 201  M8N000172
+[ 39] ERR customer.phoneNumber                empty string                           -> 400  
+[ 40] ERR customer.phoneNumber                whitespace                             -> 400  
+[ 41] ERR customer.phoneNumber                null                                   -> 400  
+[ 42] ERR customer.phoneNumber                omitted                                -> 400  
+[ 43] OK  customer.phoneNumber                letters                                -> 201  M8N000173
+[ 44] OK  customer.phoneNumber                with spaces                            -> 201  M8N000174
+[ 45] OK  customer.phoneNumber                scientific notation                    -> 201  M8N000175
+[ 46] ERR customer.phoneNumber                as integer type                        -> 400  
+[ 47] OK  customer.email                      valid                                  -> 201  M8N000176
+[ 48] ERR customer.email                      no TLD                                 -> 400  
+[ 49] ERR customer.email                      no @                                   -> 400  
+[ 50] ERR customer.email                      double dot local                       -> 400  
+[ 51] ERR customer.email                      leading dot local                      -> 400  
+[ 52] ERR customer.email                      empty string                           -> 400  
+[ 53] ERR customer.email                      whitespace only                        -> 400  
+[ 54] ERR customer.email                      null                                   -> 400  
+[ 55] ERR customer.email                      omitted                                -> 400  
+[ 56] OK  customer.email                      very long local part (80 chars)        -> 201  M8N000177
+[ 57] ERR customer.email                      unicode domain                         -> 400  
+[ 58] OK  customer.email                      plus-addressing                        -> 201  M8N000178
+[ 59] ERR customer.email                      trailing space                         -> 400  
+[ 60] OK  customer.email                      uppercase                              -> 201  M8N000179
+[ 61] OK  installationDate                    valid future date                      -> 201  M8N000180
+[ 62] OK  installationDate                    leap day valid                         -> 201  M8N000181
+[ 63] OK  installationDate                    leap day invalid (non-leap year)       -> 201  M8N000182
+[ 64] OK  installationDate                    April 31 (no such day)                 -> 201  M8N000183
+[ 65] ERR installationDate                    month 13                               -> 400  
+[ 66] ERR installationDate                    month 00                               -> 400  
+[ 67] ERR installationDate                    day 00                                 -> 400  
+[ 68] OK  installationDate                    far past                               -> 201  M8N000184
+[ 69] OK  installationDate                    epoch                                  -> 201  M8N000185
+[ 70] OK  installationDate                    far future                             -> 201  M8N000186
+[ 71] ERR installationDate                    empty string                           -> 400  
+[ 72] OK  installationDate                    null                                   -> 201  M8N000187
+[ 73] OK  installationDate                    omitted                                -> 201  M8N000188
+[ 74] ERR installationDate                    wrong format DD-MM-YYYY                -> 400  
+[ 75] OK  installationDate                    datetime with time                     -> 201  M8N000189
+[ 76] ERR installationDate                    non-date string                        -> 400  
+[ 77] OK  installationDate                    as integer (epoch ms)                  -> 201  M8N000190
+[ 78] OK  customer.name                       valid                                  -> 201  M8N000191
+[ 79] ERR customer.name                       empty string                           -> 400  
+[ 80] ERR customer.name                       whitespace only                        -> 500  
+[ 81] ERR customer.name                       null                                   -> 400  
+[ 82] ERR customer.name                       omitted                                -> 400  
+[ 83] OK  customer.name                       1 char                                 -> 201  M8N000192
+[ 84] ERR customer.name                       very long (500 chars)                  -> 400  
+[ 85] OK  customer.name                       emoji                                  -> 201  M8N000193
+[ 86] OK  customer.name                       null byte                              -> 201  M8N000194
+[ 87] OK  customer.name                       html/script                            -> 201  M8N000195
+[ 88] OK  customer.name                       digits only                            -> 201  M8N000196
+[ 89] OK  customer.name                       leading/trailing spaces                -> 201  M8N000197
+python : Traceback (most recent call last):
+At line:1 char:302
++ ... tch {} } }; python -u "C:\Users\Baps\AppData\Local\Temp\claude\c--Use ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\Baps\AppData\Local\Temp\claude\c--Users-Baps-Downloads-rajan-backup\c4dcdd35-8480-4538-a639-90af9c3107
+77\scratchpad\jobs_boundary_matrix.py", line 126, in <module>
+    body = set_path(body, field, value)
+  File "C:\Users\Baps\AppData\Local\Temp\claude\c--Users-Baps-Downloads-rajan-backup\c4dcdd35-8480-4538-a639-90af9c3107
+77\scratchpad\jobs_boundary_matrix.py", line 36, in set_path
+    obj = obj[p]
+          ~~~^^^
+TypeError: list indices must be integers or slices, not str

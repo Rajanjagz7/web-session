@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1300}, storageState:'playwright/.auth/tz-user.json', timezoneId:'Australia/Sydney' });
+const p = await c.newPage();
+const flat = t => t.split('\n').filter(Boolean).join(' | ');
+const seen=new Set();
+p.on('response', async r => { const u=r.url(); if(/\/api\/v1\//.test(u)&&r.request().method()==='GET'&&/appointment|invoice/.test(u)){const k=u.split('?')[0]; if(!seen.has(k)){seen.add(k);console.log('  api',r.status(),u.replace(/https:\/\/[^/]+/,'').slice(0,170));}} });
+await p.goto('https://sunrise-family-medical.dev.clinic1.ai/dashboard'); await p.waitForTimeout(4000);
+await p.getByText('Appointments',{exact:true}).first().click(); await p.waitForTimeout(1500);
+console.log('SUBMENU:', await p.locator('nav a, aside a').evaluateAll(l=>l.map(a=>a.innerText.trim()+' -> '+a.getAttribute('href')).filter(s=>/appoint|history|status|record/i.test(s))));
+await b.close();

@@ -1,0 +1,21 @@
+{
+  "name": "fieldr-pw-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright (TypeScript, Page Object Model) suite generated from the FieldR release notes of 6 October 2026",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "list": "playwright test --list",
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.2",
+    "@types/pdf-parse": "^1.1.4",
+    "dotenv": "^16.4.7",
+    "pdf-parse": "^1.1.1",
+    "typescript": "^5.7.2"
+  }
+}

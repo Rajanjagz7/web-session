@@ -1,0 +1,21 @@
+{
+  "name": "clinic1-tests",
+  "version": "1.0.0",
+  "description": "Automated testing suite for clinic1",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:e2e": "playwright test tests/e2e",
+    "test:api": "playwright test tests/api",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "dotenv": "^16.4.7"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
+  }
+}

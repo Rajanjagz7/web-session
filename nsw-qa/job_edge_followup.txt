@@ -1,0 +1,20 @@
+== Stored values for jobs created by the edge cases ==
+M8N000109 -> ["    M8N000109   Engagement Sent  Siobhán O'Brien-Nguyễn BAWA Residential - +61 424619508  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heating & Cooling 15/12/2"] []
+M8N000110 -> ['    M8N000110   Engagement Sent  Isabella Hart BAWA Residential - +61 424619509  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heating & Cooling 24/09/2026 - - -'] []
+M8N000105 -> ['    M8N000105   Engagement Sent  Oliver Bennett BAWA Residential - +61 424619501  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heating & Cooling 15/12/2026 - - '] []
+M8N000106 -> ['    M8N000106   Engagement Sent  Chloe Watson BAWA Residential - +61 424619505  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heating & Cooling 15/12/2026 - - -'] []
+M8N000107 -> ['    M8N000107   Engagement Sent  Henry Clarke BAWA Residential - +61 298765432  Big W Service Desk Cnr Park & Level, 1 George St, Sydney NSW 2000, Australia  Sydney Heating & Cooling 15/12/2026 - - -'] []
+
+== Search: special characters / pattern handling ==
+'a'        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'%'        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+"'"        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'.'        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'.*'       rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'('        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'['        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'*'        rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'\\'       rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se
+'zzzqqq'   rows=1 errors=[] first=No Data Found  Try adjusting your filters or search criteria.
+"O'Brien"  rows=2 errors=[] first=    M8N000109   Engagement Sent  Siobhán O'Brien-Nguyễn BAWA Residential - +61 424619508  
+'Siobh'    rows=10 errors=[] first=    M8N000112   Engagement Sent  Lachlan Pearce BAWA Residential - +61 424619512  Big W Se

@@ -1,0 +1,281 @@
+[
+  {
+    "name": "Dashboard",
+    "path": "/dashboard",
+    "heading": "Dashboard",
+    "tableHeader": "Products",
+    "denied": false,
+    "search": null,
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/installer/filter/list",
+      "/api/v1/dashboard/job-tracking",
+      "/api/v1/dashboard/job-count",
+      "/api/v1/dashboard/job-breakdown",
+      "/api/v1/dashboard/top-product",
+      "/api/v1/dashboard/job-rebate",
+      "/api/v1/dashboard/avg-complete-time"
+    ]
+  },
+  {
+    "name": "Projects",
+    "path": "/projects",
+    "heading": "All Projects",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Projects...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/installer/filter/list",
+      "/api/v1/site/list"
+    ]
+  },
+  {
+    "name": "All",
+    "path": "/jobs",
+    "heading": "All Jobs",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Jobs...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/installers",
+      "/api/v1/users",
+      "/api/v1/jobs"
+    ]
+  },
+  {
+    "name": "In Progress",
+    "path": "/in-progress-jobs",
+    "heading": "In Progress Jobs",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Jobs...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/users",
+      "/api/v1/installers",
+      "/api/v1/jobs"
+    ]
+  },
+  {
+    "name": "Action Required",
+    "path": "/action-Required-jobs",
+    "heading": "Action Required Jobs",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Jobs...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/users",
+      "/api/v1/installers",
+      "/api/v1/jobs"
+    ]
+  },
+  {
+    "name": "Being Assessed",
+    "path": "/being-assessed-jobs",
+    "heading": "Being Assessed Jobs",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Jobs...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/users",
+      "/api/v1/installers",
+      "/api/v1/jobs"
+    ]
+  },
+  {
+    "name": "Completed",
+    "path": "/completed-jobs",
+    "heading": "Completed Jobs",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Jobs...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/users",
+      "/api/v1/installers",
+      "/api/v1/jobs"
+    ]
+  },
+  {
+    "name": "Archived",
+    "path": "/archived-jobs",
+    "heading": "Archived Jobs",
+    "tableHeader": "action",
+    "denied": false,
+    "search": "Search Jobs...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/users",
+      "/api/v1/installers",
+      "/api/v1/jobs"
+    ]
+  },
+  {
+    "name": "Exception Logs",
+    "path": "/logs",
+    "heading": "Access Denied!",
+    "tableHeader": null,
+    "denied": true,
+    "search": null,
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": []
+  },
+  {
+    "name": "Installers",
+    "path": "/installer",
+    "heading": "Installers",
+    "tableHeader": "Action",
+    "denied": false,
+    "search": "Search Installer...",
+    "searchHealthy": true,
+    "searchEndpoint": "/api/v1/installers",
+    "observedEndpoints": [
+      "/api/v1/installers"
+    ]
+  },
+  {
+    "name": "Installer Users",
+    "path": "/installeruser",
+    "heading": "Installer Users",
+    "tableHeader": "Contact Name",
+    "denied": false,
+    "search": "Search Installer...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/users",
+      "/api/v1/installers"
+    ]
+  },
+  {
+    "name": "Matrix",
+    "path": "/matrix",
+    "heading": "Matrix",
+    "tableHeader": "Rule No",
+    "denied": false,
+    "search": "Search Matrix...",
+    "searchHealthy": true,
+    "searchEndpoint": "/api/v1/matrix",
+    "observedEndpoints": [
+      "/api/v1/matrix"
+    ]
+  },
+  {
+    "name": "Admin Users",
+    "path": "/admin-users",
+    "heading": "Users",
+    "tableHeader": "User",
+    "denied": false,
+    "search": "Search User...",
+    "searchHealthy": true,
+    "searchEndpoint": "/api/v1/users",
+    "observedEndpoints": [
+      "/api/v1/users"
+    ]
+  },
+  {
+    "name": "CMS",
+    "path": "/privacypolicy",
+    "heading": "CMS",
+    "tableHeader": "Title",
+    "denied": false,
+    "search": null,
+    "searchHealthy": false,
+    "searchEndpoint": "/api/v1/cms",
+    "observedEndpoints": [
+      "/api/v1/cms"
+    ]
+  },
+  {
+    "name": "Activity",
+    "path": "/activity",
+    "heading": "Activity Log",
+    "tableHeader": "Date",
+    "denied": false,
+    "search": "Search Activity",
+    "searchHealthy": true,
+    "searchEndpoint": "/api/v1/activity-logs",
+    "observedEndpoints": [
+      "/api/v1/activity-logs"
+    ]
+  },
+  {
+    "name": "Products",
+    "path": "/products",
+    "heading": "Products",
+    "tableHeader": "status",
+    "denied": false,
+    "search": "Search Product...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/products",
+      "/api/v1/products/brands"
+    ]
+  },
+  {
+    "name": "Rebates",
+    "path": "/rebates",
+    "heading": "Rebates",
+    "tableHeader": "Company Name",
+    "denied": false,
+    "search": "Search Rebate...",
+    "searchHealthy": false,
+    "searchEndpoint": "/api/v1/rebate/installer/list",
+    "observedEndpoints": [
+      "/api/v1/rebate/installer/list"
+    ]
+  },
+  {
+    "name": "Calculator",
+    "path": "/rebates/calculator",
+    "heading": "Calculator",
+    "tableHeader": null,
+    "denied": false,
+    "search": null,
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": []
+  },
+  {
+    "name": "Statistics",
+    "path": "/rebates/statistics",
+    "heading": "Statistics",
+    "tableHeader": "Company Name",
+    "denied": false,
+    "search": "Search Company Name",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/installer/filter/list",
+      "/api/v1/calculator-usage/installer/list"
+    ]
+  },
+  {
+    "name": "Invoices",
+    "path": "/invoices",
+    "heading": null,
+    "tableHeader": "Invoice Number",
+    "denied": false,
+    "search": "Search...",
+    "searchHealthy": false,
+    "searchEndpoint": null,
+    "observedEndpoints": [
+      "/api/v1/invoice/list",
+      "/api/v1/installers"
+    ]
+  }
+]

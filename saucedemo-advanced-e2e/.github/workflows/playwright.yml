@@ -1,0 +1,167 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly full regression at 02:00 UTC, catches drift on the live sites
+    # between pushes even when nobody is actively working on this repo.
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
+  API_BASE_URL: ${{ secrets.API_BASE_URL }}
+
+jobs:
+  # Fast gate: @P0/@Smoke only, single browser + API, no sharding.
+  # Runs on every push/PR so feedback lands in minutes, not the full
+  # cross-browser matrix time.
+  fast-check:
+    runs-on: ubuntu-latest
+    outputs:
+      conclusion: ${{ steps.run-tests.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright OS deps only (browsers cached)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run @P0/@Smoke tests
+        id: run-tests
+        run: npx playwright test --project=ui-chromium --project=api --grep "@P0|@Smoke"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fast-check-report
+          path: |
+            test-results/
+            tta-report/
+          retention-days: 7
+
+      - name: Comment PR with summary
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = { total: 'n/a', passed: 'n/a', failed: 'n/a' };
+            try {
+              summary = JSON.parse(fs.readFileSync('tta-report/summary.json', 'utf8'));
+            } catch (e) {
+              core.warning(`Could not read tta-report/summary.json: ${e.message}`);
+            }
+            const status = '${{ steps.run-tests.outcome }}' === 'success' ? ':white_check_mark:' : ':x:';
+            const body = [
+              `### ${status} Fast check (\`@P0\`/\`@Smoke\`)`,
+              '',
+              `| Total | Passed | Failed | Skipped |`,
+              `|---|---|---|---|`,
+              `| ${summary.total} | ${summary.passed} | ${summary.failed} | ${summary.skipped ?? 'n/a'} |`,
+              '',
+              `Full report uploaded as the \`fast-check-report\` artifact on this run.`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  # Full regression: all 5 projects (chromium/firefox/webkit/mobile/api),
+  # sharded, on merges to main/develop, nightly, or manual dispatch only —
+  # this is the expensive run, not every PR push.
+  full-regression:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/2, 2/2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+      - name: Install Playwright OS deps only (browsers cached)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+
+      - run: npx playwright test --shard=${{ matrix.shard }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blob-report-${{ strategy.job-index }}
+          path: blob-report/
+          retention-days: 14
+
+  merge-reports:
+    if: always() && needs.full-regression.result != 'skipped'
+    needs: full-regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download blob reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      - name: Merge into one HTML report
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

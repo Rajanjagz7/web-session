@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ok 1 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 1: 2 products via "+ Add another product" (29.9s)
+  ok 2 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 2: 3 products via "+ Add another product" (32.5s)
+  ok 3 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 3: 2 products via "+ Add another product" (30.8s)
+  ok 4 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 4: 4 products via "+ Add another product" (42.9s)
+  ok 5 [chromium] › tests-nsw-jobs\create-15-jobs.spec.ts:553:9 › Multi-product jobs - "+ Add another product" › Multi-Product Job 5: 3 products via "+ Add another product" (36.8s)
+
+  5 passed (3.0m)

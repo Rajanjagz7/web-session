@@ -1,0 +1,17 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:900} });
+const p = await c.newPage();
+const seen=new Set();
+p.on('response', async r => { const u=r.url(); if(/\/api\//.test(u) && !seen.has(r.request().method()+u.split('?')[0])){seen.add(r.request().method()+u.split('?')[0]); console.log(r.status(), r.request().method(), u.slice(0,150));} });
+await p.goto('https://dev.clinic1.ai/auth/sign-in');
+await p.getByLabel('Email address').fill('Jainamb@softwareco.com');
+await p.getByLabel('Password').first().fill('Test@123');
+await p.locator('button[type="submit"]').first().click();
+await p.getByText('Sunrise Family Medical').first().click();
+await p.waitForTimeout(10000);
+console.log(p.url());
+console.log((await p.locator('a').evaluateAll(l=>l.map(a=>a.innerText.trim()+' -> '+a.getAttribute('href')))).filter(s=>s.length>6).slice(0,50));
+await p.screenshot({ path: 'test-results/tz-home.png' });
+await c.storageState({ path: 'playwright/.auth/tz-user.json' });
+await b.close();

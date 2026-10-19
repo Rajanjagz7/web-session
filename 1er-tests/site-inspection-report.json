@@ -1,0 +1,133 @@
+{
+  "pagesSummary": [
+    {
+      "href": "/dashboard",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Dashboard",
+      "screenshot": "page-_dashboard.png"
+    },
+    {
+      "href": "/projects",
+      "title": "RebateM8 NSW",
+      "pageHeading": "All Projects",
+      "screenshot": "page-_projects.png"
+    },
+    {
+      "href": "/jobs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "All Jobs",
+      "screenshot": "page-_jobs.png"
+    },
+    {
+      "href": "/in-progress-jobs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "In Progress Jobs",
+      "screenshot": "page-_in_progress_jobs.png"
+    },
+    {
+      "href": "/action-Required-jobs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Action Required Jobs",
+      "screenshot": "page-_action_Required_jobs.png"
+    },
+    {
+      "href": "/being-assessed-jobs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Being Assessed Jobs",
+      "screenshot": "page-_being_assessed_jobs.png"
+    },
+    {
+      "href": "/completed-jobs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Completed Jobs",
+      "screenshot": "page-_completed_jobs.png"
+    },
+    {
+      "href": "/archived-jobs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Archived Jobs",
+      "screenshot": "page-_archived_jobs.png"
+    },
+    {
+      "href": "/logs",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Access Denied!",
+      "screenshot": "page-_logs.png"
+    },
+    {
+      "href": "/installer",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Installers",
+      "screenshot": "page-_installer.png"
+    },
+    {
+      "href": "/installeruser",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Installer Users",
+      "screenshot": "page-_installeruser.png"
+    },
+    {
+      "href": "/matrix",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Matrix",
+      "screenshot": "page-_matrix.png"
+    },
+    {
+      "href": "/admin-users",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Users",
+      "screenshot": "page-_admin_users.png"
+    },
+    {
+      "href": "/privacypolicy",
+      "title": "RebateM8 NSW",
+      "pageHeading": "CMS",
+      "screenshot": "page-_privacypolicy.png"
+    },
+    {
+      "href": "/activity",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Activity Log",
+      "screenshot": "page-_activity.png"
+    },
+    {
+      "href": "/products",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Products",
+      "screenshot": "page-_products.png"
+    },
+    {
+      "href": "/rebates",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Rebates",
+      "screenshot": "page-_rebates.png"
+    },
+    {
+      "href": "/rebates/calculator",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Calculator",
+      "screenshot": "page-_rebates_calculator.png"
+    },
+    {
+      "href": "/rebates/statistics",
+      "title": "RebateM8 NSW",
+      "pageHeading": "Statistics",
+      "screenshot": "page-_rebates_statistics.png"
+    },
+    {
+      "href": "/invoices",
+      "title": "RebateM8 NSW",
+      "pageHeading": "No invoices found",
+      "screenshot": "page-_invoices.png"
+    }
+  ],
+  "addJobModal": {
+    "activityTypes": [
+      "Heating & Cooling",
+      "Hot Water Heat Pump"
+    ],
+    "leadMethods": [],
+    "buildingTypes": [],
+    "companies": []
+  }
+}

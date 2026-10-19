@@ -1,0 +1,24 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport: { width: 1440, height: 1100 }, storageState: 'playwright/.auth/tz-user.json' });
+const p = await c.newPage();
+const seen = new Set();
+p.on('response', async r => {
+  const u = r.url();
+  if (!/\/api\/v1\//.test(u) || r.request().method() === 'OPTIONS') return;
+  if (/socket|notif|sticky|ai-pref|scribe|tenant|checkSession|overdue|dashboard|clinic\/location|smart-slot|get-token/.test(u)) return;
+  const k = r.request().method() + u.split('?')[0];
+  if (seen.has(k)) return;
+  seen.add(k);
+  console.log('  api', r.status(), r.request().method(), u.replace(/https:\/\/[^/]+/, '').slice(0, 150), (await r.text().catch(() => '')).slice(0, 200));
+});
+const flat = t => t.split('\n').filter(Boolean).join(' | ');
+const o = 'https://sunrise-family-medical.dev.clinic1.ai';
+await p.goto(o + '/dashboard');
+await p.waitForTimeout(4000);
+await p.getByText('Data Import', { exact: true }).first().click();
+await p.waitForTimeout(5000);
+console.log('URL', p.url());
+console.log(flat(await p.locator('body').innerText()).slice(200, 1500));
+await p.screenshot({ path: 'test-results/walk/data-import.png', fullPage: true });
+await b.close();

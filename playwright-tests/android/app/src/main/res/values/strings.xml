@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">zerogap-cross-browser-tests</string>
+    <string name="title_activity_main">zerogap-cross-browser-tests</string>
+    <string name="package_name">zerogap.cross.browser.tests</string>
+    <string name="custom_url_scheme">zerogap.cross.browser.tests</string>
+</resources>

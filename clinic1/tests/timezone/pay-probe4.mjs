@@ -1,0 +1,12 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1300}, storageState:'playwright/.auth/tz-user.json', timezoneId:'Australia/Sydney' });
+const p = await c.newPage();
+const flat = t => t.split('\n').filter(Boolean).join(' | ');
+p.on('request', r => { if (r.method()!=='GET' && /\/api\/v1\//.test(r.url())) console.log('MUT', r.method(), r.url().replace(/https:\/\/[^/]+/,''), (r.postData()||'').slice(0,500)); });
+p.on('response', async r => { if (r.request().method()!=='GET' && /\/api\/v1\//.test(r.url())) console.log('  ->', r.status(), (await r.text().catch(()=>'')).slice(0,250)); });
+await p.goto('https://sunrise-family-medical.dev.clinic1.ai/appointments/booking-list'); await p.waitForTimeout(6000);
+console.log(flat(await p.locator('body').innerText()).slice(280,1500));
+await p.getByText('Marcus Holloway').first().click().catch(()=>{});
+await p.screenshot({path:'test-results/walk/booking-list.png'});
+await b.close();

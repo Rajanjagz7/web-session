@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1280,height:900} });
+const p = await c.newPage();
+let n=0;
+p.on('response', async r=>{const u=r.url(); if(/\/api\//.test(u)&&r.request().method()!=='OPTIONS'&&!/socket|notif/.test(u)){let t='';try{t=await r.text()}catch{}; console.log('  api',r.status(),r.request().method(),u.replace(/https:\/\/[^/]+/,'').slice(0,150)); if(/slot|availab|practitioner|schedule/i.test(u)) fs.writeFileSync(`test-results/walk/portal-api-${n++}.json`,JSON.stringify({url:u,body:t}));}});
+const dump=async(label)=>{await p.waitForTimeout(3500); console.log('\n== '+label+' | '+p.url()); console.log((await p.locator('body').innerText()).replace(/\n+/g,' | ').slice(0,700)); await p.screenshot({path:`test-results/walk/portal-${label}.png`});};
+await p.goto('https://booking.dev.clinic1.ai/online-booking/xnM3xngd'); await dump('1-landing');
+console.log('buttons:', await p.locator('button, [role=button], a').evaluateAll(l=>l.map(x=>(x.innerText||'').trim().split('\n')[0]).filter(Boolean).slice(0,40)));
+await b.close();

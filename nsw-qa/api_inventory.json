@@ -1,0 +1,1067 @@
+[
+ {
+  "module": "login",
+  "method": "GET",
+  "path": "/api/v1/auth/me",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 401,
+  "auth": "none"
+ },
+ {
+  "module": "login",
+  "method": "POST",
+  "path": "/api/v1/auth/admin/login",
+  "query_keys": [],
+  "query": "",
+  "body": "{\"email\":\"admin@rebatem8nsw.com.au\",\"password\":\"admin@123\"}",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "login",
+  "method": "GET",
+  "path": "/api/v1/auth/me",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/installer/filter/list",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-tracking",
+  "query_keys": [
+   "endDate",
+   "interval",
+   "startDate"
+  ],
+  "query": "startDate=1789929000000&endDate=1790533799999&interval=weekly",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-count",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-breakdown",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/top-product",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-rebate",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/avg-complete-time",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-tracking",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-tracking",
+  "query_keys": [
+   "endDate",
+   "interval",
+   "startDate"
+  ],
+  "query": "startDate=1789929000000&endDate=1790533799999&interval=weekly",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-count",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-breakdown",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/top-product",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/job-rebate",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Dashboard",
+  "method": "GET",
+  "path": "/api/v1/dashboard/avg-complete-time",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Projects",
+  "method": "GET",
+  "path": "/api/v1/installer/filter/list",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Projects",
+  "method": "GET",
+  "path": "/api/v1/site/list",
+  "query_keys": [
+   "limit",
+   "platform",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&platform=web",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Projects",
+  "method": "GET",
+  "path": "/api/v1/site/list",
+  "query_keys": [
+   "limit",
+   "platform",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&platform=web",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "All",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "All",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "All",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "In Progress",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "In Progress",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "In Progress",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType",
+   "status"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&status=Install%20In%20Progress",
+  "body": "",
+  "status": 400,
+  "auth": "none"
+ },
+ {
+  "module": "Action Required",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Action Required",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Action Required",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType",
+   "status"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&status=Action%20Required",
+  "body": "",
+  "status": 400,
+  "auth": "none"
+ },
+ {
+  "module": "Being Assessed",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Being Assessed",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Being Assessed",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType",
+   "status"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&status=Being%20Assessed",
+  "body": "",
+  "status": 400,
+  "auth": "none"
+ },
+ {
+  "module": "Completed",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Completed",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Completed",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType",
+   "status"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&status=Complete",
+  "body": "",
+  "status": 400,
+  "auth": "none"
+ },
+ {
+  "module": "Archived",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Archived",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Archived",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType",
+   "status"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&status=Archived",
+  "body": "",
+  "status": 400,
+  "auth": "none"
+ },
+ {
+  "module": "Installers",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=100&sort=firstName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Installers",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Installer Users",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip"
+  ],
+  "query": "skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Installer Users",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Matrix",
+  "method": "GET",
+  "path": "/api/v1/matrix",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=order&sortType=asc&skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Admin Users",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Products",
+  "method": "GET",
+  "path": "/api/v1/activity-logs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Invoices",
+  "method": "GET",
+  "path": "/api/v1/invoice/list",
+  "query_keys": [
+   "jobStatus",
+   "limit",
+   "platform",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&jobStatus=Generated%20Invoices&platform=web",
+  "body": "",
+  "status": 404,
+  "auth": "none"
+ },
+ {
+  "module": "Invoices",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/auth/me",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "search",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&search=M8N000078",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=50&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab3a27bf9ea6129bf434ab5",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab3a27bf9ea6129bf434ab5/documents",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab34fcff9ea6129bf4333c5/members/by-role",
+  "query_keys": [
+   "role"
+  ],
+  "query": "role=Plumber",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab34fcff9ea6129bf4333c5/members/by-role",
+  "query_keys": [
+   "role"
+  ],
+  "query": "role=Electrician",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab34fcff9ea6129bf4333c5/members/by-role",
+  "query_keys": [
+   "role"
+  ],
+  "query": "role=Refrigeration+Mechanic",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail M8N000078",
+  "method": "GET",
+  "path": "/api/v1/contractor-groups",
+  "query_keys": [
+   "installerId",
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=100&installerId=6ab34fcff9ea6129bf4333c5",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/auth/me",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/users",
+  "query_keys": [
+   "limit",
+   "roleType",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "roleType=admin_user&skip=0&limit=10&sort=createdAt&sortType=desc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/installers",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "skip=0&limit=10&sort=companyName&sortType=asc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/jobs",
+  "query_keys": [
+   "limit",
+   "search",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&search=M8N000071",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab24e097541fdf3f7a498fc",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab24e097541fdf3f7a498fc/tasks",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab246ca7541fdf3f7a494bb/members",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab246ca7541fdf3f7a494bb/members/by-role",
+  "query_keys": [
+   "role"
+  ],
+  "query": "role=Plumber",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab246ca7541fdf3f7a494bb/members/by-role",
+  "query_keys": [
+   "role"
+  ],
+  "query": "role=Electrician",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/installers/6ab246ca7541fdf3f7a494bb/members/by-role",
+  "query_keys": [
+   "role"
+  ],
+  "query": "role=Refrigeration+Mechanic",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job detail (Photos Started)",
+  "method": "GET",
+  "path": "/api/v1/contractor-groups",
+  "query_keys": [
+   "installerId",
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=createdAt&sortType=desc&skip=0&limit=10&installerId=6ab246ca7541fdf3f7a494bb",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job tab: Products",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab24e097541fdf3f7a498fc",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job tab: Post Install Details",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab24e097541fdf3f7a498fc",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job tab: Photos",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab24e097541fdf3f7a498fc/all-photos",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job tab: Notes",
+  "method": "GET",
+  "path": "/api/v1/notes",
+  "query_keys": [
+   "entityId",
+   "entityType",
+   "limit",
+   "skip",
+   "sort",
+   "sortType"
+  ],
+  "query": "sort=updatedAt&sortType=desc&skip=0&limit=10&entityType=job&entityId=6ab24e097541fdf3f7a498fc",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ },
+ {
+  "module": "Job tab: Documents",
+  "method": "GET",
+  "path": "/api/v1/jobs/6ab24e097541fdf3f7a498fc/documents",
+  "query_keys": [],
+  "query": "",
+  "body": "",
+  "status": 200,
+  "auth": "none"
+ }
+]

@@ -1,0 +1,20 @@
+import { chromium } from "@playwright/test";
+const BASE = "https://rajanjagz7.dev.fieldr.app";
+const STATE = "C:/Users/Baps/AppData/Local/Temp/claude/c--Users-Baps-Downloads-rajan-backup/4080ed99-fcc1-4297-8820-b9fd19f50d55/scratchpad/fieldr_rajan_state.json";
+const browser = await chromium.launch({ headless: true });
+const ctx = await browser.newContext({ storageState: STATE, viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+const main = async (n = 40) => (await page.locator("main").first().ariaSnapshot()).split("\n").slice(0, n).join("\n");
+const go = async (p) => { await page.goto(BASE + p, { waitUntil: "domcontentloaded" }); await page.locator("main").first().waitFor({ timeout: 25000 }).catch(() => {}); await page.waitForTimeout(3500); };
+
+console.log("=== SCHEDULE"); await go("/app/schedule"); console.log(await main(18));
+console.log("\n=== CREATE menu");
+await page.getByRole("button", { name: "Create", exact: true }).click(); await page.waitForTimeout(800);
+console.log((await page.locator("[role=menu], [role=listbox], [role=dialog]").first().ariaSnapshot().catch(() => "(no menu role)")).split("\n").slice(0, 30).join("\n"));
+await page.keyboard.press("Escape");
+console.log("\n=== COMMAND PALETTE (Ctrl+K)");
+await page.keyboard.press("Control+K"); await page.waitForTimeout(800);
+console.log((await page.locator("[role=dialog]").first().ariaSnapshot().catch(() => "(no dialog)")).split("\n").slice(0, 25).join("\n"));
+await page.keyboard.press("Escape");
+console.log("\n=== CUSTOMER list"); await go("/app/customer/list"); console.log(await main(30));
+await browser.close();

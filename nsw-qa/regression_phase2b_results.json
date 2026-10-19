@@ -1,0 +1,17 @@
+[
+ {
+  "id": "NSW-STG-63",
+  "verdict": "ERROR",
+  "detail": "Locator.wait_for: Timeout 15000ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"Job Information\", exact=True) to be visible\n"
+ },
+ {
+  "id": "NSW-STG-09",
+  "verdict": "STILL_OPEN",
+  "detail": "Customer Name field replaced/removed after switching to 'Small Business Site (less than 273 kWh/day)': True"
+ },
+ {
+  "id": "NSW-STG-43",
+  "verdict": "BLOCKED",
+  "detail": "submission blocked - dialog text: Add Job\n1\nEngagement & Products\nSite Assessment & Nomination\n\nOnly the data needed for the engagement letter + fact sheet is captured here. Steps 2–3 unlock after the engagement letter is sent.\n\nOwn Reference\n*\nActivity Type\nHeating & Cooling\n*\nMethod of Lead Generation\nCustomer initiated contact\n*\nBuilding Type\nResidential Building\nInstallation Date\n*\nInstaller (Company)\nTesting Company\n*\nName of"
+ }
+]

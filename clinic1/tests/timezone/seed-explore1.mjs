@@ -1,0 +1,14 @@
+import { chromium } from '@playwright/test';
+const b = await chromium.launch({ headless: false });
+const c = await b.newContext({ viewport:{width:1440,height:1100}, storageState:'playwright/.auth/tz-user.json', timezoneId:'Australia/Sydney' });
+const p = await c.newPage();
+const flat = t => t.split('\n').filter(Boolean).join(' | ');
+p.on('request', r => { if (['POST','PUT','PATCH'].includes(r.method()) && /\/api\/v1\//.test(r.url())) console.log('MUT', r.method(), r.url().replace(/https:\/\/[^/]+/,''), (r.postData()||'').slice(0,700)); });
+await p.goto('https://sunrise-family-medical.dev.clinic1.ai/schedule'); await p.waitForTimeout(5000);
+await p.getByRole('combobox').first().click(); await p.getByRole('option',{name:/BRISBANE/i}).click(); await p.waitForTimeout(4000);
+await p.getByRole('button',{name:/Add Appointment/i}).first().click(); await p.waitForTimeout(3000);
+const d = p.locator('[role=dialog]').first();
+console.log('DIALOG:', flat(await d.innerText()).slice(0,1200));
+console.log('INPUTS:', await d.locator('input').evaluateAll(l=>l.map(i=>[i.name,i.placeholder,i.value,i.readOnly].join('|'))));
+await p.screenshot({path:'test-results/walk/add-appt.png'});
+await b.close();

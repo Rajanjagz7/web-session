@@ -1,0 +1,124 @@
+﻿70 bad-data jobs to replace and delete
+AC catalog pool: 44 entries, HWHP catalog pool: 36 entries
+[  1/70] M8N000207 -> M8N000209  (201)
+[  2/70] M8N000206 -> M8N000210  (201)
+[  3/70] M8N000205 -> FAILED  (400)
+[  4/70] M8N000204 -> FAILED  (400)
+[  5/70] M8N000203 -> FAILED  (400)
+[  6/70] M8N000202 -> M8N000211  (201)
+[  7/70] M8N000201 -> FAILED  (400)
+[  8/70] M8N000200 -> FAILED  (400)
+[  9/70] M8N000199 -> M8N000212  (201)
+[ 10/70] M8N000198 -> FAILED  (400)
+[ 11/70] M8N000190 -> FAILED  (400)
+[ 12/70] M8N000189 -> FAILED  (400)
+[ 13/70] M8N000188 -> M8N000213  (201)
+[ 14/70] M8N000187 -> M8N000214  (201)
+[ 15/70] M8N000186 -> FAILED  (400)
+[ 16/70] M8N000185 -> FAILED  (400)
+[ 17/70] M8N000184 -> M8N000215  (201)
+[ 18/70] M8N000183 -> M8N000216  (201)
+[ 19/70] M8N000182 -> FAILED  (400)
+[ 20/70] M8N000181 -> FAILED  (400)
+[ 21/70] M8N000180 -> M8N000217  (201)
+[ 22/70] M8N000179 -> M8N000218  (201)
+[ 23/70] M8N000178 -> FAILED  (400)
+[ 24/70] M8N000177 -> FAILED  (400)
+[ 25/70] M8N000176 -> FAILED  (400)
+[ 26/70] M8N000175 -> M8N000219  (201)
+[ 27/70] M8N000174 -> FAILED  (400)
+[ 28/70] M8N000173 -> FAILED  (400)
+[ 29/70] M8N000172 -> M8N000220  (201)
+[ 30/70] M8N000171 -> FAILED  (400)
+[ 31/70] M8N000170 -> FAILED  (400)
+[ 32/70] M8N000169 -> FAILED  (400)
+[ 33/70] M8N000168 -> M8N000221  (201)
+[ 34/70] M8N000167 -> M8N000222  (201)
+[ 35/70] M8N000166 -> FAILED  (400)
+[ 36/70] M8N000165 -> FAILED  (400)
+[ 37/70] M8N000164 -> M8N000223  (201)
+[ 38/70] M8N000163 -> M8N000224  (201)
+[ 39/70] M8N000162 -> FAILED  (400)
+[ 40/70] M8N000161 -> FAILED  (400)
+[ 41/70] M8N000160 -> M8N000225  (201)
+[ 42/70] M8N000159 -> M8N000226  (201)
+[ 43/70] M8N000158 -> FAILED  (400)
+[ 44/70] M8N000157 -> FAILED  (400)
+[ 45/70] M8N000156 -> FAILED  (400)
+[ 46/70] M8N000155 -> M8N000227  (201)
+[ 47/70] M8N000154 -> FAILED  (400)
+[ 48/70] M8N000153 -> FAILED  (400)
+[ 49/70] M8N000152 -> M8N000228  (201)
+[ 50/70] M8N000151 -> FAILED  (400)
+[ 51/70] M8N000150 -> FAILED  (400)
+[ 52/70] M8N000149 -> FAILED  (400)
+[ 53/70] M8N000148 -> M8N000229  (201)
+[ 54/70] M8N000147 -> M8N000230  (201)
+[ 55/70] M8N000146 -> FAILED  (400)
+[ 56/70] M8N000145 -> FAILED  (400)
+[ 57/70] M8N000144 -> M8N000231  (201)
+[ 58/70] M8N000143 -> M8N000232  (201)
+[ 59/70] M8N000142 -> FAILED  (400)
+[ 60/70] M8N000141 -> FAILED  (400)
+[ 61/70] M8N000140 -> M8N000233  (201)
+[ 62/70] M8N000139 -> M8N000234  (201)
+[ 63/70] M8N000138 -> FAILED  (400)
+[ 64/70] M8N000197 -> FAILED  (400)
+[ 65/70] M8N000196 -> FAILED  (400)
+[ 66/70] M8N000195 -> M8N000235  (201)
+[ 67/70] M8N000194 -> FAILED  (400)
+[ 68/70] M8N000193 -> FAILED  (400)
+[ 69/70] M8N000192 -> M8N000236  (201)
+[ 70/70] M8N000191 -> FAILED  (400)
+
+28 replacements created OK, 42 failed
+FAILED cases (not deleting their originals):
+  {'old_jobNumber': 'M8N000205', 'old_id': '6ab6b0fe6c68441e7dd2a533', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000204', 'old_id': '6ab6b0fd6c68441e7dd2a521', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000203', 'old_id': '6ab6b0fc6c68441e7dd2a50f', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000201', 'old_id': '6ab6b0f76c68441e7dd2a4e6', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000200', 'old_id': '6ab6b0f66c68441e7dd2a4d5', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000198', 'old_id': '6ab6b0f56c68441e7dd2a4b3', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000190', 'old_id': '6ab6b0a76c68441e7dd2a408', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000189', 'old_id': '6ab6b0a56c68441e7dd2a3f6', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000186', 'old_id': '6ab6b0a16c68441e7dd2a3bd', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000185', 'old_id': '6ab6b0a06c68441e7dd2a3ab', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000182', 'old_id': '6ab6b09c6c68441e7dd2a372', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000181', 'old_id': '6ab6b09b6c68441e7dd2a361', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000178', 'old_id': '6ab6b0986c68441e7dd2a32b', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000177', 'old_id': '6ab6b0966c68441e7dd2a318', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000176', 'old_id': '6ab6b0926c68441e7dd2a2fc', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000174', 'old_id': '6ab6b0906c68441e7dd2a2d8', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000173', 'old_id': '6ab6b08f6c68441e7dd2a2c6', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000171', 'old_id': '6ab6b08b6c68441e7dd2a29d', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000170', 'old_id': '6ab6b08a6c68441e7dd2a28b', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000169', 'old_id': '6ab6b0896c68441e7dd2a279', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000166', 'old_id': '6ab6b0866c68441e7dd2a244', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000165', 'old_id': '6ab6b0856c68441e7dd2a232', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000162', 'old_id': '6ab6b0826c68441e7dd2a1fb', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000161', 'old_id': '6ab6b0816c68441e7dd2a1e9', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000158', 'old_id': '6ab6b07e6c68441e7dd2a1b3', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000157', 'old_id': '6ab6b07d6c68441e7dd2a1a2', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000156', 'old_id': '6ab6b07c6c68441e7dd2a190', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000154', 'old_id': '6ab6b07a6c68441e7dd2a16d', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000153', 'old_id': '6ab6b0786c68441e7dd2a15a', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000151', 'old_id': '6ab6b0766c68441e7dd2a135', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000150', 'old_id': '6ab6b0756c68441e7dd2a123', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000149', 'old_id': '6ab6b0746c68441e7dd2a111', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000146', 'old_id': '6ab6b0706c68441e7dd2a0db', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000145', 'old_id': '6ab6b06f6c68441e7dd2a0c9', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000142', 'old_id': '6ab6b06c6c68441e7dd2a095', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000141', 'old_id': '6ab6b06b6c68441e7dd2a084', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000138', 'old_id': '6ab6afc16c68441e7dd2a044', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000197', 'old_id': '6ab6b0b06c68441e7dd2a48d', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000196', 'old_id': '6ab6b0af6c68441e7dd2a47c', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+  {'old_jobNumber': 'M8N000194', 'old_id': '6ab6b0ad6c68441e7dd2a45a', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"custom","path":["averageKwhPerDay"],"message":"Average daily usage band is required for Heating & Cooling business sites"}]}}'}
+  {'old_jobNumber': 'M8N000193', 'old_id': '6ab6b0ac6c68441e7dd2a448', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"averageKwhPerDay applies to business jobs only","data":null,"error":{"code":"bad_request"}}'}
+  {'old_jobNumber': 'M8N000191', 'old_id': '6ab6b0a86c68441e7dd2a41a', 'status': 400, 'error': '{"success":false,"statusCode":400,"message":"Invalid request","data":null,"error":{"code":"validation_error","details":[{"code":"invalid_value","values":["Customer initiated contact","Social media","Email campaign","Print advertisement","Online advertisement","Pamphlet","Promotional booth","Other","'}
+count before=248 after creating replacements=276 delta=28 (expect +28)
+
+deleting 28 original bad-data jobs...
+  delete chunk 0-25: 200 {"success":true,"statusCode":200,"message":"Jobs deleted successfully","data":{"deletedCount":25,"requested":25,"notFound":[]}}
+  delete chunk 25-28: 200 {"success":true,"statusCode":200,"message":"Jobs deleted successfully","data":{"deletedCount":3,"requested":3,"notFound":[]}}
+
+deleted_total=28, final job count=248 (expect before=248 + replacements=28 - deleted=28)
