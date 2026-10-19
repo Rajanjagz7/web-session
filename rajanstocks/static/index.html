@@ -626,6 +626,8 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script src="/static/journal.js?v=20261018e"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
+<link rel="stylesheet" href="/static/godseye.css?v=20261019">
+<script src="/static/godseye.js?v=20261019"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -887,6 +889,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   <section class="view" id="v-vedic"></section>
   <section class="view" id="v-ipo"></section>
   <section class="view" id="v-mobile"></section>
+  <section class="view" id="v-godseye"></section>
 </main>
 <div id="boot"><div class="spin"></div><b>Rajan Algo</b><small>Loading live NSE data…</small></div>
 <div id="modalRoot"></div>
@@ -2081,7 +2084,7 @@ function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in o
 
 /* ======================= Header / nav ======================= */
 const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro'],['godseye',"God's Eye"]];
-   const PRIMARY=['picks','trade','markets','ipo'];
+   const PRIMARY=['picks','trade','markets','ipo','godseye'];
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
 const SUBVIEWS={options:['trade','Options'],mobile:['trade',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
@@ -2112,7 +2115,7 @@ function closeOverlays(){
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
 function go(v){closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
-  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile})[v]?.();liveUpdate();window.scrollTo(0,0)}
+  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodseye&&renderGodseye()})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
 /* ======================= Trade view ======================= */
@@ -2154,7 +2157,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverlays()});
 /* a tap anywhere outside the timeframe menu closes it (it used to stay open until its button was tapped again) */
 document.addEventListener('click',e=>{if(tfPopEl&&!tfPopEl.contains(e.target)&&!e.target.closest('[data-act="tfpop"]'))closeTfPop()},true);
 function renderSymbar(){const s=App.sym;const star=App.watch.has(s.s);
-  $('#symbar').innerHTML=`<div class="sb-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><button class="symbtn" data-act="search" aria-label="Change symbol">${esc(s.s)}${I('chev',16)}</button><button class="ibtn ${star?'on':''}" data-act="star" aria-label="${star?'Remove from':'Add to'} watchlist">${I('star',16)}</button>${ocHas(s)?'<button class="btn-xs pri oc-btn" data-act="optchain" aria-haspopup="dialog">Option chain ▾</button>':''}<span class="muted sb-nm">${esc(s.n)} · ${esc(s.ex)}</span></div>
+  $('#symbar').innerHTML=`<div class="sb-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><button class="symbtn" data-act="search" aria-label="Change symbol">${esc(s.s)}${I('chev',16)}</button><button class="ibtn ${star?'on':''}" data-act="star" aria-label="${star?'Remove from':'Add to'} watchlist">${I('star',16)}</button><span class="muted sb-nm">${esc(s.n)} · ${esc(s.ex)}</span></div>
   <div class="sb-px"><b class="num" data-px="${esc(s.s)}"></b><span data-chga="${esc(s.s)}"></span><span class="num" data-chg="${esc(s.s)}"></span></div>
   <div class="sb-stat">Day range<span class="num" data-rt></span><div class="rangebar" data-range="${esc(s.s)}"><i></i></div></div>
   <div class="sb-stat">52W range<span class="num">${s.yl>0&&s.yh>0?fmtP(s.yl,s.dp)+' – '+fmtP(s.yh,s.dp):'—'}</span></div>

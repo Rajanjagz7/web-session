@@ -59,6 +59,8 @@ import vedic_api  # noqa: E402
 app.include_router(vedic_api.router)
 import ipo_funds  # noqa: E402
 app.include_router(ipo_funds.router)
+import gods_eye_api  # noqa: E402
+app.include_router(gods_eye_api.router)
 
 @app.middleware("http")
 async def _no_stale_assets(request, call_next):
