@@ -2055,11 +2055,28 @@ function liveUpdate(){
    $$('[data-tpnl]').forEach(e=>{e.textContent=ar(tot)+' '+smoney(tot);e.className=cls(tot)});
    $$('[data-npos]').forEach(e=>{const w=App.positions.filter(p=>p.q*(px(p)-p.avg)>0.004).length,l=App.positions.filter(p=>p.q*(px(p)-p.avg)<-0.004).length;e.innerHTML=`<span class="up">▲ ${w} in profit</span> · <span class="down">▼ ${l} in loss</span>`});
    renderPfChip()}
-  $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.className=cls(v)});
-  $$('[data-cash]').forEach(e=>e.textContent=money(App.cash));
-  $$('[data-range]').forEach(e=>{const s=SYM(e.dataset.range);s.hi=Math.max(s.hi,s.last);s.lo=Math.min(s.lo,s.last);e.querySelector('i').style.left=((s.last-s.lo)/(s.hi-s.lo||1)*100)+'%';const t=e.parentNode.querySelector('[data-rt]');if(t)t.textContent=fmtP(s.lo,s.dp)+' – '+fmtP(s.hi,s.dp)});
-  $$('[data-heat]').forEach(e=>{const s=SYM(e.dataset.heat),c=s.last/s.prev-1;e.style.background=heatColor(c);e.querySelector('span').textContent=pct(c)});
-}
+$$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.className=cls(v)});
+   $$('[data-cash]').forEach(e=>e.textContent=money(App.cash));
+   $$('[data-range]').forEach(e=>{const s=SYM(e.dataset.range);s.hi=Math.max(s.hi,s.last);s.lo=Math.min(s.lo,s.last);e.querySelector('i').style.left=((s.last-s.lo)/(s.hi-s.lo||1)*100)+'%';const t=e.parentNode.querySelector('[data-rt]');if(t)t.textContent=fmtP(s.lo,s.dp)+' – '+fmtP(s.hi,s.dp)});
+   $$('[data-heat]').forEach(e=>{const s=SYM(e.dataset.heat),c=s.last/s.prev-1;e.style.background=heatColor(c);e.querySelector('span').textContent=pct(c)});
+   
+   // NEW: Update open, prev close, high, low everywhere
+   $$('[data-open]').forEach(e=>{const s=SYM(e.dataset.open);if(s) e.textContent=fmtP(s.open, s.dp)});
+   $$('[data-prev]').forEach(e=>{const s=SYM(e.dataset.prev);if(s) e.textContent=fmtP(s.prev, s.dp)});
+   $$('[data-high]').forEach(e=>{const s=SYM(e.dataset.high);if(s) e.textContent=fmtP(s.hi, s.dp)});
+   $$('[data-low]').forEach(e=>{const s=SYM(e.dataset.low);if(s) e.textContent=fmtP(s.lo, s.dp)});
+   
+   // SL/Target crossover alerts
+   App.positions.forEach(p=>{
+     const s=SYM(p.sym);
+     if(!s) return;
+     const last=s.last;
+     if(p.sl && p.q>0 && last<=p.sl) toast(`⚠️ SL HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'bad');
+     if(p.sl && p.q<0 && last>=p.sl) toast(`⚠️ SL HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'bad');
+     if(p.tp && p.q>0 && last>=p.tp) toast(`✅ TARGET HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'ok');
+     if(p.tp && p.q<0 && last<=p.tp) toast(`✅ TARGET HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'ok');
+   });
+ }
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
@@ -2143,7 +2160,9 @@ function renderSymbar(){const s=App.sym;const star=App.watch.has(s.s);
   <div class="sb-stat">52W range<span class="num">${s.yl>0&&s.yh>0?fmtP(s.yl,s.dp)+' – '+fmtP(s.yh,s.dp):'—'}</span></div>
   <div class="sb-stat">${s.cls==='Crypto'?'24h volume':'Volume'}<span class="num">${s.dvol>0?fmtN(s.dvol):'—'}</span></div>
   ${s.cap?`<div class="sb-stat">Market cap<span>${fmtN(s.cap)}</span></div>`:''}${s.pe?`<div class="sb-stat">P/E<span>${s.pe}</span></div>`:''}
-  <div class="sb-stat">Position<span>${(p=>p?`${p.q>0?'+':''}${qfmt(p.q,s)} @ ${fmtP(p.avg,s.dp)}`:'—')(posOf(s.s))}</span></div>`}
+  <div class="sb-stat">Position<span>${(p=>p?`${p.q>0?'+':''}${qfmt(p.q,s)} @ ${fmtP(p.avg,s.dp)}`:'—')(posOf(s.s))}</span></div>
+  <div class="sb-stat">Open <span class="num" data-open="${esc(s.s)}"></span> · Prev Close <span class="num" data-prev="${esc(s.s)}"></span></div>
+  <div class="sb-stat">High <span class="num up" data-high="${esc(s.s)}"></span> · Low <span class="num down" data-low="${esc(s.s)}"></span></div>`}
 const CTYPES=[['candles','Candles'],['hollow','Hollow candles'],['bars','Bars (OHLC)'],['line','Line'],['area','Area'],['ha','Heikin Ashi']];
 function renderToolbar(){const nInd=chart.ind.length;
   $('#toolbar').innerHTML=`<button class="tb-btn wl-toggle" data-act="wl" aria-label="Watchlist">${I('list',16)}</button>
