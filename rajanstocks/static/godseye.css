@@ -348,6 +348,51 @@
   gap: 6px;
 }
 
+/* Real Open Interest (OI) Box */
+.ge-oi-box {
+  background: var(--ge-surface-elev);
+  border: 1px solid var(--ge-border);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ge-oi-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.ge-oi-stats small {
+  display: block;
+  font-size: 10px;
+  color: var(--ge-text-sec);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.ge-oi-stats b {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ge-oi-setup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px dashed var(--ge-border);
+  padding-top: 8px;
+  font-size: 12px;
+}
+
+.ge-oi-contract {
+  color: var(--ge-text);
+  font-size: 12px;
+}
+
 .ge-sec-title {
   font-size: 11px;
   text-transform: uppercase;

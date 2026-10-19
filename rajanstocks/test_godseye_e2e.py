@@ -47,12 +47,29 @@ def test_godseye_ui_full_e2e(live_server):
         # Capture initial Overview screenshot
         page.screenshot(path="test-results/godseye/01-godseye-overview.png")
 
-        # 2. Verify Brand, Demo Label and Disclaimer (PM-032)
+        # 2. Verify Brand, Demo Label, Disclaimer, and Index-only Universe
         assert page.locator("h2:has-text(\"GOD'S EYE\")").is_visible()
         assert page.locator("text=DEMO — MOCK DATA").is_visible()
         assert page.locator(".ge-disclaimer").is_visible()
         disclaimer_text = page.locator(".ge-disclaimer").inner_text()
         assert "guarantee" in disclaimer_text.lower() or "certainty" in disclaimer_text.lower()
+
+        # Verify ONLY Indices are present in God's Eye
+        card_titles = page.locator(".ge-sym").all_inner_texts()
+        assert "NIFTY" in card_titles
+        assert "BANKNIFTY" in card_titles
+        assert "FINNIFTY" in card_titles
+        assert "SENSEX" in card_titles
+        assert "RELIANCE" not in card_titles
+        assert "TCS" not in card_titles
+
+        # Verify NIFTY is BEARISH with real downward momentum & OI stats
+        nifty_card = page.locator(".ge-card:has(.ge-sym:has-text(\"NIFTY\"))").first
+        n_text = nifty_card.inner_text().upper()
+        assert "BEARISH" in n_text
+        assert "PCR" in n_text
+        assert "RESISTANCE" in n_text
+        assert "SUPPORT" in n_text
 
         # 3. Verify Accessibility: minimum touch target CSS px >= 44px (PM-031 / WCAG 2.2 AA)
         pills = page.locator(".ge-pill")
@@ -108,5 +125,52 @@ def test_godseye_ui_full_e2e(live_server):
         mobile_page.screenshot(path="test-results/godseye/06-mobile-view.png")
         assert mobile_page.locator(".ge-card").count() > 0
         mobile_page.close()
+
+        # 9. Verify Today's Picks: Indices placed strictly first with Option Premium levels
+        page.evaluate("go('picks')")
+        page.wait_for_selector("#v-picks.on", timeout=10000)
+        page.wait_for_selector(".pk-grid .pk", timeout=10000)
+
+        # Verify index card is visible with Option Premium levels
+        idx_pick = page.locator(".pk:has-text(\"Major Benchmark Index\")").first
+        assert idx_pick.is_visible()
+        idx_pick.scroll_into_view_if_needed()
+        page.wait_for_timeout(300)
+        page.screenshot(path="test-results/godseye/07-picks-all-indices-first.png")
+
+        pk_sym = idx_pick.locator(".pk-t b").inner_text()
+        assert pk_sym in ("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX", "MIDCPNIFTY")
+        pk_text = idx_pick.inner_text().upper()
+        assert "OPTION PREMIUM LEVELS" in pk_text
+        assert "PREMIUM ENTRY" in pk_text
+        assert "PREMIUM SL" in pk_text
+        assert "PREMIUM T1" in pk_text
+        assert "UNDERLYING SPOT" in pk_text
+
+        # 10. Verify Swing horizon selection retains indices first with Swing Option Premium
+        page.locator("[data-pkf=\"hz:SWING\"]").click()
+        page.wait_for_timeout(800)
+        swing_idx_pick = page.locator(".pk:has-text(\"Major Benchmark Index\")").first
+        assert swing_idx_pick.is_visible()
+        swing_idx_pick.scroll_into_view_if_needed()
+        page.wait_for_timeout(300)
+        page.screenshot(path="test-results/godseye/08-picks-swing-option-premium.png")
+
+        swing_text = swing_idx_pick.inner_text().upper()
+        assert "SWING" in swing_text
+        assert "PREMIUM ENTRY" in swing_text
+
+        # 11. Verify Positional horizon selection retains indices first with Positional Option Premium
+        page.locator("[data-pkf=\"hz:POS\"]").click()
+        page.wait_for_timeout(800)
+        pos_idx_pick = page.locator(".pk:has-text(\"Major Benchmark Index\")").first
+        assert pos_idx_pick.is_visible()
+        pos_idx_pick.scroll_into_view_if_needed()
+        page.wait_for_timeout(300)
+        page.screenshot(path="test-results/godseye/09-picks-positional-option-premium.png")
+
+        pos_text = pos_idx_pick.inner_text().upper()
+        assert "POSITIONAL" in pos_text
+        assert "PREMIUM ENTRY" in pos_text
 
         browser.close()

@@ -223,6 +223,21 @@
           `}
         </div>
 
+        <!-- Real Open Interest (OI) & Option Recommendation -->
+        <div class="ge-oi-box">
+          <div class="ge-oi-stats">
+            <div><small>Put-Call Ratio (PCR)</small><b>${s.pcr != null ? s.pcr : '—'}</b></div>
+            <div><small>Call Resistance</small><b style="color:var(--ge-neg)">${s.maxCeStrike ? s.maxCeStrike.toLocaleString('en-IN') : '—'}</b></div>
+            <div><small>Put Support</small><b style="color:var(--ge-pos)">${s.maxPeStrike ? s.maxPeStrike.toLocaleString('en-IN') : '—'}</b></div>
+          </div>
+          ${s.optionContract ? `
+            <div class="ge-oi-setup">
+              <span class="ge-badge ${s.direction==='BEARISH'?'ge-dir-down':'ge-dir-up'}">${esc(s.optionRecommendation || 'TRADE')}</span>
+              <span class="ge-oi-contract">Contract: <strong>${esc(s.optionContract)}</strong></span>
+            </div>
+          ` : ''}
+        </div>
+
         <!-- Drivers & Invalidation -->
         <div class="ge-section">
           <h4 class="ge-sec-title">Key Deterministic Drivers</h4>
@@ -332,12 +347,11 @@
           <h3>Immutable Forecast Ledger &amp; Out-of-Sample Scorer (PM-03)</h3>
           <div class="ge-filter-wrap">
             <select class="inp" onchange="geFilterHistSym(this.value)" style="height:32px">
-              <option value="">All Instruments</option>
+              <option value="">All Indices</option>
               <option value="NIFTY" ${historySymbol === 'NIFTY' ? 'selected' : ''}>NIFTY</option>
               <option value="BANKNIFTY" ${historySymbol === 'BANKNIFTY' ? 'selected' : ''}>BANKNIFTY</option>
-              <option value="RELIANCE" ${historySymbol === 'RELIANCE' ? 'selected' : ''}>RELIANCE</option>
-              <option value="TCS" ${historySymbol === 'TCS' ? 'selected' : ''}>TCS</option>
-              <option value="INFY" ${historySymbol === 'INFY' ? 'selected' : ''}>INFY</option>
+              <option value="FINNIFTY" ${historySymbol === 'FINNIFTY' ? 'selected' : ''}>FINNIFTY</option>
+              <option value="SENSEX" ${historySymbol === 'SENSEX' ? 'selected' : ''}>SENSEX</option>
             </select>
           </div>
         </div>

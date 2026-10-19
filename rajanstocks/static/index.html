@@ -2535,21 +2535,73 @@ function updMobEst(){const s=App.sym,e=$('#mEst');if(e)e.textContent=money(mob.q
 
 /* ======================= Picks (recommended for the day) ======================= */
 const sigCls=s=>s==='BUY'||s==='Bullish'?'b-up':s==='SELL'||s==='Bearish'?'b-down':'b-mute';
-function pickCard(p){const s=SYM(p.s)||{};const L=p.signal!=='SELL';
+const round=(v,d=2)=>typeof v==='number'&&isFinite(v)?Math.round(v*Math.pow(10,d))/Math.pow(10,d):v;
+function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
   const hz=(k,v)=>`<span class="hz ${v==='Bullish'?'bu':v==='Bearish'?'be':''}"><i>${k}</i>${v}</span>`;
+  const c=(App.calls&&App.calls.calls)?App.calls.calls.find(x=>x.instrument===p.s):null;
+  
+  if(isIdx){
+    const side=(p.signal==='SELL'||p.intraday==='Bearish'||p.swing==='Bearish')?'PE':'CE';
+    const isBuy=side==='CE';
+    const step=p.s==='BANKNIFTY'?100:(p.s==='SENSEX'?100:50);
+    const atm=Math.round(p.ltp/step)*step;
+    const contract=(c&&c.contract)?c.contract:`${p.s} ${atm} ${side}`;
+    const baseEntry=(c&&c.entry)?c.entry:Math.round(p.ltp*(p.s==='NIFTY'?0.0075:(p.s==='BANKNIFTY'?0.006:0.005)));
+    const optSignal=(c&&c.signal)?c.signal:`BUY ${side==='CE'?'CALL':'PUT'}`;
+    const isPut=optSignal.includes('PUT')||side==='PE';
+    
+    let optEntry=baseEntry,optSl,optT1,optT2,hzText='INTRADAY';
+    if(App.pk.hz==='SWING'){
+      optSl=round(baseEntry*0.85,2);optT1=round(baseEntry*1.25,2);optT2=round(baseEntry*1.50,2);hzText='SWING (NEXT EXPIRY)';
+    }else if(App.pk.hz==='POS'){
+      optSl=round(baseEntry*0.75,2);optT1=round(baseEntry*1.45,2);optT2=round(baseEntry*1.80,2);hzText='POSITIONAL (MONTHLY EXPIRY)';
+    }else{
+      optSl=(c&&c.stopLoss)?c.stopLoss:round(baseEntry*0.95,2);
+      optT1=(c&&c.target1)?c.target1:round(baseEntry*1.09,2);
+      optT2=(c&&c.target2)?c.target2:round(baseEntry*1.18,2);
+      hzText='INTRADAY ATM PREMIUM';
+    }
+
+    return`<article class="pk">
+     <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · Major Benchmark Index</small></div>
+      <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
+     <div class="pk-sig"><span class="badge ${isPut?'b-down':'b-up'}">${esc(optSignal)}</span><div class="bar"><i style="width:${p.strength||80}%;background:${isPut?'var(--down)':'var(--up)'}"></i></div><small class="muted">Strength ${p.strength||80}</small></div>
+     <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
+     <div class="pk-act ${isPut?'be-dn':'be-up'}"><b>${esc(optSignal)}</b> — ${esc(contract)} @ Premium <b>₹${fmtP(optEntry)}</b></div>
+     <div class="pk-lv" style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:8px 0">
+      <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:3px">🎯 OPTION PREMIUM LEVELS (${hzText})</div>
+      <div><small>Premium Entry</small><b class="num">₹${fmtP(optEntry)}</b></div>
+      <div><small>Premium SL</small><b class="num down">₹${fmtP(optSl)}</b></div>
+      <div><small>Premium T1</small><b class="num up">₹${fmtP(optT1)}</b></div>
+      <div><small>Premium T2</small><b class="num up">₹${fmtP(optT2)}</b></div>
+     </div>
+     <div class="muted" style="font-size:11.5px;margin-bottom:6px">Underlying Spot: <b>₹${fmtP(p.ltp)}</b> (Index Chart SL: <b>₹${fmtP(p.stop)}</b> · Index Tgt: <b>₹${fmtP(p.target)}</b>)</div>
+     <ul class="pk-why">${(p.reasons||[]).slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>Index trend and option flow analyzed</li>'}</ul>
+     <div class="pk-f"><span class="muted">${c&&c.lot?'Lot '+c.lot:'F&O Index'} · R:R ${p.rr||1.5}</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button> <button class="btn-xs" data-ocq="${esc(p.s)}">Option Chain</button> <button class="btn-xs pri" data-ocq="${esc(p.s)}">Trade ${esc(contract)}</button></span></div>
+    </article>`;
+  }
+
+  const L=p.signal!=='SELL';
   return`<article class="pk">
    <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}</small></div>
     <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
-   <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.kind==='index'?(p.signal==='BUY'?'CALL':'PUT'):p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
+   <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
    <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
-   <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':p.kind==='index'?(L?'<b>Buy CALL (CE)</b> — ATM strike':'<b>Buy PUT (PE)</b> — ATM strike'):L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
+   <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
    <div class="pk-lv"><div><small>Entry</small><b class="num">${fmtP(p.entry)}</b></div><div><small>Stop</small><b class="num down">${fmtP(p.stop)}</b></div><div><small>Target 1</small><b class="num ${L?"up":"down"}">${fmtP(p.target)}</b></div><div><small>Target 2</small><b class="num ${L?"up":"down"}">${fmtP(p.target2)}</b></div></div>
    <ul class="pk-why">${p.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>No strong trend, volume or range signal today</li>'}</ul>
-   <div class="pk-f"><span class="muted">R:R ${p.rr} · RSI ${p.rsi??'—'} · Vol ${p.volx}×</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button> <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button> ${p.kind==='index'?`<button class="btn-xs ${L?'pri':''}" data-ocq="${esc(p.s)}">${L?'Buy CALL':'Buy PUT'}</button>`:`<button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button>`}</span></div>
+   <div class="pk-f"><span class="muted">R:R ${p.rr} · RSI ${p.rsi??'—'} · Vol ${p.volx}×</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button> <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button> <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
   </article>`}
 function callCard(c){const go=c.signal==='BUY CALL'||c.signal==='BUY PUT',up=c.signal==='BUY CALL';
   const cls2=go?(up?'b-up':'b-down'):'b-mute';
-  const lv=go?`<div class="pk-lv"><div><small>Entry</small><b class="num">${fmtP(c.entry)}</b></div><div><small>Stop</small><b class="num down">${fmtP(c.stopLoss)}</b></div><div><small>Target 1</small><b class="num up">${fmtP(c.target1)}</b></div><div><small>Target 2</small><b class="num up">${fmtP(c.target2)}</b></div></div>`:'';
+  const hz=App.pk&&App.pk.hz;
+  let entry=c.entry,sl=c.stopLoss,t1=c.target1,t2=c.target2,hzLabel='Intraday';
+  if(hz==='SWING'&&go&&entry){
+    sl=round(entry*0.85,2);t1=round(entry*1.25,2);t2=round(entry*1.50,2);hzLabel='Swing';
+  }else if(hz==='POS'&&go&&entry){
+    sl=round(entry*0.75,2);t1=round(entry*1.45,2);t2=round(entry*1.80,2);hzLabel='Positional';
+  }
+  const lv=go?`<div class="pk-lv"><div><small>${hzLabel} Entry</small><b class="num">₹${fmtP(entry)}</b></div><div><small>Stop</small><b class="num down">₹${fmtP(sl)}</b></div><div><small>Target 1</small><b class="num up">₹${fmtP(t1)}</b></div><div><small>Target 2</small><b class="num up">₹${fmtP(t2)}</b></div></div>`:'';
   const u=c.underlying||{};const inv=go&&u.stop?`<div class="muted" style="font-size:12px;margin-top:6px">Exit the trade if ${esc(c.instrument)} trades ${up?'below':'above'} <b class="num">${fmtP(u.stop)}</b> (chart invalidation) · index target <b class="num">${fmtP(u.target)}</b></div>`:'';
   const flow=(c.callPct==null?'':`<div class="muted" style="font-size:12px;margin-top:6px">Option flow: ${c.callPct}% calls · ${c.putPct}% puts · chart ${esc(c.tech||'—')}</div>`)+inv;
   return`<article class="pk"><div class="pk-h"><div class="pk-t"><b>${esc(c.instrument)}</b><small>${go?esc(c.contract):'Index option'}${c.expiry?' · exp '+esc(c.expiry):''}</small></div><div class="pk-p"><b class="num" data-px="${esc(c.instrument)}">${fmtP(c.spot)}</b></div></div>
@@ -2573,7 +2625,7 @@ function mountOverview(){const host=$('#ovChart');if(!host)return;const s=SYM(OV
 document.addEventListener('click',e=>{const a=e.target.closest('[data-ovs],[data-ovr]');if(!a)return;
   if(a.dataset.ovs)OV.sym=a.dataset.ovs;else OV.rng=+a.dataset.ovr;renderPicks()});
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
-  const idx=['NIFTY','BANKNIFTY','SENSEX','INDIAVIX'].map(k=>SYM(k)).filter(Boolean);
+  const idx=['NIFTY','BANKNIFTY','SENSEX','FINNIFTY'].map(k=>SYM(k)).filter(Boolean);
   const idxHtml=idx.map(s=>`<button class="ix" data-sym="${esc(s.s)}"><small>${esc(s.n)}</small><b class="num" data-px="${esc(s.s)}"></b><span class="num" data-chg="${esc(s.s)}"></span></button>`).join('');
   let body;
   if(!P)body='<div class="empty">Screening liquid NSE F&O stocks on live data…</div>';
@@ -2581,15 +2633,23 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   else{let l;
     if(f.sig==='BUY')l=P.buy.slice();else if(f.sig==='SELL')l=P.sell.slice();else if(f.sig==='EVERY')l=P.picks.slice();else l=P.buy.concat(P.sell);
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
-    if(f.hz!=='ALL'){const key={INTRA:'intraday',SWING:'swing',POS:'positional'}[f.hz];l=l.filter(p=>p[key]===(p.signal==='SELL'?'Bearish':'Bullish'))}
+    if(f.hz!=='ALL'){const key={INTRA:'intraday',SWING:'swing',POS:'positional'}[f.hz];l=l.filter(p=>p.kind==='index'||p[key]===(p.signal==='SELL'?'Bearish':'Bullish'))}
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
     const SORTS={strength:(a,b)=>(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
-    l.sort(SORTS[f.sort]||SORTS.strength);
+    
+    // Sort indices strictly to the top
+    l.sort((a,b)=>{
+      const aIsIdx=a.kind==='index'?0:1;
+      const bIsIdx=b.kind==='index'?0:1;
+      if(aIsIdx!==bIsIdx)return aIsIdx-bIsIdx;
+      return(SORTS[f.sort]||SORTS.strength)(a,b);
+    });
+
     const size=f.size>0?f.size:l.length||1,pages=Math.max(1,Math.ceil(l.length/size));f.page=Math.min(Math.max(0,f.page||0),pages-1);
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
     const pager=pages>1?`<div class="pager"><button class="btn-xs" data-pkpage="${f.page-1}" ${f.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===f.page?'pri':''}" data-pkpage="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-pkpage="${f.page+1}" ${f.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
-    body=l.length?`<p class="muted pk-meta">${l.length} stock${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map(pickCard).join('')}</div>${pager}`:'<div class="empty">No stocks match this filter right now.</div>'}
+    body=l.length?`<p class="muted pk-meta">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · indices first · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map(pickCard).join('')}</div>${pager}`:'<div class="empty">No instruments match this filter right now.</div>'}
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
@@ -2603,7 +2663,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     <div class="seg" style="display:flex;margin:8px 12px 12px">${OVR.map(([l],i)=>`<button style="flex:1" class="${OV.rng===i?'on':''}" data-ovr="${i}">${l}</button>`).join('')}</div></div>
    <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
-   ${f.kind!=='STOCK'?`<div class="card" style="margin:10px 0"><div class="card-h"><h3>Index F&amp;O calls for the day</h3><span class="muted" style="font-size:12px">${App.calls&&App.calls.asOf?'as of '+new Date(App.calls.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="padding:10px">${callsBlock()}</div></div>`:''}
+   ${f.kind!=='STOCK'?`<div class="card" style="margin:10px 0"><div class="card-h"><h3>Index F&amp;O calls for ${f.hz==='SWING'?'Swing':f.hz==='POS'?'Positional':'the day'}</h3><span class="muted" style="font-size:12px">${App.calls&&App.calls.asOf?'as of '+new Date(App.calls.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="padding:10px">${callsBlock()}</div></div>`:''}
    ${body}
    <p class="disc">Rule-based screen of liquid NSE F&amp;O stocks using trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI. Levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
    <div class="two" style="margin-top:14px"><div class="movers" style="grid-template-columns:1fr 1fr">${mv('Top gainers',st.slice().sort((a,b)=>ch(b)-ch(a)))}${mv('Top losers',st.slice().sort((a,b)=>ch(a)-ch(b)))}</div>
