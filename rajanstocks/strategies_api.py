@@ -568,7 +568,7 @@ def _opt_rule(key, leg, prev_close, expiry=None):
         if not ok:
             return False, ""
         level, name = (primary, "base/6.5" if is_expiry else "base/2") if touch_p else (last, "base/10" if is_expiry else "base/4")
-        sl, t1, t2, t3 = round(ltp - sl_pts, 2), round(ltp * 2.0, 2), round(ltp * 2.5, 2), round(ltp * 3.0, 2)
+        sl, t1, t2, t3 = round(max(TICK, ltp - sl_pts), 2), round(ltp * 2.0, 2), round(ltp * 2.5, 2), round(ltp * 3.0, 2)
         return True, (f"Open=High, touched {name} support {level:,.2f} off prev close {prev_close:,.2f} · "
                       f"entry {ltp:,.2f} · SL {sl:,.2f} (10 pts) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
     return False, ""
