@@ -13,9 +13,9 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-   const TABS = [['overview', 'Overview'], ['new', 'New'], ['journal', 'Trades'], ['orders', 'Orders'], ['analysis', 'Analysis'], ['tsl', 'TSL'], ['backtest', 'Backtest'], ['auto', 'Auto'], ['gods', 'Gods Eye'], ['reports', 'Reports']];
-   const GROUPS = { analysis: [['strategy', 'Strategy'], ['tsl', 'TSL'], ['backtest', 'Backtest']] };
-   const TAB_TIPS = { overview: 'Equity, P&L, open positions and recent trades', new: 'Plan and log a new paper trade', journal: 'Every trade, with filters', orders: 'Open, filled and cancelled orders', analysis: 'Strategy Lab, TSL Lab and Backtest', strategy: 'Strategy Lab: results by setup', tsl: 'TSL Lab: compare trailing-stop methods', auto: 'Auto Trader: automated trades and settings', backtest: 'Run and review backtests', gods: 'Gods Eye: premium/index summary and quick actions', reports: 'Exports and summary reports', settings: 'Capital, risk and rule settings' };
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo']];
+   const GROUPS = {};
+   const TAB_TIPS = { portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -969,7 +969,7 @@
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true, 'journal')}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, gods: viewGodsEye, reports: viewReports, settings: viewSettings };
+    const bodies = { portfolio: viewPortfolio, positions: viewPositions, algo: viewAlgo };
     el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'overview' ? '' : topStrip()}${(bodies[effTab()] || viewOverview)()}</div>`;
     if (ui.tab === 'overview') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
@@ -1126,9 +1126,196 @@
     if (host && reg) host.outerHTML = tradeTable(reg.list, reg.withUnr, key); else render();
   }, true);
 
-  /* ---------- styles ---------- */
-  const st = document.createElement('style');
-  st.textContent = `
+/* ---------- styles ---------- */
+   const st = document.createElement('style');
+   st.textContent = `
+
+/* ============================================
+   SIMPLIFIED JOURNAL VIEWS - 3 TABS ONLY
+   ============================================ */
+
+   function viewPortfolio() {
+     const all = allTrades();
+     const m = metrics(all), day = today(), ds = dayStats(day);
+     const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
+     const eq = equity() + autoNet;
+     const unr = all.reduce((a, t) => a + (unrealised(t) || 0), 0);
+     const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
+     const net = m.net;
+     const winRate = m.winRate * 100;
+     
+     // Premium/Index summary (Gods Eye + Vedic combined)
+     const premiumData = all.filter(t => entered(t) && t.market === 'Options');
+     const indexData = all.filter(t => entered(t) && t.market === 'Index');
+     const premiumHigh = premiumData.length ? Math.max(...premiumData.map(t => t.entry)) : null;
+     const premiumLow = premiumData.length ? Math.min(...premiumData.map(t => t.entry)) : null;
+     const indexHigh = indexData.length ? Math.max(...indexData.map(t => t.entry)) : null;
+     const indexLow = indexData.length ? Math.min(...indexData.map(t => t.entry)) : null;
+
+     // Vedic Gann signals
+     const gannSignal = getGannSignal();
+     
+     let cum = 0; const curve = [S.capital]; m.sorted.forEach(r => { cum += r.c.net; curve.push(S.capital + cum); });
+     const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
+     let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
+
+     return `${filterBar(false)}
+     <div class="jv-kpis" id="jvKpis">
+       <div class="jv-kpi"><small>Total Equity</small><b>${inr(eq, 0)}</b></div>
+       <div class="jv-kpi"><small>Closed P&L</small><b class="${cc(net)}">${sinr(net)}</b></div>
+       <div class="jv-kpi"><small>Open P&L</small><b class="${cc(unr)}">${unr > 0 ? '+' + inr(unr, 0) : inr(unr, 0)}</b></div>
+       <div class="jv-kpi"><small>Win Rate</small><b>${winRate.toFixed(0)}%</b></div>
+       <div class="jv-kpi"><small>Positions</small><b>${open.length}</b></div>
+       <div class="jv-kpi"><small>Today</small><b>${ds.entries} / ${S.maxTrades}</b></div>
+     </div>
+     
+     <div class="jv-grid">
+       <div class="card"><div class="card-h"><h3>📊 Premium / Index Summary</h3></div>
+         <div class="jv-list">
+           <div><span>Premium Range</span><b>${premiumHigh != null && premiumLow != null ? px(premiumHigh) + ' - ' + px(premiumLow) : 'No premium trades'}</b></div>
+           <div><span>Premium High</span><b>${premiumHigh != null ? px(premiumHigh) : '—'}</b></div>
+           <div><span>Premium Low</span><b>${premiumLow != null ? px(premiumLow) : '—'}</b></div>
+           <div><span>Index Range</span><b>${indexHigh != null && indexLow != null ? px(indexHigh) + ' - ' + px(indexLow) : 'No index trades'}</b></div>
+           <div><span>Index High</span><b>${indexHigh != null ? px(indexHigh) : '—'}</b></div>
+           <div><span>Index Low</span><b>${indexLow != null ? px(indexLow) : '—'}</b></div>
+         </div>
+       </div>
+       <div class="card"><div class="card-h"><h3>🕉️ Vedic Gann Signal</h3></div>
+         <div class="jv-list">
+           <div><span>Signal</span><b class="${gannSignal.color}">${gannSignal.text}</b></div>
+           <div><span>Action</span><b>${gannSignal.action}</b></div>
+           <div><span>Level</span><b>${gannSignal.level}</b></div>
+         </div>
+       </div>
+       <div class="card"><div class="card-h"><h3>📈 Equity Curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
+       <div class="card"><div class="card-h"><h3>📉 Drawdown</h3></div><canvas class="jv-cv" id="jvDd"></canvas></div>
+       <div class="card"><div class="card-h"><h3>📅 Daily P&L</h3></div><canvas class="jv-cv" id="jvDay"></canvas></div>
+       <div class="card"><div class="card-h"><h3>⚡ Quick Actions</h3></div>
+         <div class="jv-actions">
+           <button class="btn pri" data-jv="reset">Reset Portfolio</button>
+           <button class="btn" data-jv="enter">New Trade</button>
+           <button class="btn" data-jv="exitall">Exit All</button>
+           <button class="btn" data-jv="csv">Export</button>
+         </div>
+       </div>
+     </div>
+     <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
+   }
+
+   function getGannSignal() {
+     // Get Gann signal from the new indicators
+     try {
+       const bars = JSON.parse(localStorage.getItem('gann_bars') || '[]');
+       if (!bars.length) return { text: 'No Data', color: '', action: 'Wait', level: '—' };
+       const last = bars[bars.length - 1];
+       if (last.signal === 'SELL_ON_RISE') return { text: 'SELL ON RISE 🔴', color: 'down', action: 'Sell', level: last.d1 ? px(last.d1) : '—' };
+       if (last.signal === 'BUY') return { text: 'BUY 🟢', color: 'up', action: 'Buy', level: last.u1 ? px(last.u1) : '—' };
+       if (last.signal === 'SELL') return { text: 'SELL 🔴', color: 'down', action: 'Sell', level: last.d1 ? px(last.d1) : '—' };
+       return { text: 'HOLD ⚪', color: '', action: 'Wait', level: '—' };
+     } catch (e) {
+       return { text: 'N/A', color: '', action: '—', level: '—' };
+     }
+   }
+
+   function viewPositions() {
+     const all = allTrades();
+     const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
+     
+     if (!open.length) {
+       return `<div class="card"><div class="card-h"><h3>Current Positions</h3></div>
+         <div class="empty">No open positions. Click "New Trade" to add one.</div></div>`;
+     }
+     
+     return `<div class="card"><div class="card-h"><h3>Current Positions (${open.length})</h3></div>
+       <div class="tbl-wrap">${positionTable(open)}</div></div>
+       <div class="card"><div class="card-h"><h3>Closed Positions (Recent)</h3></div>
+         <div class="tbl-wrap">${positionTable(all.filter(t => statusOf(t) === 'Closed').slice(-20))}</div></div>`;
+   }
+
+   function positionTable(trades) {
+     if (!trades.length) return '<div class="empty">No positions</div>';
+     const headers = ['Symbol', 'Side', 'Entry', 'SL', 'Target', 'Current', 'P&L', 'Exit'];
+     const rows = trades.map(t => {
+       const c = calc(t);
+       const status = statusOf(t);
+       const currentPrice = t.ltp || live(t.symbol || t.instrument) || t.entry;
+       const pnl = c.net || 0;
+       const pnlClass = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
+       const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="mktexit" data-id="${t.id}" title="Market exit">Exit</button>` : '<span class="muted">Closed</span>';
+       return `<tr${t.auto ? ' class="auto-row"' : ''}>
+         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small>${E(t.setup || '')}</small></span></td>
+         <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'L' : 'S'}</span></td>
+         <td class="num">${px(c.entry || t.entry)}</td>
+         <td class="num">${px(c.sl || t.sl)}</td>
+         <td class="num">${px(c.t2 || t.t2)}</td>
+         <td class="num"><b>${px(currentPrice)}</b></td>
+         <td class="num ${pnlClass}">${sinr(pnl)}</td>
+         <td>${exitBtn}</td>
+       </tr>`;
+     }).join('');
+     return `<table class="jv-t"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+   }
+
+   function viewAlgo() {
+     const auto = AUTO.list;
+     const openAuto = auto.filter(t => entered(t) && statusOf(t) !== 'Closed');
+     const closedAuto = auto.filter(t => statusOf(t) === 'Closed');
+     
+     // Backtest data
+     const bt = typeof SV !== 'undefined' && SV.bt ? SV.bt : null;
+     
+     return `<div class="jv-grid">
+       <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
+         <div class="jv-list">
+           <div><span>Status</span><b>${auto.length ? 'Active' : 'Idle'}</b></div>
+           <div><span>Open Auto Trades</span><b>${openAuto.length}</b></div>
+           <div><span>Closed Today</span><b>${closedAuto.filter(t => t.date === today()).length}</b></div>
+           <div><span>Total Auto P&L</span><b class="${cc(auto.reduce((s, t) => s + (calc(t).net || 0), 0))}">${sinr(auto.reduce((s, t) => s + (calc(t).net || 0), 0))}</b></div>
+         </div>
+         <div class="jv-actions">
+           <button class="btn pri" data-jv="autotoggle">${auto.length ? 'Stop Auto' : 'Start Auto'}</button>
+           <button class="btn" data-jv="autorefresh">Refresh</button>
+         </div>
+       </div>
+       
+       <div class="card"><div class="card-h"><h3>📊 Backtest Results</h3></div>
+         ${bt ? `
+           <div class="jv-list">
+             <div><span>Strategy</span><b>${bt.strategy || 'N/A'}</b></div>
+             <div><span>Total Trades</span><b>${bt.totalTrades || 0}</b></div>
+             <div><span>Win Rate</span><b>${bt.winRate ? (bt.winRate * 100).toFixed(1) + '%' : 'N/A'}</b></div>
+             <div><span>Net P&L</span><b class="${cc(bt.netPnl || 0)}">${sinr(bt.netPnl || 0)}</b></div>
+             <div><span>Max DD</span><b>${inr(bt.maxDD || 0, 0)}</b></div>
+             <div><span>Profit Factor</span><b>${bt.profitFactor ? bt.profitFactor.toFixed(2) : 'N/A'}</b></div>
+           </div>
+         ` : '<div class="empty">No backtest data. Run a backtest from Analysis tab.</div>'}
+       </div>
+       
+       <div class="card"><div class="card-h"><h3>🕉️ Vedic Gann Report</h3></div>
+         <div class="jv-list">
+           <div><span>Gann Signal</span><b>${getGannSignal().text}</b></div>
+           <div><span>Action</span><b>${getGannSignal().action}</b></div>
+           <div><span>Key Level</span><b>${getGannSignal().level}</b></div>
+           <div><span>Morning Bias</span><b>${getMorningBias()}</b></div>
+         </div>
+       </div>
+     </div>`;
+   }
+
+   function getMorningBias() {
+     try {
+       const now = new Date();
+       const hour = now.getHours();
+       if (hour < 10) return '🌅 Pre-market - Analyzing...';
+       if (hour === 9 && now.getMinutes() < 30) return '🌅 Market opening - Watch for signals';
+       if (hour === 9) return '📈 Morning session - Trend forming';
+       if (hour < 12) return '☀️ Mid-morning - Trend developing';
+       if (hour < 15) return '🌤️ Afternoon - Range bound';
+       return '🌙 End of day - Position management';
+     } catch (e) {
+       return '—';
+     }
+   }
   .jv-banner{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;border:1px solid var(--warn,#c9922c);background:color-mix(in srgb,var(--warn,#c9922c) 12%,transparent);border-radius:10px;margin:10px 0;font-size:12.5px}
   .jv-tabs{display:flex;gap:6px;overflow-x:auto;margin:6px 0 12px;padding-bottom:2px;scrollbar-width:none}
   .jv-tabs button{white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text-2,inherit);font-size:13px}
