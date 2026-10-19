@@ -200,7 +200,7 @@
 
         <!-- Probabilities Section (BRD v0.4 / PM-051 Contract) -->
         <div class="ge-probs-box">
-          ${s.probabilities ? `
+          ${(s.probabilityStatus === 'VALIDATED' && s.probabilities) ? `
             <div class="ge-prob-header">
               <small>Calibrated Outcome Probabilities (Sum: 1.0)</small>
             </div>
@@ -218,7 +218,7 @@
           ` : `
             <div class="ge-prob-unval">
               <span class="ge-unval-icon">🔒</span>
-              <span>Probability unavailable / not validated (per risk gate)</span>
+              <span>${s.probabilityStatus === 'NOT_VALIDATED' ? 'Probabilities pending calibration validation (PM-051)' : 'Probabilities unavailable / suppressed (PM-002)'}</span>
             </div>
           `}
         </div>
@@ -397,12 +397,24 @@
     loadHistory();
   };
 
+  let modelHealthData = null;
+  let evalReportData = null;
+  let calendarData = null;
+
   async function loadHealth() {
     const body = document.getElementById('geBody');
     if (body) body.innerHTML = '<div class="ge-loading">Running feed diagnostics &amp; security verification…</div>';
     try {
-      const res = await fetch('/api/v1/health/data');
-      healthData = await res.json();
+      const [hRes, mRes, eRes, cRes] = await Promise.all([
+        fetch('/api/v1/health/data'),
+        fetch('/api/v1/health/model'),
+        fetch('/api/v1/evaluation/report'),
+        fetch('/api/v1/calendar/session')
+      ]);
+      healthData = await hRes.json();
+      modelHealthData = await mRes.json();
+      evalReportData = await eRes.json();
+      calendarData = await cRes.json();
       renderHealthContent();
     } catch (e) {
       if (body) body.innerHTML = `<div class="ge-card ge-card-error">Failed loading health data: ${esc(e.message)}</div>`;
@@ -415,6 +427,7 @@
 
     body.innerHTML = `
       <div class="ge-health-grid">
+        <!-- Feed Freshness -->
         <div class="ge-card">
           <h3>Feed Freshness &amp; Latency (PM-04)</h3>
           <div class="ge-diag-kpi">
@@ -425,6 +438,7 @@
           </div>
         </div>
 
+        <!-- Security Sanitization -->
         <div class="ge-card">
           <h3>Security &amp; Secret Sanitization (PM-037)</h3>
           <p style="font-size:12.5px;color:var(--ge-text-sec)">
@@ -435,6 +449,7 @@
           </div>
         </div>
 
+        <!-- Kill Switch -->
         <div class="ge-card">
           <h3>Model Kill Switch Control (PM-025)</h3>
           <p style="font-size:12.5px;color:var(--ge-text-sec);margin-bottom:12px">
@@ -449,6 +464,53 @@
             </button>
           </div>
         </div>
+
+        <!-- Model Drift Monitoring (PM-026, PM-040) -->
+        ${modelHealthData ? `
+          <div class="ge-card">
+            <h3>Model Stability &amp; Drift Monitoring (PM-026)</h3>
+            <div class="ge-diag-kpi">
+              <div><small>PSI Stability Score</small><b>${modelHealthData.psiScore} (Threshold: &lt; ${modelHealthData.driftThreshold})</b></div>
+              <div><small>Drift Status</small><b style="color:${modelHealthData.driftStatus === 'STABLE' ? 'var(--ge-pos)' : 'var(--ge-neg)'}">${esc(modelHealthData.driftStatus)}</b></div>
+              <div><small>Regime Classification</small><b>${esc(modelHealthData.regime)}</b></div>
+              <div><small>Abstention Gate</small><b>${modelHealthData.abstentionGateActive ? 'ACTIVE (SUPPRESSED)' : 'CLEAR (NORMAL)'}</b></div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Calendar & Session Cutoff (PM-033, PM-034) -->
+        ${calendarData ? `
+          <div class="ge-card">
+            <h3>Exchange Calendar &amp; Session Boundary (PM-033, PM-034)</h3>
+            <div class="ge-diag-kpi">
+              <div><small>Exchange &amp; TZ</small><b>${esc(calendarData.exchange)} (${esc(calendarData.timezone)} ${esc(calendarData.utcOffset)})</b></div>
+              <div><small>Trading Day Status</small><b style="color:${calendarData.isTradingDay ? 'var(--ge-pos)' : 'var(--ge-neg)'}">${calendarData.isTradingDay ? 'OPEN / ACTIVE' : 'CLOSED (' + esc(calendarData.reason) + ')'}</b></div>
+              <div><small>Pre-Market Cutoff</small><b>${esc(calendarData.preMarketCutoff)}</b></div>
+              <div><small>Market Hours</small><b>${esc(calendarData.regularMarketHours)}</b></div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Backtest Evaluation & Baseline Comparison (PM-018, PM-019, PM-020, PM-039) -->
+        ${evalReportData ? `
+          <div class="ge-card" style="grid-column: 1 / -1">
+            <h3>Chronological Out-of-Sample Evaluation &amp; Baseline Comparison (PM-018, PM-020)</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;font-size:12px;color:var(--ge-text-sec)">
+              <span><strong>Train:</strong> ${esc(evalReportData.evaluationDataset.trainPeriod)}</span>
+              <span><strong>Validation:</strong> ${esc(evalReportData.evaluationDataset.validationPeriod)}</span>
+              <span><strong>Test Holdout:</strong> ${esc(evalReportData.evaluationDataset.testHoldoutPeriod)}</span>
+              <span><strong>Purge Window:</strong> ${evalReportData.evaluationDataset.purgeWindowDays}d</span>
+              <span><strong>Embargo:</strong> ${evalReportData.evaluationDataset.embargoWindowDays}d</span>
+              <span><strong>Evaluated Samples:</strong> ${evalReportData.sampleCount}</span>
+            </div>
+            <div class="ge-diag-kpi">
+              <div><small>Candidate Model Accuracy</small><b style="color:var(--ge-pos)">${(evalReportData.metrics.candidateModel.directionalAccuracy * 100).toFixed(1)}%</b></div>
+              <div><small>Baseline Accuracy (Majority/Momentum)</small><b>${(evalReportData.metrics.simpleBaseline.directionalAccuracy * 100).toFixed(1)}%</b></div>
+              <div><small>Excess Accuracy over Baseline</small><b style="color:var(--ge-pos)">+${(evalReportData.metrics.excessAccuracyOverBaseline * 100).toFixed(1)}%</b></div>
+              <div><small>Candidate Brier / Log-Loss</small><b>${evalReportData.metrics.candidateModel.brierScore} / ${evalReportData.metrics.candidateModel.logLoss}</b></div>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }

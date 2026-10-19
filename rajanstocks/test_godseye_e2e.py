@@ -75,8 +75,11 @@ def test_godseye_ui_full_e2e(live_server):
         page.screenshot(path="test-results/godseye/03-signal-audit-modal.png")
         assert page.locator("text=Signal Audit:").is_visible()
         assert page.locator("text=Deterministic Invalidation Conditions").is_visible()
-        # Close modal
-        page.locator(".ge-close-btn").click()
+        # Close modal and verify touch target >= 44px (PM-031 / WCAG 2.2 AA)
+        close_btn = page.locator(".ge-close-btn")
+        c_box = close_btn.bounding_box()
+        assert c_box["height"] >= 43.5 and c_box["width"] >= 43.5, f"Close btn touch target {c_box['width']}x{c_box['height']} < 44px!"
+        close_btn.click()
         page.wait_for_timeout(400)
 
         # 6. Verify Forecast Ledger & History Tab (PM-03)
@@ -92,5 +95,18 @@ def test_godseye_ui_full_e2e(live_server):
         page.screenshot(path="test-results/godseye/05-system-health.png")
         assert page.locator("text=ZERO CREDENTIALS EXPOSED").is_visible()
         assert page.locator("text=Operational Status").is_visible()
+        assert page.locator("text=Chronological Out-of-Sample Evaluation").is_visible()
+        assert page.locator("text=Exchange Calendar & Session Boundary").is_visible()
+
+        # 8. Verify Mobile Responsive Screen (PM-031 <= 767px mobileMax)
+        mobile_page = browser.new_page(viewport={"width": 390, "height": 844})
+        mobile_page.goto(live_server)
+        mobile_page.wait_for_selector("#boot", state="detached", timeout=25000)
+        mobile_page.evaluate("go('godseye')")
+        mobile_page.wait_for_selector("#v-godseye.on", timeout=10000)
+        mobile_page.wait_for_selector(".ge-card", timeout=10000)
+        mobile_page.screenshot(path="test-results/godseye/06-mobile-view.png")
+        assert mobile_page.locator(".ge-card").count() > 0
+        mobile_page.close()
 
         browser.close()

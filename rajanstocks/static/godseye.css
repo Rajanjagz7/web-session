@@ -433,13 +433,17 @@
 }
 
 .ge-close-btn {
-  width: 36px;
-  height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--ge-text-sec);
-  font-size: 18px;
+  font-size: 20px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
 }
 
 .ge-modal-body {
