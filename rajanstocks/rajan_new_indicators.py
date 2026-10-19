@@ -405,6 +405,27 @@ def rajan_gann_sq9_scan(symbol, angle_step=0.25, lookback_days=250):
         u1[i], d1[i] = lvl(base[i], 1), lvl(base[i], -1)
         u2[i], d2[i] = lvl(base[i], 2), lvl(base[i], -2)
 
+    # Track morning bearish signals for "sell on rise"
+    morning_bearish = [None] * n
+    for i in range(1, n):
+        if base[i] is not None:
+            # Check for "sell on rise" - price rises to resistance in morning session
+            # In daily bars, we check if open is near resistance and closes lower
+            open_px = bars[i]["open"]
+            close_px = bars[i]["close"]
+            high_px = bars[i]["high"]
+            
+            # Morning bearish: Open near d1 (resistance) and price falls
+            if d1[i] is not None and open_px is not None:
+                dist_to_d1 = abs(open_px - d1[i]) / d1[i] * 100
+                if dist_to_d1 <= 1.5 and close_px < open_px:
+                    morning_bearish[i] = True
+            
+            # Also check for gap up to resistance
+            if d1[i] is not None and open_px is not None and close_px is not None:
+                if open_px > d1[i] and close_px < d1[i]:
+                    morning_bearish[i] = True
+
     def raw_long(i):
         return base[i] is not None and closes[i - 1] <= u1[i] and closes[i] > u1[i] and closes[i] < u2[i] and hilo[i] == 1
 
@@ -421,8 +442,17 @@ def rajan_gann_sq9_scan(symbol, angle_step=0.25, lookback_days=250):
         return lvl(base[i], math.floor(dist) - 1) if side == "LONG" else lvl(base[i], math.ceil(dist) + 1)
 
     rows_core, pos = _walk(bars, raw_long, raw_short, init_sl, trail_fn)
-    rows = [{**rows_core[i], "base": base[i], "u1": u1[i], "d1": d1[i]} for i in range(n)]
-    return {"symbol": symbol, "columns": [{"key": "base", "label": "Gann base"}, {"key": "u1", "label": "Buy above"}, {"key": "d1", "label": "Sell below"}],
+    
+    # Add morning bearish signals to rows
+    rows = []
+    for i in range(n):
+        row = {**rows_core[i], "base": base[i], "u1": u1[i], "d1": d1[i]}
+        if morning_bearish[i]:
+            row["signal"] = "SELL_ON_RISE" if row["signal"] == "NONE" else row["signal"]
+            row["note"] = "Morning sell on rise - Open near resistance"
+        rows.append(row)
+    
+    return {"symbol": symbol, "columns": [{"key": "base", "label": "Gann base"}, {"key": "u1", "label": "Buy above"}, {"key": "d1", "label": "Sell below"}, {"key": "signal", "label": "Signal"}],
             "current": _current_from_pos(bars[-1], pos, rows), "bars": rows[-300:], "events": rp._events_from_bars(rows)}
 
 

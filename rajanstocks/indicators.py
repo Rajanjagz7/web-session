@@ -190,6 +190,36 @@ def oh_ol_setup(symbol, params):
             match_count += 1
 
         if show_side and (qualifies or not only_qualifying) and low is not None:
+            # Dynamic SL/TGT based on ATR and market conditions
+            # Calculate ATR-like measure for better SL/TGT sizing
+            atr_proxy = max(low * 0.02, 5.0)  # Minimum 2% or 5 points
+            
+            # Dynamic multipliers based on VIX tier
+            if tier == 1:  # Low volatility
+                sl_mult = 1.5
+                tgt_mult = 2.5
+            elif tier == 2:  # Medium volatility
+                sl_mult = 2.0
+                tgt_mult = 3.0
+            else:  # High volatility
+                sl_mult = 2.5
+                tgt_mult = 3.5
+            
+            # Calculate dynamic SL/TGT
+            dynamic_sl = round(low - (atr_proxy * sl_mult), 2)
+            dynamic_tgt = round(low + (atr_proxy * tgt_mult), 2)
+            
+            # Original levels for reference
+            orig_sl_s5 = round(low * 0.95, 2)
+            orig_sl_s9 = round(low * 0.91, 2)
+            orig_sl_s18 = round(low * 0.82, 2)
+            orig_tgt_t9 = round(low * 1.09, 2)
+            orig_tgt_t18 = round(low * 1.18, 2)
+            
+            # Use the better of dynamic or original (whichever gives wider SL/TGT)
+            sl_final = min(dynamic_sl, orig_sl_s5) if tier == 1 else min(dynamic_sl, orig_sl_s9) if tier == 2 else min(dynamic_sl, orig_sl_s18)
+            tgt_final = max(dynamic_tgt, orig_tgt_t9) if tier == 1 else max(dynamic_tgt, orig_tgt_t9) if tier == 2 else max(dynamic_tgt, orig_tgt_t18)
+            
             results.append({
                 "type": "CALL" if r["type"] == "CE" else "PUT",
                 "strike": r["strike"],
@@ -204,11 +234,17 @@ def oh_ol_setup(symbol, params):
                 "buyAtLow": low,
                 "buyLowPlus9": round(low * 1.09, 2),
                 "buyAtOpen": open_,
-                "targetT18": round(low * 1.18, 2),
-                "targetT9": round(low * 1.09, 2),
-                "slS5": round(low * 0.95, 2),
-                "slS9": round(low * 0.91, 2),
-                "slS18": round(low * 0.82, 2),
+                "targetT18": orig_tgt_t18,
+                "targetT9": orig_tgt_t9,
+                "slS5": orig_sl_s5,
+                "slS9": orig_sl_s9,
+                "slS18": orig_sl_s18,
+                # NEW: Dynamic SL/TGT based on market conditions
+                "dynamicSL": sl_final,
+                "dynamicTarget": tgt_final,
+                "atrProxy": round(atr_proxy, 2),
+                "slMultiplier": sl_mult,
+                "tgtMultiplier": tgt_mult,
                 "useT18": tier >= 2,
                 "useT9": tier == 1,
                 "useS5": tier == 1,
