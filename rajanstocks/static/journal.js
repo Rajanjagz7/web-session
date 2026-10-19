@@ -13,12 +13,9 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-  const TABS = [['overview', 'Overview'], ['new', 'New'], ['journal', 'Trades'], ['orders', 'Orders'], ['analysis', 'Analysis'], ['config', 'Config'], ['reports', 'Reports']];
-  const GROUPS = { analysis: [['strategy', 'Strategy'], ['tsl', 'TSL'], ['backtest', 'Backtest']], config: [['auto', 'Auto'], ['settings', 'Settings']] };
-  const TAB_TIPS = { overview: 'Equity, P&L, open positions and recent trades', new: 'Plan and log a new paper trade', journal: 'Every trade, with filters',
-    orders: 'Open, filled and cancelled orders', analysis: 'Strategy Lab, TSL Lab and Backtest', config: 'Auto Trader and settings',
-    strategy: 'Strategy Lab: results by setup', tsl: 'TSL Lab: compare trailing-stop methods',
-    auto: 'Auto Trader: automated trades and settings', backtest: 'Run and review backtests', reports: 'Exports and summary reports', settings: 'Capital, risk and rule settings' };
+   const TABS = [['overview', 'Overview'], ['new', 'New'], ['journal', 'Trades'], ['orders', 'Orders'], ['analysis', 'Analysis'], ['tsl', 'TSL'], ['backtest', 'Backtest'], ['auto', 'Auto'], ['gods', 'Gods Eye'], ['reports', 'Reports']];
+   const GROUPS = { analysis: [['strategy', 'Strategy'], ['tsl', 'TSL'], ['backtest', 'Backtest']] };
+   const TAB_TIPS = { overview: 'Equity, P&L, open positions and recent trades', new: 'Plan and log a new paper trade', journal: 'Every trade, with filters', orders: 'Open, filled and cancelled orders', analysis: 'Strategy Lab, TSL Lab and Backtest', strategy: 'Strategy Lab: results by setup', tsl: 'TSL Lab: compare trailing-stop methods', auto: 'Auto Trader: automated trades and settings', backtest: 'Run and review backtests', gods: 'Gods Eye: premium/index summary and quick actions', reports: 'Exports and summary reports', settings: 'Capital, risk and rule settings' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -276,32 +273,40 @@
   setInterval(() => { refreshLive(); if (!document.hidden) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 15000);
 
-  function viewOverview() {
-    const L = filtered(), m = metrics(L), day = today(), ds = dayStats(day);
-    const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0), eq = equity() + autoNet, unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
-    let cum = 0; const curve = [S.capital]; m.sorted.forEach(r => { cum += r.c.net; curve.push(S.capital + cum); });
-    const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
-    let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
-    const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
-    const noSL = T.filter(t => entered(t) && !(t.sl0 > 0)).length, overrides = T.filter(t => t.override).length;
-    const missing = closedTrades().filter(t => !t.reviewed).length;
-    const recent = L.slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
-    return `${filterBar(false)}
-    <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
-    <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen">${tradeTable(open, true, 'open')}</div></div>
-    <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>
-    <div class="jv-grid">
-      <div class="card"><div class="card-h"><h3>Equity curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
-      <div class="card"><div class="card-h"><h3>Drawdown</h3></div><canvas class="jv-cv" id="jvDd"></canvas></div>
-      <div class="card"><div class="card-h"><h3>Daily P&amp;L</h3></div><canvas class="jv-cv" id="jvDay"></canvas></div>
-      <div class="card"><div class="card-h"><h3>Rule compliance</h3></div><div class="jv-list">
-        <div><span>Entries without a stop-loss</span><b class="${noSL ? 'down' : 'up'}">${noSL}</b></div>
-        <div><span>Rule overrides (limit / budget / R:R)</span><b class="${overrides ? 'down' : 'up'}">${overrides}</b></div>
-        <div><span>Closed trades missing a review</span><b class="${missing ? 'down' : 'up'}">${missing}</b></div>
-        <div><span>Trades today / limit</span><b>${ds.entries} / ${S.maxTrades}</b></div></div></div>
-    </div>
-    <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
-  }
+   function viewOverview() {
+     const L = filtered(), m = metrics(L), day = today(), ds = dayStats(day);
+     const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0), eq = equity() + autoNet, unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
+     let cum = 0; const curve = [S.capital]; m.sorted.forEach(r => { cum += r.c.net; peak = Math.max(peak, cum); dd = Math.max(dd, peak - cum); curve.push(S.capital + cum); });
+     const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
+     let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
+     const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
+     const noSL = T.filter(t => entered(t) && !(t.sl0 > 0)).length, overrides = T.filter(t => t.override).length;
+     const missing = closedTrades().filter(t => !t.reviewed).length;
+     const recent = L.slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+     return `${filterBar(false)}
+     <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
+     <div class="card"><div class="card-h"><h3>Quick Stats</h3><div class="jv-actions"><button class="btn pri" data-jv="reset">Reset portfolio</button></div></div><div class="jv-list">
+         <div><span>Total Equity</span><b>${inr(eq, 0)}</b></div>
+         <div><span>Closed P&amp;L</span><b class="${cc(m.net)}">${sinr(m.net)}</b></div>
+         <div><span>Open P&L</span><b class="${cc(unr)}">${unr > 0 ? '+' + inr(unr, 0) : inr(unr, 0)}</b></div>
+         <div><span>Today</span><b>${ds.entries} / ${S.maxTrades} trades</b></div>
+         <div><span>Win Rate</span><b>${(m.winRate * 100).toFixed(0)}%</b></div>
+         <div><span>Current Positions</span><b>${open.length}</b></div>
+       </div></div>
+     <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen">${tradeTable(open, true, 'open')}</div></div>
+     <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>
+     <div class="jv-grid">
+       <div class="card"><div class="card-h"><h3>Equity curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
+       <div class="card"><div class="card-h"><h3>Drawdown</h3></div><canvas class="jv-cv" id="jvDd"></canvas></div>
+       <div class="card"><div class="card-h"><h3>Daily P&amp;L</h3></div><canvas class="jv-cv" id="jvDay"></canvas></div>
+       <div class="card"><div class="card-h"><h3>Rule compliance</h3></div><div class="jv-list">
+         <div><span>Entries without a stop-loss</span><b class="${noSL ? 'down' : 'up'}">${noSL}</b></div>
+         <div><span>Rule overrides (limit / budget / R:R)</span><b class="${overrides ? 'down' : 'up'}">${overrides}</b></div>
+         <div><span>Closed trades missing a review</span><b class="${missing ? 'down' : 'up'}">${missing}</b></div>
+         <div><span>Trades today / limit</span><b>${ds.entries} / ${S.maxTrades}</b></div></div></div>
+     </div>
+     <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
+   }
 
   function viewOrders() {
     if (typeof App === 'undefined' || typeof ordTable === 'undefined') return '<div class="empty">Orders are not available right now.</div>';
@@ -964,7 +969,7 @@
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true, 'journal')}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, reports: viewReports, settings: viewSettings };
+    const bodies = { overview: viewOverview, new: viewNew, journal: () => filterBar() + `<div class="card">${tradeTable(filtered().slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))), true, 'journal')}</div>`, orders: viewOrders, strategy: viewStrategy, tsl: viewTsl, auto: viewAuto, backtest: viewBacktest, gods: viewGodsEye, reports: viewReports, settings: viewSettings };
     el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'overview' ? '' : topStrip()}${(bodies[effTab()] || viewOverview)()}</div>`;
     if (ui.tab === 'overview') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
@@ -977,48 +982,116 @@
     if (ui.tab === 'new') renderCalc();
   }
 
-  document.addEventListener('click', e => {
-    const o = e.target.closest('[data-jvord]'); if (!o) return;
-    if (typeof App !== 'undefined') App.ord = o.dataset.jvord;
-    render();
-  });
+   const resetPortfolio = () => {
+     if (confirm('Reset the entire portfolio? This will clear all trades and settings - this cannot be undone.')) {
+       if (confirm('Are you absolutely sure? This will permanently delete all your journal data.')) {
+         T = [];
+         S = Object.assign({}, DEFAULTS);
+         persist();
+         toast_('Portfolio reset complete', 'ok');
+         render();
+       }
+     }
+   };
+
+   document.addEventListener('click', e => {
+     const b = e.target.closest('[data-jv="reset"]'); if (!b) return;
+     e.preventDefault(); e.stopPropagation(); resetPortfolio();
+   });
 
   /* ---------- events ---------- */
-  document.addEventListener('click', e => {
-    const b = e.target.closest('[data-jv]'); if (!b) return;
-    const a = b.dataset.jv, id = b.dataset.id;
-    if (!document.getElementById('v-journal') && !document.querySelector('.modal-bg')) return;
-    if (a === 'tab') { ui.tab = b.dataset.k; const eff = effTab(); if (eff === 'auto') SV.auto = null; if (eff === 'backtest') SV.bt = null; render(); }
-    else if (a === 'subtab') { ui.sub[b.dataset.grp] = b.dataset.k; if (b.dataset.k === 'auto') SV.auto = null; if (b.dataset.k === 'backtest') SV.bt = null; render(); }
-    else if (a === 'open') openDetail(id);
-    else if (a === 'clearf') { ui.f = { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '' }; render(); }
-    else if (a === 'plan') savePlan();
-    else if (a === 'enter') recordEntry();
-    else if (a === 'resetform') { ui.draft = null; render(); }
-    else if (a === 'cancelmodal') window.closeModal && window.closeModal();
-    else if (a === 'addexit') addExit(id);
-    else if (a === 'autoexit') autoExit(id);
-    else if (a === 'exitall') exitAll();
-    else if (a === 'autotsl') autoTsl(id);
-    else if (a === 'autostop') autoStop(id);
-    else if (a === 'settsl') setManualTsl(id);
-    else if (a === 'mktexit') marketExit(id);
-    else if (a === 'movesl') moveSL(id);
-    else if (a === 'savereview') saveReview(id);
-    else if (a === 'enterplan') { const t = T.find(x => x.id === id); if (t) { ui.draft = Object.assign({}, t, { instrument: t.instrument, why: t.why, entry: t.entry, sl: t.sl0 }); T = T.filter(x => x.id !== id); persist(); window.closeModal && window.closeModal(); ui.tab = 'new'; render(); } }
-    else if (a === 'cancelplan') { const t = T.find(x => x.id === id); if (t) { t.status = 'Cancelled'; persist(); window.closeModal && window.closeModal(); render(); } }
-    else if (a === 'favsave') { const t = T.find(x => x.id === id); if (t) { t.hi = num(document.getElementById('jd-hi').value); t.lo = num(document.getElementById('jd-lo').value); if (statusOf(t) === 'Closed') t.edited = true; persist(); toast_('Saved', 'ok'); } }
-    else if (a === 'csv') exportCsv();
-    else if (a === 'csvsum') exportSummary();
-    else if (a === 'runlab') runLab();
-    else if (a === 'btrun') { fetch('/api/backtest/run', { method: 'POST' }).then(() => { SV.btBusy = true; SV.bt = null; ui.tab = 'analysis'; ui.sub.analysis = 'backtest'; render(); const iv = setInterval(async () => { await loadSrv('bt'); if (SV.bt && !SV.bt.running) clearInterval(iv); }, 4000); }); }
-    else if (a === 'autotoggle') { const on = !(SV.auto && SV.auto.cfg.enabled); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: on }) }).then(() => loadSrv('auto')); }
-    else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
-    else if (a === 'autorefresh') { loadSrv('auto'); }
-    else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
-    else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
-    else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
-  });
+   document.addEventListener('click', e => {
+     const b = e.target.closest('[data-jv="reset"]'); if (!b) return;
+     e.preventDefault(); e.stopPropagation(); resetPortfolio();
+   });
+
+   /* ---------- Gods Eye - Monitoring Dashboard ---------- */
+   function viewGodsEye() {
+     const all = allTrades();
+     const day = today();
+     const todayStats = dayStats(day);
+     const { open: openToday } = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
+     const livePrices = {};
+
+     // Get current live prices for premium and index tracking
+     const symbols = [...new Set(all.map(t => t.symbol || t.instrument).filter(Boolean))];
+     if (symbols.length) {
+       symbols.forEach(sym => {
+         const price = live(sym);
+         if (price != null) livePrices[sym] = price;
+       });
+     }
+
+     // Calculate premium high/low for today
+     const premiumData = all.filter(t => entered(t) && statusOf(t) !== 'Closed' && t.market === 'Options');
+     const premiumHigh = premiumData.length ? Math.max(...premiumData.map(t => t.entry)) : null;
+     const premiumLow = premiumData.length ? Math.min(...premiumData.map(t => t.entry)) : null;
+
+     // Calculate index high/low for today
+     const indexData = all.filter(t => entered(t) && statusOf(t) !== 'Closed' && t.market === 'Index');
+     const indexHigh = indexData.length ? Math.max(...indexData.map(t => t.entry)) : null;
+     const indexLow = indexData.length ? Math.min(...indexData.map(t => t.entry)) : null;
+
+     // Calculate P&L summaries
+     const totalEquity = equity() + livePrices.reduce((sum, price, sym) => {
+       const trade = all.find(t => (t.symbol || t.instrument) === sym && entered(t) && statusOf(t) !== 'Closed');
+       if (trade) {
+         const qty = trade.qty - exitedQty(trade);
+         const unrealized = unrealised(trade);
+         return sum + (unrealized || 0);
+       }
+       return sum;
+     }, 0);
+
+     const realizedPNL = realised();
+     const openPNL = all.reduce((sum, t) => {
+       if (entered(t) && statusOf(t) !== 'Closed') {
+         const unrealized = unrealised(t);
+         return sum + (unrealized || 0);
+       }
+       return sum;
+     }, 0);
+
+     return `<div class="jv-grid">
+       <div class="card"><div class="card-h"><h3>🎯 Premium Summary (Today)</h3></div>
+         <div class="jv-list">
+           <div><span>Premium Range</span><b>${premiumHigh != null && premiumLow != null ? px(premiumHigh) + ' - ' + px(premiumLow) : 'No premium trades'}</b></div>
+           <div><span>High</span><b>${premiumHigh != null ? px(premiumHigh) : '—'}</b></div>
+           <div><span>Low</span><b>${premiumLow != null ? px(premiumLow) : '—'}</b></div>
+           <div><span>Count</span><b>${premiumData.length}</b></div>
+         </div>
+       </div>
+       <div class="card"><div class="card-h"><h3>📈 Index Summary (Today)</h3></div>
+         <div class="jv-list">
+           <div><span>Index Range</span><b>${indexHigh != null && indexLow != null ? px(indexHigh) + ' - ' + px(indexLow) : 'No index trades'}</b></div>
+           <div><span>High</span><b>${indexHigh != null ? px(indexHigh) : '—'}</b></div>
+           <div><span>Low</span><b>${indexLow != null ? px(indexLow) : '—'}</b></div>
+           <div><span>Count</span><b>${indexData.length}</b></div>
+         </div>
+       </div>
+       <div class="card"><div class="card-h"><h3>💰 P&L Summary</h3></div>
+         <div class="jv-list">
+           <div><span>Total Equity</span><b class="${cc(totalEquity - S.capital)}">${inr(totalEquity, 0)}</b></div>
+           <div><span>Realized P&L</span><b class="${cc(realizedPNL)}">${sinr(realizedPNL)}</b></div>
+           <div><span>Open P&L</span><b class="${cc(openPNL)}">${sinr(openPNL)}</b></div>
+           <div><span>Today P&L</span><b class="${cc(todayStats.pnl + todayStats.unr)}">${sinr(todayStats.pnl + todayStats.unr)}</b></div>
+         </div>
+       </div>
+       <div class="card"><div class="card-h"><h3>📊 Live Prices</h3></div>
+         <div class="jv-list">
+           ${Object.entries(livePrices).length ? Object.entries(livePrices).map(([sym, price]) => `<div><span>${sym}</span><b>${px(price)}</b></div>`).join('') : '<div><span>No live prices available</span></div>'}
+         </div>
+       </div>
+       <div class="card"><div class="card-h"><h3>⚡ Quick Actions</h3></div>
+         <div class="jv-actions">
+           <button class="btn pri" data-jv="reset">Reset Portfolio</button>
+           <button class="btn" data-jv="enter">New Trade</button>
+           <button class="btn" data-jv="exitall">Exit All Positions</button>
+           <button class="btn" data-jv="csv">Export Trades</button>
+         </div>
+       </div>
+     </div>`;
+   }
   document.addEventListener('change', e => {
     const h = e.target.closest('[data-jv="hit"]');
     if (h) {
