@@ -22,6 +22,7 @@ import rajan_pavan_indicators as rp
 import trade_predictor
 import ut_bot
 import market_api
+from indicators import get_india_vix, vix_tier
 
 router = APIRouter(prefix="/api/m")
 
@@ -527,9 +528,12 @@ OPT_SCANS = [
     ("opt-spike", "Volume Spurt and OI Spike (contracts)", "Option scans", "Contracts trading over 2x the typical strike volume on a rising candle while open interest builds."),
     ("rajan-premium-levels", "Rajan Premium Levels", "Option scans",
      "Open=High premium touching support at prev-close /2 or /4 (normal day) or /6.5 or /10 (this contract's own expiry day). Base is always previous close. 10-pt SL, 2x/2.5x/3x targets off entry premium. Pine: Rajan_Premium_Levels.pine."),
+    ("rajan-ohol-premium", "Rajan OH-OL Premium Entry", "Option scans",
+     "Index Open=Low -> CE / Open=High -> PE, and the option's own day-low has not pulled back more than 10 pts below its open or previous close. "
+     "Entries only 09:30-11:00 IST, skipped if price already chased more than 5% off the day low. VIX-tiered SL/targets off the day low. Pine: Rajan_OHOL_Options.pine."),
 ]
 OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": [],
-                "gen": "new" if k in newind.NEW_KEYS_SET or k == "rajan-premium-levels" else "old"} for k, n, g, d in OPT_SCANS}
+                "gen": "new" if k in newind.NEW_KEYS_SET or k in ("rajan-premium-levels", "rajan-ohol-premium") else "old"} for k, n, g, d in OPT_SCANS}
 SCAN_INDICES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"]
 TICK = 0.05
 
@@ -600,6 +604,29 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
         if time.time() > deadline:
             failed.append(sym)
             return out
+        want_side = None
+        ohol_plan = None
+        if key == "rajan-ohol-premium":
+            try:
+                uq = (market_api.quotes(sym)["quotes"] or [None])[0]
+            except Exception:
+                uq = None
+            if not uq or not uq.get("open") or uq.get("high") is None or uq.get("low") is None:
+                return out
+            idx_ol = abs(uq["open"] - uq["low"]) <= 0.0
+            idx_oh = abs(uq["open"] - uq["high"]) <= 0.0
+            want_side = "CE" if (idx_ol and not idx_oh) else "PE" if (idx_oh and not idx_ol) else None
+            if not want_side:
+                return out
+            now_ist = datetime.now(market_api.IST)
+            mins = now_ist.hour * 60 + now_ist.minute
+            if not (9 * 60 + 30 <= mins < 11 * 60):
+                return out
+            vix = get_india_vix()
+            tier = vix_tier(vix)
+            sl_pct = {1: 5.0, 2: 9.0, 3: 18.0}[tier]
+            t1_pct = {1: 9.0, 2: 18.0, 3: 18.0}[tier]
+            ohol_plan = {"idx_pattern": "Open=Low" if idx_ol else "Open=High", "tier": tier, "sl_pct": sl_pct, "t1_pct": t1_pct}
         try:
             first = market_api.chain(symbol=sym, expiry="")
         except Exception:
@@ -618,6 +645,23 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
                 if key == "opt-spike":
                     ok = med > 0 and leg["vol"] > 2.0 * med and leg["ltp"] > leg["open"] > 0 and leg["oiChg"] > 0
                     tag = f"Volume {leg['vol'] / med:.1f}x the typical strike, OI +{leg['oiChg']:,.0f}" if ok else ""
+                elif key == "rajan-ohol-premium":
+                    ok, tag = False, ""
+                    if side == want_side and leg["ltp"] > 0 and leg["low"] > 0:
+                        pts = 10.0
+                        near_open = leg["open"] > 0 and leg["low"] >= leg["open"] - pts
+                        near_prev = leg["prev"] > 0 and leg["low"] >= leg["prev"] - pts
+                        not_chased = leg["ltp"] <= leg["low"] * 1.05
+                        ok = (near_open or near_prev) and not_chased
+                        if ok:
+                            dl = leg["low"]
+                            sl = round(max(TICK, dl * (1 - ohol_plan["sl_pct"] / 100)), 2)
+                            t1 = round(dl * (1 + ohol_plan["t1_pct"] / 100), 2)
+                            t2 = round(dl * (1 + (ohol_plan["t1_pct"] + 9) / 100), 2)
+                            t3 = round(dl * (1 + (ohol_plan["t1_pct"] + 18) / 100), 2)
+                            near = "open" if near_open else "prev close"
+                            tag = (f"Index {ohol_plan['idx_pattern']}, premium day-low {dl:,.2f} within {pts:.0f} pts of {near} · "
+                                   f"entry {leg['ltp']:,.2f} · SL {sl:,.2f} (VIX tier {ohol_plan['tier']}) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
                 else:
                     ok, tag = _opt_rule(key, leg, leg["prev"], c["expiry"])
                 if ok:
