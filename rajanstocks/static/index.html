@@ -2080,8 +2080,8 @@ $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.classNa
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
-const PRIMARY=['picks','trade','markets','ipo'];
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro'],['godseye',"God's Eye"]];
+   const PRIMARY=['picks','trade','markets','ipo'];
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
 const SUBVIEWS={options:['trade','Options'],mobile:['trade',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
@@ -2104,7 +2104,7 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=windo
   c.className='pf-chip '+k;c.innerHTML=`<small>Portfolio</small><b>₹${sh(eq)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;
   c.title=t?`Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} · booked ${t.booked>=0?'+':'−'}₹${Math.round(Math.abs(t.booked)).toLocaleString('en-IN')} · open ${t.unr>=0?'+':'−'}₹${Math.round(Math.abs(t.unr)).toLocaleString('en-IN')} (${t.open} open) — click for the journal`:'Portfolio value'}
 function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
-const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log'};
+const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
 function closeOverlays(){
   try{RN.closeAll()}catch(e){}try{closeOc()}catch(e){}try{closeTfPop()}catch(e){}try{closeModal()}catch(e){}
