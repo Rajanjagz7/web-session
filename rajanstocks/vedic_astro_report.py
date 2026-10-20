@@ -337,6 +337,16 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         else "Post-market"
     )
 
+    # Seller / buyer windows for the session this report is for (today, or the next trading day once closed)
+    try:
+        import vedic_timing
+        hol = NSE_HOLIDAYS.get(now_ist.year, {}) | NSE_HOLIDAYS.get(now_ist.year + 1, {})
+        sdate = vedic_timing.next_session(now_ist, hol)
+        s_open = datetime(sdate.year, sdate.month, sdate.day, 9, 15, tzinfo=IST).astimezone(timezone.utc)
+        special_timing = vedic_timing.build(sdate, vedic_panchang.compute_panchang(s_open), hol)
+    except Exception as e:
+        special_timing = {"available": False, "reason": f"Special timing unavailable: {str(e)[:160]}"}
+
     mc = _market_context(symbol)
     spot = mc["index_last"]["value"] if mc.get("index_last", {}).get("available") else None
     prev = mc["index_prev_close"]["value"] if mc.get("index_prev_close", {}).get("available") else None
@@ -421,6 +431,7 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
             "source": "Skyfield / JPL DE421, Lahiri ayanamsa (computed here, not a third-party API)",
         },
         "watch_windows": windows,
+        "special_timing": special_timing,
         "stocks_to_watch": _stocks_to_watch(5),
         "risk_management": RISK_MANAGEMENT,
         "disclaimer": DISCLAIMER,

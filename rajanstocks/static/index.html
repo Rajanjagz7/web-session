@@ -800,6 +800,23 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-setup.long{background:var(--up-bg);border:1px solid color-mix(in srgb,var(--up) 35%,transparent)}.vx-setup.short{background:var(--down-bg);border:1px solid color-mix(in srgb,var(--down) 35%,transparent)}
 .vx-setup h4{margin:0;font-size:13px}.vx-setup.long h4{color:var(--up)}.vx-setup.short h4{color:var(--down)}.vx-setup small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase}.vx-setup b{font-size:14px}
 .vx-kvs .vd-kv{display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);font-size:12.5px}.vx-kvs .vd-kv small{color:var(--text-3)}
+.vx-sp{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:6px 0 14px;background:var(--panel-2)}
+.vx-sp-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.vx-sp-h b{font-size:15px;color:var(--gold,#e8b84a)}.vx-sp-h small{display:block;color:var(--text-3);font-size:12px;margin-top:2px}
+.vx-sp-list{display:flex;flex-direction:column;gap:6px;margin:10px 0 6px}
+.vx-sp-w{display:grid;grid-template-columns:auto auto auto 1fr;align-items:baseline;gap:4px 12px;padding:8px 12px;border-radius:9px;border-left:4px solid}
+.vx-sp-w.sell{background:var(--down-bg);border-color:var(--down)}.vx-sp-w.buy{background:var(--up-bg);border-color:var(--up)}
+.vx-sp-w span{font-size:17px;font-weight:800}.vx-sp-w b{font-size:15px}.vx-sp-w.sell b{color:var(--down)}.vx-sp-w.buy b{color:var(--up)}
+.vx-sp-w em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}.vx-sp-w small{font-size:11.5px;color:var(--text-2);justify-self:end;text-align:right}
+.vx-sp-c{font-size:12.5px;font-weight:600;color:var(--text-2);margin:2px 0 10px}
+.vx-sp-bar{position:relative;height:26px;border-radius:7px;background:var(--panel);overflow:visible}.vx-sp-bar>i{position:absolute;top:0;bottom:0}
+.vx-sp-box{position:absolute;top:-3px;bottom:-3px;border:2px solid;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.vx-sp-box.sell{border-color:var(--down)}.vx-sp-box.buy{border-color:var(--up)}
+.vx-sp-g{position:absolute;bottom:-9px;width:8px;height:8px;margin-left:-4px;background:var(--gold,#e8b84a);transform:rotate(45deg)}
+.vx-sp-moon{position:absolute;top:-16px;margin-left:-5px;font-style:normal;font-size:12px;color:#a78bfa}
+.vx-sp-hora{position:relative;height:18px;margin-top:12px}.vx-sp-hora span{position:absolute;top:0;font-size:10px;color:var(--text-3);border-left:1px solid var(--line);padding-left:3px;overflow:hidden;white-space:nowrap}
+.vx-sp-ev{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:12px;color:var(--text-2)}
+.vx-sp-how{margin-top:8px;font-size:12px;color:var(--text-2)}.vx-sp-how summary{cursor:pointer;color:var(--text-3)}
+@media(max-width:640px){.vx-sp-w{grid-template-columns:auto 1fr}.vx-sp-w small{grid-column:1/-1;justify-self:start;text-align:left}}
 .vx-tl{margin:4px 0 12px}.vx-tl-bar{position:relative;height:34px;border-radius:8px;background:var(--panel-2);overflow:hidden}
 .vx-seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;border-right:1px solid var(--panel)}.vx-seg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 .vx-seg.k0{background:#10b981}.vx-seg.k1{background:#3b82f6}.vx-seg.k2{background:#a855f7}.vx-seg.k3{background:#f59e0b}.vx-seg.k4{background:#14b8a6}
@@ -2429,6 +2446,31 @@ function vxTimeline(wins){const S0=555,S1=930,span=S1-S0,pos=m=>Math.max(0,Math.
   const ticks=['09:15','10:00','11:00','12:00','13:00','14:00','15:00','15:30'].map((t,i)=>{const m=+t.slice(0,2)*60+ +t.slice(3);return `<i class="${[1,3,5,6].includes(i)?'opt':''}" style="left:${pos(m)}%">${t}</i>`}).join('');
   const out=wins.filter(w=>!w.in_session&&w.window_ist&&w.window_ist!=='NOT AVAILABLE').map(w=>`<span class="vx-chip mute" title="${esc(w.focus)}">${esc(w.label)} ${esc(w.window_ist)} · outside market hours</span>`).join('');
   return `<div class="vx-tl"><div class="vx-tl-bar">${segs}${nm>=S0&&nm<=S1&&!(VD.data.header.is_weekend)?`<b class="vx-now" style="left:${pos(nm)}%" title="Now"></b>`:''}</div><div class="vx-tl-ticks">${ticks}</div>${out?`<div class="vx-tl-out">${out}</div>`:''}</div>`}
+/* Special timing: Sellers / Buyers windows from hora + choghadiya + kaal periods, Gann 45-min turns, Moon changes. */
+function vxSpecialText(st){const d=new Date(st.session_date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+  return `${st.title} (${d})\n`+st.windows.map(w=>`${w.start.replace(/^0/,'')} - ${w.end.replace(/^0/,'')} ${w.side}`).join('\n')+`\n(If Price Action Confirm)\nWatch Volume with Price Action in Given Period for Confirmation`}
+function vxSpecial(st){if(!st||!st.available)return st&&st.reason?`<p class="vx-note">${esc(st.reason)}</p>`:'';
+  const S0=555,S1=930,pos=m=>Math.max(0,Math.min(100,(m-S0)/(S1-S0)*100)),d=new Date(st.session_date+'T00:00:00');
+  const today=new Date(Date.now()+(330+new Date().getTimezoneOffset())*60000).toISOString().slice(0,10)===st.session_date;
+  const col=v=>v<=-3?'#dc2626':v<=-2?'#ef4444':v<0?'rgba(239,68,68,.45)':v>=3?'#059669':v>=2?'#10b981':v>0?'rgba(16,185,129,.45)':'var(--panel-2)';
+  const heat=st.slots.map(x=>`<i style="left:${pos(x.m)}%;width:${pos(x.m+5)-pos(x.m)}%;background:${col(x.score)}" title="${fmtHM(x.m)} · ${esc(x.hora)} hora · ${esc(x.chog)} · ${x.score>0?'+':''}${x.score}"></i>`).join('');
+  const boxes=st.windows.map(w=>`<b class="vx-sp-box ${w.side==='Sellers'?'sell':'buy'}" style="left:${pos(w.start_min)}%;width:${pos(w.end_min)-pos(w.start_min)}%"><span>${w.side}</span></b>`).join('');
+  const turns=(st.gann_turns||[]).map(t=>{const m=+t.slice(0,2)*60+ +t.slice(3);return `<em class="vx-sp-g" style="left:${pos(m)}%" title="Gann time turn ${t}"></em>`}).join('')+(st.moon_events||[]).map(e=>`<em class="vx-sp-moon" style="left:${pos(e.min)}%" title="${esc(e.time)} ${esc(e.what)}">☾</em>`).join('');
+  const hora=(st.hora_sequence||[]).map(h=>{const a=+h.start.slice(0,2)*60+ +h.start.slice(3),b=+h.end.slice(0,2)*60+ +h.end.slice(3);return `<span style="left:${pos(a)}%;width:${pos(b)-pos(a)}%" title="${esc(h.lord)} hora ${h.start}-${h.end}">${esc(h.lord.slice(0,3))}</span>`}).join('');
+  return `<div class="vx-sp">
+    <div class="vx-sp-h"><div><b>${esc(st.title)}</b><small>${today?'Today':'Next session'} · ${d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'})}${st.is_expiry?' · weekly expiry':''}</small></div>
+      <button class="btn-xs" data-vxcopy="1" title="Copy in message format">Copy</button></div>
+    <div class="vx-sp-list">${st.windows.length?st.windows.map(w=>`<div class="vx-sp-w ${w.side==='Sellers'?'sell':'buy'}"><span class="num">${w.start} – ${w.end}</span><b>${w.side}</b><em>${esc(w.strength)}</em>
+      <small>${w.reasons.map(esc).join(' · ')}${w.gann_turns.length?` · Gann turn ${w.gann_turns.join(', ')}`:''}</small></div>`).join(''):'<p class="vx-note">No strong seller or buyer window today - the time factors are mixed.</p>'}</div>
+    <p class="vx-sp-c">(If price action confirms) Watch volume with price action in the given period for confirmation.</p>
+    <div class="vx-sp-bar">${heat}${boxes}${turns}</div>
+    <div class="vx-sp-hora">${hora}</div>
+    ${(st.moon_events||[]).length?`<div class="vx-sp-ev">${st.moon_events.map(e=>`<span>☾ <b class="num">${esc(e.time)}</b> ${esc(e.what)} - ${esc(e.note)}</span>`).join('')}</div>`:''}
+    <details class="vx-sp-how"><summary>How these windows are found</summary><p>Every 5 minutes of the session is scored from the <b>hora</b> (planetary hour: Jupiter, Venus +2 · Moon, Mercury +1 · Sun 0 · Mars, Saturn −2), the day's <b>choghadiya</b> (Amrit, Shubh +2 · Labh +1 · Chal 0 · Udveg −1 · Rog, Kaal −2) and the <b>kaal</b> periods (Rahu Kaal −2 · Yamaganda, Gulika −1). Runs scoring −2 or lower are <b>Sellers</b>, +2 or higher <b>Buyers</b> (20–60 minutes, two strongest of each). Diamonds mark <b>Gann time turns</b> every 45 minutes from the 09:15 open; ☾ marks a Moon nakshatra or tithi change. Sunrise ${esc(st.sunrise_ist)} · sunset ${esc(st.sunset_ist)} (Mumbai). Traditional timing - use it only with price and volume confirmation.</p></details>
+  </div>`}
+function fmtHM(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vxcopy]');if(!b||!VD.data||!VD.data.special_timing)return;const t=vxSpecialText(VD.data.special_timing);
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Special timing copied','ok')).catch(()=>{prompt('Copy this text',t)})});
 /* Gann ladder + plan follow the LIVE price: 4 levels above and 4 below it from the Square-of-9 grid around the base. */
 function vxSpot(g,sym){const s=typeof SYM==='function'?SYM(sym||'NIFTY'):null;return s&&s.last>0&&(typeof MKT!=='undefined'&&MKT.open||!g.spot)?s.last:g.spot}
 function vxGrid(g){if(g.grid&&g.grid.length)return g.grid;const b=g.base.price,r=Math.sqrt(b),out=[];for(let n=-24;n<=24;n++){const x=r+n*0.25;if(x>0)out.push({n,level:+(x*x).toFixed(2)})}return out}
@@ -2463,7 +2505,7 @@ setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.h
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
-    <section class="vx-card"><h3>Session timeline (IST)</h3>${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>${vdNewsPanel(4)}`}
+    <section class="vx-card"><h3>Session timeline (IST)</h3>${vxSpecial(r.special_timing)}${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
   return `<div class="vx-grid2"><section class="vx-card"><h3>Panchang · Mumbai</h3><div class="vx-pan">
