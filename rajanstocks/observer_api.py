@@ -275,3 +275,31 @@ def observer(refresh: bool = False):
         else:
             data = _cache["data"]
     return data
+
+# ---- any single stock or index (Trade screen) ----
+TV_INDEX = {"NIFTY": "NSE:NIFTY", "BANKNIFTY": "NSE:BANKNIFTY", "FINNIFTY": "NSE:CNXFINANCE", "MIDCPNIFTY": "NSE:NIFTY_MID_SELECT",
+            "NIFTYNXT50": "NSE:NIFTYJR", "SENSEX": "BSE:SENSEX", "BANKEX": "BSE:BANKEX", "INDIAVIX": "NSE:INDIAVIX"}
+
+
+def tv_symbol(sym):
+    s = (sym or "").upper().strip()
+    if s in TV_INDEX:
+        return TV_INDEX[s]
+    return "NSE:" + "".join(c if c.isalnum() else "_" for c in s)
+
+
+@router.get("/observer/one")
+def observer_one(symbol: str):
+    import re
+    s = (symbol or "").upper().strip()
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", s):
+        return {"symbol": s, "error": "bad symbol"}
+    key = f"obs1|{s}"
+    got = shared_cache.get(key)
+    if got:
+        return got
+    res = _compute((s, s, tv_symbol(s), "₹"))
+    if "error" not in res:
+        res["method"] = METHOD
+        shared_cache.set(key, res, TTL)
+    return res

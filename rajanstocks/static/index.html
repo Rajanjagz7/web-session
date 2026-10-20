@@ -634,7 +634,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <script src="/static/journal.js?v=20261020f"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
-<script src="/static/observer.js?v=20261020c"></script>
+<script src="/static/observer.js?v=20261020d"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -3091,9 +3091,9 @@ function drawBuyList(){const box=$('#opBuyList');if(!box)return;const hits=OPT.h
     return`<div class="bl-col"><div class="bl-h ${sd==='CE'?'ce':'pe'}">${sd==='CE'?'CALLS':'PUTS'} <span>${allRows.filter(h=>h.t.st==='hit').length} buy · ${allRows.filter(h=>h.t.st==='near').length} near</span></div>
       ${rows.length?`<table class="bl-t"><thead><tr><th>Strike</th><th>Signal</th><th class="num">Buy at</th><th class="num bl-ltp">LTP</th><th class="num">SL</th><th class="num">Target</th></tr></thead><tbody>${rows.map(h=>{const tg=h.t.zone?h.t.zone.t[0]:h.t.entry*1.5,sel=OPT.sel&&OPT.sel.side===sd&&OPT.sel.strike===h.k;
         return`<tr class="${h.t.st} ${sel?'sel':''}" data-opt="${sd}:${h.k}" title="${esc(h.t.ind)} · entry ${fmtP(h.t.entry)} · SL ${fmtP(h.t.sl)} · targets ${esc(pdTg(h.t.entry,h.t))}"><td><b>${fmtP(h.k,h.k%1?2:0)}</b>${h.k===c0atm()?'<em>ATM</em>':''}</td><td><span class="bl-tag ${h.t.st}">${h.t.st==='hit'?'BUY':'near'} ${esc(h.t.name)}</span></td><td class="num"><b>${fmtP(h.t.entry)}</b></td><td class="num bl-ltp">${fmtP(h.ltp)}</td><td class="num down">${fmtP(h.t.sl)}</td><td class="num up">${fmtP(tg)}</td></tr>`}).join('')}</tbody></table>`:`<div class="bl-none">No ${sd==='CE'?'call':'put'} at a buy level</div>`}${pager}</div>`};
-  box.innerHTML=`<div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
+  box.innerHTML=`<div data-ob-one="${esc(String(OPT.sym||'').toUpperCase())}"></div><div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
     <div class="bl-ctl"><label class="muted">Rows <select class="inp bl-ps" data-blps>${PS.map(n=>`<option ${n===ps?'selected':''}>${n}</option>`).join('')}</select></label><div class="seg" role="group"><button type="button" class="${all?'':'on'}" data-buyall="0" title="Expiry/Daily divisor levels, Open = Low clean buy, SENSEX and 38-42 zones">Levels</button><button type="button" class="${all?'on':''}" data-buyall="1" title="Also Open = Low within 10 points (many contracts qualify)">+ O=L ±10</button></div></div></div>
-    <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Buy at = your entry premium for that signal; SL = its stop (indicator points, capped at 35% for small premiums). Green = premium is at your buy value now · amber = getting close. Target shows the first target (all targets in the tooltip and on the chart strip).</p></div>`}
+    <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Buy at = your entry premium for that signal; SL = its stop (indicator points, capped at 35% for small premiums). Green = premium is at your buy value now · amber = getting close. Target shows the first target (all targets in the tooltip and on the chart strip).</p></div>`;{const h=box.querySelector('[data-ob-one]');if(h&&window.obsOne)obsOne(OPT.sym,h)}}
 const c0atm=()=>OPT.chain&&OPT.chain.atm;
 document.addEventListener('change',e=>{if(e.target.matches('[data-blps]')){OPT.blPs=+e.target.value;OPT.blPg={CE:0,PE:0};try{localStorage.setItem('bl-ps',OPT.blPs)}catch(x){}drawBuyList()}});
 try{OPT.blPs=+localStorage.getItem('bl-ps')||6;OPT.buyAll=localStorage.getItem('bl-all')!=='0'}catch(e){}

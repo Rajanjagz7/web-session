@@ -92,6 +92,32 @@
   const hosts = () => Array.from(document.querySelectorAll('[data-ob-host]')).filter(h => h.offsetParent !== null);
   function paintAll() { hosts().forEach(paint); }
 
+  /* one stock / index (Trade screen, Signals): same score, action and divergence as the cards above */
+  const ONE = {}, ONE_OPEN = {};
+  document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('.ob-one-why')) ONE_OPEN[d.dataset.k] = d.open; }, true);
+  function oneHTML(i) {
+    if (!i) return '<div class="ob-one muted">God\'s Eye: loading…</div>';
+    if (i.error) return `<div class="ob-one muted">God's Eye: no daily data for ${esc(i.key || i.symbol || '')} right now.</div>`;
+    const c = cls(i.label), d = i.detail || {}, p = d.parts || {}, a = i.action || {};
+    return `<div class="ob-one ${c}"><div class="ob-one-h"><span class="ob-one-t">👁 God's Eye · ${esc(i.name)}</span>
+        <b class="ob-one-s">${sgn(i.score)}</b><em class="ob-one-l">${nice(i.label).toUpperCase()}</em>
+        ${a.label ? `<span class="ob-act ${a.side === 'SELL' ? 'bear' : a.side === 'BUY' ? 'bull' : 'neut'}">${esc(a.label)}</span>` : ''}
+        ${i.divergence ? `<span class="ob-div ${i.divergence === 'BULLISH' ? 'bull' : 'bear'}">⚡ ${nice(i.divergence)} divergence</span>` : ''}</div>
+      ${play(i)}
+      <details class="ob-one-why" data-k="${esc(i.key || '')}"${ONE_OPEN[i.key] ? ' open' : ''}><summary>Why · day ${sgn(p.dayMove || 0)} · intraday ${sgn(p.intraday || 0)} · vs 20-day ${sgn(p.trend || 0)} · RSI ${sgn(p.rsi || 0)}</summary><ul class="ob-why">${(d.reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul></details></div>`;
+  }
+  window.obsOne = async function (sym, host) {
+    if (!host || !sym) return;
+    const k = String(sym).toUpperCase(), c = ONE[k];
+    host.innerHTML = oneHTML(c && c.d);
+    if (c && (Date.now() - c.ts < 90000 || c.busy)) return;
+    ONE[k] = Object.assign(c || {}, { busy: true });
+    try { const r = await fetch('/api/observer/one?symbol=' + encodeURIComponent(k)); ONE[k].d = r.ok ? await r.json() : { error: 'HTTP ' + r.status, key: k }; }
+    catch (e) { ONE[k].d = ONE[k].d || { error: 'network', key: k }; }
+    ONE[k].ts = Date.now(); ONE[k].busy = false;
+    document.querySelectorAll('[data-ob-one="' + k + '"]').forEach(h => { h.innerHTML = oneHTML(ONE[k].d); });
+  };
+
   window.obsRefresh = () => load(true);        // the Picks page Refresh button refreshes the Observer too
   window.obsMount = function (host) {
     if (!host) return;
@@ -121,6 +147,12 @@
   const st = document.createElement('style');
   st.textContent = `
   .ob{max-width:1100px;margin:0 auto}
+  .ob-one{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--text-3,#8a93a6);border-radius:10px;font-size:13px}
+  .ob-one.bull{border-left-color:var(--up,#22ab94)}.ob-one.bear{border-left-color:var(--down,#f7525f)}
+  .ob-one-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.ob-one-t{font-weight:700}.ob-one-s{font-size:18px;font-weight:800}
+  .ob-one.bull .ob-one-s,.ob-one.bull .ob-one-l{color:var(--up,#22ab94)}.ob-one.bear .ob-one-s,.ob-one.bear .ob-one-l{color:var(--down,#f7525f)}.ob-one-l{font-style:normal;font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--text-3,#8a93a6)}
+  .ob-one .ob-div{font-size:12px;font-weight:600}.ob-one .ob-div.bull{color:var(--up,#22ab94)}.ob-one .ob-div.bear{color:var(--down,#f7525f)}
+  .ob-one-why summary{cursor:pointer;font-size:12px;color:var(--text-3,#8a93a6);margin-top:4px}
   .ob-act{align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.04em;padding:3px 8px;border-radius:6px;background:var(--panel-2,rgba(255,255,255,.06));color:var(--text-2,inherit)}
   .ob-act.bear{background:color-mix(in srgb,var(--down,#f7525f) 18%,transparent);color:var(--down,#f7525f)}.ob-act.bull{background:color-mix(in srgb,var(--up,#22ab94) 18%,transparent);color:var(--up,#22ab94)}
   .ob-play{margin:10px 0 4px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;font-size:13px}
