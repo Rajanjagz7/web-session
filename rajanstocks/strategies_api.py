@@ -684,14 +684,38 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
         _cache[ck] = (time.time(), res)
     return res
 
+# Duplicates / laggy variants hidden from every list in the app (code stays: backtests and push alerts still use some).
+# Kept one per idea:  ATR trail -> UT Bot, Quantum Matrix · Supertrend -> Supertrend MTF · Heikin Ashi -> HA Dancing
+# Trend (intraday), Rajan HA Momentum (daily) · Breakouts -> Rajan Breakout & Trap, NR-7, Potential Breakout ·
+# Volume -> Volume Spurt · Reversal -> RSI Divergence, Dual-Phase Reversal, 9/15 + Hammer + W Confluence ·
+# Open=High/Low -> Rajan OH-OL Options · Trend ribbon -> Rajan Trend Rider.
+HIDDEN = {
+    "trade-predictor",      # UT Bot trail + 200-EMA filter: same signal as UT Bot, later
+    "rj-best",              # UT Bot + EMAs + levels: same as Quantum Matrix
+    "darvas-supertrend",    # Supertrend again, plus a Darvas box
+    "heikin-ashi-channel",  # older 3-min HA channel; HA Dancing Trend is the filtered version
+    "donchian",             # 20-bar high/low break: covered by Breakout & Trap (with volume + trap check)
+    "breakout-15m", "breakdown-15m",   # N-bar high/low break on volume: same as Breakout & Trap
+    "fake",                 # fake breakout/breakdown: the 'trap' half of Breakout & Trap
+    "tight-range",          # range compression: same idea as NR-7
+    "volume-buzzer-15m", "volume-buzzer-daily",   # volume above average: same as Volume Spurt
+    "hammer-support", "w-pattern",   # both inside the 9/15 + Hammer + W Confluence
+    "ema-9-15",             # plain EMA cross - lags; part of the Confluence
+    "bottom-reversal",      # 50-SMA based reversal - lags; RSI Divergence / Dual-Phase cover it
+    "candle-oh-ol",         # Open=High/Low candles: Rajan OH-OL Options does this with levels + SL
+    "trend-target-ribbon",  # trend ribbon: same role as Rajan Trend Rider
+}
+
+
 @router.get("/strategies")
-def strategies():
+def strategies(all: bool = False):
     groups = []
-    for k, m in META.items():
+    vis = [m for k, m in META.items() if all or k not in HIDDEN]
+    for m in vis:
         if m["group"] not in groups:
             groups.append(m["group"])
     groups = groups + ["Option scans"]
-    return {"strategies": list(META.values()) + list(OPT_META.values()), "groups": groups}
+    return {"strategies": vis + list(OPT_META.values()), "groups": groups, "hidden": sorted(HIDDEN)}
 
 
 @router.get("/strategy")
