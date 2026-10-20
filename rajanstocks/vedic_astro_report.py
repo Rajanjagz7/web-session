@@ -243,6 +243,27 @@ def _session_stats(symbol):
     }
 
 
+def _daily_bars(symbol):
+    """~400 days of daily bars for Gann cycles / HiLo - cached once per day across all server instances."""
+    import shared_cache
+    key = f"vedic:bars:{symbol}:{datetime.now(IST).date().isoformat()}"
+    got = shared_cache.get(key)
+    if got:
+        return got
+    from ut_bot import fetch_index_history
+    bars = fetch_index_history(symbol, lookback_days=400)
+    if bars:
+        shared_cache.set(key, bars, 20 * 3600)
+    return bars
+
+
+def _stw_result(fut, timeout):
+    try:
+        return fut.result(timeout=timeout)
+    except Exception:
+        return _na("Stocks-to-watch scan took too long - try Refresh")
+
+
 def _stocks_to_watch(limit: int = 5):
     """Reuses the existing /daily-scan (Open=High/Open=Low bias scanner) that already backs the live #picks page.
 
@@ -347,7 +368,24 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     except Exception as e:
         special_timing = {"available": False, "reason": f"Special timing unavailable: {str(e)[:160]}"}
 
-    mc = _market_context(symbol)
+    # The three network-bound parts run in parallel, each with a time budget, so one slow source can never
+    # push the whole report past the serverless time limit - that part just says it is unavailable.
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FT
+    _pool = ThreadPoolExecutor(3)
+    f_mc = _pool.submit(_market_context, symbol)
+    f_bars = _pool.submit(_daily_bars, symbol)
+    f_stw = _pool.submit(_stocks_to_watch, 5)
+    _pool.shutdown(wait=False)
+    import time as _time
+    _deadline = _time.time() + 14          # one shared budget for all three
+
+    def _left():
+        return max(0.1, _deadline - _time.time())
+    try:
+        mc = f_mc.result(timeout=_left())
+    except _FT:
+        na = _na("Live market data took too long to load - try Refresh")
+        mc = {k: na for k in ("index_prev_close", "index_today_ohlc", "index_last", "market_open", "gift_nifty", "crude_oil", "live_vwap", "opening_range", "fpi_flow")}
     spot = mc["index_last"]["value"] if mc.get("index_last", {}).get("available") else None
     prev = mc["index_prev_close"]["value"] if mc.get("index_prev_close", {}).get("available") else None
     ohlc = mc["index_today_ohlc"]["value"] if mc.get("index_today_ohlc", {}).get("available") else None
@@ -367,10 +405,8 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     elif prev:
         mc["levels_base"] = _ok({"price": prev, "kind": "previous close", "session": None, "for": "today",
                                  "note": "Live session - levels from the previous close"})
-    bars = None
     try:
-        from ut_bot import fetch_index_history
-        bars = fetch_index_history(symbol, lookback_days=400)
+        bars = f_bars.result(timeout=_left())
     except Exception:
         bars = None
     try:
@@ -432,7 +468,7 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         },
         "watch_windows": windows,
         "special_timing": special_timing,
-        "stocks_to_watch": _stocks_to_watch(5),
+        "stocks_to_watch": _stw_result(f_stw, _left()),
         "risk_management": RISK_MANAGEMENT,
         "disclaimer": DISCLAIMER,
     }
