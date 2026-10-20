@@ -42,7 +42,8 @@ ATR_N, TARGET_R, MAX_HOLD, COST = 14, 2.0, 10, 0.0005
 # high (SELL) of the signal bar and the bar before it, kept between 0.5 and 1.0 ATR - but never more than 30% of the
 # option premium (at delta 0.5). Without that cap a 1.5 ATR stop let one ATM option lose ~90% of its premium.
 PREM_SL, DELTA, SWING_BUF, MIN_ATR, MAX_ATR = 0.30, 0.5, 0.1, 0.5, 1.0
-DTE_EST = {"index": 5, "stock": 15}        # typical days to expiry when entered (weekly index / monthly stock options)
+DTE_EST = {"index": 5, "stock": 15}        # fallback only - theta now follows the real expiry calendar (expiry_for)
+MIN_DTE = 3                                 # the live trader buys the nearest expiry at least 3 days away
 SKIP_KEYS = {"vix-range", "volume-buzzer-15m", "volume-buzzer-daily", "potential-breakout"}   # not directional entries
 
 _tl = threading.local()          # the as-of replay must only affect the backtest thread
@@ -89,9 +90,34 @@ def _atr(bars, n=ATR_N):
     return _rma(_true_range(bars), n)
 
 
-def est_premium(atr_v, kind):
-    """ATM option premium estimate: 0.4 x sigma x S x sqrt(days), with daily sigma x S ~= 0.8 x ATR."""
-    return 0.32 * atr_v * (DTE_EST.get(kind, 5) ** 0.5)
+def est_premium(atr_v, kind, days=None):
+    """ATM option premium estimate: 0.4 x sigma x S x sqrt(trading days left), daily sigma x S ~= 0.8 x ATR.
+    days = CALENDAR days to expiry (converted at 5 trading days per 7); None -> typical DTE for the kind."""
+    td = DTE_EST.get(kind, 5) if days is None else max(0.0, days) * 5 / 7
+    return 0.32 * atr_v * (td ** 0.5)
+
+
+def expiry_for(day_iso, kind):
+    """The contract the live trader would buy on this day: nearest expiry at least MIN_DTE days away.
+    Index options: weekly (Thursday until Aug 2025, Tuesday from Sep 2025). Stock options: monthly, last such weekday.
+    Exchange holidays that move an expiry by a day are ignored (an approximation)."""
+    d0 = date.fromisoformat(day_iso)
+    wd = 3 if d0 < date(2025, 9, 1) else 1
+    if kind == "index":
+        e = d0 + timedelta(days=(wd - d0.weekday()) % 7)
+        while (e - d0).days < MIN_DTE:
+            e += timedelta(days=7)
+        return e
+    y, m = d0.year, d0.month
+    while True:
+        nxt = date(y + (m == 12), m % 12 + 1, 1)
+        wdm = 3 if nxt - timedelta(days=1) < date(2025, 9, 1) else 1
+        e = nxt - timedelta(days=1)
+        while e.weekday() != wdm:
+            e -= timedelta(days=1)
+        if (e - d0).days >= MIN_DTE:
+            return e
+        y, m = nxt.year, nxt.month
 
 
 def plan_risk(bars, atr_v, i, side, entry, premium, delta=DELTA, ind_stop=None):
@@ -110,10 +136,10 @@ def plan_risk(bars, atr_v, i, side, entry, premium, delta=DELTA, ind_stop=None):
     return min(risk, PREM_SL * premium / max(delta, 0.05))
 
 
-def theta_r(atr_v, kind, risk):
-    """Approximate time decay per session, in R: an ATM option loses about premium / (2 x days left) a day."""
-    prem = est_premium(atr_v, kind)
-    return (prem / (2 * DTE_EST.get(kind, 5))) / DELTA / risk
+def theta_r(atr_v, kind, risk, d_from, d_to):
+    """Time decay in R between two moments, from the real days-to-expiry on each date: premium(days) falls with
+    sqrt(days), so the daily loss is small a week out and steep in the last sessions."""
+    return (est_premium(atr_v, kind, d_from) - est_premium(atr_v, kind, d_to)) / DELTA / risk
 
 
 VARIANTS = ("fixed", "trail", "reverse")      # exit styles tried for every strategy
@@ -134,7 +160,10 @@ def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_
     entry = bars[i + 1]["open"]
     if not entry or entry <= 0:
         return None
-    risk = plan_risk(bars, atr[i], i, side, entry, est_premium(atr[i], kind), ind_stop=ind_stop)
+    exp = expiry_for(bars[i + 1]["date"], kind)
+    dte = lambda j, frac: (exp - date.fromisoformat(bars[j]["date"])).days + frac   # frac: part of that day still to run
+    d_entry = dte(i + 1, 0.26)                                                       # entry at 09:15, expiry at 15:30
+    risk = plan_risk(bars, atr[i], i, side, entry, est_premium(atr[i], kind, d_entry), ind_stop=ind_stop)
     if risk <= 0:
         return None
     if variant == "fixed":
@@ -144,28 +173,31 @@ def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_
     last = min(len(bars) - 1, i + hold)
     best = entry
     cost_r = COST * entry / risk
-    th = theta_r(atr[i], kind, risk)
 
-    def out(r, j, why):
-        return (r - cost_r - th * (j - i), j, why)     # gaps through the stop are kept (they happen to options too)
+    def out(r, j, why, when="mid"):
+        frac = {"open": 0.26, "mid": 0.13, "close": 0.0}[when]                       # intraday exits: ~3 h before close
+        th = theta_r(atr[i], kind, risk, d_entry, dte(j, frac))
+        return (r - cost_r - th, j, why)     # gaps through the stop are kept (they happen to options too)
     for j in range(i + 1, last + 1):
         b = bars[j]
         if j > i + 1:
             if (d > 0 and b["open"] <= stop) or (d < 0 and b["open"] >= stop):
-                return out(d * (b["open"] - entry) / risk, j, "SL")
+                return out(d * (b["open"] - entry) / risk, j, "SL", "open")
             if variant == "reverse" and opp_i is not None and j == opp_i + 1:
-                return out(d * (b["open"] - entry) / risk, j, "REV")
+                return out(d * (b["open"] - entry) / risk, j, "REV", "open")
         hit_stop = b["low"] <= stop if d > 0 else b["high"] >= stop
         if hit_stop:
             return out(d * (stop - entry) / risk, j, "SL")
         if target is not None and (b["high"] >= target if d > 0 else b["low"] <= target):
             return out(TARGET_R, j, "T")
+        if dte(j, 0.0) <= 1:                                                         # live rule: out one day before expiry
+            return out(d * (b["close"] - entry) / risk, j, "EXP", "close")
         if variant == "trail":
             best = max(best, b["high"]) if d > 0 else min(best, b["low"])
             stop = max(stop, best - risk) if d > 0 else min(stop, best + risk)
     if last == len(bars) - 1 and last < i + hold:
         return None
-    return out(d * (bars[last]["close"] - entry) / risk, last, "TIME")
+    return out(d * (bars[last]["close"] - entry) / risk, last, "TIME", "close")
 
 
 def _hold_days(T):
@@ -386,9 +418,9 @@ def run_backtest(progress=None):
         "generatedAt": datetime.now(IST).isoformat(), "symbols": syms, "strategiesTested": len(ranking),
         "tradesSimulated": len(trades), "historyFrom": dates[0], "historyTo": dates[-1], "splitDate": split,
         "rules": {"entry": "next session open", "exitStyles": {
-                      "fixed": f"signal-candle stop ({MIN_ATR}-{MAX_ATR} ATR, max {int(PREM_SL * 100)}% of premium), target {TARGET_R}R, max {MAX_HOLD} sessions, theta charged",
-                      "trail": f"same stop trailing the best price, max {TRAIL_HOLD} sessions, theta charged",
-                      "reverse": f"same stop, exit on the opposite signal, max {TRAIL_HOLD} sessions, theta charged"},
+                      "fixed": f"signal-candle stop ({MIN_ATR}-{MAX_ATR} ATR, max {int(PREM_SL * 100)}% of premium), target {TARGET_R}R, max {MAX_HOLD} sessions, theta from the real days to expiry, out 1 day before expiry",
+                      "trail": f"same stop trailing the best price, max {TRAIL_HOLD} sessions, daily theta, out 1 day before expiry",
+                      "reverse": f"same stop, exit on the opposite signal, max {TRAIL_HOLD} sessions, daily theta, out 1 day before expiry"},
                   "filters": {"none": "no filter", "trend200": "only with the 200-day EMA trend"},
                   "roundTripCost": f"{COST * 100:.2f}%", "riskPerTrade": RISK_RS, "tieBreak": "stop wins a same-candle tie",
                   "provenIf": f"in-sample n>={MIN_IS}, avgR>={IS_R}, PF>={IS_PF}; out-of-sample n>={MIN_OOS}, avgR>={OOS_R}, PF>={OOS_PF}"},
