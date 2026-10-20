@@ -7,7 +7,9 @@ Rules (identical to the backtest in backtest.py, so results are comparable):
   * Signal = the fresh BUY/SELL on the last COMPLETED daily bar, acted on from the 09:15 open.
   * BUY -> ATM call, SELL -> ATM put, nearest expiry that is at least 3 days away.
   * Risk per trade = 0.5% of equity; lots = floor(budget / (lot x 0.5 delta x stop distance)), minimum 1.
-  * Exit on the UNDERLYING: 1.5 x ATR(14) stop, 2R target, 10 sessions, or one day before expiry; square-off check 15:15.
+  * Stop = the indicator's signal candle (beyond its low/high, 0.5-1.0 ATR) but never more than 30% of the option
+    premium (backtest.plan_risk). Exit when the underlying hits that stop OR the option bid falls 30% below entry,
+    2R target, 10 sessions, or one day before expiry; square-off check 15:15.
   * Stock picks are chosen automatically: proven-strategy signal agreeing with the stock's screen score.
 """
 import json
@@ -179,7 +181,7 @@ def candidates(today):
         variant, flt = chosen.get(key, ("fixed", "none"))
         if flt == "trend200" and not _trend_ok(sym, sg, today):
             return None
-        return {"key": key, "sym": sym, "side": sg, "asOf": rows[-1]["date"], "score": scores[key],
+        return {"key": key, "sym": sym, "side": sg, "asOf": rows[-1]["date"], "score": scores[key], "indStop": rows[-1].get("stop"),
                 "variant": variant, "filter": flt, "label": label, "kind": "index" if sym in INDEX_SYMS else "stock"}
 
     jobs = [(k, s) for s in syms for k in scores if k in runners]
@@ -246,6 +248,10 @@ def fill_slots(st, today, already):
     return out[:room]
 
 
+def x_stop(rows):
+    return rows[-1].get("stop") if rows else None
+
+
 def scan_all(st, today):
     """Fresh BUY/SELL events from EVERY indicator on the last completed daily bar, for 5 indices + 20 liquid stocks.
     Completed bars only change once a day, so this is scanned ONCE per day, symbol by symbol (it resumes in the next
@@ -285,7 +291,7 @@ def scan_all(st, today):
             variant, flt = chosen.get(key, ("fixed", "none"))
             if flt == "trend200" and not _trend_ok(sym, sg, today):
                 continue
-            found.append({"key": key, "sym": sym, "side": sg, "asOf": rows[-1]["date"], "score": score.get(key, 0.0),
+            found.append({"key": key, "sym": sym, "side": sg, "asOf": rows[-1]["date"], "score": score.get(key, 0.0), "indStop": x_stop(rows),
                           "variant": variant, "filter": flt, "kind": "index" if sym in INDEX_SYMS else "stock"})
         return sym, found
 
@@ -380,19 +386,48 @@ def _atr_for(sym):
     bars = bar_source.daily_bars(sym, 120)
     bars = [b for b in bars if b["date"] < _now().date().isoformat()]
     a = _rma(_true_range(bars), 14)
-    return a[-1], bars[-1]["close"]
+    return a[-1], bars[-1]["close"], bars
+
+
+def _premium_plan(entry, risk_u, delta=0.5):
+    """Option stop and targets in premium terms: 1R = delta x underlying stop distance."""
+    rp = round(delta * risk_u, 2)
+    return {"premRisk": rp, "premSL": round(max(0.05, entry - rp), 2),
+            "premT": [round(entry + k * rp, 2) for k in (1, 2, 3)]}
+
+
+def _replan(t):
+    """Trades opened under the old 1.5-2 ATR rule risked up to 90% of the premium; cap them at 30% (tighten only)."""
+    if t.get("plan") == "v2" or t["status"] != "OPEN":
+        return
+    import backtest
+    d = 1 if t["side"] == "BUY" else -1
+    cap = backtest.PREM_SL * t["entry"] / backtest.DELTA
+    if t["riskU"] > cap:
+        t["riskU"] = round(cap, 2)
+        ns = t["entryU"] - d * cap
+        t["stopU"] = round(max(t["stopU"], ns) if d > 0 else min(t["stopU"], ns), 2)
+        if t.get("targetU") is not None:
+            t["targetU"] = round(t["entryU"] + d * backtest.TARGET_R * cap, 2)
+        qty = t["lots"] * t["lot"]
+        t["initialRisk"] = round(min(qty * backtest.DELTA * cap, qty * t["entry"]), 0)
+    t.update(_premium_plan(t["entry"], t["riskU"]), plan="v2")
 
 
 def open_trade(st, c, today):
     cfg = st["cfg"]
-    atr, last_close = _atr_for(c["sym"])
+    import backtest
+    atr, last_close, bars = _atr_for(c["sym"])
     ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"])
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
     variant = c.get("variant", "fixed")
-    risk_u = (1.5 if variant == "fixed" else 2.0) * atr
+    # same rule as the backtest: signal-candle stop, capped at 30% of THIS option's premium
+    risk_u = backtest.plan_risk(bars, atr, len(bars) - 1, c["side"], entry_u, ct["premium"], ind_stop=c.get("indStop"))
+    if risk_u <= 0:
+        raise RuntimeError("no valid stop")
     stop_u = entry_u - d * risk_u
-    target_u = entry_u + d * 2.0 * risk_u if variant == "fixed" else None
+    target_u = entry_u + d * backtest.TARGET_R * risk_u if variant == "fixed" else None
     budget = _equity(st) * cfg["riskPct"] / 100
     per_lot = ct["lot"] * 0.5 * risk_u
     lots = max(1, int(budget // per_lot)) if per_lot > 0 else 1
@@ -410,6 +445,7 @@ def open_trade(st, c, today):
         "strategy": c["key"], "agree": c.get("agree", 1),
         "screenAgrees": c.get("screenAgrees"), "indicators": c.get("strategies") or [c["key"]],
         "source": c.get("source", f"{c.get('agree', 1)} indicator(s) agree" if c.get("strategies") else "strategy signal"), "status": "OPEN", "last": round(ct["premium"], 2),
+        "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
     }
     st["trades"].append(t)
     st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]"})
@@ -439,6 +475,8 @@ def manage(st, now):
         return
     today = now.date().isoformat()
     for t in opens:
+        _replan(t)
+    for t in opens:
         opt_q, und_q = q.get(t["key"]), q.get(market_api._key(t["sym"]))
         opt_px, und_px = _last(opt_q), _last(und_q)
         if opt_px > 0:
@@ -450,7 +488,7 @@ def manage(st, now):
         d = 1 if t["side"] == "BUY" else -1
         why = None
         variant = t.get("variant", "fixed")
-        if variant == "trail":                       # 2 ATR stop trailing the best underlying price since entry
+        if variant == "trail":                       # the stop trails the best underlying price since entry by the same distance
             t["bestU"] = max(t.get("bestU", t["entryU"]), und_px) if d > 0 else min(t.get("bestU", t["entryU"]), und_px)
             t["stopU"] = round(max(t["stopU"], t["bestU"] - t["riskU"]) if d > 0 else min(t["stopU"], t["bestU"] + t["riskU"]), 2)
         tsl = t.get("tsl")
@@ -475,7 +513,9 @@ def manage(st, now):
                     t["stopU"] = round(new, 2)
                     t["stopMoved"] = _now().isoformat()
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
-        if d * (und_px - t["stopU"]) <= 0:
+        if t.get("premSL") and exit_px <= t["premSL"]:
+            why = "STOP"                              # option premium stop (30% cap) - catches time decay too
+        elif d * (und_px - t["stopU"]) <= 0:
             why = "TSL" if (tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) else "STOP"
         elif t.get("targetU") is not None and d * (und_px - t["targetU"]) >= 0:
             why = "TARGET"
@@ -676,6 +716,7 @@ def status():
     wins = [t for t in closed if t["net"] > 0]
     opens = [t for t in st["trades"] if t["status"] == "OPEN"]
     for t in opens:
+        _replan(t)
         t["unrealised"] = round((t["last"] - t["entry"]) * t["lots"] * t["lot"], 2)
     import backtest
     bt = backtest.get()["result"]

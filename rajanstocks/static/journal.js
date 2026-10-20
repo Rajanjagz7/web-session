@@ -29,7 +29,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const EXIT_MAP = { STOP: 'SL', TSL: 'TSL', MANUAL: 'Manual Exit', TARGET: 'T2', TIME: 'Time Exit', EXPIRY: 'Time Exit', REVERSE: 'Manual Exit', 'SQUARE-OFF': 'Time Exit' };
   function mapAuto(a) {
     const d = a.openedAt ? new Date(a.openedAt) : new Date(a.date + 'T09:20:00+05:30');
-    const delta = 0.5, riskP = Math.max(0.05, Math.min(delta * (a.riskU || 0), 0.9 * a.entry));   // premium at risk per unit: delta 0.5 x underlying stop, never more than the premium itself
+    // premium at risk per unit: from the server plan (delta 0.5 x the indicator's stop, capped at 30% of the premium)
+    const riskP = a.premRisk > 0 ? a.premRisk : Math.max(0.05, Math.min(0.5 * (a.riskU || 0), 0.3 * a.entry));
     const inds = (a.indicators && a.indicators.length ? a.indicators : [a.strategy]).filter(Boolean);
     const closed = a.status === 'CLOSED';
     const t = {

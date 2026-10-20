@@ -4,7 +4,8 @@ What it does
   1. Replays every daily-bar strategy "as of" several past dates (so ~3 years of signals, not just the last 1.5),
      for 5 indices and the most liquid F&O stocks.
   2. Simulates each fresh signal on daily candles with one fixed rule set:
-        entry next session's open, stop 1.5 x ATR(14), target 2R, max hold 10 sessions, round-trip cost 0.05%.
+        entry next session's open, signal-candle stop capped at 30% of the option premium, target 2R,
+        max hold 10 sessions, estimated option time decay per session, round-trip cost 0.05%.
      A candle that touches both stop and target is treated as a stop (conservative).
   3. Splits the history: the first 70% of trades is IN-SAMPLE (used to decide which strategies "work"),
      the last 30% is OUT-OF-SAMPLE (used only to judge them).
@@ -27,7 +28,7 @@ import shared_cache
 IST = timezone(timedelta(hours=5, minutes=30))
 HERE = os.path.dirname(__file__)
 OUT_FILE = os.path.join(HERE, "static", "backtest_result.json")   # local-dev fallback only - read-only on Vercel
-CACHE_KEY = "backtest_result"
+CACHE_KEY = "backtest_result_v2"          # v2: option-premium stop (30% cap), theta, kept indicators only
 CACHE_TTL = 48 * 3600   # Vercel runs several instances with their own /tmp and a read-only static/ -
                         # shared_cache (Upstash) is what actually makes a fresh run visible to every instance
 
@@ -36,7 +37,12 @@ STOCK_SYMS = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "BHART
               "AXISBANK", "BAJFINANCE", "MARUTI", "SUNPHARMA", "TITAN", "HCLTECH", "TATASTEEL", "M&M", "ADANIENT", "ONGC"]
 ASOF_OFFSETS = [0, 380, 760, 1140]          # calendar days back; each replay yields ~1.5y of signals
 RISK_RS = 5000.0                            # BRD default: 0.5% of Rs 10,00,000
-ATR_N, STOP_ATR, TARGET_R, MAX_HOLD, COST = 14, 1.5, 2.0, 10, 0.0005
+ATR_N, TARGET_R, MAX_HOLD, COST = 14, 2.0, 10, 0.0005
+# Option-buyer stop (same rule in auto_trader.py). The stop is the indicator's signal candle: just beyond the low (BUY) or
+# high (SELL) of the signal bar and the bar before it, kept between 0.5 and 1.0 ATR - but never more than 30% of the
+# option premium (at delta 0.5). Without that cap a 1.5 ATR stop let one ATM option lose ~90% of its premium.
+PREM_SL, DELTA, SWING_BUF, MIN_ATR, MAX_ATR = 0.30, 0.5, 0.1, 0.5, 1.0
+DTE_EST = {"index": 5, "stock": 15}        # typical days to expiry when entered (weekly index / monthly stock options)
 SKIP_KEYS = {"vix-range", "volume-buzzer-15m", "volume-buzzer-daily", "potential-breakout"}   # not directional entries
 
 _tl = threading.local()          # the as-of replay must only affect the backtest thread
@@ -64,13 +70,18 @@ def _runners():
 
     out = {}
     for k, fn in rp.RAJAN_PAVAN_KEYS.items():
-        if k not in SKIP_KEYS:
+        if k not in SKIP_KEYS and k not in strategies_api.HIDDEN:
             out[k] = (lambda sym, lb, fn=fn: fn(sym, lookback_days=lb))
     out["ut-bot"] = lambda sym, lb: ut_bot.ut_bot_scan(sym, lookback_days=lb)
     out["trade-predictor"] = lambda sym, lb: trade_predictor.trade_predictor_scan(sym, lookback_days=lb)
     out["donchian"] = lambda sym, lb: donchian.donchian_scan(sym, lookback_days=lb)
     out["supertrend-mtf"] = lambda sym, lb: strategies_api._raw_supertrend_mtf(sym)
-    return out
+    import rajan_new_indicators as newind
+    for k, fn in newind.NEW_KEYS.items():                # daily-bar Rajan strategies (they give their own stop)
+        out[k] = (lambda sym, lb, fn=fn: fn(sym, lookback_days=max(lb, 250)))
+    # quantum-matrix, ha-dancing-trend, volume-spurt, orb-15m and vwap-rsi run on 1-minute bars: years of
+    # 1-minute history are not available, so they cannot be replayed here.
+    return {k: v for k, v in out.items() if k not in strategies_api.HIDDEN}      # only the indicators kept on the site
 
 
 def _atr(bars, n=ATR_N):
@@ -78,49 +89,83 @@ def _atr(bars, n=ATR_N):
     return _rma(_true_range(bars), n)
 
 
+def est_premium(atr_v, kind):
+    """ATM option premium estimate: 0.4 x sigma x S x sqrt(days), with daily sigma x S ~= 0.8 x ATR."""
+    return 0.32 * atr_v * (DTE_EST.get(kind, 5) ** 0.5)
+
+
+def plan_risk(bars, atr_v, i, side, entry, premium, delta=DELTA, ind_stop=None):
+    """Underlying stop distance for a signal on bar i. The indicator's own stop when it gives one (Rajan Trend Rider,
+    HA Momentum, Breakout Trap, OH/OL, Gann Sq9), otherwise the signal candle; either way never more than 30% of
+    the option premium (see PREM_SL above)."""
+    d = 1 if side == "BUY" else -1
+    own = d * (entry - ind_stop) if ind_stop else None
+    if own is not None and own > 0.2 * atr_v:
+        risk = own
+    else:
+        lo = min(b["low"] for b in bars[max(0, i - 1):i + 1])
+        hi = max(b["high"] for b in bars[max(0, i - 1):i + 1])
+        swing = d * (entry - (lo if d > 0 else hi)) + SWING_BUF * atr_v
+        risk = min(max(swing, MIN_ATR * atr_v), MAX_ATR * atr_v)
+    return min(risk, PREM_SL * premium / max(delta, 0.05))
+
+
+def theta_r(atr_v, kind, risk):
+    """Approximate time decay per session, in R: an ATM option loses about premium / (2 x days left) a day."""
+    prem = est_premium(atr_v, kind)
+    return (prem / (2 * DTE_EST.get(kind, 5))) / DELTA / risk
+
+
 VARIANTS = ("fixed", "trail", "reverse")      # exit styles tried for every strategy
 FILTERS = ("none", "trend200")                 # optional: only trade with the 200-day EMA trend
-TRAIL_ATR, TRAIL_HOLD = 2.0, 40
+TRAIL_HOLD = 10      # options cannot be held for 40 sessions
 
 
-def simulate(bars, atr, i, side, variant="fixed", opp_i=None):
+def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_stop=None):
     """Signal on bar i's close -> enter bar i+1 open. Returns (R, exit_index, reason) or None while still open.
-    fixed   : stop 1.5 ATR, target 2R, max 10 sessions
-    trail   : stop 2 ATR trailing the best price since entry, no target, max 40 sessions
-    reverse : stop 2 ATR, exit at the open after the strategy's opposite signal, max 40 sessions"""
+    Stop for every variant: plan_risk() (signal-candle stop, capped at 30% of the option premium).
+    fixed   : target 2R, max 10 sessions
+    trail   : the stop trails the best price by the same distance, no target, max 10 sessions
+    reverse : exit at the open after the strategy's opposite signal, max 10 sessions
+    Every session held costs the option's estimated time decay (theta_r)."""
     if i + 1 >= len(bars) or atr[i] is None or atr[i] <= 0:
         return None
     d = 1 if side == "BUY" else -1
     entry = bars[i + 1]["open"]
     if not entry or entry <= 0:
         return None
+    risk = plan_risk(bars, atr[i], i, side, entry, est_premium(atr[i], kind), ind_stop=ind_stop)
+    if risk <= 0:
+        return None
     if variant == "fixed":
-        risk = STOP_ATR * atr[i]
         stop, target, hold = entry - d * risk, entry + d * TARGET_R * risk, MAX_HOLD
     else:
-        risk = TRAIL_ATR * atr[i]
         stop, target, hold = entry - d * risk, None, TRAIL_HOLD
     last = min(len(bars) - 1, i + hold)
     best = entry
     cost_r = COST * entry / risk
+    th = theta_r(atr[i], kind, risk)
+
+    def out(r, j, why):
+        return (r - cost_r - th * (j - i), j, why)     # gaps through the stop are kept (they happen to options too)
     for j in range(i + 1, last + 1):
         b = bars[j]
         if j > i + 1:
             if (d > 0 and b["open"] <= stop) or (d < 0 and b["open"] >= stop):
-                return (d * (b["open"] - entry) / risk - cost_r, j, "SL")
+                return out(d * (b["open"] - entry) / risk, j, "SL")
             if variant == "reverse" and opp_i is not None and j == opp_i + 1:
-                return (d * (b["open"] - entry) / risk - cost_r, j, "REV")
+                return out(d * (b["open"] - entry) / risk, j, "REV")
         hit_stop = b["low"] <= stop if d > 0 else b["high"] >= stop
         if hit_stop:
-            return (d * (stop - entry) / risk - cost_r, j, "SL")
+            return out(d * (stop - entry) / risk, j, "SL")
         if target is not None and (b["high"] >= target if d > 0 else b["low"] <= target):
-            return (TARGET_R - cost_r, j, "T")
+            return out(TARGET_R, j, "T")
         if variant == "trail":
             best = max(best, b["high"]) if d > 0 else min(best, b["low"])
             stop = max(stop, best - risk) if d > 0 else min(stop, best + risk)
     if last == len(bars) - 1 and last < i + hold:
         return None
-    return (d * (bars[last]["close"] - entry) / risk - cost_r, last, "TIME")
+    return out(d * (bars[last]["close"] - entry) / risk, last, "TIME")
 
 
 def _hold_days(T):
@@ -180,6 +225,7 @@ def run_backtest(progress=None):
         return [b for b in bars if lo <= b["date"] <= cut]
 
     signals = {}        # (key, sym) -> {date: BUY/SELL}
+    istops = {}         # (key, sym) -> {date: the indicator's own stop, when it gives one}
     total = len(runners) * len(syms) * len(ASOF_OFFSETS)
     done = 0
     bar_source.daily_bars = replay
@@ -198,11 +244,14 @@ def run_backtest(progress=None):
                         continue
                     prev = None
                     m = signals.setdefault((key, s), {})
+                    ms = istops.setdefault((key, s), {})
                     for row in rows:
                         sg = norm_signal(row.get("signal"))
                         d = row.get("date")
                         if sg and d and sg != prev:     # only the first bar of a run is a new entry
                             m.setdefault(d, sg)
+                            if row.get("stop"):
+                                ms.setdefault(d, row["stop"])
                         prev = sg
     finally:
         _tl.on = False
@@ -238,7 +287,8 @@ def run_backtest(progress=None):
                             if m[d2] != side:
                                 opp_i = ix.get(d2)
                                 break
-                    res = simulate(bars, atr[s_], i, side, variant, opp_i)
+                    res = simulate(bars, atr[s_], i, side, variant, opp_i, "index" if s_ in INDEX_SYMS else "stock",
+                                   istops.get((key, s_), {}).get(d))
                     if not res:
                         continue
                     R, j, why = res
@@ -336,9 +386,9 @@ def run_backtest(progress=None):
         "generatedAt": datetime.now(IST).isoformat(), "symbols": syms, "strategiesTested": len(ranking),
         "tradesSimulated": len(trades), "historyFrom": dates[0], "historyTo": dates[-1], "splitDate": split,
         "rules": {"entry": "next session open", "exitStyles": {
-                      "fixed": f"stop {STOP_ATR} x ATR({ATR_N}), target {TARGET_R}R, max {MAX_HOLD} sessions",
-                      "trail": f"stop {TRAIL_ATR} x ATR trailing the best price, max {TRAIL_HOLD} sessions",
-                      "reverse": f"stop {TRAIL_ATR} x ATR, exit on the opposite signal, max {TRAIL_HOLD} sessions"},
+                      "fixed": f"signal-candle stop ({MIN_ATR}-{MAX_ATR} ATR, max {int(PREM_SL * 100)}% of premium), target {TARGET_R}R, max {MAX_HOLD} sessions, theta charged",
+                      "trail": f"same stop trailing the best price, max {TRAIL_HOLD} sessions, theta charged",
+                      "reverse": f"same stop, exit on the opposite signal, max {TRAIL_HOLD} sessions, theta charged"},
                   "filters": {"none": "no filter", "trend200": "only with the 200-day EMA trend"},
                   "roundTripCost": f"{COST * 100:.2f}%", "riskPerTrade": RISK_RS, "tieBreak": "stop wins a same-candle tie",
                   "provenIf": f"in-sample n>={MIN_IS}, avgR>={IS_R}, PF>={IS_PF}; out-of-sample n>={MIN_OOS}, avgR>={OOS_R}, PF>={OOS_PF}"},

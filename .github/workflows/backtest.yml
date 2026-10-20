@@ -1,0 +1,36 @@
+name: Strategy backtest
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 13 * * 6"          # Saturday 19:00 IST
+  push:
+    branches: [rajan-web-session]
+    paths:
+      - rajanstocks/backtest.py
+      - rajanstocks/run_backtest_ci.py
+      - rajanstocks/rajan_new_indicators.py
+      - rajanstocks/rajan_pavan_indicators.py
+      - rajanstocks/ut_bot.py
+      - rajanstocks/strategies_api.py
+      - .github/workflows/backtest.yml
+permissions:
+  contents: write
+concurrency: { group: backtest, cancel-in-progress: true }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r rajanstocks/requirements.txt
+      - run: python rajanstocks/run_backtest_ci.py
+      - name: Commit result
+        run: |
+          git config user.name "backtest-bot"
+          git config user.email "backtest-bot@users.noreply.github.com"
+          git add rajanstocks/static/backtest_result.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Backtest result $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase -q origin rajan-web-session && git push -q origin HEAD:rajan-web-session && break; sleep 5; done

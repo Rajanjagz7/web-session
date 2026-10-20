@@ -129,6 +129,7 @@ def _walk(bars, raw_long, raw_short, init_sl_fn, trail_fn, r1=1.0, r2=2.0, r3=3.
                            "t1": plan["t1"], "t2": plan["t2"], "t3": plan["t3"],
                            "hit1": False, "hit2": False, "hit3": False, "entryDate": b["date"]}
                     rows[i]["signal"] = "BUY" if side == "LONG" else "SELL"
+                    rows[i]["stop"] = round(init_sl, 2)      # the strategy's own initial stop (used by the backtest / auto trader)
     return rows, pos
 
 
