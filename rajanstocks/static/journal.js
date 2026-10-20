@@ -275,8 +275,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
    function viewOverview() {
      const L = filtered(), m = metrics(L), day = today(), ds = dayStats(day);
-     const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0), eq = equity() + autoNet, unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
-     let cum = 0; const curve = [S.capital]; m.sorted.forEach(r => { cum += r.c.net; peak = Math.max(peak, cum); dd = Math.max(dd, peak - cum); curve.push(S.capital + cum); });
+     const LT = liveTotals(day), eq = LT.eq, unr = LT.unr, booked = LT.booked;   // same live figure as the KPI cards and the header
+     let cum = 0; const curve = [S.capital]; m.sorted.forEach(r => { cum += r.c.net; curve.push(S.capital + cum); });
      const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
      let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
      const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
@@ -286,8 +286,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      return `${filterBar(false)}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
      <div class="card"><div class="card-h"><h3>Quick Stats</h3><div class="jv-actions"><button class="btn pri" data-jv="reset">Reset portfolio</button></div></div><div class="jv-list">
-         <div><span>Total Equity</span><b>${inr(eq, 0)}</b></div>
-         <div><span>Closed P&amp;L</span><b class="${cc(m.net)}">${sinr(m.net)}</b></div>
+         <div><span>Total Equity</span><b class="${cc(eq - S.capital)}">${inr(eq, 0)}</b></div>
+         <div><span>Closed P&amp;L</span><b class="${cc(booked)}">${sinr(booked)}</b></div>
          <div><span>Open P&L</span><b class="${cc(unr)}">${unr > 0 ? '+' + inr(unr, 0) : inr(unr, 0)}</b></div>
          <div><span>Today</span><b>${ds.entries} / ${S.maxTrades} trades</b></div>
          <div><span>Win Rate</span><b>${(m.winRate * 100).toFixed(0)}%</b></div>
@@ -1133,11 +1133,9 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
    function viewPortfolio() {
      const all = allTrades();
      const m = metrics(all), day = today(), ds = dayStats(day);
-     const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
-     const eq = equity() + autoNet;
-     const unr = all.reduce((a, t) => a + (unrealised(t) || 0), 0);
+     const LT = liveTotals(day), eq = LT.eq, unr = LT.unr;   // capital + booked + open at live prices
      const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
-     const net = m.net;
+     const net = LT.booked;
      const winRate = m.winRate * 100;
      
      // Premium/Index summary (Gods Eye + Vedic combined)
