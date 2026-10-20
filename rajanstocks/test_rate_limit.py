@@ -158,3 +158,45 @@ def test_real_upstox_errors_still_raise_the_banner(isolated_cache, monkeypatch):
 
     monkeypatch.setattr(ma.nse_service.upstox, "_full_quotes", broken)
     assert ma.health()["state"] == "expired"
+
+
+def test_background_jobs_stop_at_their_share_while_live_screens_keep_going(redis):
+    fresh_instance()
+    b20 = int(time.time() // 20)
+    redis.kv[f"rl2:a:{b20}"] = int(us.GLOBAL_PER_MIN * us.BG_MIN_SHARE)          # background share is used up
+    with us.background():
+        with pytest.raises(us.UpstoxRateLimited):
+            us._lease_permit()
+    assert redis.kv[f"rl2:a:{b20}"] == int(us.GLOBAL_PER_MIN * us.BG_MIN_SHARE)  # refused permit returned
+    us._lease_permit()                                                           # a live screen is still served
+    assert redis.kv[f"rl2:a:{b20}"] > us.GLOBAL_PER_MIN * us.BG_MIN_SHARE
+
+
+def test_background_flag_nests_and_clears():
+    assert getattr(us._BG, "on", 0) == 0
+    with us.background():
+        with us.background():
+            assert us._BG.on == 2
+        assert us._BG.on == 1
+    assert us._BG.on == 0
+
+
+def test_research_proxy_marks_calls_as_background_and_returns_429_when_busy(monkeypatch):
+    import research_data as rd
+    seen = {}
+
+    class Fake:
+        BASE_V2 = "x"
+
+        def _get(self, url, **kw):
+            seen["bg"] = us._BG.on
+            raise us.UpstoxRateLimited("busy")
+
+    import nse_service
+    monkeypatch.setattr(nse_service.nse_service, "upstox", Fake())
+    import shared_cache
+    monkeypatch.setattr(shared_cache, "get", lambda k: None)
+    with pytest.raises(Exception) as ei:
+        rd.expired_candles("NSE_FO|1", "5minute", "2026-10-01", "2026-10-02")
+    assert seen["bg"] == 1
+    assert getattr(ei.value, "status_code", None) == 429 and ei.value.headers["Retry-After"] == "30"

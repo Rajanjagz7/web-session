@@ -78,6 +78,21 @@ def _redis_pipe(cmds, timeout=2.5):
         return json.load(r)
 
 
+# Background jobs (the backtest workflow's research API, scans) may only use part of the shared budget, so they can never
+# starve the live screens: above these fractions of the per-minute / 30-minute caps they are refused and must retry later.
+BG_MIN_SHARE, BG_30M_SHARE = 0.4, 0.55
+
+
+class background:
+    """`with background():` marks Upstox calls on this thread as background work (own thread-local flag, nestable)."""
+
+    def __enter__(self):
+        _BG.on = getattr(_BG, "on", 0) + 1
+
+    def __exit__(self, *exc):
+        _BG.on -= 1
+
+
 _FLUSHED = {}
 
 
@@ -97,6 +112,8 @@ def _lease_permit():
     doubles up to LEASE_N only while the instance keeps using its whole lease inside the lease time."""
     if not _redis_creds():
         return
+    if getattr(_BG, "on", 0) > 0:
+        return _lease_background()
     with _LS_LOCK:
         now = time.time()
         if _LS["left"] > 0 and now < _LS["exp"]:
@@ -133,6 +150,27 @@ def _lease_permit():
             _LS["deny"] = now + 3                                                          # do not hammer Redis while over the limit
             raise UpstoxRateLimited("The shared Upstox request budget is used up for the moment; serving the last known prices")
         _LS.update(left=n - 1, exp=now + LEASE_SECONDS, b20=b20, b10=b10, n=n)
+
+
+def _lease_background():
+    """One permit per background call, straight from the shared counters, against a reduced cap (never leased, so a
+    background call cannot ride on a lease taken by a live screen)."""
+    now = time.time()
+    b20, b10 = int(now // 20), int(now // 600)
+    try:
+        res = _redis_pipe([["INCRBY", f"rl2:a:{b20}", 1], ["EXPIRE", f"rl2:a:{b20}", 130], ["GET", f"rl2:a:{b20 - 1}"], ["GET", f"rl2:a:{b20 - 2}"],
+                           ["INCRBY", f"rl2:b:{b10}", 1], ["EXPIRE", f"rl2:b:{b10}", 2400], ["GET", f"rl2:b:{b10 - 1}"], ["GET", f"rl2:b:{b10 - 2}"],
+                           ["GET", "rl2:block"]])
+    except Exception:
+        return                                                       # Redis unreachable: the local limits still apply
+    v = lambda i: int(res[i].get("result") or 0)
+    s20, s10, blocked = v(0) + v(2) + v(3), v(4) + v(6) + v(7), res[8].get("result")
+    if blocked or s20 > GLOBAL_PER_MIN * BG_MIN_SHARE or s10 > GLOBAL_PER_30M * BG_30M_SHARE:
+        try:
+            _redis_pipe([["DECRBY", f"rl2:a:{b20}", 1], ["DECRBY", f"rl2:b:{b10}", 1]])
+        except Exception:
+            pass
+        raise UpstoxRateLimited("Background jobs are limited to a share of the Upstox budget so the live screens keep working; retry shortly")
 
 
 def _global_block(seconds=8):
