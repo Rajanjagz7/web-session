@@ -553,7 +553,7 @@ OPT_SCANS += [
 ]
 OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": [],
                 "gen": "new" if k in newind.NEW_KEYS_SET or k in ("rajan-premium-levels", "rajan-ohol-premium") else "old"} for k, n, g, d in OPT_SCANS}
-SCAN_INDICES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"]
+SCAN_INDICES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]   # NIFTYNXT50 has no option chain here
 TICK = 0.05
 
 

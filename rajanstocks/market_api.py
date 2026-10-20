@@ -832,8 +832,10 @@ def daily_scan(refresh: bool = False, limit: int = 16):
                 "entry": round(last, 2), "sl": round(last - 3 if is_ol else last + 3, 2),
                 "t1": round(last + 6 if is_ol else last - 6, 2), "t2": round(last + 9 if is_ol else last - 9, 2),
                 "bias": "Bullish" if is_ol else "Bearish",
-                "idea": ("Opened at the day low — buyers in control. Buy futures or buy CE; or sell PE for premium. The day low is the natural stop."
-                         if is_ol else "Opened at the day high — sellers in control. Sell futures, buy PE or sell CE for premium. The day high is the natural stop."),
+                "idea": (("Opened at the day low" if exact else "Low stayed within 10 points of the open") + " and price is back at or above the open — "
+                         "buyers in control."
+                         if is_ol else ("Opened at the day high" if exact else "High stayed within 10 points of the open") + " and price is at or below the open — "
+                         "sellers in control."),
             })
         found.sort(key=lambda r: (not r["exact"], -abs(r["chg"])))
         total = len(found)
