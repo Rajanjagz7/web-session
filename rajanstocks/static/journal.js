@@ -13,7 +13,7 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['new', 'New trade'], ['algo', 'Algo']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo']];
    const GROUPS = {};
    const TAB_TIPS = { new: 'Log a trade: buy price, SL, target, quantity - R:R is worked out for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
@@ -972,7 +972,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['new', 'N
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { portfolio: viewOverview, positions: viewPositions, new: viewNew, algo: viewAlgo };
+    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo };
     if (!bodies[ui.tab]) ui.tab = 'portfolio';
     el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
     if (ui.tab === 'portfolio') {
@@ -1002,7 +1002,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['new', 'N
     else if (a === 'open') openDetail(id);
     else if (a === 'clearf') { ui.f = { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }; render(); }
     else if (a === 'plan') savePlan();
-    else if (a === 'enter') { if (ui.tab !== 'new') { ui.tab = 'new'; render(); window.scrollTo(0, 0); } else recordEntry(); }
+    else if (a === 'enter') { if (typeof go === 'function') go('options'); }      // trades are placed from the Trade screen
     else if (a === 'resetform') { ui.draft = null; render(); }
     else if (a === 'cancelmodal') window.closeModal && window.closeModal();
     else if (a === 'addexit') addExit(id);
@@ -1264,7 +1264,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['new', 'N
      
      if (!open.length) {
        return `<div class="card"><div class="card-h"><h3>Current Positions</h3></div>
-         <div class="empty">No open positions. Click "New Trade" to add one.</div></div>`;
+         <div class="empty">No open positions. Place trades from the <b>Trade</b> screen (market or limit).</div></div>`;
      }
      
      return `<div class="card"><div class="card-h"><h3>Current Positions (${open.length})</h3></div>
