@@ -11,6 +11,7 @@ How to re-run everything (server on http://127.0.0.1:8000):
 | Rate-limit logic (fake Redis, 21 tests) | `python -m pytest test_rate_limit.py -q` |
 | 10-user concurrency test (latency + Upstox calls) | `python qa/load_test.py http://127.0.0.1:8000 10 25` |
 | SIP calculator vs the raw fund NAV history | `python qa/sip_check.py` |
+| Read-only browser smoke test of a deployed site (web + mobile) | `python qa/live_smoke.py https://rajanstocks.vercel.app` |
 
 ## Indicators
 - **35 backend strategies x 8 symbols = 280 calls, all HTTP 200**; every payload complete, finite, fresh (last bar = last trading day,
@@ -54,6 +55,10 @@ How to re-run everything (server on http://127.0.0.1:8000):
 - **Concurrency**: 10 users, 923 requests in 25 s, 0 errors, p50 40-160 ms, p95 <= 0.7 s, and the whole run cost 23 Upstox calls.
 - **Monkey test**: 25 random clicks on each of 11 screens on web and mobile - no JavaScript error, no blank screen, no horizontal overflow.
 - **E2E**: 15 tests on web 1366x800 and mobile 390x844, all pass.
+
+## Live site after deploying (6a3b77d)
+Boot 3.0-3.6 s (web / mobile), option chart ready in 0-2.4 s, 0 JavaScript errors, 0 failing API calls; Upstox budget 95 of 1,850 used in 30 minutes.
+Cold serverless numbers: first candles 1.1 s (`recent`) vs 3.3 s (full history), Vedic report 2.1 s once then 0.4 s.
 
 ## Notes (not bugs in the app)
 - Deep in-the-money option legs that have not traded for a while show a last price below intrinsic value (stale last-traded price from Upstox);
