@@ -534,11 +534,17 @@ OPT_SCANS = [
 ]
 OPT_SCANS += [
     ("pd-expiry", "Expiry Divisor /4 /6.5 /8 /10", "Option scans",
-     "Expiry day of the contract only. Premium Open = High -> buy where the premium falls to open/4, /6.5, /8 or /10. SL 5-10 points under the level."),
+     "Expiry day of the contract only. Premium Open = High -> buy where the premium falls to open/4, /6.5, /8 or /10. SL 5-10 points under the level. "
+     "Targets 1.5x / 2x / 5x / 10x the entry. BACKTEST (NIFTY + BANKNIFTY, 1-min, Oct 2024-Oct 2026, 38 expiry days): lost money at every level and "
+     "target - treat as experimental."),
     ("pd-daily", "Daily Divisor /2 /4", "Option scans",
-     "Other days. High = Open or High = previous close -> buy where the premium falls to that high /2 or /4. Open = Low with price above the open is a clean buy. SL 5-10 points."),
+     "Other days. High = Open or High = previous close -> buy where the premium falls to that high /2 or /4. Open = Low with price above the open is a clean buy. SL 5-10 points. "
+     "Targets 1.5x / 2x / 5x / 10x. BACKTEST: Open = Low clean buy with 5-pt SL and 1.5x target - 1,852 trades, profit factor 1.57 (1.52 older / 1.67 recent), "
+     "+2.5 pts a trade, wins only ~11% of trades. /4 with 10-pt SL and 2x target - PF 1.18 (185 trades). /2 - about break-even."),
     ("pd-ohol10", "Open = Low (within 10 pts) buy", "Option scans",
-     "Contract's low is no more than 10 points under its open and the premium is back at or above the open -> buy. SL 3 points. Stocks: see Daily scan."),
+     "Contract's low is no more than 10 points under its open and the premium is back at or above the open -> buy. SL 3 points. Targets 1.5x / 2x / 5x / 10x. "
+     "BACKTEST: checked at 09:30 with a 5x target - 4,159 trades, profit factor 2.23 (2.51 older / 1.59 recent), +3.4 pts a trade, wins ~7%. "
+     "Stocks (Daily scan): the buy side lost money; the Open = High sell side was slightly positive."),
 ]
 OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": [],
                 "gen": "new" if k in newind.NEW_KEYS_SET or k in ("rajan-premium-levels", "rajan-ohol-premium") else "old"} for k, n, g, d in OPT_SCANS}
