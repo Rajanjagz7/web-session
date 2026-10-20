@@ -35,8 +35,7 @@ MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "5"))
 CYCLE_SECONDS = 300
 STATE_KEY = "rajanone:push:v1"
 STATE_FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "push_state.json")
-STRATEGY_KEYS = ("trend-target-ribbon", "rj-best", "dual-phase-reversal", "ema-9-15",
-                 "breakout-15m", "breakdown-15m", "supertrend-mtf", "confluence")
+STRATEGY_KEYS = ("rajan-ha-momentum", "rajan-trend-rider", "ut-bot")   # daily strategies kept by the 20 Oct 2026 audit
 _lock = threading.Lock()
 
 
