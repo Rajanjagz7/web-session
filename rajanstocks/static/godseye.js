@@ -150,7 +150,7 @@
   /* God's Eye lives inside the Picks page (#pkGodseye); the old standalone view still works if it is ever shown. */
   function host() {
     if (typeof App === 'undefined') return null;
-    if (App.view === 'picks') return document.getElementById('pkGodseye');
+    if (App.view === 'picks') return window.obsMount ? null : document.getElementById('pkGodseye');   // the Observer owns Picks - never paint a second board (or its sheet) over it
     if (App.view === 'godseye') return document.getElementById('v-godseye');
     return null;
   }

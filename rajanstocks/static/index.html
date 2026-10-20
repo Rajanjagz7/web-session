@@ -633,7 +633,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script src="/static/journal.js?v=20261020f"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261020c"></script>
+<script src="/static/godseye.js?v=20261020d"></script>
 <script src="/static/observer.js?v=20261020b"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
@@ -679,6 +679,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .bl{padding:10px 12px}.bl-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}.bl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .bl-col{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}.bl-h{display:flex;justify-content:space-between;padding:7px 10px;font-weight:700;font-size:12px;letter-spacing:.04em}.bl-h span{font-weight:500;color:var(--text-3);letter-spacing:0}.bl-h.ce{color:var(--up);background:color-mix(in srgb,var(--up) 8%,transparent)}.bl-h.pe{color:var(--down);background:color-mix(in srgb,var(--down) 8%,transparent)}
 .bl-t{width:100%;border-collapse:collapse;font-size:12px}.bl-t th{font-size:10.5px;color:var(--text-3);text-align:left;padding:5px 8px;font-weight:600;border-bottom:1px solid var(--line)}.bl-t th.num,.bl-t td.num{text-align:right}.bl-t td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+@media(max-width:560px){.bl-t{font-size:11.5px}.bl-t th,.bl-t td{padding:5px 4px}.bl-t .bl-ltp{display:none}.bl-t .bl-tag{font-size:9.5px;padding:2px 5px}}
 .bl-t tr{cursor:pointer}.bl-t tr:hover td{background:var(--panel-2)}.bl-t tr.hit td:first-child{box-shadow:inset 3px 0 0 #22c55e}.bl-t tr.near td:first-child{box-shadow:inset 3px 0 0 #f59e0b}.bl-t tr.sel td{background:color-mix(in srgb,var(--brand) 12%,transparent)}.bl-t em{font-style:normal;font-size:9.5px;color:var(--brand);margin-left:4px}
 .bl-tag{font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px}.bl-tag.hit{background:color-mix(in srgb,#16a34a 22%,transparent);color:#4ade80}.bl-tag.near{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#fbbf24}
 .bl-none{padding:14px 10px;color:var(--text-3);font-size:12px}.bl-ctl{display:flex;gap:10px;align-items:center}.bl-ctl label{display:flex;gap:6px;align-items:center;font-size:12px}.bl-ps{height:28px;padding:0 6px;width:auto}.bl-pg{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:6px 8px;font-size:11.5px;color:var(--text-3)}.bl-note{font-size:11px;margin:8px 0 0}
@@ -3046,6 +3047,7 @@ function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
    State per level: hit = touched and price still in the buy zone (green), near = within reach (amber),
    ran = touched and already moved up (blue), stop = fell more than 10 pts under the level. ---- */
 const PD_TOL=0.5;
+const pdSl=(e,pts)=>+Math.max(0.05,e-Math.min(pts,Math.max(0.5,e*0.35))).toFixed(2);   // the indicator's point stop, capped at 35% of a small premium so a 7 rs entry never carries a 0.05 stop
 const ZONES={'sensex-310':{name:'SENSEX Indicator (prev close 310-340)',short:'SX 52-58',only:'SENSEX',ref:'prev',refLo:310,refHi:340,lo:52,hi:58,slPts:10,t:[88,92,105]},
   'prem-38-42':{name:'Premium 38-42 -> 7.80-8.45',short:'7.8-8.45',ref:'open',refLo:38,refHi:42,lo:7.80,hi:8.45,sl:5.80,t:[12,16,22,32,42]}};
 function pdIsExpiry(){const c=OPT.chain;return !!(c&&c.expiry&&c.expiry===new Date(Date.now()+330*60000).toISOString().slice(0,10))}
@@ -3053,18 +3055,18 @@ function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;cons
   if(o>=20){if(isExp){if(h<=o+PD_TOL)[4,6.5,8,10].forEach(k=>lv.push({name:'/'+k,ind:'Expiry divisor',base:o,lv:o/k}))}
     else{let base=null,from='';if(h<=o+PD_TOL){base=o;from='open = high'}else if(pc&&Math.abs(h-pc)<=PD_TOL){base=pc;from='high = prev close'}
       if(base)[2,4].forEach(k=>lv.push({name:'/'+k,ind:'Daily divisor ('+from+')',base,lv:base/k}))}}
-  for(const x of lv){x.entry=+x.lv.toFixed(2);x.sl=+Math.max(0.05,x.lv-10).toFixed(2);x.sl5=+Math.max(0.05,x.lv-5).toFixed(2);
+  for(const x of lv){x.entry=+x.lv.toFixed(2);x.sl=pdSl(x.lv,10);x.sl5=pdSl(x.lv,5);
     const touched=l<=x.lv+0.05,zone=Math.max(3,x.lv*0.1);
-    x.st=touched?(p<x.lv-10?'stop':p<=x.lv+zone?'hit':'ran'):(p<=x.lv*1.08+1?'near':'wait')}
+    x.st=touched?(p<x.sl?'stop':p<=x.lv+zone?'hit':'ran'):(p<=x.lv*1.08+1?'near':'wait')}
   const sigs=lv.filter(x=>x.st!=='wait');
-  if(!isExp&&o>=5&&Math.abs(l-o)<=PD_TOL&&p>o&&h>l)sigs.push({name:'O=L',ind:'Open = Low clean buy',entry:p,sl:+Math.max(0.05,p-10).toFixed(2),sl5:+Math.max(0.05,p-5).toFixed(2),st:'hit'});
-  else if(o>=5&&l>=o-10&&p>=o&&h>l)sigs.push({name:'O=L±10',ind:'Open = Low within 10 pts',entry:p,sl:+Math.max(0.05,p-3).toFixed(2),st:'hit',soft:1});
+  if(!isExp&&o>=5&&Math.abs(l-o)<=PD_TOL&&p>o&&h>l)sigs.push({name:'O=L',ind:'Open = Low clean buy',entry:p,sl:pdSl(p,10),sl5:pdSl(p,5),st:'hit'});
+  else if(o>=5&&l>=o-10&&p>=o&&h>l)sigs.push({name:'O=L±10',ind:'Open = Low within 10 pts',entry:p,sl:pdSl(p,3),st:'hit',soft:1});
   /* user zone indicators: SENSEX 310-340 -> 52-58 and premium 38-42 -> 7.80-8.45 */
   for(const [k,z] of Object.entries(ZONES)){if(z.only&&z.only!==OPT.sym)continue;const ref=z.ref==='prev'?pc:o;if(!(ref>=z.refLo&&ref<=z.refHi))continue;
     const inZone=l>=z.lo&&l<=z.hi,near=!inZone&&l>z.hi&&p<=z.hi*1.15;
     if(!inZone&&!near)continue;const entry=+Math.min(p,z.hi).toFixed(2),sl=z.slPts?+(entry-z.slPts).toFixed(2):z.sl,st=near?'near':p<sl?'stop':p<=z.hi+1?'hit':'ran';
     sigs.push({name:z.short,ind:z.name,entry,sl,st,zone:z})}
-  const rank={hit:0,near:1,ran:2,stop:3},top=sigs.filter(x=>!x.soft).sort((a,b)=>(rank[a.st]-rank[b.st])||(Math.abs(p-a.entry)-Math.abs(p-b.entry)))[0]||sigs[0]||null;   // nearest level wins
+  const rank={hit:0,near:1,ran:2,stop:3},top=sigs.slice().sort((a,b)=>(rank[a.st]-rank[b.st])||((a.soft?1:0)-(b.soft?1:0))||(Math.abs(p-a.entry)-Math.abs(p-b.entry)))[0]||null;   // an actionable signal wins; firm levels before O=L±10, then the nearest
   return{levels:lv,sigs,top}}
 const PD_T=[1.5,2,5,10],pdTg=(e,x)=>x&&x.zone?x.zone.t.map(v=>fmtP(v)).join(' · '):PD_T.map(m=>m+'x '+fmtP(e*m)).join(' · ');   // user targets: 1.5x 2x 5x 10x the entry premium
 function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''} · targets ${pdTg(x.entry,x)}`).join('\n')}
@@ -3074,22 +3076,22 @@ function pdStrip(){const box=$('#opLv'),o=OPT.osym;if(!box)return;if(!o||!OPT.se
   box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="${x.st}">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')
     +(()=>{const t=pd.sigs.find(x=>x.st==='hit'&&!x.soft)||pd.sigs.find(x=>x.st==='hit');return t?`<span class="tg">Targets${t.zone?'':' from '+fmtP(t.entry)}: ${pdTg(t.entry,t)}</span>`:''})()}
 /* Buy list (Signals tab): every call and put at a buy level, side by side - no scrolling the chain to find them */
-function drawBuyList(){const box=$('#opBuyList');if(!box)return;const hits=OPT.hits||[],all=!!OPT.buyAll;
+function drawBuyList(){const box=$('#opBuyList');if(!box)return;const hits=OPT.hits||[],all=OPT.buyAll!==false;
   const list=hits.filter(h=>all||!h.soft);
   const PS=[6,18,24,36,52,60],ps=OPT.blPs||6;OPT.blPg=OPT.blPg||{CE:0,PE:0};
   const col=sd=>{const allRows=list.filter(h=>h.sd===sd),pages=Math.max(1,Math.ceil(allRows.length/ps)),pg=Math.min(OPT.blPg[sd]||0,pages-1);OPT.blPg[sd]=pg;
     const rows=allRows.slice(pg*ps,pg*ps+ps),pager=allRows.length>ps?`<div class="bl-pg"><button type="button" class="btn-xs" data-blpg="${sd}:${pg-1}" ${pg<=0?'disabled':''}>‹</button><span>${pg*ps+1}–${Math.min(allRows.length,pg*ps+ps)} of ${allRows.length}</span><button type="button" class="btn-xs" data-blpg="${sd}:${pg+1}" ${pg>=pages-1?'disabled':''}>›</button></div>`:'';
     return`<div class="bl-col"><div class="bl-h ${sd==='CE'?'ce':'pe'}">${sd==='CE'?'CALLS':'PUTS'} <span>${allRows.filter(h=>h.t.st==='hit').length} buy · ${allRows.filter(h=>h.t.st==='near').length} near</span></div>
-      ${rows.length?`<table class="bl-t"><thead><tr><th>Strike</th><th>Signal</th><th class="num">LTP</th><th class="num">SL</th><th class="num">Target</th></tr></thead><tbody>${rows.map(h=>{const tg=h.t.zone?h.t.zone.t[0]:h.t.entry*1.5,sel=OPT.sel&&OPT.sel.side===sd&&OPT.sel.strike===h.k;
-        return`<tr class="${h.t.st} ${sel?'sel':''}" data-opt="${sd}:${h.k}" title="${esc(h.t.ind)} · entry ${fmtP(h.t.entry)} · SL ${fmtP(h.t.sl)} · targets ${esc(pdTg(h.t.entry,h.t))}"><td><b>${fmtP(h.k,h.k%1?2:0)}</b>${h.k===c0atm()?'<em>ATM</em>':''}</td><td><span class="bl-tag ${h.t.st}">${h.t.st==='hit'?'BUY':'near'} ${esc(h.t.name)}</span></td><td class="num">${fmtP(h.ltp)}</td><td class="num down">${fmtP(h.t.sl)}</td><td class="num up">${fmtP(tg)}</td></tr>`}).join('')}</tbody></table>`:`<div class="bl-none">No ${sd==='CE'?'call':'put'} at a buy level</div>`}${pager}</div>`};
+      ${rows.length?`<table class="bl-t"><thead><tr><th>Strike</th><th>Signal</th><th class="num">Buy at</th><th class="num bl-ltp">LTP</th><th class="num">SL</th><th class="num">Target</th></tr></thead><tbody>${rows.map(h=>{const tg=h.t.zone?h.t.zone.t[0]:h.t.entry*1.5,sel=OPT.sel&&OPT.sel.side===sd&&OPT.sel.strike===h.k;
+        return`<tr class="${h.t.st} ${sel?'sel':''}" data-opt="${sd}:${h.k}" title="${esc(h.t.ind)} · entry ${fmtP(h.t.entry)} · SL ${fmtP(h.t.sl)} · targets ${esc(pdTg(h.t.entry,h.t))}"><td><b>${fmtP(h.k,h.k%1?2:0)}</b>${h.k===c0atm()?'<em>ATM</em>':''}</td><td><span class="bl-tag ${h.t.st}">${h.t.st==='hit'?'BUY':'near'} ${esc(h.t.name)}</span></td><td class="num"><b>${fmtP(h.t.entry)}</b></td><td class="num bl-ltp">${fmtP(h.ltp)}</td><td class="num down">${fmtP(h.t.sl)}</td><td class="num up">${fmtP(tg)}</td></tr>`}).join('')}</tbody></table>`:`<div class="bl-none">No ${sd==='CE'?'call':'put'} at a buy level</div>`}${pager}</div>`};
   box.innerHTML=`<div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
     <div class="bl-ctl"><label class="muted">Rows <select class="inp bl-ps" data-blps>${PS.map(n=>`<option ${n===ps?'selected':''}>${n}</option>`).join('')}</select></label><div class="seg" role="group"><button type="button" class="${all?'':'on'}" data-buyall="0" title="Expiry/Daily divisor levels, Open = Low clean buy, SENSEX and 38-42 zones">Levels</button><button type="button" class="${all?'on':''}" data-buyall="1" title="Also Open = Low within 10 points (many contracts qualify)">+ O=L ±10</button></div></div></div>
-    <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Green = premium is at your buy value now · amber = getting close. Targets column shows the first target (all targets in the tooltip and on the chart strip).</p></div>`}
+    <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Buy at = your entry premium for that signal; SL = its stop (indicator points, capped at 35% for small premiums). Green = premium is at your buy value now · amber = getting close. Target shows the first target (all targets in the tooltip and on the chart strip).</p></div>`}
 const c0atm=()=>OPT.chain&&OPT.chain.atm;
 document.addEventListener('change',e=>{if(e.target.matches('[data-blps]')){OPT.blPs=+e.target.value;OPT.blPg={CE:0,PE:0};try{localStorage.setItem('bl-ps',OPT.blPs)}catch(x){}drawBuyList()}});
-try{OPT.blPs=+localStorage.getItem('bl-ps')||6}catch(e){}
+try{OPT.blPs=+localStorage.getItem('bl-ps')||6;OPT.buyAll=localStorage.getItem('bl-all')!=='0'}catch(e){}
 document.addEventListener('click',e=>{const pgb=e.target.closest('[data-blpg]');if(pgb){const [sd,n]=pgb.dataset.blpg.split(':');OPT.blPg[sd]=Math.max(0,+n);drawBuyList();return}
-  const b=e.target.closest('[data-buyall]');if(b){OPT.buyAll=b.dataset.buyall==='1';OPT.blPg={CE:0,PE:0};drawBuyList();return}
+  const b=e.target.closest('[data-buyall]');if(b){OPT.buyAll=b.dataset.buyall==='1';try{localStorage.setItem('bl-all',OPT.buyAll?'1':'0')}catch(x){}OPT.blPg={CE:0,PE:0};drawBuyList();return}
   if(e.target.closest('[data-act="buylist"]')){if(opxMobile())opxTab('signals');else{opxWtab('signals');const p=document.querySelector('.opx-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})}}});
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
   if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
