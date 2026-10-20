@@ -344,6 +344,7 @@ def quotes(symbols: str = ""):
         return out
 
     ck = "q|" + ",".join(syms)
+    slast = "qs-last|" + hashlib.md5(",".join(syms).encode()).hexdigest()
     stale, why = False, ""
     try:
         ttl = 4.0 if market_open() else 300        # live: 4s; Upstox allows ~66 calls/min in total, and every server instance has its own cache
@@ -367,8 +368,15 @@ def quotes(symbols: str = ""):
         if not data and syms:
             raise RuntimeError("no quotes available")
         _QLAST[ck] = (time.time(), data)
+        if missing:                       # we really refreshed: keep a copy every instance can fall back on (30 min)
+            shared_cache.set(slast, {"t": time.time(), "data": data}, 1800)
     except Exception as e:
         last = _QLAST.get(ck)
+        if not last:                      # a fresh serverless instance has no memory of its own: use the shared copy
+            sh = shared_cache.get(slast)
+            if sh:
+                last = (sh["t"], sh["data"])
+                _QLAST[ck] = last
         if last and time.time() - last[0] < 1800:
             data, stale, why = last[1], True, str(e)[:160]
         else:
