@@ -182,14 +182,14 @@ def _play(short, trend, last, hi, lo, avg_rng, from_hi, from_lo):
         side, why = "SELL", (f"Sold off today - {from_hi:.1f}% off the high {hi:,.2f}" if short <= -1.5 else "Below its 20-day average with weak RSI")
         z_lo, z_hi = last + 0.15 * u, min(max(hi, last + 0.3 * u), last + 0.6 * u)
         sl = max(hi, z_hi) + 0.15 * u
-        out = {"side": side, "label": "SELL ON RISE", "zone": [r(z_lo), r(z_hi)], "sl": r(sl), "targets": [r(last - 0.5 * u), r(min(lo, last - 0.25 * u) - 0.25 * u)]}
+        out = {"side": side, "label": "SELL ON RISE", "zone": [r(z_lo), r(z_hi)], "sl": r(sl), "targets": [r(last - 0.5 * u), r(min(lo - 0.25 * u, last - u))]}
         if trend >= 1:
             why += " - counter-trend: the 20-day trend is still up, keep it quick"
     elif short >= 1.5 or (abs(short) < 1.5 and trend >= 2):
         side, why = "BUY", (f"Strong today - {from_lo:.1f}% up from the low {lo:,.2f}" if short >= 1.5 else "Above its 20-day average with firm RSI")
         z_hi, z_lo = last - 0.15 * u, max(min(lo, last - 0.3 * u), last - 0.6 * u)
         sl = min(lo, z_lo) - 0.15 * u
-        out = {"side": side, "label": "BUY ON DIPS", "zone": [r(z_lo), r(z_hi)], "sl": r(sl), "targets": [r(last + 0.5 * u), r(max(hi, last + 0.25 * u) + 0.25 * u)]}
+        out = {"side": side, "label": "BUY ON DIPS", "zone": [r(z_lo), r(z_hi)], "sl": r(sl), "targets": [r(last + 0.5 * u), r(max(hi + 0.25 * u, last + u))]}
         if trend <= -1:
             why += " - counter-trend: the 20-day trend is still down, keep it quick"
     else:
