@@ -250,9 +250,8 @@ def _key(sym):
 
 
 def market_open():
-    n = datetime.now(IST)
-    mins = n.hour * 60 + n.minute
-    return n.weekday() < 5 and 9 * 60 + 15 <= mins <= 15 * 60 + 30
+    import nse_calendar
+    return nse_calendar.session_open(datetime.now(IST))      # exchange holidays count as closed
 
 
 def _num(v, d=0.0):
@@ -537,7 +536,7 @@ def _hist_rows(key, unit, interval, days, window):
 
 def _today_daily_bar(key):
     now = datetime.now(IST)
-    if not (now.weekday() < 5 and now.hour * 60 + now.minute >= 9 * 60 + 15):
+    if not (__import__("nse_calendar").is_trading_day(now.date()) and now.hour * 60 + now.minute >= 9 * 60 + 15):
         return None
     try:
         mins = sorted(upstox_service.fetch_intraday_candles(key, "minutes", "1"), key=lambda c: c["time"])

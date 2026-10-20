@@ -97,7 +97,7 @@ def _inr(v):
 def market_hours(now=None):
     n = now or datetime.now(IST)
     m = n.hour * 60 + n.minute
-    return n.weekday() < 5 and 9 * 60 + 15 <= m <= 15 * 60 + 30
+    return __import__("nse_calendar").is_trading_day(n.date()) and 9 * 60 + 15 <= m <= 15 * 60 + 30
 
 
 def collect(today=None):

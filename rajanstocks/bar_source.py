@@ -46,7 +46,7 @@ def _cached(key, ttl, fn):
 
 
 def _market_started(now):
-    return now.weekday() < 5 and now.hour * 60 + now.minute >= 9 * 60 + 15
+    return __import__("nse_calendar").is_trading_day(now.date()) and now.hour * 60 + now.minute >= 9 * 60 + 15
 
 
 FULL_DAYS = 1900     # one shared fetch per symbol; every strategy slices what it needs from it

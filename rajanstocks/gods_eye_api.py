@@ -41,18 +41,8 @@ CANONICAL_SYMBOLS = {
 }
 
 # Known Indian market holidays (YYYY-MM-DD)
-EXCHANGE_HOLIDAYS = {
-    "2026-01-26": "Republic Day",
-    "2026-03-03": "Holi",
-    "2026-04-03": "Good Friday",
-    "2026-04-14": "Dr. Ambedkar Jayanti",
-    "2026-05-01": "Maharashtra Day",
-    "2026-08-15": "Independence Day",
-    "2026-10-02": "Mahatma Gandhi Jayanti",
-    "2026-10-20": "Dussehra",
-    "2026-11-09": "Diwali Laxmi Pujan",
-    "2026-12-25": "Christmas",
-}
+import nse_calendar as _nc
+EXCHANGE_HOLIDAYS = dict(_nc.HOLIDAYS)
 
 # In-memory mutable states with atomic-like operations
 _KILL_SWITCH: bool = False

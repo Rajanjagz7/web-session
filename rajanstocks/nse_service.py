@@ -109,7 +109,7 @@ class NSEService:
             pass
         now = datetime.now(IST)
         minutes = now.hour * 60 + now.minute
-        is_open = now.weekday() < 5 and 9 * 60 + 15 <= minutes <= 15 * 60 + 30
+        is_open = __import__("nse_calendar").is_trading_day(now.date()) and 9 * 60 + 15 <= minutes <= 15 * 60 + 30
         return {
             "marketStatus": "Open" if is_open else "Closed",
             "tradeDate": now.strftime("%d-%b-%Y"),

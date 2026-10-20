@@ -20,7 +20,7 @@ _cache: dict[str, tuple[str, float, dict]] = {}  # symbol -> (date, built_at, re
 def _ttl():
     """2 minutes while NSE is in session (live price, VWAP, opening range move), 30 minutes otherwise."""
     now = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=5, minutes=30)))
-    in_session = now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) < (15, 30)
+    in_session = __import__("nse_calendar").is_trading_day(now.date()) and (9, 15) <= (now.hour, now.minute) < (15, 30)
     return 120 if in_session else 1800
 
 

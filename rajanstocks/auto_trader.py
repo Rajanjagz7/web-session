@@ -55,6 +55,12 @@ def _load():
                 d = json.load(f)
         st["cfg"].update(d.get("cfg") or {})
         st["trades"], st["log"] = d.get("trades") or [], d.get("log") or []
+        import nse_calendar                               # trades "opened" on an exchange holiday used stale prices: void them
+        bad = [t for t in st["trades"] if nse_calendar.holiday(t.get("date"))]
+        if bad:
+            st["trades"] = [t for t in st["trades"] if not nse_calendar.holiday(t.get("date"))]
+            st["log"].append({"at": _now().isoformat(), "msg": f"Voided {len(bad)} paper trade(s) opened on an NSE holiday ({nse_calendar.holiday(bad[0]['date'])}) - prices were stale"})
+            st["_dirty"] = True
         st["fillNext"], st["fillBackoff"] = d.get("fillNext") or 0, d.get("fillBackoff") or 0
         if d.get("cand"):
             st["cand"] = d["cand"]
@@ -68,6 +74,7 @@ def _load():
 
 
 def _save(st):
+    st.pop("_dirty", None)
     st["log"] = st["log"][-120:]
     try:
         r = _remote()
@@ -115,7 +122,7 @@ def _sessions_between(a, b):
     end = date.fromisoformat(b)
     while d < end:
         d += timedelta(days=1)
-        if d.weekday() < 5:
+        if __import__("nse_calendar").is_trading_day(d):
             n += 1
     return n
 
@@ -562,9 +569,10 @@ def _run_cycle(now, force, dry):
         rep = {"ran": True, "dry": dry, "entered": [], "closed": [], "note": None}
         if not cfg["enabled"] and not dry:
             return {"ran": False, "reason": "auto trader is switched off"}
-        is_open = now.weekday() < 5 and 9 * 60 + 15 <= _mins(now) <= 15 * 60 + 30
-        if not is_open and not force:
-            return {"ran": False, "reason": "market closed"}
+        import nse_calendar
+        is_open = nse_calendar.session_open(now)
+        if not is_open and (not force or not nse_calendar.is_trading_day(now.date())):
+            return {"ran": False, "reason": "market closed" + (f" ({nse_calendar.holiday(now.date())})" if nse_calendar.holiday(now.date()) else "")}
         before = {t["id"] for t in st["trades"] if t["status"] == "CLOSED"}
         if not dry:
             manage(st, now)
@@ -710,6 +718,9 @@ def tighten_stop(tid: str, b: StopBody):
 @router.get("/status")
 def status():
     st = _load()
+    if st.get("_dirty"):
+        with _lock:
+            _save(st)
     now = _now()
     today = now.date().isoformat()
     closed = [t for t in st["trades"] if t["status"] == "CLOSED"]
@@ -729,7 +740,7 @@ def status():
     return {
         "activeStrategies": [{"key": k, "variant": chosen.get(k, ("fixed", "none"))[0], "filter": chosen.get(k, ("fixed", "none"))[1]} for k in keys],
         "mode": label,
-        "cfg": st["cfg"], "today": today, "marketOpen": now.weekday() < 5 and 9 * 60 + 15 <= _mins(now) <= 15 * 60 + 30,
+        "cfg": st["cfg"], "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
         "open": opens, "closed": closed[-120:][::-1], "log": st["log"][-120:][::-1],
         "summary": {"trades": len(closed), "net": round(sum(t["net"] for t in closed), 0),

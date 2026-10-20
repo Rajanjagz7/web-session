@@ -13,9 +13,9 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['new', 'New trade'], ['algo', 'Algo']];
    const GROUPS = {};
-   const TAB_TIPS = { portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report' };
+   const TAB_TIPS = { new: 'Log a trade: buy price, SL, target, quantity - R:R is worked out for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -70,7 +70,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         AUTO.list = (a.open || []).concat(a.closed || []).map(mapAuto);
         AUTO.ts = Date.now();
         if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.unrl, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
-            ['overview', 'journal', 'strategy', 'reports'].includes(effTab())) render();
+            ['portfolio', 'positions', 'algo'].includes(effTab())) render();
       }
     } catch (e) { /* offline: keep what we have */ }
     AUTO.busy = false;
@@ -83,7 +83,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       return r.ok ? { ok: true, d } : { ok: false, err: d.detail || ('Request failed (' + r.status + ')') };
     } catch (e) { return { ok: false, err: 'No internet connection.' }; }
   }
-  const ui = { tab: 'overview', sub: { analysis: 'strategy', config: 'auto' }, f: { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }, sel: null, lab: null, labBusy: false };
+  const ui = { tab: 'portfolio', sub: { analysis: 'strategy', config: 'auto' }, f: { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }, sel: null, lab: null, labBusy: false };
 
   /* ---------- helpers ---------- */
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -152,7 +152,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   /* ---------- trade validation (FR-03/04/05, section 10) ---------- */
   function validate(f, opts) {
     const errs = [], warns = [], d = f.dir === 'Short' ? -1 : 1, m = f.mult || 1;
-    ['date', 'market', 'instrument', 'dir', 'setup'].forEach(k => { if (!f[k]) errs.push('Missing: ' + k); });
+    if (!f.setup) f.setup = 'Manual';                                  // optional on the simple form
+    [['date', 'date'], ['market', 'market'], ['instrument', 'stock / index'], ['dir', 'buy / sell']].forEach(([k, l]) => { if (!f[k]) errs.push('Missing: ' + l); });
     if (!(f.entry > 0)) errs.push('Entry price is required.');
     if (!(f.sl > 0)) errs.push('Stop-loss is mandatory.');
     if (f.entry > 0 && f.sl > 0) {
@@ -261,7 +262,9 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   }
   function refreshLive() {
     const host = document.getElementById('v-journal');
-    if (!host || !host.offsetParent || ui.tab !== 'overview' || document.querySelector('.modal-bg') || document.hidden) return;
+    if (!host || !host.offsetParent || document.querySelector('.modal-bg') || document.hidden) return;
+    if (ui.tab === 'positions') { render(); return; }                  // live P&L / current price on the Positions tab
+    if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
     const day = today();
     k.innerHTML = kpiBlock(metrics(filtered()), dayStats(day), day);
@@ -390,47 +393,46 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const sel = (id, arr, cur) => `<select class="inp" id="${id}">${arr.map(x => `<option ${cur === x ? 'selected' : ''}>${E(x)}</option>`).join('')}</select>`;
     const inp = (id, label, v, type = 'text', extra = '') => `<label class="fld"><span>${label}</span><input class="inp" id="${id}" type="${type}" value="${E(v == null ? '' : v)}" ${extra}></label>`;
     const syms = (typeof SYMS !== 'undefined') ? SYMS.slice(0, 500).map(s => `<option value="${E(s.s)}">`).join('') : '';
-    return `<form class="jv-form" id="jvForm" autocomplete="off">
-      <fieldset><legend>Setup</legend>
-        ${inp('jf-date', 'Date', d.date, 'date')}${inp('jf-time', 'Entry time (IST)', d.time, 'time')}
-        <label class="fld"><span>Market type</span>${sel('jf-market', MARKETS, d.market)}</label>
-        <label class="fld"><span>Instrument</span><input class="inp" id="jf-inst" list="jvSyms" value="${E(d.instrument || '')}" placeholder="e.g. RELIANCE / NIFTY"><datalist id="jvSyms">${syms}</datalist></label>
-        ${d.market === 'Options' ? `${inp('jf-strike', 'Strike', d.strike, 'number', 'step="any" placeholder="22600"')}
-        <label class="fld"><span>Option type</span>${sel('jf-opt', ['CE', 'PE'], d.opt || 'CE')}</label>
+    const opt = d.market === 'Options';
+    return `<form class="jv-form jv-simple" id="jvForm" autocomplete="off">
+      <fieldset><legend>New trade</legend>
+        <label class="fld"><span>Market</span>${sel('jf-market', MARKETS, d.market)}</label>
+        <label class="fld"><span>Stock / index</span><input class="inp" id="jf-inst" list="jvSyms" value="${E(d.instrument || '')}" placeholder="e.g. RELIANCE / NIFTY"><datalist id="jvSyms">${syms}</datalist></label>
+        ${opt ? `${inp('jf-strike', 'Strike', d.strike, 'number', 'step="any" placeholder="22600"')}
+        <label class="fld"><span>CE / PE</span>${sel('jf-opt', ['CE', 'PE'], d.opt || 'CE')}</label>
         ${inp('jf-expiry', 'Expiry', d.expiry, 'date')}` : ''}
-        ${inp('jf-sym', 'Symbol / contract', d.symbol || '', 'text', 'placeholder="e.g. NIFTY 22600 PE"')}
-        <label class="fld"><span>Direction</span>${sel('jf-dir', ['Long', 'Short'], d.dir)}</label>
-        <label class="fld"><span>Strategy / setup</span><input class="inp" id="jf-setup" list="jvSetups" value="${E(d.setup || '')}" placeholder="${d.market === 'Options' ? 'e.g. breakout CE buy, IV crush PE sell' : ''}"><datalist id="jvSetups">${setups.map(s => `<option value="${E(s)}">`).join('')}</datalist></label>
-        ${inp('jf-tf', 'Timeframe', d.tf || '', 'text', 'placeholder="5m / 15m / 1D"')}
-        ${inp('jf-ind', 'Indicator values', d.ind || '', 'text', 'placeholder="UT Bot BUY, RSI 58…"')}
-      </fieldset>
-      <fieldset><legend>Entry &amp; risk</legend>
-        ${inp('jf-entry', 'Entry price', d.entry, 'number', 'step="any"')}${inp('jf-sl', 'Initial stop-loss (mandatory)', d.sl, 'number', 'step="any"')}
-        ${inp('jf-qty', 'Quantity (shares / lots)', d.qty, 'number', 'step="1" min="1"')}${inp('jf-mult', 'Lot / contract multiplier', d.mult, 'number', 'step="any" min="1"')}
+        <label class="fld"><span>Buy / Sell</span><select class="inp" id="jf-dir"><option value="Long" ${d.dir !== 'Short' ? 'selected' : ''}>Buy</option><option value="Short" ${d.dir === 'Short' ? 'selected' : ''}>Sell (short)</option></select></label>
+        ${inp('jf-entry', opt ? 'Buy price (premium)' : 'Buy price', d.entry, 'number', 'step="any" inputmode="decimal"')}
+        ${inp('jf-sl', 'Stop-loss (SL)', d.sl, 'number', 'step="any" inputmode="decimal"')}
+        ${inp('jf-t2', 'Target (TGT)', d.t2, 'number', 'step="any" inputmode="decimal" placeholder="blank = ' + S.t2 + 'R"')}
+        ${inp('jf-qty', opt ? 'Lots' : 'Quantity', d.qty, 'number', 'step="1" min="1" inputmode="numeric"')}
+        ${inp('jf-mult', opt ? 'Lot size' : 'Multiplier', d.mult, 'number', 'step="any" min="1"')}
         <div class="jv-calc" id="jvCalc"></div>
-      </fieldset>
-      <fieldset><legend>Targets <small>(blank = ${S.t1}R / ${S.t2}R / ${S.t3}R)</small></legend>
-        ${inp('jf-t1', 'T1', d.t1, 'number', 'step="any"')}${inp('jf-t2', 'T2', d.t2, 'number', 'step="any"')}${inp('jf-t3', 'T3', d.t3, 'number', 'step="any"')}
-      </fieldset>
-      <fieldset><legend>TSL rules</legend>
-        <label class="fld"><span>TSL mode</span>${sel('jf-tsl', TSL_MODES, d.tsl)}</label>
-        ${inp('jf-trig', 'Activation / breakeven trigger (R)', d.tslTrig, 'number', 'step="any"')}
-        ${inp('jf-trail', 'Trail distance (price)', d.trail, 'number', 'step="any"')}${inp('jf-step', 'Step size (price)', d.step, 'number', 'step="any"')}
-      </fieldset>
-      <fieldset><legend>Rationale</legend>
-        <label class="fld wide"><span>Why this trade (before entry)</span><textarea class="inp" id="jf-why" rows="3">${E(d.why || '')}</textarea></label>
         <label class="fld wide" id="jvOvr" hidden><span>Override reason (logged)</span><input class="inp" id="jf-ovr" value="${E(d.ovr || '')}"></label>
       </fieldset>
-      <div class="jv-actions"><button type="button" class="btn" data-jv="plan">Save as plan</button><button type="button" class="btn pri" data-jv="enter">Record entry…</button><button type="button" class="btn" data-jv="resetform">Reset</button></div>
+      <details class="jv-more"><summary>More details (optional): date, setup, T1/T3, trailing stop, notes</summary>
+      <fieldset>
+        ${inp('jf-date', 'Date', d.date, 'date')}${inp('jf-time', 'Entry time (IST)', d.time, 'time')}
+        ${inp('jf-sym', 'Symbol / contract', d.symbol || '', 'text', 'placeholder="auto from stock / strike"')}
+        <label class="fld"><span>Strategy / setup</span><input class="inp" id="jf-setup" list="jvSetups" value="${E(d.setup || '')}"><datalist id="jvSetups">${setups.map(s => `<option value="${E(s)}">`).join('')}</datalist></label>
+        ${inp('jf-tf', 'Timeframe', d.tf || '', 'text', 'placeholder="5m / 15m / 1D"')}
+        ${inp('jf-ind', 'Indicator values', d.ind || '', 'text', 'placeholder="UT Bot BUY, RSI 58…"')}
+        ${inp('jf-t1', 'T1 (partial)', d.t1, 'number', 'step="any" placeholder="blank = ' + S.t1 + 'R"')}${inp('jf-t3', 'T3 (extended)', d.t3, 'number', 'step="any" placeholder="blank = ' + S.t3 + 'R"')}
+        <label class="fld"><span>Trailing stop</span>${sel('jf-tsl', TSL_MODES, d.tsl)}</label>
+        ${inp('jf-trig', 'Breakeven trigger (R)', d.tslTrig, 'number', 'step="any"')}
+        ${inp('jf-trail', 'Trail distance (price)', d.trail, 'number', 'step="any"')}${inp('jf-step', 'Step size (price)', d.step, 'number', 'step="any"')}
+        <label class="fld wide"><span>Why this trade</span><textarea class="inp" id="jf-why" rows="2">${E(d.why || '')}</textarea></label>
+      </fieldset></details>
+      <div class="jv-actions"><button type="button" class="btn pri" data-jv="enter">Add trade</button><button type="button" class="btn" data-jv="plan">Save as plan</button><button type="button" class="btn" data-jv="resetform">Clear</button></div>
     </form>`;
   }
 
   function readForm() {
     const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
     const f = {
-      date: g('jf-date'), time: g('jf-time'), market: g('jf-market'), instrument: g('jf-inst').trim(), symbol: g('jf-sym').trim(),
+      date: g('jf-date') || today(), time: g('jf-time') || istTime(new Date()), market: g('jf-market'), instrument: g('jf-inst').trim(), symbol: g('jf-sym').trim(),
       strike: num(g('jf-strike')), opt: g('jf-opt'), expiry: g('jf-expiry'),
-      dir: g('jf-dir'), setup: g('jf-setup').trim(), tf: g('jf-tf').trim(), ind: g('jf-ind').trim(),
+      dir: g('jf-dir'), setup: g('jf-setup').trim() || 'Manual', tf: g('jf-tf').trim(), ind: g('jf-ind').trim(),
       entry: num(g('jf-entry')), sl: num(g('jf-sl')), qty: num(g('jf-qty')), mult: num(g('jf-mult')) || 1,
       t1: num(g('jf-t1')), t2: num(g('jf-t2')), t3: num(g('jf-t3')), tsl: g('jf-tsl'), tslTrig: num(g('jf-trig')),
       trail: num(g('jf-trail')), step: num(g('jf-step')), why: g('jf-why').trim(), ovr: g('jf-ovr').trim(),
@@ -459,7 +461,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       <div><small>Risk budget (${S.riskPct}% of ${inr(equity(), 0)})</small><b>${inr(v.bud, 0)}</b></div>
       <div><small>Initial risk (₹)</small><b class="${v.overBudget ? 'down' : ''}">${v.risk ? inr(v.risk, 0) : '—'}</b></div>
       <div><small>Suggested quantity</small><b>${v.sugg || '—'}</b></div>
-      <div><small>Planned R:R (to T2)</small><b>${v.plannedRR != null ? v.plannedRR.toFixed(2) + ':1' : '—'}</b></div>
+      <div><small>R:R (to target)</small><b>${v.plannedRR != null ? v.plannedRR.toFixed(2) + ':1' : '—'}</b></div>
       <div><small>Trades today</small><b>${ds.entries} / ${S.maxTrades}</b></div></div><ul class="jv-msgs">${msgs.join('') || '<li class="up">✓ Plan passes all checks</li>'}</ul>`;
     const ovr = document.getElementById('jvOvr'); if (ovr) ovr.hidden = !(v.overBudget || (v.plannedRR != null && v.plannedRR < S.minRR) || ds.entries >= S.maxTrades);
   }
@@ -481,7 +483,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function savePlan() {
     const f = readForm(), v = validate(fillTargets(Object.assign({}, f)), { recording: false });
     if (v.errs.length) { toast_(v.errs[0], 'err'); renderCalc(); return; }
-    T.push(buildTrade(f, 'Planned')); persist(); ui.draft = null; toast_('Plan saved (not counted as an entry)', 'ok'); ui.tab = 'journal'; render();
+    T.push(buildTrade(f, 'Planned')); persist(); ui.draft = null; toast_('Plan saved (not counted as an entry)', 'ok'); ui.tab = 'positions'; render();
   }
   function recordEntry() {
     const f = fillTargets(readForm()), v = validate(f, { recording: true });
@@ -498,7 +500,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const go = () => {
       const t = buildTrade(f, 'Open', f.ovr, hardBlocks.length > 0);
       if (hardBlocks.length) t.overrideNotes = hardBlocks;
-      T.push(t); persist(); ui.draft = null; if (window.closeModal) window.closeModal(); toast_('Entry recorded: ' + t.id, 'ok'); ui.tab = 'journal'; render();
+      T.push(t); persist(); ui.draft = null; if (window.closeModal) window.closeModal(); toast_('Entry recorded: ' + t.id, 'ok'); ui.tab = 'positions'; render();
     };
     if (window.modal) {
       window.modal('Confirm paper entry', body, { foot: '<button class="btn" data-jv="cancelmodal">Cancel</button><button class="btn pri" id="jvConfirm">Record entry</button>' });
@@ -666,7 +668,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function marketExit(id) {
     const t = T.find(x => x.id === id); if (!t) return;
     const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);
-    if (l == null) { toast_('No live price for this instrument here. Use "Add exit" and enter the price.', 'warn'); return; }
+    if (l == null) { addExit(id); return; }                           // no live quote here: ask for the exit price instead
     smallForm('Exit at market · ' + t.id, `<p>Exit the remaining <b>${rem}</b> of <b>${E(t.symbol || t.instrument)}</b> at the live price <b>${px(l)}</b>?</p>`, 'Exit now', () => {
       const now = new Date();
       t.exits.push({ qty: rem, price: +l.toFixed(2), type: 'Manual Exit', date: istDay(now), time: istTime(now) });
@@ -970,9 +972,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { portfolio: viewPortfolio, positions: viewPositions, algo: viewAlgo };
-    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'overview' ? '' : topStrip()}${(bodies[effTab()] || viewOverview)()}</div>`;
-    if (ui.tab === 'overview') {
+    const bodies = { portfolio: viewOverview, positions: viewPositions, new: viewNew, algo: viewAlgo };
+    if (!bodies[ui.tab]) ui.tab = 'portfolio';
+    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
+    if (ui.tab === 'portfolio') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
       try { d = JSON.parse(dEl.textContent); } catch (e) { }
       requestAnimationFrame(() => {
@@ -982,6 +985,49 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     }
     if (ui.tab === 'new') renderCalc();
   }
+
+  /* ---------- events (tabs, entry form, exits, auto trader controls) ---------- */
+  document.addEventListener('click', e => {
+    const o = e.target.closest('[data-jvord]'); if (!o) return;
+    if (typeof App !== 'undefined') App.ord = o.dataset.jvord;
+    render();
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-jv]'); if (!b) return;
+    const a = b.dataset.jv, id = b.dataset.id;
+    if (a === 'reset' || a === 'moref') return;                       // own handlers
+    if (!document.getElementById('v-journal') && !document.querySelector('.modal-bg')) return;
+    if (a === 'tab') { ui.tab = b.dataset.k; if (ui.tab === 'algo') { SV.auto = null; SV.bt = null; } render(); window.scrollTo(0, 0); }
+    else if (a === 'subtab') { ui.sub[b.dataset.grp] = b.dataset.k; render(); }
+    else if (a === 'open') openDetail(id);
+    else if (a === 'clearf') { ui.f = { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }; render(); }
+    else if (a === 'plan') savePlan();
+    else if (a === 'enter') { if (ui.tab !== 'new') { ui.tab = 'new'; render(); window.scrollTo(0, 0); } else recordEntry(); }
+    else if (a === 'resetform') { ui.draft = null; render(); }
+    else if (a === 'cancelmodal') window.closeModal && window.closeModal();
+    else if (a === 'addexit') addExit(id);
+    else if (a === 'autoexit') autoExit(id);
+    else if (a === 'exitall') exitAll();
+    else if (a === 'autotsl') autoTsl(id);
+    else if (a === 'autostop') autoStop(id);
+    else if (a === 'settsl') setManualTsl(id);
+    else if (a === 'mktexit') marketExit(id);
+    else if (a === 'movesl') moveSL(id);
+    else if (a === 'savereview') saveReview(id);
+    else if (a === 'enterplan') { const t = T.find(x => x.id === id); if (t) { ui.draft = Object.assign({}, t, { instrument: t.instrument, why: t.why, entry: t.entry, sl: t.sl0 }); T = T.filter(x => x.id !== id); persist(); window.closeModal && window.closeModal(); ui.tab = 'new'; render(); } }
+    else if (a === 'cancelplan') { const t = T.find(x => x.id === id); if (t) { t.status = 'Cancelled'; persist(); window.closeModal && window.closeModal(); render(); } }
+    else if (a === 'favsave') { const t = T.find(x => x.id === id); if (t) { t.hi = num(document.getElementById('jd-hi').value); t.lo = num(document.getElementById('jd-lo').value); if (statusOf(t) === 'Closed') t.edited = true; persist(); toast_('Saved', 'ok'); } }
+    else if (a === 'csv') exportCsv();
+    else if (a === 'csvsum') exportSummary();
+    else if (a === 'runlab') runLab();
+    else if (a === 'btrun') { fetch('/api/backtest/run', { method: 'POST' }).then(() => { SV.btBusy = true; SV.bt = null; render(); }); }
+    else if (a === 'autotoggle') { const on = !(SV.auto && SV.auto.cfg.enabled); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: on }) }).then(() => loadSrv('auto')); }
+    else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
+    else if (a === 'autorefresh') { loadSrv('auto'); }
+    else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
+    else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
+    else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
+  });
 
   /* Reset portfolio: one confirmation, then clear EVERYTHING that feeds the portfolio figure -
      manual journal trades, journal settings, the server's auto paper trades and the Trade screen's paper account. */
@@ -1229,20 +1275,23 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
    function positionTable(trades) {
      if (!trades.length) return '<div class="empty">No positions</div>';
-     const headers = ['Symbol', 'Side', 'Entry', 'SL', 'Target', 'Current', 'P&L', 'Exit'];
+     const headers = ['Symbol', 'Side', 'Entry', 'SL', 'Target', 'R:R', 'Current', 'P&L', 'Exit'];
      const rows = trades.map(t => {
        const c = calc(t);
        const status = statusOf(t);
-       const currentPrice = t.ltp || live(t.symbol || t.instrument) || t.entry;
-       const pnl = c.net || 0;
+       const open = status !== 'Closed', u = open ? unrealised(t) : null;
+       const currentPrice = open ? (t.auto ? (t.raw && t.raw.last) : live(t.symbol || t.instrument)) || t.entry : ((t.exits || []).slice(-1)[0] || {}).price;
+       const pnl = open ? (u || 0) : (c.net || 0);
+       const r0 = Math.abs(t.entry - t.sl0), rrv = r0 > 0 && t.t2 ? Math.abs(t.t2 - t.entry) / r0 : null;
        const pnlClass = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
-       const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="mktexit" data-id="${t.id}" title="Market exit">Exit</button>` : '<span class="muted">Closed</span>';
+       const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="${t.auto ? 'autoexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit at the live price">Exit</button>` : '<span class="muted">Closed</span>';
        return `<tr${t.auto ? ' class="auto-row"' : ''}>
          <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small>${E(t.setup || '')}</small></span></td>
          <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'L' : 'S'}</span></td>
-         <td class="num">${px(c.entry || t.entry)}</td>
-         <td class="num">${px(c.sl || t.sl)}</td>
-         <td class="num">${px(c.t2 || t.t2)}</td>
+         <td class="num">${px(t.entry)}</td>
+         <td class="num">${px(t.sl)}</td>
+         <td class="num">${px(t.t2)}</td>
+         <td class="num">${rrv != null ? '1:' + rrv.toFixed(1) : '—'}</td>
          <td class="num"><b>${px(currentPrice)}</b></td>
          <td class="num ${pnlClass}">${sinr(pnl)}</td>
          <td>${exitBtn}</td>
@@ -1380,6 +1429,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.jv-cv{height:120px}
   .jv-exit{height:24px;padding:0 10px;border-radius:6px;border:1px solid color-mix(in srgb,var(--down,#f7525f) 55%,transparent);background:color-mix(in srgb,var(--down,#f7525f) 12%,transparent);color:var(--down,#f7525f);font-size:11.5px;font-weight:700;cursor:pointer}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
+  .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
   .jv-hr{display:flex;align-items:center;gap:10px;margin-left:auto}
   .jv-list>div{padding:7px 12px;font-size:12.5px}
   @media (max-width:600px){.jv-kpis{grid-template-columns:repeat(3,1fr)}.jv-kpi b{font-size:13.5px}.jv-search{max-width:none;order:5;flex-basis:100%}.jv-tabs{overflow-x:auto}.jv-more{display:grid;grid-template-columns:1fr 1fr}.jv-more .inp{min-width:0;width:100%}.jv-t .jv-tg,.jv-t th[title^="T1"]{display:none}}`;
