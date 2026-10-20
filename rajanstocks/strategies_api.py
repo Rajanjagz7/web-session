@@ -50,7 +50,7 @@ CATALOG = [
     ("confluence", "9/15 + Hammer + W Confluence", "Reversal", "Fires when the 9/15 EMA setup coincides with a hammer or W pattern at support.", "rp"),
     ("vix-range", "India VIX Next-Day Range", "Volatility", "Indicative next-day range = close ± (India VIX ÷ 1600) × close.", "rp"),
     ("supertrend-mtf", "Supertrend Multi-Timeframe", "Trend", "Supertrend (10, 3) with higher-timeframe confirmation. Buy / Sell on a direction flip; shows whether the weekly trend agrees (daily-bar adaptation of the 15-minute rule).", "core"),
-    ("candle-oh-ol", "Open = High / Open = Low Candles", "Reversal", "Flags days that opened exactly at the low (bullish demand drive) or at the high (bearish supply drive).", "core"),
+    ("candle-oh-ol", "Open = High / Open = Low", "Reversal", "Stocks and indices: Open = Low (low within 10 points of the open, price back at / above it) -> BUY; Open = High (high within 10 points, price at / below the open) -> SELL. SL 3 points, targets 6 / 9 points. Exact O=L / O=H marked. Same rule as the Daily scan.", "core"),
     ("volume-spurt", "Volume Spurt", "Volume", "Volume more than 2x its 20-bar average on a bullish candle - an abnormal institutional spurt.", "core"),
     ("orb-15m", "15-Min Opening Range Breakout", "Intraday", "High and low of the 09:15-09:30 candle range with breakout status and 0.5x / 1.0x extension targets.", "core"),
     ("vwap-rsi", "VWAP + RSI Mean Reversion", "Intraday", "VWAP with 1.5 standard-deviation bands on 5-minute bars; buys a bounce off the lower band with RSI < 40, sells a rejection at the upper band with RSI > 60.", "core"),
@@ -165,17 +165,26 @@ def _raw_supertrend_mtf(symbol):
 
 
 def _raw_candle_oh_ol(symbol):
+    """User rule (20 Oct 2026, same as the Daily scan): Open = Low when the low stays within 10 points of the open and
+    price is at / above the open -> BUY; Open = High when the high stays within 10 points and price is at / below the
+    open -> SELL. Stop-loss 3 points, targets 6 and 9 points. 'exact' = a true Open = Low / High."""
     bars = bar_source.daily_bars(symbol, 200)
     rows = []
     for b in bars:
-        tol = max(0.05, b["close"] * 0.0001)
-        ol = b["high"] > b["low"] and abs(b["open"] - b["low"]) <= tol
-        oh = b["high"] > b["low"] and abs(b["open"] - b["high"]) <= tol
-        rows.append({"date": b["date"], "signal": "BUY" if ol and not oh else "SELL" if oh and not ol else None, "ol": ol, "oh": oh})
-    last = bars[-1]
-    return {"bars": rows[-120:], "current": {"date": last["date"], "close": last["close"], "open": last["open"], "high": last["high"], "low": last["low"],
-            "openEqLow": rows[-1]["ol"], "openEqHigh": rows[-1]["oh"], "signal": rows[-1]["signal"],
-            "sessionsWithSignal": sum(1 for r in rows[-20:] if r["signal"])}}
+        tol = max(0.05, b["close"] * 0.0002)
+        ol = b["low"] >= b["open"] - 10 and b["close"] >= b["open"]
+        oh = not ol and b["high"] <= b["open"] + 10 and b["close"] <= b["open"]
+        exact = (abs(b["open"] - b["low"]) <= tol) if ol else (abs(b["open"] - b["high"]) <= tol) if oh else False
+        rows.append({"date": b["date"], "signal": "BUY" if ol else "SELL" if oh else None, "ol": ol, "oh": oh, "exact": exact})
+    last, r = bars[-1], rows[-1]
+    px = last["close"]
+    plan = None
+    if r["signal"]:
+        d = 1 if r["signal"] == "BUY" else -1
+        plan = {"entry": round(px, 2), "sl": round(px - 3 * d, 2), "t1": round(px + 6 * d, 2), "t2": round(px + 9 * d, 2)}
+    return {"bars": rows[-120:], "current": {"date": last["date"], "close": px, "open": last["open"], "high": last["high"], "low": last["low"],
+            "openEqLow": r["ol"], "openEqHigh": r["oh"], "exact": r["exact"], "signal": r["signal"], "plan": plan,
+            "sessionsWithSignal": sum(1 for x in rows[-20:] if x["signal"])}}
 
 
 def _raw_volume_spurt(symbol):
@@ -445,9 +454,11 @@ def summarize(key, symbol, raw):
         out.update(date=c["date"], close=c["close"])
         out["signal"] = c["signal"] or "NONE"
         out["bias"] = _bias(c["signal"])
-        out["headline"] = ("Open = Low today - buyers in control" if c["openEqLow"] else "Open = High today - sellers in control" if c["openEqHigh"]
-                           else f"Neither today ({c['sessionsWithSignal']} of the last 20 sessions had one)")
-        out["details"] = _flat({k: v for k, v in c.items() if k not in ("date", "signal", "openEqLow", "openEqHigh")})
+        pl = c.get("plan")
+        what = ("Open = Low" if c["openEqLow"] else "Open = High") + ("" if c.get("exact") else " (within 10 pts)")
+        out["headline"] = (f"{what} - {'BUY' if c['openEqLow'] else 'SELL'} near {pl['entry']:,.2f} · SL {pl['sl']:,.2f} (3 pts) · T1 {pl['t1']:,.2f} · T2 {pl['t2']:,.2f}"
+                           if pl else f"Neither today ({c['sessionsWithSignal']} of the last 20 sessions had one)")
+        out["details"] = _flat({k: v for k, v in c.items() if k not in ("date", "signal", "openEqLow", "openEqHigh", "plan", "exact")})
         out["events"] = [{"date": r["date"], "text": "Open = Low" if r["signal"] == "BUY" else "Open = High"} for r in raw["bars"] if r.get("signal")][-12:]
 
     elif key == "volume-spurt":
@@ -775,7 +786,7 @@ HIDDEN = {
     # Code is kept - remove a key from this set to bring a strategy back.
     # -- no edge (lost in the futures test and did not beat normal drift) --
     "nr7-breakout", "potential-breakout", "supertrend-mtf", "dual-phase-reversal", "rajan-breakout-trap",
-    "rajan-gann-sq9", "rajan-ohol-options", "rsi-divergence", "breakout-15m", "breakdown-15m", "candle-oh-ol",
+    "rajan-gann-sq9", "rajan-ohol-options", "rsi-divergence", "breakout-15m", "breakdown-15m",
     "darvas-supertrend", "donchian", "fake", "trend-target-ribbon",
     # -- never fired in 4 years --
     "confluence", "w-pattern",

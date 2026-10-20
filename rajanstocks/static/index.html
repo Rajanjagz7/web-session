@@ -2912,7 +2912,7 @@ async function renderIndicators(){const el=$('#v-indicators');if(!el)return;
   try{await loadStratMeta()}catch(e){el.innerHTML='<div class="page"><div class="empty">Could not load strategies. <button class="btn-xs" data-view="indicators">Retry</button></div></div>';return}
   const M=ST.meta;
   const list=M.strategies.filter(m=>ST.grp==='All'||m.group===ST.grp);   // one list - the old New / Old split is gone
-  const PAGE=5,pages=Math.max(1,Math.ceil(list.length/PAGE));ST.page=Math.min(Math.max(0,ST.page),pages-1);
+  const PAGE=50,pages=Math.max(1,Math.ceil(list.length/PAGE));   // 13 indicators: all on one page, nothing hidden behind NextST.page=Math.min(Math.max(0,ST.page),pages-1);
   const pageList=list.slice(ST.page*PAGE,ST.page*PAGE+PAGE);
   const pager=pages>1?`<div class="pager" style="margin:14px 0 2px"><button class="btn-xs" data-stp="${ST.page-1}" ${ST.page<=0?'disabled':''}>‹ Prev</button><span class="muted" style="font-size:12px;padding:0 6px">Page ${ST.page+1} of ${pages}</span><button class="btn-xs" data-stp="${ST.page+1}" ${ST.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
   el.innerHTML=`<div class="page">${pageHead('Indicators & strategies',`${M.strategies.length} of your own strategies, running on real NSE data for any stock or index.`,
