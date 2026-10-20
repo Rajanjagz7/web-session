@@ -546,6 +546,13 @@ OPT_SCANS += [
      "BACKTEST: checked at 09:30 with a 5x target - 4,159 trades, profit factor 2.23 (2.51 older / 1.59 recent), +3.4 pts a trade, wins ~7%. "
      "Stocks (Daily scan): the buy side lost money; the Open = High sell side was slightly positive."),
 ]
+OPT_SCANS += [
+    ("sensex-310", "SENSEX Indicator", "Option scans",
+     "SENSEX options only. Previous close Rs 310-340 and today's low inside Rs 52-58 -> buy in the 52-58 zone. Targets 88 / 92 / 105. "
+     "SL: not specified - shown at 47 (5 points under the 52 floor)."),
+    ("prem-38-42", "Premium 38-42 -> 7.80-8.45", "Option scans",
+     "Any index option. Open Rs 38-42 and today's low inside Rs 7.80-8.45 -> buy in that zone. SL 5.80. Targets 12 / 16 / 22 / 32 / 42."),
+]
 OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": [],
                 "gen": "new" if k in newind.NEW_KEYS_SET or k in ("rajan-premium-levels", "rajan-ohol-premium") else "old"} for k, n, g, d in OPT_SCANS}
 SCAN_INDICES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"]
@@ -573,6 +580,8 @@ def _opt_rule(key, leg, prev_close, expiry=None):
     if key == "opt-oh":
         ok = hi > lo and abs(op - hi) <= TICK
         return ok, "Open = High" if ok else ""
+    if key in ("sensex-310", "prem-38-42"):
+        return _zone_rule(key, ltp, op, lo, prev_close)
     if key in ("pd-expiry", "pd-daily", "pd-ohol10"):
         return _pd_rule(key, ltp, op, hi, lo, prev_close, expiry)
     if key == "rajan-premium-levels":
@@ -592,6 +601,22 @@ def _opt_rule(key, leg, prev_close, expiry=None):
         return True, (f"Open=High, touched {name} support {level:,.2f} off prev close {prev_close:,.2f} · "
                       f"entry {ltp:,.2f} · SL {sl:,.2f} (10 pts) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
     return False, ""
+
+
+ZONES = {   # user rules, 20 Oct 2026 (same numbers in static/index.html ZONES and premium_backtest.py)
+    "sensex-310": {"ref": "prev", "ref_lo": 310, "ref_hi": 340, "lo": 52, "hi": 58, "sl": 47, "t": (88, 92, 105)},
+    "prem-38-42": {"ref": "open", "ref_lo": 38, "ref_hi": 42, "lo": 7.80, "hi": 8.45, "sl": 5.80, "t": (12, 16, 22, 32, 42)},
+}
+
+
+def _zone_rule(key, p, o, l, pc):
+    z = ZONES[key]
+    ref = pc if z["ref"] == "prev" else o
+    if not (z["ref_lo"] <= ref <= z["ref_hi"]) or not (z["lo"] <= l <= z["hi"]) or p < z["sl"]:
+        return False, ""
+    where = "in the buy zone" if p <= z["hi"] + 1 else "bought zone, now above it"
+    return True, (f"{'Prev close' if z['ref'] == 'prev' else 'Open'} {ref:,.2f}, low {l:,.2f} (zone {z['lo']}-{z['hi']}) · LTP {p:,.2f} {where} · "
+                  f"SL {z['sl']} · targets " + " / ".join(f"{t:g}" for t in z["t"]))
 
 
 def _pd_t(e):
@@ -715,6 +740,8 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
                             near = "open" if near_open else "prev close"
                             tag = (f"Index {ohol_plan['idx_pattern']}, premium day-low {dl:,.2f} within {pts:.0f} pts of {near} · "
                                    f"entry {leg['ltp']:,.2f} · SL {sl:,.2f} (VIX tier {ohol_plan['tier']}) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
+                elif key == "sensex-310" and sym != "SENSEX":
+                    ok, tag = False, ""
                 else:
                     ok, tag = _opt_rule(key, leg, leg["prev"], c["expiry"])
                 if ok:

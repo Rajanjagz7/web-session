@@ -3013,6 +3013,8 @@ function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
    State per level: hit = touched and price still in the buy zone (green), near = within reach (amber),
    ran = touched and already moved up (blue), stop = fell more than 10 pts under the level. ---- */
 const PD_TOL=0.5;
+const ZONES={'sensex-310':{name:'SENSEX Indicator (prev close 310-340)',short:'SX 52-58',only:'SENSEX',ref:'prev',refLo:310,refHi:340,lo:52,hi:58,sl:47,t:[88,92,105]},
+  'prem-38-42':{name:'Premium 38-42 -> 7.80-8.45',short:'7.8-8.45',ref:'open',refLo:38,refHi:42,lo:7.80,hi:8.45,sl:5.80,t:[12,16,22,32,42]}};
 function pdIsExpiry(){const c=OPT.chain;return !!(c&&c.expiry&&c.expiry===new Date(Date.now()+330*60000).toISOString().slice(0,10))}
 function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;const o=leg.open,h=Math.max(leg.high||o,o),l=Math.min(leg.low||o,o),p=leg.ltp,pc=leg.prev||0,lv=[];
   if(o>=20){if(isExp){if(h<=o+PD_TOL)[4,6.5,8,10].forEach(k=>lv.push({name:'/'+k,ind:'Expiry divisor',base:o,lv:o/k}))}
@@ -3024,15 +3026,20 @@ function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;cons
   const sigs=lv.filter(x=>x.st!=='wait');
   if(!isExp&&Math.abs(l-o)<=PD_TOL&&p>o&&h>l)sigs.push({name:'O=L',ind:'Open = Low clean buy',entry:p,sl:+Math.max(0.05,p-10).toFixed(2),sl5:+Math.max(0.05,p-5).toFixed(2),st:'hit'});
   else if(l>=o-10&&p>=o&&h>l)sigs.push({name:'O=L±10',ind:'Open = Low within 10 pts',entry:p,sl:+Math.max(0.05,p-3).toFixed(2),st:'hit',soft:1});
+  /* user zone indicators: SENSEX 310-340 -> 52-58 and premium 38-42 -> 7.80-8.45 */
+  for(const [k,z] of Object.entries(ZONES)){if(z.only&&z.only!==OPT.sym)continue;const ref=z.ref==='prev'?pc:o;if(!(ref>=z.refLo&&ref<=z.refHi))continue;
+    const inZone=l>=z.lo&&l<=z.hi,near=!inZone&&l>z.hi&&p<=z.hi*1.15;
+    if(!inZone&&!near)continue;const st=near?'near':p<z.sl?'stop':p<=z.hi+1?'hit':'ran';
+    sigs.push({name:z.short,ind:z.name,entry:+Math.min(p,z.hi).toFixed(2),sl:z.sl,st,zone:z})}
   const rank={hit:0,near:1,ran:2,stop:3},top=sigs.filter(x=>!x.soft).sort((a,b)=>(rank[a.st]-rank[b.st])||(Math.abs(p-a.entry)-Math.abs(p-b.entry)))[0]||sigs[0]||null;   // nearest level wins
   return{levels:lv,sigs,top}}
-const PD_T=[1.5,2,5,10],pdTg=e=>PD_T.map(m=>m+'x '+fmtP(e*m)).join(' · ');   // user targets: 1.5x 2x 5x 10x the entry premium
-function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''} · targets ${pdTg(x.entry)}`).join('\n')}
+const PD_T=[1.5,2,5,10],pdTg=(e,x)=>x&&x.zone?x.zone.t.map(v=>fmtP(v)).join(' · '):PD_T.map(m=>m+'x '+fmtP(e*m)).join(' · ');   // user targets: 1.5x 2x 5x 10x the entry premium
+function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''} · targets ${pdTg(x.entry,x)}`).join('\n')}
 function pdStrip(){const box=$('#opLv'),o=OPT.osym;if(!box)return;if(!o||!OPT.sel){box.innerHTML='';return}
   const pd=pdEval({ltp:o.last,open:o.open,high:o.hi,low:o.lo,prev:o.prev},pdIsExpiry());
   if(!pd||!(pd.levels.length||pd.sigs.length)){box.innerHTML=`<span class="muted">No premium-divisor setup: ${pdIsExpiry()?'needs Open = High on expiry':'needs High = Open or High = prev close'} and a premium of 20+.</span>`;return}
-  box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="hit">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')
-    +(()=>{const t=pd.sigs.find(x=>x.st==='hit'&&!x.soft)||pd.sigs.find(x=>x.st==='hit');return t?`<span class="tg">Targets from ${fmtP(t.entry)}: ${pdTg(t.entry)}</span>`:''})()}
+  box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="${x.st}">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')
+    +(()=>{const t=pd.sigs.find(x=>x.st==='hit'&&!x.soft)||pd.sigs.find(x=>x.st==='hit');return t?`<span class="tg">Targets${t.zone?'':' from '+fmtP(t.entry)}: ${pdTg(t.entry,t)}</span>`:''})()}
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
   if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
   const xs=$('#optExp');if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('');

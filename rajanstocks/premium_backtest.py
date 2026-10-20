@@ -35,7 +35,11 @@ BASE = os.environ.get("RESEARCH_BASE", "https://rajanstocks.vercel.app")
 IST = timezone(timedelta(hours=5, minutes=30))
 S = requests.Session()
 S.headers["User-Agent"] = "rajan-backtest"
-INDEX = {"NIFTY": {"step": 50, "yh": "NIFTY"}, "BANKNIFTY": {"step": 100, "yh": "BANKNIFTY"}}
+INDEX = {"NIFTY": {"step": 50, "yh": "NIFTY"}, "BANKNIFTY": {"step": 100, "yh": "BANKNIFTY"}, "SENSEX": {"step": 100, "yh": "SENSEX"}}
+ZONES = {   # user zone indicators (20 Oct 2026) - same numbers as strategies_api.ZONES
+    "sensex-310": {"ref": "prev", "ref_lo": 310, "ref_hi": 340, "lo": 52, "hi": 58, "t": (88, 92, 105), "sl": (47, 51.5), "only": "SENSEX"},
+    "prem-38-42": {"ref": "open", "ref_lo": 38, "ref_hi": 42, "lo": 7.80, "hi": 8.45, "t": (12, 16, 22, 32, 42), "sl": (5.80,), "only": None},
+}
 STOCKS = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "BHARTIARTL", "ITC", "KOTAKBANK", "LT",
           "AXISBANK", "BAJFINANCE", "MARUTI", "SUNPHARMA", "TITAN", "HCLTECH", "TATASTEEL", "M&M", "ADANIENT", "ONGC"]
 TOL = 0.5
@@ -177,6 +181,25 @@ def ind_open_low(bars, check_min, tol, sl_list, tgts_fn, allow_sell):
     return out
 
 
+def ind_zone(z, bars, pc):
+    """Buy at the top of the zone when the premium first falls into it (touch from above); one trade a day."""
+    ref = pc if z["ref"] == "prev" else bars[0][1]
+    if not ref or not (z["ref_lo"] <= ref <= z["ref_hi"]):
+        return []
+    for i, (m, o, h, l, c) in enumerate(bars):
+        if m > LAST_ENTRY:
+            return []
+        prev_c = bars[i - 1][4] if i else o
+        if l <= z["hi"] and prev_c > z["hi"]:
+            out = []
+            for sl in z["sl"]:
+                t = {f"T {v:g}": v for v in z["t"]}
+                t["hold to 15:25"] = None
+                out.append({"sl": sl, "entry": z["hi"], "res": manage(bars, i, z["hi"], "BUY", z["hi"] - sl, t)})
+            return out
+    return []
+
+
 def rr_targets(px, sl, d):
     return {"1:2": px + d * 2 * sl, "1:3": px + d * 3 * sl, "hold to 15:25": None}
 
@@ -246,6 +269,7 @@ def run_options():
         print(f"{sym}: {len(w)} contracts to fetch", flush=True)
         jobs += w
     A, B, BOL, C = [], [], [], []
+    Z = {k: [] for k in ZONES}
     done = 0
     with cf.ThreadPoolExecutor(max_workers=8) as ex:
         for j, days in ex.map(fetch_contract, jobs):
@@ -259,6 +283,10 @@ def run_options():
                     prev_close = bars[-1][4] if bars else prev_close
                     continue
                 tag = {"sym": j["sym"], "date": d, "expiry": j["expiry"], "strike": j["strike"], "type": j["type"], "lot": j["lot"]}
+                for zk, z in ZONES.items():
+                    if z["only"] in (None, j["sym"]):
+                        for t in ind_zone(z, bars, prev_close):
+                            Z[zk].append({**tag, **t})
                 if d == j["expiry"]:
                     for t in ind_A(bars):
                         A.append({**tag, **t})
@@ -271,7 +299,7 @@ def run_options():
                     for t in ind_open_low(bars, cm, 10.0, (3,), opt_targets, False):
                         C.append({**tag, **t, "check": f"{cm // 60:02d}:{cm % 60:02d}", "market": "option"})
                 prev_close = bars[-1][4]
-    return A, B, BOL, C
+    return A, B, BOL, C, Z
 
 
 def run_stocks():
@@ -328,7 +356,7 @@ def summarize(trades, group_keys):
 
 if __name__ == "__main__":
     t0 = time.time()
-    A, B, BOL, Copt = run_options()
+    A, B, BOL, Copt, Z = run_options()
     Cst = run_stocks()
     res = {
         "generatedAt": datetime.now(IST).isoformat(), "method": __doc__,
@@ -337,13 +365,15 @@ if __name__ == "__main__":
         "B_open_low_clean_buy": summarize(BOL, ["sl"]),
         "C_ohol_options": summarize(Copt, ["check", "side"]),
         "C_ohol_stocks": summarize(Cst, ["check", "side"]),
-        "counts": {"A": len(A), "B": len(B), "BOL": len(BOL), "Copt": len(Copt), "Cst": len(Cst),
+        "D_sensex_310": summarize(Z["sensex-310"], ["sl"]),
+        "E_prem_38_42": summarize(Z["prem-38-42"], ["sym", "sl"]),
+        "counts": {"D": len(Z["sensex-310"]), "E": len(Z["prem-38-42"]), "A": len(A), "B": len(B), "BOL": len(BOL), "Copt": len(Copt), "Cst": len(Cst),
                    "expiryDays": len({(t["sym"], t["date"]) for t in A}), "optionDays": len({(t["sym"], t["date"]) for t in B + BOL})},
         "runtimeSec": round(time.time() - t0),
     }
     with open(os.path.join(HERE, "static", "premium_backtest.json"), "w") as f:
         json.dump(res, f)
-    for name in ("A_expiry_divisor", "B_daily_divisor", "B_open_low_clean_buy", "C_ohol_options", "C_ohol_stocks"):
+    for name in ("A_expiry_divisor", "B_daily_divisor", "B_open_low_clean_buy", "C_ohol_options", "C_ohol_stocks", "D_sensex_310", "E_prem_38_42"):
         print("==", name)
         for r in res[name]:
             print({k: v for k, v in r.items() if k not in ("is", "oos")}, "| OOS", r["oos"])
