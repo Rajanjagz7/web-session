@@ -532,6 +532,14 @@ OPT_SCANS = [
      "Index Open=Low -> CE / Open=High -> PE, and the option's own day-low has not pulled back more than 10 pts below its open or previous close. "
      "Entries only 09:30-11:00 IST, skipped if price already chased more than 5% off the day low. VIX-tiered SL/targets off the day low. Pine: Rajan_OHOL_Options.pine."),
 ]
+OPT_SCANS += [
+    ("pd-expiry", "Expiry Divisor /4 /6.5 /8 /10", "Option scans",
+     "Expiry day of the contract only. Premium Open = High -> buy where the premium falls to open/4, /6.5, /8 or /10. SL 5-10 points under the level."),
+    ("pd-daily", "Daily Divisor /2 /4", "Option scans",
+     "Other days. High = Open or High = previous close -> buy where the premium falls to that high /2 or /4. Open = Low with price above the open is a clean buy. SL 5-10 points."),
+    ("pd-ohol10", "Open = Low (within 10 pts) buy", "Option scans",
+     "Contract's low is no more than 10 points under its open and the premium is back at or above the open -> buy. SL 3 points. Stocks: see Daily scan."),
+]
 OPT_META = {k: {"key": k, "name": n, "group": g, "desc": d, "kind": "optscan", "chart": False, "indexOnly": False, "lines": [],
                 "gen": "new" if k in newind.NEW_KEYS_SET or k in ("rajan-premium-levels", "rajan-ohol-premium") else "old"} for k, n, g, d in OPT_SCANS}
 SCAN_INDICES = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50", "SENSEX"]
@@ -559,6 +567,8 @@ def _opt_rule(key, leg, prev_close, expiry=None):
     if key == "opt-oh":
         ok = hi > lo and abs(op - hi) <= TICK
         return ok, "Open = High" if ok else ""
+    if key in ("pd-expiry", "pd-daily", "pd-ohol10"):
+        return _pd_rule(key, ltp, op, hi, lo, prev_close, expiry)
     if key == "rajan-premium-levels":
         if prev_close <= 0:
             return False, ""
@@ -575,6 +585,39 @@ def _opt_rule(key, leg, prev_close, expiry=None):
         sl, t1, t2, t3 = round(max(TICK, ltp - sl_pts), 2), round(ltp * 2.0, 2), round(ltp * 2.5, 2), round(ltp * 3.0, 2)
         return True, (f"Open=High, touched {name} support {level:,.2f} off prev close {prev_close:,.2f} · "
                       f"entry {ltp:,.2f} · SL {sl:,.2f} (10 pts) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
+    return False, ""
+
+
+def _pd_rule(key, p, o, h, l, pc, expiry):
+    """Live match for the premium indicators (same rules as static/index.html pdEval and premium_backtest.py)."""
+    tol = 0.5
+    if o <= 0:
+        return False, ""
+    h, l = max(h, o), min(l, o)
+    is_exp = expiry == datetime.now(market_api.IST).date().isoformat()
+    if key == "pd-ohol10":
+        ok = l >= o - 10 and p >= o and h > l
+        return ok, (f"Open {o:,.2f}, low {l:,.2f} (within 10) · BUY {p:,.2f} · SL {max(0.05, p - 3):,.2f} (3 pts)") if ok else ""
+    if o < 20 or (key == "pd-expiry") != is_exp:
+        return False, ""
+    if key == "pd-expiry":
+        if h > o + tol:
+            return False, ""
+        base, ks, why = o, (4, 6.5, 8, 10), "Open = High"
+    else:
+        if h <= o + tol:
+            base, why = o, "High = Open"
+        elif pc and abs(h - pc) <= tol:
+            base, why = pc, "High = prev close"
+        else:
+            if abs(l - o) <= tol and p > o:
+                return True, f"Open = Low clean buy · entry {p:,.2f} · SL {max(0.05, p - 10):,.2f}-{max(0.05, p - 5):,.2f}"
+            return False, ""
+        ks = (2, 4)
+    for k in ks:
+        lv = base / k
+        if l <= lv + 0.05 and lv - 10 <= p <= lv + max(3, lv * 0.1):
+            return True, (f"{why} {base:,.2f} · premium at /{k:g} = {lv:,.2f} (buy zone) · SL {max(0.05, lv - 10):,.2f}-{max(0.05, lv - 5):,.2f}")
     return False, ""
 
 
@@ -705,6 +748,8 @@ HIDDEN = {
     "quantum-matrix", "rj-best", "trade-predictor",
     # -- inconclusive and not positive enough to show --
     "vwap-rsi", "heikin-ashi-channel", "ema-9-15", "bottom-reversal", "hammer-support",
+    # -- older option scans, replaced by the Expiry / Daily Divisor and Open = Low (10 pt) scans --
+    "opt-strat1", "opt-premium", "opt-ol", "opt-oh", "opt-spike", "rajan-premium-levels", "rajan-ohol-premium",
 }
 
 
@@ -716,7 +761,7 @@ def strategies(all: bool = False):
         if m["group"] not in groups:
             groups.append(m["group"])
     groups = groups + ["Option scans"]
-    return {"strategies": vis + list(OPT_META.values()), "groups": groups, "hidden": sorted(HIDDEN)}
+    return {"strategies": vis + [m for k, m in OPT_META.items() if all or k not in HIDDEN], "groups": groups, "hidden": sorted(HIDDEN)}
 
 
 @router.get("/strategy")

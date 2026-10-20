@@ -673,6 +673,15 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-stats[open] .opt-stats{margin-top:8px}
 .opx-panel{padding:0;gap:0}
 .opx-wtabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.dl-plan{margin:8px 0 2px;padding:7px 10px;border-radius:9px;font-size:12.5px;background:var(--panel-2)}.dl-plan.up{border-left:3px solid var(--up)}.dl-plan.down{border-left:3px solid var(--down)}
+td.ltp.pd-hit{background:color-mix(in srgb,#16a34a 26%,transparent)!important;box-shadow:inset 0 0 0 2px #22c55e}td.ltp.pd-hit b{color:#4ade80}
+td.ltp.pd-near{background:color-mix(in srgb,#f59e0b 16%,transparent)!important;box-shadow:inset 0 0 0 1px #f59e0b88}
+td.ltp.pd-ran{background:color-mix(in srgb,#3b82f6 14%,transparent)!important}
+td.ltp .pd-tag{display:block;font-size:9.5px;font-weight:700;line-height:1.15;margin-top:1px;letter-spacing:.01em;white-space:nowrap}
+td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.pd-ran .pd-tag{color:#93c5fd}
+.opx-lv{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:11.5px}.opx-lv:empty{display:none}.opx-lv span{padding:4px 8px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line)}
+.opx-lv span.hit{border-color:#22c55e;background:color-mix(in srgb,#16a34a 22%,transparent);color:#4ade80;font-weight:700}.opx-lv span.near{border-color:#f59e0b;color:#fbbf24}.opx-lv span.ran{border-color:#3b82f6;color:#93c5fd}.opx-lv span.stop{opacity:.55;text-decoration:line-through}
+.opx-lv b.h{font-weight:700;color:var(--text-2)}
 .opx-wi{padding:0 0 6px}.opx-wi .opx-ph{padding:12px 14px 6px;font-weight:700}.wi-kpis{display:flex;flex-wrap:wrap;gap:6px 16px;padding:0 14px 8px;font-size:12.5px;color:var(--text-3)}.wi-kpis b{color:var(--text);font-weight:700}
 .wi-tw{overflow-x:auto;padding:0 8px}.wi-t{width:100%;border-collapse:collapse;font-size:13px}.wi-t th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .wi-t th:first-child,.wi-t td:first-child{text-align:left}.wi-t td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.wi-t td small{font-size:11px;margin-left:4px}.wi-t tr.wi-0{background:color-mix(in srgb,var(--brand) 8%,transparent)}
@@ -2996,6 +3005,32 @@ function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
   rows.forEach(r=>{const a=r.ce?.oi||0,b=r.pe?.oi||0;ceOi+=a;peOi+=b;if(r.ce&&(!cw||a>cw.oi))cw={k:r.strike,oi:a};if(r.pe&&(!pw||b>pw.oi))pw={k:r.strike,oi:b}});
   let mp=null,best=Infinity;rows.forEach(K=>{let p=0;rows.forEach(r=>{p+=(r.ce?.oi||0)*Math.max(0,K.strike-r.strike)+(r.pe?.oi||0)*Math.max(0,r.strike-K.strike)});if(p<best){best=p;mp=K.strike}});
   return{pcr:ceOi>0?peOi/ceOi:null,mp,cw,pw,ceOi,peOi}}
+/* ---- Rajan premium indicators (live). Rules agreed 20 Oct 2026 - see premium_backtest.py for the test:
+   A Expiry divisor (contract's own expiry day): premium Open = High (high <= open + 0.5) -> buy at open/4, /6.5, /8, /10; SL 5-10 pts
+   B Daily divisor (other days): base = High when High = Open or High = previous close -> buy at base/2, /4; SL 5-10 pts
+     + Open = Low (low >= open - 0.5) with price above open -> clean buy
+   C Open = Low within 10 pts (low >= open - 10) with price at/above open -> buy; SL 3 pts
+   State per level: hit = touched and price still in the buy zone (green), near = within reach (amber),
+   ran = touched and already moved up (blue), stop = fell more than 10 pts under the level. ---- */
+const PD_TOL=0.5;
+function pdIsExpiry(){const c=OPT.chain;return !!(c&&c.expiry&&c.expiry===new Date(Date.now()+330*60000).toISOString().slice(0,10))}
+function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;const o=leg.open,h=Math.max(leg.high||o,o),l=Math.min(leg.low||o,o),p=leg.ltp,pc=leg.prev||0,lv=[];
+  if(o>=20){if(isExp){if(h<=o+PD_TOL)[4,6.5,8,10].forEach(k=>lv.push({name:'/'+k,ind:'Expiry divisor',base:o,lv:o/k}))}
+    else{let base=null,from='';if(h<=o+PD_TOL){base=o;from='open = high'}else if(pc&&Math.abs(h-pc)<=PD_TOL){base=pc;from='high = prev close'}
+      if(base)[2,4].forEach(k=>lv.push({name:'/'+k,ind:'Daily divisor ('+from+')',base,lv:base/k}))}}
+  for(const x of lv){x.entry=+x.lv.toFixed(2);x.sl=+Math.max(0.05,x.lv-10).toFixed(2);x.sl5=+Math.max(0.05,x.lv-5).toFixed(2);
+    const touched=l<=x.lv+0.05,zone=Math.max(3,x.lv*0.1);
+    x.st=touched?(p<x.lv-10?'stop':p<=x.lv+zone?'hit':'ran'):(p<=x.lv*1.08+1?'near':'wait')}
+  const sigs=lv.filter(x=>x.st!=='wait');
+  if(!isExp&&Math.abs(l-o)<=PD_TOL&&p>o&&h>l)sigs.push({name:'O=L',ind:'Open = Low clean buy',entry:p,sl:+Math.max(0.05,p-10).toFixed(2),sl5:+Math.max(0.05,p-5).toFixed(2),st:'hit'});
+  else if(l>=o-10&&p>=o&&h>l)sigs.push({name:'O=L±10',ind:'Open = Low within 10 pts',entry:p,sl:+Math.max(0.05,p-3).toFixed(2),st:'hit',soft:1});
+  const rank={hit:0,near:1,ran:2,stop:3},top=sigs.filter(x=>!x.soft).sort((a,b)=>(rank[a.st]-rank[b.st])||(Math.abs(p-a.entry)-Math.abs(p-b.entry)))[0]||sigs[0]||null;   // nearest level wins
+  return{levels:lv,sigs,top}}
+function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''}`).join('\n')}
+function pdStrip(){const box=$('#opLv'),o=OPT.osym;if(!box)return;if(!o||!OPT.sel){box.innerHTML='';return}
+  const pd=pdEval({ltp:o.last,open:o.open,high:o.hi,low:o.lo,prev:o.prev},pdIsExpiry());
+  if(!pd||!(pd.levels.length||pd.sigs.length)){box.innerHTML=`<span class="muted">No premium-divisor setup: ${pdIsExpiry()?'needs Open = High on expiry':'needs High = Open or High = prev close'} and a premium of 20+.</span>`;return}
+  box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="hit">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')}
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
   if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
   const xs=$('#optExp');if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('');
@@ -3018,7 +3053,8 @@ function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f
     if(k==='chg'){const v=leg.oiChg;return`<td class="num ${itm} ${sel} ${v>0?'up':v<0?'down':''}" data-opt="${side}:${strike}">${isFinite(v)&&v!==null?(v>0?'+':v<0?'−':'')+fmtN(Math.abs(v)):'—'}</td>`}
     return`<td class="num opx-dim ${itm} ${sel}" data-opt="${side}:${strike}">${fmtN(leg.vol)}</td>`};
   const ltp=(leg,side,strike)=>{const itm=(side==='CE'?strike<spot:strike>spot)?'itm':'';if(!leg)return`<td class="ltp ${itm}">—</td>`;const ch=leg.prev>0?(leg.ltp/leg.prev-1):0,sel=OPT.sel&&OPT.sel.key===leg.key?'sel':'';
-    return`<td class="ltp ${itm} ${sel}" data-opt="${side}:${strike}"><span class="bs"><button class="bs-b" data-optbs="buy:${side}:${strike}" title="Buy ${side} ${strike}" aria-label="Buy ${side} ${strike}">B</button><button class="bs-s" data-optbs="sell:${side}:${strike}" title="Sell ${side} ${strike}" aria-label="Sell ${side} ${strike}">S</button></span><b class="num">${fmtP(leg.ltp)}</b><small class="num ${cls(ch)}">${pct(ch)}</small></td>`};
+    const pd=pdEval(leg,pdIsExpiry()),pc=pd&&pd.top?'pd-'+pd.top.st:'',tip=pd&&pd.top?` title="${esc(pdTip(pd))}"`:'';
+    return`<td class="ltp ${itm} ${sel} ${pc}" data-opt="${side}:${strike}"${tip}><span class="bs"><button class="bs-b" data-optbs="buy:${side}:${strike}" title="Buy ${side} ${strike}" aria-label="Buy ${side} ${strike}">B</button><button class="bs-s" data-optbs="sell:${side}:${strike}" title="Sell ${side} ${strike}" aria-label="Sell ${side} ${strike}">S</button></span><b class="num">${fmtP(leg.ltp)}</b><small class="num ${cls(ch)}">${pct(ch)}</small>${pd&&pd.top&&pd.top.st!=='stop'?`<span class="pd-tag">${pd.top.st==='hit'?'BUY ':pd.top.st==='near'?'near ':'✓ '}${esc(pd.top.name)} · SL ${fmtP(pd.top.sl)}</span>`:''}</td>`};
   let spotDone=false;
   const body=rows.map((r,ix)=>{let pre='';if(!spotDone&&r.strike>spot){spotDone=true;pre=`<tr class="opx-spotrow"><td colspan="${ncol}"><span>${esc(c.symbol)} ${fmtP(spot)}</span></td></tr>`}
     const ceCells=cols.map(k=>cell(r.ce,'CE',r.strike,k)).join('')+ltp(r.ce,'CE',r.strike),peCells=ltp(r.pe,'PE',r.strike)+cols.slice().reverse().map(k=>cell(r.pe,'PE',r.strike,k)).join('');
@@ -3080,7 +3116,7 @@ function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!O
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
   if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div id="opStrat"></div></div>`;OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
   if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opx-sw" id="opSw"></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
-     <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div></div>
+     <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div><div class="opx-lv" id="opLv"></div></div>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
@@ -3141,6 +3177,7 @@ function optStats(){const o=OPT.osym;if(!o)return;const ch=o.prev>0?o.last/o.pre
   const L=$('#opLast'),C=$('#opChg');if(L)L.textContent=fmtP(o.last);if(C){C.textContent=`${o.last>=o.prev?'+':'−'}${fmtP(Math.abs(o.last-o.prev))} (${pct(ch)})`;C.className='num '+cls(ch)}
   const v=x=>x>0?fmtP(x):'—';
   const S=$('#opStats');if(S)S.innerHTML=[['Day high',v(o.hi),'up'],['Day low',v(o.lo),'down'],['Open',v(o.open)],['Prev close',v(o.prev)],['Bid / Ask',`${v(o.bid)} / ${v(o.ask)}`],['Volume',o.vol>0?fmtN(o.vol):'—'],['OI',o.oi>0?fmtN(o.oi):'—'],['OI change',o.oiChg?(o.oiChg>=0?'+':'−')+fmtN(Math.abs(o.oiChg)):'—']].map(x=>`<span><small>${x[0]}</small><b class="num ${x[2]||''}">${x[1]}</b></span>`).join('');
+  try{pdStrip()}catch(e){}
   const R=$('#opRng');if(R)R.innerHTML=o.hi>o.lo?`<small class="num">L ${fmtP(o.lo)}</small><div class="opx-rbar"><i style="left:${Math.max(0,Math.min(100,pos)).toFixed(1)}%"></i></div><small class="num">H ${fmtP(o.hi)}</small>`:''}
 const lastv=a=>{for(let i=a.length-1;i>=0;i--)if(isFinite(a[i]))return a[i];return NaN};
 function calcDef(k,d,tf){const df=DEFS[k],p={};df.params.forEach(x=>p[x.k]=x.v);return df.calc(d,p,{tf:tf.sec})}
@@ -3299,7 +3336,8 @@ function drawDaily(){const body=$('#dailyBody');if(!body)return;const D=DAILY.da
   body.innerHTML=(`<p class="muted" style="margin-bottom:10px;font-size:12px">${D.marketOpen?'Live':'Last session'} · ${D.total} match${D.total===1?'':'es'} among ${SYMS.filter(s=>s.cls==='Stocks').length} F&O stocks and the indices · updated ${new Date(D.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>`)+(rows.length?`<div class="dl-list">${rows.map(r=>{const o=r.options,open=DAILY.open[r.symbol];return`<article class="dl ${r.status==='OPEN_LOW'?'dl-bull':'dl-bear'}">
     <div class="dl-h"><div class="dl-t"><b>${esc(r.symbol)}</b><small>${esc(r.name)}${r.type==='Index'?' · Index':''}</small></div><span class="badge ${r.status==='OPEN_LOW'?'b-up':'b-down'}">${r.status==='OPEN_LOW'?'Open = Low · Bullish':'Open = High · Bearish'}</span><div class="dl-p"><b class="num">${fmtP(r.ltp)}</b><span class="num ${cls(r.chg)}">${pct(r.chg/100)}</span></div></div>
     <div class="dl-ohl"><span><small>Open</small><b class="num">${fmtP(r.open)}</b></span><span><small>High</small><b class="num">${fmtP(r.high)}</b></span><span><small>Low</small><b class="num">${fmtP(r.low)}</b></span><span><small>Prev close</small><b class="num">${fmtP(r.prev)}</b></span></div>
-    <p class="dl-idea">${esc(r.idea)} ${r.status==='OPEN_LOW'?`Stop-loss idea: below <b>${fmtP(r.low)}</b>.`:`Stop-loss idea: above <b>${fmtP(r.high)}</b>.`}</p>
+    ${r.entry?`<div class="dl-plan ${r.status==='OPEN_LOW'?'up':'down'}"><b>${r.status==='OPEN_LOW'?'BUY':'SELL'}</b> near ${fmtP(r.entry)} · <b>SL ${fmtP(r.sl)}</b> (3 pts) · T1 ${fmtP(r.t1)} · T2 ${fmtP(r.t2)}${r.exact?' · <span class="badge b-info">exact '+(r.status==='OPEN_LOW'?'O=L':'O=H')+'</span>':' · <span class="muted">within 10 pts of open</span>'}</div>`:''}
+    <p class="dl-idea">${esc(r.idea)}</p>
     <div class="dl-f"><button class="btn-xs" data-sym="${esc(r.symbol)}">Chart</button>${o?`<button class="btn-xs ${open?'on':''}" data-dl="${esc(r.symbol)}">${open?'Hide':'Show'} CE / PE (${o.legs.length})</button>`:'<span class="muted" style="font-size:11.5px">Options not loaded</span>'}</div>
     ${o&&open?`<div class="tbl-wrap"><table class="dl-t2"><thead><tr><th>Contract</th><th class="num">LTP</th><th class="num">Chg</th><th>Open vs day</th><th class="num">OI</th><th></th></tr></thead><tbody>${o.legs.map(l=>leg(r,l)).join('')}</tbody></table><small class="muted" style="display:block;padding:6px 2px">Expiry ${fmtExp(o.expiry)} · spot ${fmtP(o.spot)} · ATM ${fmtP(o.atm,0)}</small></div>`:''}</article>`}).join('')}</div>`:'<div class="empty">No stocks match this filter right now.</div>');}
 function openOptionFromScan(sym,expiry,strike,side){closeModal();OPT.sym=sym;OPT.expiry=expiry;OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.pending={side,strike};go('options')}

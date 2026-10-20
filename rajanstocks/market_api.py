@@ -791,21 +791,28 @@ def daily_scan(refresh: bool = False, limit: int = 16):
             prev = _num(q.get("prev_close_price")) or (last - _num(q.get("net_change")))
             if not sym or last <= 0 or op <= 0 or hi <= lo or (hi - lo) < last * 0.001:
                 continue
+            # User rule (20 Oct 2026): Open = Low allows the low to sit up to 10 points under the open (and price is back
+            # at / above the open) -> BUY; Open = High allows the high up to 10 points over the open (price at / below
+            # the open) -> SELL. Stop-loss 3 points. 'exact' marks a true Open = Low / High.
             tol = max(0.05, last * 0.0002)
-            is_oh, is_ol = abs(op - hi) <= tol, abs(op - lo) <= tol
+            is_ol = lo >= op - 10 and last >= op
+            is_oh = hi <= op + 10 and last <= op and not is_ol
             if not (is_oh or is_ol):
                 continue
+            exact = abs(op - lo) <= tol if is_ol else abs(op - hi) <= tol
             chg = (last / prev - 1) * 100 if prev else 0.0
             found.append({
                 "symbol": sym, "name": NAME.get(sym, sym), "type": "Index" if sym in INDEX_SET else "Stock",
                 "sector": SECTOR.get(sym, ""), "ltp": round(last, 2), "prev": round(prev, 2), "chg": round(chg, 2),
                 "open": op, "high": hi, "low": lo, "vol": _num(q.get("volume")) or _num(o.get("volume")),
-                "status": "OPEN_LOW" if is_ol else "OPEN_HIGH",
+                "status": "OPEN_LOW" if is_ol else "OPEN_HIGH", "exact": exact,
+                "entry": round(last, 2), "sl": round(last - 3 if is_ol else last + 3, 2),
+                "t1": round(last + 6 if is_ol else last - 6, 2), "t2": round(last + 9 if is_ol else last - 9, 2),
                 "bias": "Bullish" if is_ol else "Bearish",
                 "idea": ("Opened at the day low — buyers in control. Buy futures or buy CE; or sell PE for premium. The day low is the natural stop."
                          if is_ol else "Opened at the day high — sellers in control. Sell futures, buy PE or sell CE for premium. The day high is the natural stop."),
             })
-        found.sort(key=lambda r: -abs(r["chg"]))
+        found.sort(key=lambda r: (not r["exact"], -abs(r["chg"])))
         total = len(found)
         deadline = time.time() + 20
 
@@ -830,7 +837,9 @@ def daily_scan(refresh: bool = False, limit: int = 16):
                                          "prev": leg["prev"], "chg": round((leg["ltp"] / leg["prev"] - 1) * 100, 2) if leg["prev"] else 0.0,
                                          "open": leg["open"], "high": leg["high"], "low": leg["low"], "oi": leg["oi"], "vol": leg["vol"],
                                          "oh": leg["high"] > leg["low"] and abs(leg["open"] - leg["high"]) <= t,
-                                         "ol": leg["high"] > leg["low"] and abs(leg["open"] - leg["low"]) <= t})
+                                         "ol": leg["high"] > leg["low"] and abs(leg["open"] - leg["low"]) <= t,
+                                         "ol10": leg["open"] > 0 and leg["low"] >= leg["open"] - 10 and leg["ltp"] >= leg["open"],
+                                         "sl": round(max(0.05, leg["ltp"] - 3), 2)})
                 r["options"] = {"expiry": c["expiry"], "atm": c["atm"], "spot": c["spot"], "legs": legs}
             except Exception:
                 r["options"] = None
