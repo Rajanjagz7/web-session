@@ -64,8 +64,7 @@ def expired_candles(key: str, interval: str = "5minute", frm: str = "", to: str 
     up = _up()
     from urllib.parse import quote
     try:
-        return _cache(f"rx:c:{key}:{interval}:{frm}:{to}", 30 * 86400, lambda: up._get(
-            f"{up.BASE_V2}/expired-instruments/historical-candle/{quote(key, safe='')}/{interval}/{to}/{frm}", timeout=20))
+        return up._get(f"{up.BASE_V2}/expired-instruments/historical-candle/{quote(key, safe='')}/{interval}/{to}/{frm}", timeout=20)
     except Exception as e:
         raise HTTPException(502, f"candles failed: {str(e)[:300]}")
 
@@ -98,3 +97,19 @@ def bhav(date_: str = "", symbols: str = "NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY"):
         return _cache(f"rx:bhav:{d}:{','.join(sorted(want))}", 60 * 86400, fetch)
     except Exception as e:
         raise HTTPException(502, f"bhav failed: {str(e)[:300]}")
+
+
+@router.get("/candles")
+def stock_candles(symbol: str, frm: str, to: str, interval: str = "1"):
+    """Intraday candles of a stock / index for a date range (Upstox v3; 1-minute ranges up to one month)."""
+    if interval not in ("1", "3", "5", "15"):
+        raise HTTPException(400, "interval 1/3/5/15")
+    if not (re.match(r"^\d{4}-\d{2}-\d{2}$", frm) and re.match(r"^\d{4}-\d{2}-\d{2}$", to)):
+        raise HTTPException(400, "frm/to=YYYY-MM-DD")
+    up = _up()
+    key, _ = up._resolve_underlying(symbol.upper())
+    try:
+        rows = up.fetch_historical_candles(key, "minutes", interval, to, frm)
+    except Exception as e:
+        raise HTTPException(502, f"candles failed: {str(e)[:300]}")
+    return {"symbol": symbol.upper(), "candles": [[c["time"], c["open"], c["high"], c["low"], c["close"], c.get("volume", 0)] for c in rows]}
