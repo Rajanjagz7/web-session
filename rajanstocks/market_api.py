@@ -255,6 +255,24 @@ def _shared(key, ttl, fn):
     return val
 
 
+_REFRESH_AT = {}
+
+
+def _known_quote(s):
+    """Symbols of the app's own universe (F&O stocks, indices, extra indices)."""
+    return s in NAME or any(s == i for i, _ in INDICES) or any(s == c for c, _n, _g, _k in MORE_INDICES)
+
+
+def _allow_refresh(name, gap_live=30, gap_closed=180):
+    """`?refresh=true` skips the cache. A user (or a stuck script) pressing Refresh in a loop used to re-run the whole scan every
+    time - hundreds of Upstox calls each - and burn the 30-minute budget for everyone. A refresh inside the gap is answered from the cache."""
+    now, gap = time.time(), gap_live if market_open() else gap_closed
+    if now - _REFRESH_AT.get(name, 0) < gap:
+        return False
+    _REFRESH_AT[name] = now
+    return True
+
+
 def _key(sym):
     key, _is_index = nse_service.upstox._resolve_underlying(sym)
     return key
@@ -343,9 +361,13 @@ def quotes(symbols: str = ""):
         keymap = {}
         for s in names:
             try:
+                if not _known_quote(s) and not nse_service.upstox.is_listed_equity(s):
+                    continue                         # not a real NSE equity (REIT / typo): never send it to Upstox
                 keymap[_key(s)] = s
             except Exception:
                 continue
+        if not keymap:
+            return []
         raw = nse_service.upstox._full_quotes(list(keymap.keys()))
         out = []
         for k, q in raw.items():
@@ -371,6 +393,7 @@ def quotes(symbols: str = ""):
             raise RuntimeError("Upstox returned no quotes")     # never cache an empty answer
         return out
 
+    explicit = bool(symbols.strip())
     ck = "q|" + ",".join(syms)
     slast = "qs-last|" + hashlib.md5(",".join(syms).encode()).hexdigest()
     stale, why = False, ""
@@ -393,6 +416,8 @@ def quotes(symbols: str = ""):
                 _QSYM[q["s"]] = (t0, q)
                 have[q["s"]] = q
         data = [have[s] for s in syms if s in have]
+        if not data and syms and explicit and len(syms) <= 20:
+            return {"quotes": [], "missing": syms, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat(), "stale": False}
         if not data and syms:
             raise RuntimeError("no quotes available")
         _QLAST[ck] = (time.time(), data)
@@ -909,12 +934,15 @@ def daily_scan(refresh: bool = False, limit: int = 16):
         return {"rows": top + [dict(r, options=None) for r in found[limit:]], "total": total, "detailed": len(top),
                 "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat()}
 
-    if refresh:
+    if refresh and _allow_refresh("daily"):
         _cache.pop("daily", None)
     try:
         return _cached("daily", 60 if market_open() else 600, build)
     except Exception as e:
-        raise HTTPException(502, f"Daily scan failed: {e}")
+        old = _cache.get("daily")                         # budget used up / Upstox hiccup: show the last scan rather than an error
+        if old:
+            return {**old[1], "stale": True, "reason": str(e)[:120]}
+        raise HTTPException(503 if isinstance(e, UpstoxRateLimited) else 502, f"Daily scan failed: {e}")
 
 
 # ----------------------------- Global markets & futures (GIFT Nifty, US futures, Nasdaq ...) -----------------------------
@@ -1387,7 +1415,7 @@ def picks(refresh: bool = False):
     ensure_universe()
     if os.environ.get("VERCEL"):
         # serverless freezes background threads after the response: build inline within the 30s cap
-        if refresh:
+        if refresh and _allow_refresh("picks", 20, 120):
             _cache.pop("picks", None)
 
         ttl_s = 600 if market_open() else 3600
@@ -1417,7 +1445,7 @@ def picks(refresh: bool = False):
 
     ttl = 900 if market_open() else 3600
     d = _PK["data"]
-    if d is None or refresh or time.time() - _PK["t"] > ttl:
+    if d is None or (refresh and _allow_refresh("picks", 20, 120)) or time.time() - _PK["t"] > ttl:
         _picks_kick()                              # stale-while-revalidate: a refresh never blocks the user
     if d is not None:
         return {**d, "refreshing": _PK["busy"]}
@@ -1515,7 +1543,7 @@ def day_calls(refresh: bool = False):
                 "rule": f"Call/Put only when the daily chart signal and ATM±{FLOW_WINDOW} option-volume flow (>= {FLOW_MIN_PCT:.0f}%) agree. "
                         "Premium levels: T1 +9%, T2 +18%, SL -5%. Paper-trading aid, not advice."}
 
-    if refresh:
+    if refresh and _allow_refresh("daycalls", 15, 120):
         _cache.pop("daycalls", None)
 
     def build_ok():

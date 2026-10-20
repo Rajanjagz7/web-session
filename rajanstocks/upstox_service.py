@@ -362,6 +362,10 @@ class UpstoxService:
         self.instrument_cache[symbol] = key
         return key, False
 
+    def is_listed_equity(self, symbol):
+        """True when the symbol is a real NSE equity in Upstox's instrument master (REITs/InvITs and typos are not)."""
+        return symbol.upper().strip() in (self._load_equity_keys() or {})
+
     def _load_equity_keys(self):
         if getattr(self, "_eq_keys", None):
             return self._eq_keys

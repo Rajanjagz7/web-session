@@ -23,8 +23,10 @@ def _universe():
 
 
 def supports(symbol):
+    """Any index / F&O stock of the app, and any other real NSE equity a user searched for (strategies only need daily candles)."""
     try:
-        return (symbol or "").upper() in _universe()
+        sym = (symbol or "").upper()
+        return sym in _universe() or bool(_up().is_listed_equity(sym))
     except Exception:
         return False
 

@@ -86,9 +86,10 @@ def check_strategy(key, sym, meta, quote, lastday):
     if b.get("bias") not in ("bull", "bear", "neutral"):
         bad(where, f"bias '{b.get('bias')}' not bull/bear/neutral")
     sig = str(b.get("signal") or "")
-    if sig.upper().startswith("BUY") and b.get("bias") == "bear":
+    opt = "PUT" in sig.upper() or "CALL" in sig.upper()          # option signals: SELL PUT is bullish, BUY PUT is bearish
+    if not opt and sig.upper().startswith("BUY") and b.get("bias") == "bear":
         bad(where, f"signal {sig} but bias bear")
-    if sig.upper().startswith("SELL") and b.get("bias") == "bull":
+    if not opt and sig.upper().startswith("SELL") and b.get("bias") == "bull":
         bad(where, f"signal {sig} but bias bull")
     if not finite(b.get("close")) or b.get("close", 0) <= 0:
         bad(where, f"close {b.get('close')} invalid")

@@ -13,3 +13,6 @@ push_state.json.tmp
 
 # Local disk cache of daily candles etc. (see shared_cache.py)
 .cache/
+
+# Auto-trader runtime state
+auto_state.json

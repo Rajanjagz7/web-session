@@ -206,6 +206,7 @@ def test_fresh_instance_serves_shared_last_prices_when_upstox_is_busy(isolated_c
     ma = isolated_cache
     monkeypatch.setattr(ma, "ensure_universe", lambda: None)
     monkeypatch.setattr(ma, "_key", lambda s: "K|" + s)
+    monkeypatch.setattr(ma.nse_service.upstox, "is_listed_equity", lambda s: True)
     state = {"busy": False}
 
     def full(keys):
@@ -224,3 +225,31 @@ def test_fresh_instance_serves_shared_last_prices_when_upstox_is_busy(isolated_c
     ma._cache.clear(); ma._QSYM.clear(); ma._QLAST.clear()              # a brand-new instance: nothing in memory
     second = ma.quotes(symbols="AAA,BBB")
     assert second["stale"] is True and len(second["quotes"]) == 2
+
+
+def test_refresh_inside_the_cooldown_is_served_from_cache(isolated_cache):
+    ma = isolated_cache
+    ma._REFRESH_AT.clear()
+    assert ma._allow_refresh("daily") is True          # first refresh runs
+    assert ma._allow_refresh("daily") is False         # an immediate second one is answered from the cache
+    assert ma._allow_refresh("picks", 20, 120) is True  # other scans have their own clock
+    ma._REFRESH_AT["daily"] -= 1000
+    assert ma._allow_refresh("daily") is True          # and it runs again once the gap has passed
+
+
+def test_unknown_symbol_quotes_answer_empty_not_503(isolated_cache, monkeypatch):
+    ma = isolated_cache
+    monkeypatch.setattr(ma, "ensure_universe", lambda: None)
+    monkeypatch.setattr(ma.nse_service.upstox, "is_listed_equity", lambda s: s == "REALCO")
+    monkeypatch.setattr(ma.nse_service.upstox, "_full_quotes", lambda keys: (_ for _ in ()).throw(AssertionError("must not call Upstox")))
+    out = ma.quotes(symbols="EMBASSY")
+    assert out["quotes"] == [] and out["missing"] == ["EMBASSY"]
+
+
+def test_strategies_accept_any_listed_equity_but_not_reits(monkeypatch):
+    import bar_source
+    import nse_service
+    monkeypatch.setattr(bar_source, "_universe", lambda: {"TCS"})
+    monkeypatch.setattr(nse_service.nse_service.upstox, "is_listed_equity", lambda s: s in ("AADHARHFC",))
+    assert bar_source.supports("TCS") and bar_source.supports("aadharhfc")
+    assert not bar_source.supports("EMBASSY")

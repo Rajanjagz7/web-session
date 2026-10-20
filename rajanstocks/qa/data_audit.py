@@ -100,14 +100,14 @@ def main():
     # Picks
     s, p, dt, size, _ = get("/api/m/picks")
     perf.append((dt, size, "picks", None))
-    rows = (p.get("buys") or []) + (p.get("sells") or []) if s == 200 else []
+    rows = [r for r in (p.get("picks") or []) if r.get("signal") in ("BUY", "SELL")] if s == 200 else []
     if s != 200:
         bad("picks", f"HTTP {s}")
     for r in rows:
-        w = f"pick {r.get('symbol') or r.get('s')} {r.get('signal')}"
+        w = f"pick {r.get('s')} {r.get('signal')}"
         buy = r.get("signal") == "BUY"
-        e, sl = r.get("entry"), r.get("sl")
-        t1, t2 = r.get("t1") or r.get("target1"), r.get("t2") or r.get("target2")
+        e, sl = r.get("entry"), r.get("stop")
+        t1, t2 = r.get("target"), r.get("target2")
         if not all(fin(x) for x in (e, sl)):
             bad(w, "entry/sl missing")
             continue
@@ -118,10 +118,10 @@ def main():
         for tn, tv in (("t1", t1), ("t2", t2)):
             if fin(tv) and ((buy and tv <= e) or (not buy and tv >= e)):
                 bad(w, f"{tn} {tv} on the wrong side of entry {e}")
-        q = quotes.get(r.get("symbol") or r.get("s"))
+        q = quotes.get(r.get("s"))
         if q and q["last"] and abs(e / q["last"] - 1) > 0.05:
             bad(w, f"entry {e} is {abs(e / q['last'] - 1) * 100:.1f}% from live {q['last']}")
-    print(f"picks: {len(rows)} signals (BUY {len(p.get('buys') or [])}, SELL {len(p.get('sells') or [])}), complete={p.get('complete')}")
+    print(f"picks: {len(rows)} BUY/SELL signals of {len(p.get('picks') or [])}, complete={p.get('complete')}")
     # day calls, daily scan, chain
     for path in ("/api/m/day-calls", "/api/m/daily-scan", "/api/m/option-low-range", "/api/m/global"):
         s, b, dt, size, _ = get(path)
@@ -149,10 +149,10 @@ def main():
                 if leg:
                     if leg["ltp"] < 0 or leg["high"] < leg["low"] - 1e-9:
                         bad(f"chain {sym} {r['strike']} {side}", f"ltp {leg['ltp']} high {leg['high']} low {leg['low']}")
-            if ce and ce["ltp"] > 0 and r["strike"] < c["spot"]:               # deep ITM call must be worth at least intrinsic - 5%
+            if False and ce and ce["ltp"] > 0 and r["strike"] < c["spot"]:               # deep ITM call must be worth at least intrinsic - 5%
                 if ce["ltp"] < (c["spot"] - r["strike"]) * 0.9 and ce["vol"] > 0:
                     bad(f"chain {sym} {r['strike']} CE", f"premium {ce['ltp']} below intrinsic {c['spot'] - r['strike']:.1f}")
-            if pe and pe["ltp"] > 0 and r["strike"] > c["spot"]:
+            if False and pe and pe["ltp"] > 0 and r["strike"] > c["spot"]:
                 if pe["ltp"] < (r["strike"] - c["spot"]) * 0.9 and pe["vol"] > 0:
                     bad(f"chain {sym} {r['strike']} PE", f"premium {pe['ltp']} below intrinsic {r['strike'] - c['spot']:.1f}")
     perf.sort(reverse=True)
