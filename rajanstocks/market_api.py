@@ -720,8 +720,26 @@ def chain(symbol: str = "NIFTY", expiry: str = ""):
         return {"symbol": sym, "lot": lot, "spot": spot, "expiry": data.get("targetExpiry"), "expiries": data.get("expiryDates") or [],
                 "atm": atm, "rows": rows, "provider": "Upstox", "asOf": datetime.now(IST).isoformat()}
 
+    def shared_build():
+        # second tier shared by every serverless instance: a cold instance answers from Upstash instead of
+        # making three Upstox calls (contracts, chain, ~200 quotes) before the page can show anything
+        import shared_cache
+        sk, ttl = f"chain:v1:{sym}:{expiry}", (6 if market_open() else 600)
+        try:
+            hit = shared_cache.get(sk)
+            if hit and time.time() - hit.get("_ts", 0) < ttl:
+                return hit
+        except Exception:
+            pass
+        val = build()
+        try:
+            shared_cache.set(sk, dict(val, _ts=time.time()), ttl + 5)
+        except Exception:
+            pass
+        return val
+
     try:
-        return _cached(f"chain|{sym}|{expiry}", 3 if market_open() else 45, build)
+        return _cached(f"chain|{sym}|{expiry}", 3 if market_open() else 45, shared_build)
     except Exception as e:
         raise HTTPException(502, f"Option chain failed: {e}")
 

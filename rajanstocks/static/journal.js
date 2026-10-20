@@ -983,28 +983,28 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (ui.tab === 'new') renderCalc();
   }
 
-   const resetPortfolio = () => {
-     if (confirm('Reset the entire portfolio? This will clear all trades and settings - this cannot be undone.')) {
-       if (confirm('Are you absolutely sure? This will permanently delete all your journal data.')) {
-         T = [];
-         S = Object.assign({}, DEFAULTS);
-         persist();
-         toast_('Portfolio reset complete', 'ok');
-         render();
-       }
-     }
-   };
-
-   document.addEventListener('click', e => {
-     const b = e.target.closest('[data-jv="reset"]'); if (!b) return;
-     e.preventDefault(); e.stopPropagation(); resetPortfolio();
-   });
-
-  /* ---------- events ---------- */
-   document.addEventListener('click', e => {
-     const b = e.target.closest('[data-jv="reset"]'); if (!b) return;
-     e.preventDefault(); e.stopPropagation(); resetPortfolio();
-   });
+  /* Reset portfolio: one confirmation, then clear EVERYTHING that feeds the portfolio figure -
+     manual journal trades, journal settings, the server's auto paper trades and the Trade screen's paper account. */
+  async function resetPortfolio() {
+    if (!confirm('Reset the portfolio to ₹10,00,000?\n\nThis clears every journal trade, all auto paper trades (open and closed) and the Trade screen paper positions and orders. It cannot be undone.')) return;
+    const r = await jpost('/api/auto/reset', {});
+    T = []; S = Object.assign({}, DEFAULTS); persist(); persistS();
+    AUTO.list = []; AUTO.ts = Date.now();
+    try {
+      if (typeof App !== 'undefined') {
+        App.cash = S.capital || 1000000; App.positions = []; App.orders = []; App.history = []; App.trades = []; App.meta = {};
+        if (typeof saveTrades === 'function') saveTrades(); if (typeof savePaper === 'function') savePaper();
+        if (typeof renderBottom === 'function') renderBottom(); if (typeof renderPfChip === 'function') renderPfChip();
+        if (typeof setChartLines === 'function') try { setChartLines(); } catch (e) { }
+      }
+    } catch (e) { }
+    toast_(r.ok ? 'Portfolio reset to ₹10,00,000 - all trades cleared' : 'Journal cleared, but the auto trades could not be reset: ' + r.err, r.ok ? 'ok' : 'err');
+    render(); setTimeout(() => syncAuto(true).then(render), 600);
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-jv="reset"]'); if (!b) return;
+    e.preventDefault(); e.stopImmediatePropagation(); resetPortfolio();
+  }, true);
 
    /* ---------- Gods Eye - Monitoring Dashboard ---------- */
    function viewGodsEye() {

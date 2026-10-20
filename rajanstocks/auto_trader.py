@@ -769,6 +769,19 @@ def clear_log():
         return {"ok": True}
 
 
+@router.post("/reset")
+def reset_portfolio():
+    """Journal 'Reset portfolio': drop every paper trade (open and closed) so equity starts again from capital.
+    Settings are kept. Today's entries count restarts too."""
+    with _lock:
+        st = _load()
+        n = len(st["trades"])
+        st["trades"], st["cand"] = [], {}
+        st["log"] = [{"at": _now().isoformat(), "msg": f"Portfolio reset by the user ({n} paper trades cleared)"}]
+        _save(st)
+        return {"ok": True, "cleared": n}
+
+
 @router.api_route("/run", methods=["GET", "POST"])
 def run():
     return run_cycle()

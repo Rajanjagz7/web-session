@@ -7,7 +7,7 @@
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LS = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const SS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-  const G = { data: LS('gx-cache', null), busy: false, err: null, ts: 0, view: LS('gx-view', 'cards'), grp: LS('gx-grp', 'All'), open: null, how: false };
+  const G = { data: (d => d && d.summary && Array.isArray(d.items) ? d : null)(LS('gx-cache', null)), busy: false, err: null, ts: 0, view: LS('gx-view', 'cards'), grp: LS('gx-grp', 'All'), open: null, how: false };
 
   const num = (v, d = 2) => v == null || isNaN(v) ? '—' : Number(v).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
   const pct = v => v == null || isNaN(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + '%';
@@ -35,7 +35,9 @@
   /* ---------- data ---------- */
   async function load(force) {
     if (G.busy) return; G.busy = true; paint();
-    try { G.data = await api('/api/godseye/board' + (force ? '?refresh=true' : '')); G.err = null; G.ts = Date.now(); SS('gx-cache', G.data); }
+    try { const d = await api('/api/godseye/board' + (force ? '?refresh=true' : ''));
+      if (!d || !d.summary || !Array.isArray(d.items)) throw new Error('bad board');
+      G.data = d; G.err = null; G.ts = Date.now(); SS('gx-cache', G.data); }
     catch (e) { G.err = 'Market data could not be loaded right now. Try Refresh in a minute.'; }
     G.busy = false; paint();
   }
@@ -178,7 +180,7 @@
       <div class="gx-head">
         <div class="gx-brand"><svg viewBox="0 0 48 28" class="gx-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
           <h2>GOD'S EYE</h2><span>— The Observer</span></div>
-        <div class="gx-bar0">${status}<span class="gx-upd">${G.busy && d ? 'Updating…' : upd ? 'Updated ' + upd + ' IST' : ''}</span><button class="btn" data-gxr="1" ${G.busy ? 'disabled' : ''}>↻ Refresh</button></div>
+        <div class="gx-bar0">${status}<span class="gx-upd">${G.busy && d ? 'Updating…' : upd ? 'Updated ' + upd + ' IST' : ''}</span>${embed ? '' : `<button class="btn" data-gxr="1" ${G.busy ? 'disabled' : ''}>↻ Refresh</button>`}</div>
       </div>
       ${body}
       ${G.open ? detail() : ''}
@@ -186,6 +188,7 @@
     document.body.classList.toggle('gx-noscroll', !!G.open);
   }
 
+  window.godseyeRefresh = () => load(true);       // the Picks page has one Refresh button for picks + God's Eye
   window.renderGodseye = function () {
     paint();
     if (!G.data || Date.now() - G.ts > 60e3) load(false);

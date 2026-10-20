@@ -625,9 +625,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
-<script src="/static/journal.js?v=20261020c"></script>
+<script src="/static/journal.js?v=20261020d"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261020b"></script>
+<script src="/static/godseye.js?v=20261020c"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -668,6 +668,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-stats[open] .opt-stats{margin-top:8px}
 .opx-panel{padding:0;gap:0}
 .opx-wtabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.opx-wi{padding:0 0 6px}.opx-wi .opx-ph{padding:12px 14px 6px;font-weight:700}.wi-kpis{display:flex;flex-wrap:wrap;gap:6px 16px;padding:0 14px 8px;font-size:12.5px;color:var(--text-3)}.wi-kpis b{color:var(--text);font-weight:700}
+.wi-tw{overflow-x:auto;padding:0 8px}.wi-t{width:100%;border-collapse:collapse;font-size:13px}.wi-t th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.wi-t th:first-child,.wi-t td:first-child{text-align:left}.wi-t td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.wi-t td small{font-size:11px;margin-left:4px}.wi-t tr.wi-0{background:color-mix(in srgb,var(--brand) 8%,transparent)}
+.wi-note{font-size:11.5px;padding:8px 14px 4px;margin:0}
 .opx-wtabs button,.opx-mtabs button{height:42px;padding:0 14px;border:0;background:none;color:var(--text-3);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
 .opx-wtabs button.on,.opx-mtabs button.on{color:var(--text);border-bottom-color:var(--brand)}
 .opx-pane{padding:14px;min-width:0;overflow-x:auto}.opx-pane[hidden]{display:none}#opStrat.opx-pane,#opRead.opx-pane{padding:0}
@@ -706,7 +710,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   .opx[data-mtab="chain"] .opx-work{display:none}
   .opx:not([data-mtab="chain"]) .opx-chain{display:none}
   .opx[data-mtab="chart"] .opx-panel{display:none}
-  .opx[data-mtab="order"] .opx-chartcard,.opx[data-mtab="signals"] .opx-chartcard{display:none}
+  .opx[data-mtab="order"] .opx-chartcard,.opx[data-mtab="signals"] .opx-chartcard,.opx[data-mtab="order"] .opx-wi,.opx[data-mtab="signals"] .opx-wi{display:none}
   .opx[data-mtab="order"] .opx-wtabs,.opx[data-mtab="signals"] .opx-wtabs{display:none}
   .opx-chartcard .opt-chart{height:58vh}
   .opx-oc td,.opx-oc th{padding:7px 6px;font-size:12px}.opx-oc td.k{min-width:58px}.opx-oc .bs{display:none!important}.opx-oc td.ltp b{font-size:12.5px}
@@ -2414,7 +2418,7 @@ function renderAlerts(){$('#v-alerts').innerHTML=`<div class="page">${pageHead('
 let VD={data:null,busy:false,err:null,symbol:(()=>{try{return localStorage.getItem('vx-symbol')||'NIFTY'}catch(e){return 'NIFTY'}})()};
 const VX_INDICES=[['NIFTY','Nifty 50'],['SENSEX','BSE Sensex'],['BANKNIFTY','Nifty Bank']];
 async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
-  try{VD._ts=Date.now();VD.data=await Promise.race([api('/api/vedic/report?symbol='+VD.symbol+(refresh?'&refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))])}
+  try{VD._ts=Date.now();VD.data=await Promise.race([api('/api/vedic/report?symbol='+VD.symbol+(refresh?'&refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))]);if(!VD.data||!VD.data.header||!Array.isArray(VD.data.watch_windows))throw new Error('bad report')}
   catch(e){VD.err='Could not load the Vedic Astro report. Try again in a moment.'}
   VD.busy=false}
 function vdField(label,f,fmt){if(!f)return'';
@@ -2489,7 +2493,7 @@ function vxPlanCards(g,sym){if(!g||!g.available)return'';const spot=vxSpot(g,sym
   return `<div class="vx-setups" id="vxPlan"><div class="vx-setup long"><h4>▲ Long setup</h4><div><small>Buy above</small><b class="num">${f(up[0].level)}</b></div><div><small>Targets</small><b class="num">${f(up[1].level)} → ${f(up[2].level)}</b></div><div><small>Stop-loss</small><b class="num">${f(dn[2].level)}</b></div><div><small>Risk : reward</small><b class="num">1 : ${rr(up[0].level,up[1].level,dn[2].level)} · 1 : ${rr(up[0].level,up[2].level,dn[2].level)}</b></div></div>
     <div class="vx-setup short"><h4>▼ Short setup</h4><div><small>Sell below</small><b class="num">${f(dn[2].level)}</b></div><div><small>Targets</small><b class="num">${f(dn[1].level)} → ${f(dn[0].level)}</b></div><div><small>Stop-loss</small><b class="num">${f(up[0].level)}</b></div><div><small>Risk : reward</small><b class="num">1 : ${rr(dn[2].level,dn[1].level,up[0].level)} · 1 : ${rr(dn[2].level,dn[0].level,up[0].level)}</b></div></div></div>
     <p class="vx-note">Levels are the nearest Square-of-9 steps around ${fmtP(spot,2)}. Only on a 5-min close beyond the level with VWAP agreeing. Avoid fresh entries inside Rahu Kaal.</p>`}
-function vxWinCards(wins){return `<div class="vx-wins">${wins.map((w,i)=>`<details class="vx-win ${w.key==='rahu_kaal'?'rahu':''} ${w.in_session?'':'off'}"><summary><span class="vx-wn">${i+1}</span><b>${esc(w.label)}</b><em class="num">${esc(w.window_ist||'—')}</em><small>${esc(w.focus)}</small></summary>
+function vxWinCards(wins){return `<div class="vx-wins">${(wins||[]).filter(Boolean).map((w,i)=>`<details class="vx-win ${w.key==='rahu_kaal'?'rahu':''} ${w.in_session?'':'off'}"><summary><span class="vx-wn">${i+1}</span><b>${esc(w.label)}</b><em class="num">${esc(w.window_ist||'—')}</em><small>${esc(w.focus)}</small></summary>
   <div class="vx-wb"><p><b class="up">Bullish:</b> ${esc(w.bullish)}</p><p><b class="down">Bearish:</b> ${esc(w.bearish)}</p><p><b>No trade:</b> ${esc(w.no_trade)}</p><p class="vx-note">Checks: ${(w.key_checks||[]).map(esc).join(' · ')}</p>${w.astrology_note?`<p class="vx-note">${esc(w.astrology_note)}</p>`:''}</div></details>`).join('')}</div>`}
 function vxCtx(mc,symName){
   const nb=mc.levels_base&&mc.levels_base.available?mc.levels_base.value:null,chg=v=>v==null?'':` <span class="${v>0?'up':v<0?'down':''}">${v>0?'+':''}${(+v).toFixed(2)}%</span>`;
@@ -2502,8 +2506,8 @@ function vxCtx(mc,symName){
     +vdField(mc.opening_range&&mc.opening_range.value&&mc.opening_range.value.live?'Opening range (15m)':'Opening range (last session)',mc.opening_range,v=>typeof v==='object'?`${fmtP(v.low,2)} – ${fmtP(v.high,2)} <small class="muted">${fmtP(v.width,1)} pts · price ${esc(v.price_vs)}${v.live?'':' · '+esc(v.session_tag)}</small>`:esc(v))}
 setInterval(async()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden||VD.busy||typeof MKT==='undefined'||!MKT.open)return;
   if(Date.now()-(VD._ts||0)<120000)return;const y=window.scrollY;await loadVedic(false);VD._lastSpot=null;if(App.view==='vedic'){vdPaint();window.scrollTo(0,y)}}catch(e){}},30000);
-setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden)return;const lb=document.getElementById('vxLadBox'),pb=document.getElementById('vxPlanBox');if(!lb||!VD||!VD.data)return;
-  const r=VD.data,g=r.gann;if(!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
+setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden)return;const lb=document.getElementById('vxLadBox'),pb=document.getElementById('vxPlanBox');if(!VD||!VD.data)return;
+  const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le)le.innerHTML=vxLeanHTML(r);if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
@@ -2538,20 +2542,45 @@ function vxTabGann(r){const g=r.gann;if(!g||!g.available)return`<section class="
 function vxTabWatch(r){const st=r.stocks_to_watch,h=r.header;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Stocks to watch · ${esc(h.report_date)}</h3>${st.session_note?`<p class="vx-note" style="margin:0 0 6px">${esc(st.session_note)}</p>`:''}${st.available?st.value.map(s=>`<div class="vx-stock"><div><b>${esc(s.symbol)}</b> <span class="muted">${esc(s.name)}</span><span class="vx-chip ${String(s.bias).toLowerCase()==='bullish'?'up':String(s.bias).toLowerCase()==='bearish'?'down':'mute'}">${esc(s.bias)}</span></div><p>${esc(s.reason)} — ${esc(s.idea)}</p><small class="num">LTP ${fmtP(s.ltp,2)} · prev ${fmtP(s.prev,2)} · <span class="${s.chg_pct>=0?'up':'down'}">${pct(s.chg_pct/100)}</span></small></div>`).join(''):`<div class="empty">${esc(st.reason||'Not available')}</div>`}</section>
      <section class="vx-card"><h3>Risk management</h3><ul class="vx-ul">${r.risk_management.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section></div>${vdNewsPanel(8)}`}
+/* Today's lean, recomputed live: the report's Vedic/Gann votes + live price vs Gann base, VWAP and opening range,
+   and the special-timing window active right now. Refreshed every 3 s while the market is open. */
+function vxNowMin(){const d=new Date(Date.now()+330*60000);return d.getUTCHours()*60+d.getUTCMinutes()}
+function vxLean(r){const c=r.confluence||{factors:[]},mc=r.market_context||{},g=r.gann||{},sym=r.header&&r.header.symbol||'NIFTY';
+  const spot=g.available?vxSpot(g,sym):(mc.index_last&&mc.index_last.available?mc.index_last.value:null),f=[],fp=v=>fmtP(v,2);
+  (c.factors||[]).forEach(x=>{if(!/^Price vs Gann/.test(x.name))f.push(x)});
+  if(g.available&&spot){const b=g.base.price;f.push({name:'Price vs Gann base',vote:spot>b?1:spot<b?-1:0,detail:`${fp(spot)} is ${spot>b?'above':spot<b?'below':'at'} the 0° base ${fp(b)}`})}
+  const vw=mc.live_vwap&&mc.live_vwap.available&&mc.live_vwap.value,live=typeof MKT!=='undefined'&&MKT.open;
+  if(vw&&vw.value&&spot&&live)f.push({name:'Price vs VWAP',vote:spot>vw.value?1:spot<vw.value?-1:0,detail:`${fp(spot)} vs VWAP ${fp(vw.value)}`});
+  const orr=mc.opening_range&&mc.opening_range.available&&mc.opening_range.value;
+  if(orr&&orr.high&&spot&&live)f.push({name:'Opening range',vote:spot>orr.high?1:spot<orr.low?-1:0,detail:spot>orr.high?`Above the 15-min high ${fp(orr.high)}`:spot<orr.low?`Below the 15-min low ${fp(orr.low)}`:`Inside ${fp(orr.low)} – ${fp(orr.high)}`});
+  const st=r.special_timing,now=vxNowMin();let win=null,nxt=null;
+  if(st&&st.available){const today=new Date(Date.now()+330*60000).toISOString().slice(0,10),isToday=st.session_date===today;
+    if(isToday){win=(st.windows||[]).find(w=>now>=w.start_min&&now<w.end_min)||null;nxt=(st.windows||[]).find(w=>w.start_min>now)||null;
+      const sl=(st.slots||[]).find(x=>now>=x.m&&now<x.m+5);
+      if(win)f.push({name:`${win.side} window`,vote:win.side==='Buyers'?1:-1,detail:`${win.start}–${win.end} · ${(win.reasons||[]).join(', ')} — act only if price action confirms`});
+      else if(sl&&Math.abs(sl.score)>=2)f.push({name:'Time (hora/choghadiya)',vote:sl.score>0?1:-1,detail:`${sl.hora} hora · ${sl.chog} choghadiya`})}
+    else nxt=(st.windows||[])[0]||null}
+  const score=f.reduce((a,x)=>a+x.vote,0),max=Math.max(1,f.length);
+  const lean=score>=2?'BULLISH LEAN':score<=-2?'BEARISH LEAN':'MIXED / WAIT';
+  return{lean,score,max,factors:f,win,nxt,spot,live}}
+function vxLeanHTML(r){const L=vxLean(r),cls=L.lean.startsWith('BULL')?'up':L.lean.startsWith('BEAR')?'down':'mute';
+  const t=new Date(Date.now()+330*60000).toISOString().slice(11,19);
+  const nowTxt=L.win?`<span class="vx-chip ${L.win.side==='Buyers'?'up':'down'}">Now: ${esc(L.win.side)} ${esc(L.win.start)}–${esc(L.win.end)}</span>`:L.nxt?`<span class="vx-chip mute">Next: ${esc(L.nxt.side)} ${esc(L.nxt.start)}–${esc(L.nxt.end)}</span>`:'';
+  return `<div class="vx-lean ${cls}" title="Recomputed live from the price, VWAP, opening range, Gann base and the current time window. Not a signal - act only on price action and volume."><small>Today's lean · ${L.live?'live '+t:'last session'}</small><b>${esc(L.lean)}</b><div class="vx-meter"><i style="left:${50+(L.score/L.max)*50}%"></i></div>
+    <div class="vx-factors">${nowTxt}${L.factors.map(x=>`<span class="vx-chip ${x.vote>0?'up':x.vote<0?'down':'mute'}" title="${esc(x.detail)}">${x.vote>0?'▲':x.vote<0?'▼':'•'} ${esc(x.name)}</span>`).join('')}</div></div>`}
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic + Gann','')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
   const r=VD.data;if(!r){el.innerHTML=`<div class="page vx"><div class="vx-hero vx-skel"></div><div class="empty">Calculating today's Panchang, planets and Gann levels…</div></div>`;return}
   const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
   const last=mc.index_last.available?mc.index_last.value:null,prev=mc.index_prev_close.available?mc.index_prev_close.value:null,ch=last&&prev?last/prev-1:null;
-  const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};const leanCls=c.lean.startsWith('BULL')?'up':c.lean.startsWith('BEAR')?'down':'mute';
+  const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};
   const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];
   el.innerHTML=`<div class="page vx">
    <div class="vx-hero">
     <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · ${esc(h.symbol_name)}</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
       <div class="vx-idx">${VX_INDICES.map(([k,l])=>`<button class="${VD.symbol===k?'on':''}" data-vxsym="${k}">${l}</button>`).join('')}</div>
       <div class="vx-meta">${esc(h.report_date)} · <span class="vx-chip ${h.session_phase==='During session'?'up':'mute'}">${esc(h.session_phase)}</span>${h.nse_trading_day.available&&h.nse_trading_day.value!=='No'?' · '+esc(h.nse_trading_day.value):''}</div></div>
-    <div class="vx-lean ${leanCls}" title="${esc(c.note||'')}"><small>Today's lean</small><b>${esc(c.lean)}</b><div class="vx-meter"><i style="left:${50+(c.score/Math.max(1,c.max))*50}%"></i></div>
-      <div class="vx-factors">${c.factors.map(f=>`<span class="vx-chip ${f.vote>0?'up':f.vote<0?'down':'mute'}" title="${esc(f.detail)}">${f.vote>0?'▲':f.vote<0?'▼':'•'} ${esc(f.name)}</span>`).join('')}</div></div>
+    <div id="vxLean">${vxLeanHTML(r)}</div>
     <div class="vx-today"><div><small>Tithi</small><b>${esc(p.tithi)}</b></div><div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="${rk.in_session?'rahu':''}"><small>Rahu Kaal</small><b>${esc(p.mumbai_rahu_kaal_ist)}</b><span>${rk.in_session?'during market hours':'outside market hours'}</span></div>
       <button class="btn-xs" data-act="vedic-retry" title="Recalculate now">${I('reset',14)} Refresh</button></div>
    </div>
@@ -2685,7 +2714,8 @@ function callCard(c){const go=c.signal==='BUY CALL'||c.signal==='BUY PUT',up=c.s
 function callsBlock(){const C=App.calls;
   if(!C)return'<div class="empty">Reading live option chains…</div>';
   if(C.error)return`<div class="empty">Index calls unavailable (${esc(C.error)}). <button class="btn-xs" data-act="rpicks">Retry</button></div>`;
-  return`<div class="pk-grid">${C.calls.map(callCard).join('')}</div><p class="disc">${esc(C.rule)}</p>`}
+  if(!(C.calls||[]).length)return'<div class="empty">No index calls right now.</div>';
+  return`<div class="pk-grid">${C.calls.map(callCard).join('')}</div><p class="disc">${esc(C.rule||'')}</p>`}
 /* ---- Market overview on Picks: the app's own chart (area), with range chips ---- */
 const OV={sym:'NIFTY',rng:2};
 const OVR=[['1D',1,78],['1W',2,130],['1M',3,150],['3M',5,66],['1Y',5,250],['5Y',6,260]];   // label, TFS index, bars shown
@@ -2702,6 +2732,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const idxHtml=idx.map(s=>`<button class="ix" data-sym="${esc(s.s)}"><small>${esc(s.n)}</small><b class="num" data-px="${esc(s.s)}"></b><span class="num" data-chg="${esc(s.s)}"></span></button>`).join('');
   let body;
   if(!P)body='<div class="empty">Screening liquid NSE F&O stocks on live data…</div>';
+  else if(!P.error&&!Array.isArray(P.picks))body='<div class="empty">Screening liquid NSE F&O stocks on live data…</div>';
   else if(P.error)body=`<div class="empty">Could not load picks (${esc(P.error)}). <button class="btn-xs" data-act="rpicks">Retry</button></div>`;
   else{let l;
     if(f.sig==='BUY')l=P.buy.slice();else if(f.sig==='SELL')l=P.sell.slice();else if(f.sig==='EVERY')l=P.picks.slice();else l=P.buy.concat(P.sell);
@@ -2727,7 +2758,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
   const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc((n.pubDate||'').slice(5,22))}</small></a>`).join(''):'';
-  el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed — showing last session'}${P&&P.asOf?' · screened '+new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}`,`<button class="btn" data-act="rpicks">Refresh</button>`)}
+  el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed — showing last session'}${P&&P.asOf?' · screened '+new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    <div class="ixs">${idxHtml}</div>
    <div id="pkGodseye" class="pk-ge"></div>
    <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>
@@ -2736,7 +2767,8 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    ${body}
    <p class="disc">Rule-based screen of liquid NSE F&amp;O stocks using trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI. Levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();if(window.renderGodseye)renderGodseye()}
-document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{App.picks=null;renderPicks();loadPicks(true)}});
+document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
+    Promise.all([loadPicks(true),window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 
 
 /* ======================= Strategies & indicators (your own pack) ======================= */
@@ -2821,7 +2853,8 @@ function stBody(m){const sym=ST.sym,r=ST.res[m.key+'|'+sym];
   if(m.indexOnly&&!INDEX_RE.test(sym))return'<div class="muted st-note">Works on indices only — pick NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY or SENSEX.</div>';
   if(!r||r.pending)return'<div class="muted st-note">Running on '+esc(sym)+'…</div>';
   if(r.err)return'<div class="muted st-note">'+esc(r.err)+'</div>';
-  const kv=r.details.slice(0,4).map(d=>`<span><small>${esc(/\s/.test(String(d.label))?d.label:lvlName(d.label))}</small><b class="num">${stVal(d)}</b></span>`).join('');
+  if(!Array.isArray(r.details)&&!r.headline)return'<div class="muted st-note">No reading for '+esc(sym)+' right now.</div>';
+  const kv=(r.details||[]).slice(0,4).map(d=>`<span><small>${esc(/\s/.test(String(d.label))?d.label:lvlName(d.label))}</small><b class="num">${stVal(d)}</b></span>`).join('');
   const hb=horizonBadge(m);
   return`<div class="st-res">${stBadge(r)}${hb}<span class="st-hl">${esc(tidyText(r.headline))}</span></div>${kv?`<div class="st-kv">${kv}</div>`:''}${dayCounter(r)}${recLine(m.key,sym)}`}
 function stCard(m){return`<div class="card st-card" id="stc-${m.key}"><div class="st-h"><h4>${esc(m.name)}</h4><span class="badge b-mute">${esc(m.group)}</span></div><p class="st-d">${esc(m.desc)}</p>
@@ -2891,7 +2924,7 @@ async function optScan(m,scope){modal(m.name,`<div id="scanBody"><div class="emp
 
 /* ===== Upstox token health banner ===== */
 async function checkTokenHealth(){try{const r=await api('/api/m/health');let b=$('#tokBanner');
-  if(r.state==='ok'){b&&b.remove();return}
+  if(!r||!r.state||r.state==='ok'){b&&b.remove();return}
   if(!b){b=document.createElement('div');b.id='tokBanner';b.setAttribute('role','alert');document.body.insertBefore(b,document.querySelector('main'))}
   b.className='tokb '+(r.state==='expiring'?'warn':'bad');b.innerHTML='<b>'+(r.state==='expiring'?'Token expiring':r.state==='expired'?'Data feed stopped':r.state==='missing'?'Data feed not set up':'Data feed issue')+'</b> '+esc(r.message)+'<button class="btn-xs" onclick="this.parentNode.remove()">Dismiss</button>'}catch(e){}}
 
@@ -2902,9 +2935,17 @@ const OPT_TFS=['1m','5m','15m','1H','1D'];
 const OPT_INDS=[['vol','Vol'],['sma','SMA'],['ema','EMA'],['vwap','VWAP'],['bb','BB'],['rsi','RSI'],['macd','MACD'],['atr','ATR']];
 const fmtExp=iso=>{try{const d=new Date(iso+'T00:00:00');return d.getDate()+' '+MON[d.getMonth()]}catch(e){return iso||''}};
 function optUnderlyings(){return SYMS.filter(s=>s.cls==='Indices'&&!s.nofo&&s.s!=='INDIAVIX').concat(SYMS.filter(s=>s.cls==='Stocks'))}
-async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const want=OPT.sym;
-  try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(OPT.expiry?'&expiry='+OPT.expiry:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null}
-  catch(e){OPT.chain=null;OPT.err='The option chain is not available for '+want+' right now.'}
+/* The last chain per underlying is kept in the browser and drawn at once (stale-while-revalidate), then replaced
+   by the fresh one - the Trade screen no longer waits on three broker calls before showing anything. */
+const OCK=(sym,exp)=>'oc1:'+sym+':'+(exp||'');
+function ocGet(sym,exp){try{const v=JSON.parse(localStorage.getItem(OCK(sym,exp))||'null');const today=new Date(Date.now()+330*60000).toISOString().slice(0,10);
+  return v&&v.rows&&v.rows.length&&(!v.expiry||v.expiry>=today)&&Date.now()-(v._saved||0)<3*86400000?v:null}catch(e){return null}}
+function ocPut(sym,exp,v){try{const o=Object.assign({},v,{_saved:Date.now()});localStorage.setItem(OCK(sym,exp),JSON.stringify(o));if(!exp)localStorage.setItem(OCK(sym,v.expiry),JSON.stringify(o))}catch(e){}}
+async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const want=OPT.sym,wexp=OPT.expiry;
+  if(!OPT.chain||OPT.chain.symbol!==want){const c=ocGet(want,wexp);if(c){OPT.chain=Object.assign({},c,{stale:true});OPT.expiry=c.expiry;OPT.err=null;
+    if(App.view==='options'){drawChain();if(!OPT.sel&&!OPT.pending)opxAutoPick()}}}
+  try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(wexp?'&expiry='+wexp:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null;ocPut(want,wexp,r)}
+  catch(e){if(!(OPT.chain&&OPT.chain.stale&&OPT.chain.symbol===want)){OPT.chain=null;OPT.err='The option chain is not available for '+want+' right now.'}}
   OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}else if(OPT.chain&&!OPT.sel)opxAutoPick()}}
 /* Open a contract straight away: the ATM strike on the side last used (CE by default) - no extra tap needed. */
 function opxAutoPick(){const c=OPT.chain;if(!c||!c.rows||!c.rows.length)return;let side='CE';try{side=localStorage.getItem('opx-side')||'CE'}catch(e){}
@@ -2985,7 +3026,36 @@ function selectOption(side,strike,auto){const c=OPT.chain;if(!c)return;if(!auto)
   const label=`${c.symbol} ${fmtP(strike,strike%1?2:0)} ${side} ${fmtExp(c.expiry)}`;
   OPT.sel={side,strike,key:leg.key,label};
   OPT.osym={s:label,n:label,ikey:leg.key,dp:2,qdp:0,ex:'NFO',cls:'Options',sec:'Options',last:leg.ltp,prev:leg.prev||leg.ltp,open:leg.open,hi:leg.high,lo:leg.low,vol:leg.vol,oi:leg.oi,oiChg:leg.oiChg,bid:leg.bid,ask:leg.ask};
-  drawChain();drawDetail();if(opxMobile()&&!auto)opxTab('chart')}
+  drawChain();drawDetail();drawWhatIf();if(opxMobile()&&!auto)opxTab('chart')}
+/* ---- What-if premium (Sensibull-style): Black-Scholes with the IV implied by the live premium, so the table shows
+   the option's price if the underlying opens x% up/down at the NEXT session (one session of time decay included)
+   and if it moved that much right now. IV is held constant - in reality IV also moves, so treat these as estimates. ---- */
+const WI_MOVES=[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],WI_R=0.065;
+function wiN(x){const t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p}
+function wiBS(S,K,T,v,call){if(T<=0||v<=0)return Math.max(0,call?S-K:K-S);const sq=v*Math.sqrt(T),d1=(Math.log(S/K)+(WI_R+v*v/2)*T)/sq,d2=d1-sq;
+  return call?S*wiN(d1)-K*Math.exp(-WI_R*T)*wiN(d2):K*Math.exp(-WI_R*T)*wiN(-d2)-S*wiN(-d1)}
+function wiIV(px,S,K,T,call){let lo=0.005,hi=5;if(px<=Math.max(0,call?S-K:K-S)+0.01||T<=0)return null;for(let i=0;i<80;i++){const m=(lo+hi)/2;if(wiBS(S,K,T,m,call)>px)hi=m;else lo=m}return(lo+hi)/2}
+function wiExpiryMs(iso){return Date.parse(iso+'T15:30:00+05:30')}
+function wiNextOpen(){const ist=new Date(Date.now()+330*60000);let d=new Date(Date.UTC(ist.getUTCFullYear(),ist.getUTCMonth(),ist.getUTCDate()));
+  const mins=ist.getUTCHours()*60+ist.getUTCMinutes();if(ist.getUTCDay()>0&&ist.getUTCDay()<6&&mins<555){}else{do{d=new Date(d.getTime()+86400000)}while(d.getUTCDay()===0||d.getUTCDay()===6)}
+  return Date.parse(d.toISOString().slice(0,10)+'T09:15:00+05:30')}
+function drawWhatIf(){const box=$('#opxWhatIf');if(!box)return;const c=OPT.chain,sel=OPT.sel,o=OPT.osym;if(!c||!sel||!o){box.innerHTML='';return}
+  const u=SYM(OPT.sym),S=(u&&u.last>0?u.last:c.spot)||0,K=sel.strike,call=sel.side==='CE',px=o.last||0,exp=wiExpiryMs(c.expiry),now=Date.now(),nxt=wiNextOpen();
+  const key=[S,px,K,sel.side,c.expiry].join('|');if(box.dataset.k===key)return;box.dataset.k=key;
+  const Y=365*86400000,T0=(exp-now)/Y,T1=(exp-nxt)/Y;
+  if(!S||!px||T0<=0){box.innerHTML=`<div class="opx-ph">What if · next open</div><p class="muted wi-note">Needs a live premium and a contract that has not expired.</p>`;return}
+  let iv=wiIV(px,S,K,T0,call),assumed=false;if(!iv){iv=c.symbol&&/NIFTY|SENSEX/.test(c.symbol)?0.14:0.3;assumed=true}
+  const model=wiBS(S,K,T0,iv,call),adj=px-model;   // keep the table anchored on the real live premium
+  const th=T1>0?(wiBS(S,K,T1,iv,call)+adj)-px:-px,dS=S*0.001,delta=(wiBS(S+dS,K,T0,iv,call)-wiBS(S-dS,K,T0,iv,call))/(2*dS);
+  const f=v=>fmtP(Math.max(0.05,v),2),pc=(v)=>(v>=0?'+':'')+(v*100).toFixed(0)+'%',cls=v=>v>0.005?'up':v<-0.005?'down':'muted';
+  const nd=new Date(nxt+330*60000),nlabel=nd.toUTCString().slice(0,11);
+  const rows=WI_MOVES.map(m=>{const S2=S*(1+m/100),pn=wiBS(S2,K,T0,iv,call)+adj,po=T1>0?wiBS(S2,K,T1,iv,call)+adj:Math.max(0,call?S2-K:K-S2);
+    return`<tr class="${m===0?'wi-0':''}"><td class="${m>0?'up':m<0?'down':''}">${m>0?'+':''}${m}%</td><td class="num">${fmtP(S2,2)}</td><td class="num">${f(pn)} <small class="${cls(pn/px-1)}">${pc(Math.max(0.05,pn)/px-1)}</small></td><td class="num"><b>${f(po)}</b> <small class="${cls(po/px-1)}">${pc(Math.max(0.05,po)/px-1)}</small></td></tr>`}).join('');
+  box.innerHTML=`<div class="opx-ph">What if · ${esc(OPT.sym)} opens up/down <span class="muted">· ${esc(sel.label)}</span></div>
+   <div class="wi-kpis"><span title="Implied volatility from the live premium${assumed?' (could not be solved - assumed)':''}">IV <b>${(iv*100).toFixed(1)}%${assumed?'*':''}</b></span><span title="Premium lost to time decay by the next open if the market is flat">Theta to next open <b class="down">${th<=0?'−':'+'}₹${fmtP(Math.abs(th),2)}</b></span><span title="Premium change for a 1-point move in ${esc(OPT.sym)}">Delta <b>${delta.toFixed(2)}</b></span><span>Days left <b>${(T0*365).toFixed(1)}</b></span></div>
+   <div class="wi-tw"><table class="wi-t"><thead><tr><th>Move</th><th>${esc(OPT.sym)}</th><th>If it moved now</th><th>At next open (${esc(nlabel)})</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <p class="muted wi-note">Black-Scholes at today's implied volatility, anchored on the live premium ₹${f(px)}. The next-open column includes one session of time decay. IV usually rises on a fall and drops on a rise, so real prices can differ.</p>`}
+setInterval(()=>{try{if(App.view==='options'&&!document.hidden)drawWhatIf()}catch(e){}},3000);
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
   if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
 function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
@@ -2998,6 +3068,7 @@ function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
      <details class="opx-stats"><summary>Stats · OI · bid/ask</summary><div class="opt-stats" id="opStats"></div></details>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
+     <div class="opx-card opx-wi" id="opxWhatIf"></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
        <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>
      <div class="opx-card opx-pos" id="opxPos"></div>`;
@@ -3628,7 +3699,7 @@ function levelsLine(lv){if(!lv)return'';const parts=Object.entries(lv).filter(([
   return parts.length?`<div class="lvls">${parts.join('')}</div>`:''}
 async function renderAllIndicators(containerSel,und,side){const box=$(containerSel);if(!box)return;
   const meta=await loadStratMeta().catch(()=>null);if(!meta||!$(containerSel))return;
-  const list=meta.strategies.filter(m=>m.kind!=='optscan'&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
+  const list=((meta&&meta.strategies)||[]).filter(m=>m.kind!=='optscan'&&(!m.indexOnly||/^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX)$/.test(und)));
   const draw=()=>{const bx=$(containerSel);if(!bx)return;const rows=list.map(m=>({m,r:OS.res[m.key+'|'+und]})),V=optVerdict(und,side||'CE');
     if(!side){V.txt=!(V.bu+V.be)?`No active signal on ${und} right now — wait for a setup`:V.bu===V.be?`${und} is mixed: ${V.bu} bullish · ${V.be} bearish`:V.bu>V.be?`${und} leans bullish (${V.bu} vs ${V.be}) — CE side favoured`:`${und} leans bearish (${V.be} vs ${V.bu}) — PE side favoured`;V.cls=V.bu===V.be?'muted':V.bu>V.be?'up':'down'}
     const done=rows.filter(x=>x.r&&!x.r.pending).length;
@@ -3856,6 +3927,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])]);
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(KNOWN_VIEWS.includes(h)?h:'vedic');
+  setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
 </script>
 </body>

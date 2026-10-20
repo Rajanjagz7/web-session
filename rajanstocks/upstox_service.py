@@ -424,6 +424,16 @@ class UpstoxService:
         ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
         today_iso = ist_now.date().isoformat()
         ex_hit = self.cache.get(f"EXPIRIES|{underlying_key}")
+        if not (ex_hit and now - ex_hit[0] < 600):
+            # a cold serverless instance would otherwise download the whole contract list first (slow)
+            try:
+                import shared_cache
+                sh = shared_cache.get(f"upx:exp:{underlying_key}")
+                if sh and sh.get("dates") and sh["dates"][-1] >= today_iso:
+                    ex_hit = (now, sh["dates"], sh.get("lot") or 0)
+                    self.cache[f"EXPIRIES|{underlying_key}"] = ex_hit
+            except Exception:
+                pass
         if ex_hit and now - ex_hit[0] < 600:
             expiry_dates, lot_size = ex_hit[1], ex_hit[2]
         else:
@@ -432,6 +442,11 @@ class UpstoxService:
             lots = [int(x.get("lot_size") or 0) for x in contracts if x.get("lot_size")]
             lot_size = max(set(lots), key=lots.count) if lots else 0
             self.cache[f"EXPIRIES|{underlying_key}"] = (now, expiry_dates, lot_size)
+            try:
+                import shared_cache
+                shared_cache.set(f"upx:exp:{underlying_key}", {"dates": expiry_dates, "lot": lot_size}, 6 * 3600)
+            except Exception:
+                pass
         target_expiry = expiry
         if not target_expiry:
             live = [d for d in expiry_dates if d > today_iso or (d == today_iso and ist_now.hour * 60 + ist_now.minute < 15 * 60 + 30)]
