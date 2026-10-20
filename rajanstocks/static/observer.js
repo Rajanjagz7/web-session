@@ -73,7 +73,8 @@
     try {
       const r = await fetch('/api/observer' + (force ? '?refresh=true' : ''), { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      O.data = await r.json(); O.ts = Date.now();
+      const j = await r.json(); if (!j || !Array.isArray(j.items)) throw new Error('bad response');
+      O.data = j; O.ts = Date.now();
       if (O.data.items.some(x => x.pending) && O.retries++ < 8) { clearTimeout(O.retry); O.retry = setTimeout(() => load(false), 4000); } else if (!O.data.items.some(x => x.pending)) O.retries = 0;
     } catch (e) { O.err = e.message || 'network error'; }
     O.busy = false; paintAll();
