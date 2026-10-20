@@ -13,7 +13,8 @@ Indicators (as specified by the user)
      B-OL Clean buy   - Open = Low (low never under open - 0.5) at 09:20 and price above open -> buy at 09:20.
   C  OH / OL (10 pt)  - at 09:20 (and 09:30): Open = Low within 10 points (low >= open - 10) and price >= open -> BUY;
                         stocks also Open = High within 10 (high <= open + 10) and price <= open -> SELL. SL 3 points.
-Exits tested for every entry: target 1:2, target 1:3, next divisor level up (A/B), or hold to 15:25. A candle that
+Exits tested for every entry: target 1:2, target 1:3, next divisor level up (A/B), premium 1.5x / 2x / 5x / 10x
+(user targets, options only), or hold to 15:25. A candle that
 touches both stop and target counts as a stop. No entries after 15:00.
 """
 import concurrent.futures as cf
@@ -130,7 +131,7 @@ def level_trades(bars, base_fn, valid_fn, levels, sl_list):
             if l <= lv and (i > 0 and bars[i - 1][4] > lv):   # touched from above
                 nxt = round(base / ks[idx - 1], 2) if idx > 0 else round(base / 2, 2)
                 for sl in sl_list:
-                    t = {"1:2": lv + 2 * sl, "1:3": lv + 3 * sl, "next level": nxt, "hold to 15:25": None}
+                    t = {"1:2": lv + 2 * sl, "1:3": lv + 3 * sl, "next level": nxt, "hold to 15:25": None, **mult_targets(lv)}
                     trades.append({"level": f"/{k:g}", "sl": sl, "entryMin": m, "entry": lv, "res": manage(bars, i, lv, "BUY", sl, t)})
                 done.add(k)
     return trades
@@ -180,6 +181,15 @@ def rr_targets(px, sl, d):
     return {"1:2": px + d * 2 * sl, "1:3": px + d * 3 * sl, "hold to 15:25": None}
 
 
+def mult_targets(px):
+    """User targets for premiums (20 Oct 2026): 1.5x, 2x, 5x, 10x the entry premium, within the day."""
+    return {f"{m:g}x": round(px * m, 2) for m in (1.5, 2, 5, 10)}
+
+
+def opt_targets(px, sl, d):
+    return {**rr_targets(px, sl, d), **mult_targets(px)}
+
+
 # ───────────────────────── data ─────────────────────────
 def option_weeks(sym):
     ex = (get("/api/research/expired/expiries", {"symbol": sym}) or {}).get("data") or []
@@ -206,10 +216,27 @@ def option_weeks(sym):
     return jobs
 
 
+CACHE_DIR = os.path.join(HERE, ".pcache")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+def _cpath(key):
+    import hashlib
+    return os.path.join(CACHE_DIR, hashlib.md5(key.encode()).hexdigest() + ".json")
+
+
 def fetch_contract(j):
+    p = _cpath(j["key"] + j["frm"] + j["to"])
+    if os.path.exists(p):
+        with open(p) as f:
+            return j, {k: [tuple(b) for b in v] for k, v in json.load(f).items()}
     d = get("/api/research/expired/candles", {"key": j["key"], "interval": "1minute", "frm": j["frm"], "to": j["to"]})
     cs = ((d or {}).get("data") or {}).get("candles") or []
-    return j, by_day(cs)
+    out = by_day(cs)
+    if d is not None and j["to"] < datetime.now(IST).date().isoformat():
+        with open(p, "w") as f:
+            json.dump(out, f)
+    return j, out
 
 
 def run_options():
@@ -238,10 +265,10 @@ def run_options():
                 else:
                     for t in ind_B(bars, prev_close):
                         B.append({**tag, **t})
-                    for t in ind_open_low(bars, 9 * 60 + 20, TOL, (5, 10), rr_targets, False):
+                    for t in ind_open_low(bars, 9 * 60 + 20, TOL, (5, 10), opt_targets, False):
                         BOL.append({**tag, **t})
                 for cm in (9 * 60 + 20, 9 * 60 + 30):
-                    for t in ind_open_low(bars, cm, 10.0, (3,), rr_targets, False):
+                    for t in ind_open_low(bars, cm, 10.0, (3,), opt_targets, False):
                         C.append({**tag, **t, "check": f"{cm // 60:02d}:{cm % 60:02d}", "market": "option"})
                 prev_close = bars[-1][4]
     return A, B, BOL, C
@@ -254,8 +281,17 @@ def run_stocks():
         for k in range(12):
             to = today - timedelta(days=30 * k)
             frm = to - timedelta(days=29)
-            d = get("/api/research/candles", {"symbol": s, "frm": frm.isoformat(), "to": to.isoformat(), "interval": "1"})
-            for day, bars in by_day((d or {}).get("candles") or []).items():
+            p = _cpath(f"stk{s}{frm}{to}")
+            if os.path.exists(p) and k > 0:
+                with open(p) as f:
+                    days = {kk: [tuple(b) for b in v] for kk, v in json.load(f).items()}
+            else:
+                d = get("/api/research/candles", {"symbol": s, "frm": frm.isoformat(), "to": to.isoformat(), "interval": "1"})
+                days = by_day((d or {}).get("candles") or [])
+                if d is not None and k > 0:
+                    with open(p, "w") as f:
+                        json.dump(days, f)
+            for day, bars in days.items():
                 if len(bars) < 300 or bars[0][0] > 9 * 60 + 16:
                     continue
                 for cm in (9 * 60 + 20, 9 * 60 + 30):
