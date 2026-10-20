@@ -200,3 +200,27 @@ def test_research_proxy_marks_calls_as_background_and_returns_429_when_busy(monk
         rd.expired_candles("NSE_FO|1", "5minute", "2026-10-01", "2026-10-02")
     assert seen["bg"] == 1
     assert getattr(ei.value, "status_code", None) == 429 and ei.value.headers["Retry-After"] == "30"
+
+
+def test_fresh_instance_serves_shared_last_prices_when_upstox_is_busy(isolated_cache, monkeypatch):
+    ma = isolated_cache
+    monkeypatch.setattr(ma, "ensure_universe", lambda: None)
+    monkeypatch.setattr(ma, "_key", lambda s: "K|" + s)
+    state = {"busy": False}
+
+    def full(keys):
+        if state["busy"]:
+            raise us.UpstoxRateLimited("budget")
+        return {k: {"last_price": 100.0, "prev_close_price": 99.0, "ohlc": {"open": 99.5, "high": 101, "low": 99}, "volume": 5, "year_high": 120, "year_low": 80} for k in keys}
+
+    monkeypatch.setattr(ma.nse_service.upstox, "_full_quotes", full)
+    first = ma.quotes(symbols="AAA,BBB")
+    assert first["stale"] is False and len(first["quotes"]) == 2
+    state["busy"] = True
+    import hashlib
+    import os
+    import shared_cache
+    os.remove(shared_cache._file("qs|" + hashlib.md5(b"AAA,BBB").hexdigest()))      # the 4-second shared answer has expired
+    ma._cache.clear(); ma._QSYM.clear(); ma._QLAST.clear()              # a brand-new instance: nothing in memory
+    second = ma.quotes(symbols="AAA,BBB")
+    assert second["stale"] is True and len(second["quotes"]) == 2
