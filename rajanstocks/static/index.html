@@ -837,7 +837,6 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-sp-moon{position:absolute;top:-16px;margin-left:-5px;font-style:normal;font-size:12px;color:#a78bfa}
 .vx-sp-hora{position:relative;height:18px;margin-top:12px}.vx-sp-hora span{position:absolute;top:0;font-size:10px;color:var(--text-3);border-left:1px solid var(--line);padding-left:3px;overflow:hidden;white-space:nowrap}
 .vx-sp-ev{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:12px;color:var(--text-2)}
-.vx-sp-how{margin-top:8px;font-size:12px;color:var(--text-2)}.vx-sp-how summary{cursor:pointer;color:var(--text-3)}
 @media(max-width:640px){.vx-sp-w{grid-template-columns:auto 1fr}.vx-sp-w small{grid-column:1/-1;justify-self:start;text-align:left}}
 .vx-tl{margin:4px 0 12px}.vx-tl-bar{position:relative;height:34px;border-radius:8px;background:var(--panel-2);overflow:hidden}
 .vx-seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;overflow:hidden;border-right:1px solid var(--panel)}.vx-seg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
@@ -2490,7 +2489,6 @@ function vxSpecial(st){if(!st||!st.available)return st&&st.reason?`<p class="vx-
     <div class="vx-sp-bar">${heat}${boxes}${turns}</div>
     <div class="vx-sp-hora">${hora}</div>
     ${(st.moon_events||[]).length?`<div class="vx-sp-ev">${st.moon_events.map(e=>`<span>☾ <b class="num">${esc(e.time)}</b> ${esc(e.what)} - ${esc(e.note)}</span>`).join('')}</div>`:''}
-    <details class="vx-sp-how"><summary>How these windows are found</summary><p>Every 5 minutes of the session is scored from the <b>hora</b> (planetary hour: Jupiter, Venus +2 · Moon, Mercury +1 · Sun 0 · Mars, Saturn −2), the day's <b>choghadiya</b> (Amrit, Shubh +2 · Labh +1 · Chal 0 · Udveg −1 · Rog, Kaal −2) and the <b>kaal</b> periods (Rahu Kaal −2 · Yamaganda, Gulika −1). Runs scoring −2 or lower are <b>Sellers</b>, +2 or higher <b>Buyers</b> (20–60 minutes, two strongest of each). Diamonds mark <b>Gann time turns</b> every 45 minutes from the 09:15 open; ☾ marks a Moon nakshatra or tithi change. Sunrise ${esc(st.sunrise_ist)} · sunset ${esc(st.sunset_ist)} (Mumbai). Traditional timing - use it only with price and volume confirmation.</p></details>
   </div>`}
 function fmtHM(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-vxcopy]');if(!b||!VD.data||!VD.data.special_timing)return;const t=vxSpecialText(VD.data.special_timing);
