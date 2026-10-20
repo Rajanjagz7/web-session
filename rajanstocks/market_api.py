@@ -1010,23 +1010,25 @@ def gcandles(id: str, tf: str = "1D", count: int = 1500):
         raise HTTPException(400, "Unsupported instrument (MCX charts need an exchange licence)")
     cfg = _parse_tf(tf)
     n, u = cfg["n"], cfg["unit"]
-    factor = 1
-    if u in "mH":                                   # TradingView serves only some minute intervals natively
-        mins = n if u == "m" else n * 60
-        if mins in (1, 2, 3, 5, 10, 15, 30, 45, 60, 120, 180, 240):
-            res = str(mins)
-        else:
-            base = next(b for b in (240, 180, 120, 60, 45, 30, 15, 10, 5, 3, 2, 1) if mins % b == 0)
-            res, factor = str(base), mins // base
+    if u in "mH":                                   # only these minute intervals reliably come back from the free feed
+        mins = n if u == "m" else n * 60            # (10m, 45m, 2H, 3H return nothing) - everything else is built from a base
+        plans = [(str(b), mins // b) for b in (240, 60, 30, 15, 5, 1) if mins % b == 0]
     else:
-        res = TV_RES[u]( 1 )                       # D / W / M: fetch the 1-period series and group it ourselves
+        plans = [(TV_RES[u](1), 1)]                # D / W / M: fetch the 1-period series and group it ourselves
+    res, factor = plans[0]
     count = max(50, min(count, 5000))
 
     def fetch():
-        rows = _tv_history(id, res, min(5000, count * factor))
+        rows = []
+        for pres, pf in plans[:2]:                  # a base that comes back empty falls through to the next smaller one
+            rows = _tv_history(id, pres, min(5000, count * pf))
+            if rows:
+                break
+        else:
+            pf = 1
         out = [{"t": int(r[0] * 1000), "o": r[1], "h": r[2], "l": r[3], "c": r[4], "v": (r[5] if len(r) > 5 else 0) or 0} for r in rows]
-        if factor > 1:
-            out = _resample(out, factor)
+        if pf > 1:
+            out = _resample(out, pf)
         if u == "D" and n > 1:
             out = _group_n(out, n, lambda d: d.toordinal())
         elif u == "W" and n > 1:
