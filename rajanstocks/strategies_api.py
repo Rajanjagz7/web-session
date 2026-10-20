@@ -549,7 +549,7 @@ OPT_SCANS += [
 OPT_SCANS += [
     ("sensex-310", "SENSEX Indicator", "Option scans",
      "SENSEX options only. Previous close Rs 310-340 and today's low inside Rs 52-58 -> buy in the 52-58 zone. Targets 88 / 92 / 105. "
-     "SL: not specified - shown at 47 (5 points under the 52 floor)."),
+     "SL 10 points under the entry."),
     ("prem-38-42", "Premium 38-42 -> 7.80-8.45", "Option scans",
      "Any index option. Open Rs 38-42 and today's low inside Rs 7.80-8.45 -> buy in that zone. SL 5.80. Targets 12 / 16 / 22 / 32 / 42."),
 ]
@@ -604,7 +604,7 @@ def _opt_rule(key, leg, prev_close, expiry=None):
 
 
 ZONES = {   # user rules, 20 Oct 2026 (same numbers in static/index.html ZONES and premium_backtest.py)
-    "sensex-310": {"ref": "prev", "ref_lo": 310, "ref_hi": 340, "lo": 52, "hi": 58, "sl": 47, "t": (88, 92, 105)},
+    "sensex-310": {"ref": "prev", "ref_lo": 310, "ref_hi": 340, "lo": 52, "hi": 58, "sl_pts": 10, "t": (88, 92, 105)},
     "prem-38-42": {"ref": "open", "ref_lo": 38, "ref_hi": 42, "lo": 7.80, "hi": 8.45, "sl": 5.80, "t": (12, 16, 22, 32, 42)},
 }
 
@@ -612,11 +612,13 @@ ZONES = {   # user rules, 20 Oct 2026 (same numbers in static/index.html ZONES a
 def _zone_rule(key, p, o, l, pc):
     z = ZONES[key]
     ref = pc if z["ref"] == "prev" else o
-    if not (z["ref_lo"] <= ref <= z["ref_hi"]) or not (z["lo"] <= l <= z["hi"]) or p < z["sl"]:
+    entry = min(p, z["hi"])
+    sl = round(entry - z["sl_pts"], 2) if z.get("sl_pts") else z["sl"]
+    if not (z["ref_lo"] <= ref <= z["ref_hi"]) or not (z["lo"] <= l <= z["hi"]) or p < sl:
         return False, ""
     where = "in the buy zone" if p <= z["hi"] + 1 else "bought zone, now above it"
     return True, (f"{'Prev close' if z['ref'] == 'prev' else 'Open'} {ref:,.2f}, low {l:,.2f} (zone {z['lo']}-{z['hi']}) · LTP {p:,.2f} {where} · "
-                  f"SL {z['sl']} · targets " + " / ".join(f"{t:g}" for t in z["t"]))
+                  f"SL {sl:g}" + (" (10 pts)" if z.get("sl_pts") else "") + " · targets " + " / ".join(f"{t:g}" for t in z["t"]))
 
 
 def _pd_t(e):

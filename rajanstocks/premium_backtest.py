@@ -37,7 +37,7 @@ S = requests.Session()
 S.headers["User-Agent"] = "rajan-backtest"
 INDEX = {"NIFTY": {"step": 50, "yh": "NIFTY"}, "BANKNIFTY": {"step": 100, "yh": "BANKNIFTY"}, "SENSEX": {"step": 100, "yh": "SENSEX"}}
 ZONES = {   # user zone indicators (20 Oct 2026) - same numbers as strategies_api.ZONES
-    "sensex-310": {"ref": "prev", "ref_lo": 310, "ref_hi": 340, "lo": 52, "hi": 58, "t": (88, 92, 105), "sl": (47, 51.5), "only": "SENSEX"},
+    "sensex-310": {"ref": "prev", "ref_lo": 310, "ref_hi": 340, "lo": 52, "hi": 58, "t": (88, 92, 105), "sl": (48,), "only": "SENSEX"},     # SL 10 points under the 58 entry
     "prem-38-42": {"ref": "open", "ref_lo": 38, "ref_hi": 42, "lo": 7.80, "hi": 8.45, "t": (12, 16, 22, 32, 42), "sl": (5.80,), "only": None},
 }
 STOCKS = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "BHARTIARTL", "ITC", "KOTAKBANK", "LT",

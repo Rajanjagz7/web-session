@@ -3013,7 +3013,7 @@ function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
    State per level: hit = touched and price still in the buy zone (green), near = within reach (amber),
    ran = touched and already moved up (blue), stop = fell more than 10 pts under the level. ---- */
 const PD_TOL=0.5;
-const ZONES={'sensex-310':{name:'SENSEX Indicator (prev close 310-340)',short:'SX 52-58',only:'SENSEX',ref:'prev',refLo:310,refHi:340,lo:52,hi:58,sl:47,t:[88,92,105]},
+const ZONES={'sensex-310':{name:'SENSEX Indicator (prev close 310-340)',short:'SX 52-58',only:'SENSEX',ref:'prev',refLo:310,refHi:340,lo:52,hi:58,slPts:10,t:[88,92,105]},
   'prem-38-42':{name:'Premium 38-42 -> 7.80-8.45',short:'7.8-8.45',ref:'open',refLo:38,refHi:42,lo:7.80,hi:8.45,sl:5.80,t:[12,16,22,32,42]}};
 function pdIsExpiry(){const c=OPT.chain;return !!(c&&c.expiry&&c.expiry===new Date(Date.now()+330*60000).toISOString().slice(0,10))}
 function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;const o=leg.open,h=Math.max(leg.high||o,o),l=Math.min(leg.low||o,o),p=leg.ltp,pc=leg.prev||0,lv=[];
@@ -3029,8 +3029,8 @@ function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;cons
   /* user zone indicators: SENSEX 310-340 -> 52-58 and premium 38-42 -> 7.80-8.45 */
   for(const [k,z] of Object.entries(ZONES)){if(z.only&&z.only!==OPT.sym)continue;const ref=z.ref==='prev'?pc:o;if(!(ref>=z.refLo&&ref<=z.refHi))continue;
     const inZone=l>=z.lo&&l<=z.hi,near=!inZone&&l>z.hi&&p<=z.hi*1.15;
-    if(!inZone&&!near)continue;const st=near?'near':p<z.sl?'stop':p<=z.hi+1?'hit':'ran';
-    sigs.push({name:z.short,ind:z.name,entry:+Math.min(p,z.hi).toFixed(2),sl:z.sl,st,zone:z})}
+    if(!inZone&&!near)continue;const entry=+Math.min(p,z.hi).toFixed(2),sl=z.slPts?+(entry-z.slPts).toFixed(2):z.sl,st=near?'near':p<sl?'stop':p<=z.hi+1?'hit':'ran';
+    sigs.push({name:z.short,ind:z.name,entry,sl,st,zone:z})}
   const rank={hit:0,near:1,ran:2,stop:3},top=sigs.filter(x=>!x.soft).sort((a,b)=>(rank[a.st]-rank[b.st])||(Math.abs(p-a.entry)-Math.abs(p-b.entry)))[0]||sigs[0]||null;   // nearest level wins
   return{levels:lv,sigs,top}}
 const PD_T=[1.5,2,5,10],pdTg=(e,x)=>x&&x.zone?x.zone.t.map(v=>fmtP(v)).join(' · '):PD_T.map(m=>m+'x '+fmtP(e*m)).join(' · ');   // user targets: 1.5x 2x 5x 10x the entry premium
