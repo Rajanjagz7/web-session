@@ -31,6 +31,16 @@ def sq9_levels(base, step=0.25):
     return out
 
 
+def plan_around(grid, spot):
+    """Long above the first level over the price, short below the first level under it; targets are the next two levels."""
+    up = [x["level"] for x in grid if x["level"] > spot]
+    dn = [x["level"] for x in grid if x["level"] < spot][::-1]
+    if len(up) < 3 or len(dn) < 3:
+        return {"buy_above": None, "buy_targets": [None, None], "buy_stop": None, "sell_below": None, "sell_targets": [None, None], "sell_stop": None}
+    return {"buy_above": up[0], "buy_targets": [up[1], up[2]], "buy_stop": dn[0],
+            "sell_below": dn[0], "sell_targets": [dn[1], dn[2]], "sell_stop": up[0]}
+
+
 def price_angle(price):
     """Where a price sits on the Square of 9 wheel, in degrees (Gann's standard (sqrt(P) * 180 - 225) mod 360)."""
     return (math.sqrt(price) * 180.0 - 225.0) % 360.0
@@ -98,26 +108,24 @@ def seasonal_dates(today, count=2):
     return out[:count]
 
 
-def build(spot, prev_close, today_open, planets_sidereal, ayanamsa, bars, today):
+def build(spot, prev_close, today_open, planets_sidereal, ayanamsa, bars, today, base_kind=None):
     """Everything the Gann tab and the combined plan need. Any missing input degrades that part only."""
     out = {"available": spot is not None and spot > 0}
     if not out["available"]:
         out["reason"] = "No NIFTY price available to anchor Gann levels"
         return out
     base = prev_close or spot
-    out["base"] = {"price": round(base, 2), "kind": "previous close" if prev_close else "last price"}
+    out["base"] = {"price": round(base, 2), "kind": base_kind or ("previous close" if prev_close else "last price")}
     out["levels"] = sq9_levels(base)
+    # wide grid (+-24 x 45 deg) so the page can always show levels above AND below a live price that has moved far from the base
+    out["grid"] = [{"n": n, "level": round(lv, 2)} for n in range(-24, 25) if (lv := sq9_level(base, n))]
     if today_open:
         out["open_levels"] = sq9_levels(today_open)
     up = [l for l in out["levels"] if l["level"] > spot]
     dn = [l for l in out["levels"] if l["level"] < spot]
     out["nearest"] = {"resistance": dict(up[0], side="resistance") if up else None, "support": dict(dn[-1], side="support") if dn else None}
     out["spot"] = round(float(spot), 2)
-    lv = {l["n"]: l["level"] for l in out["levels"]}
-    out["plan"] = {
-        "buy_above": lv.get(1), "buy_targets": [lv.get(2), lv.get(3)], "buy_stop": lv.get(0),
-        "sell_below": lv.get(-1), "sell_targets": [lv.get(-2), lv.get(-3)], "sell_stop": lv.get(0),
-    }
+    out["plan"] = plan_around(out["grid"], spot)
     out["planet_lines"] = planet_lines(planets_sidereal, spot)
     sun_trop = (float(planets_sidereal.get("Sun", 0)) + float(ayanamsa)) % 360
     pa = price_angle(spot)

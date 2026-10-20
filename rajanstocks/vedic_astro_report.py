@@ -174,19 +174,62 @@ def _market_context(symbol: str = "NIFTY"):
     try:
         import market_api
         g = market_api.global_markets()
-        rows = {r.get("n"): r for r in g.get("rows", g if isinstance(g, list) else [])} if g else {}
+        items = g.get("items") or [] if isinstance(g, dict) else (g or [])
+        rows = {(r.get("name") or r.get("n")): r for r in items}
+
+        def _gl(r):
+            return {"price": r.get("price"), "chg_pct": r.get("chgPct"), "chg": r.get("chg"), "name": r.get("name"),
+                    "mode": r.get("mode"), "delay": r.get("delay")}
         gift = rows.get("GIFT Nifty")
         crude = rows.get("Crude Oil (MCX)") or rows.get("Crude (NYMEX)")
-        out["gift_nifty"] = _ok(gift) if gift else _na("GIFT Nifty not in /global response")
-        out["crude_oil"] = _ok(crude) if crude else _na("Crude oil not in /global response")
+        out["gift_nifty"] = _ok(_gl(gift)) if gift else _na("GIFT Nifty not returned by the global markets feed right now")
+        out["crude_oil"] = _ok(_gl(crude)) if crude else _na("Crude oil not returned by the global markets feed right now")
     except Exception as e:
         reason = f"Global markets unavailable: {str(e)[:160]}"
         out["gift_nifty"] = out["crude_oil"] = _na(reason)
 
     out["fpi_flow"] = _na("No FPI flow data source wired into this app yet")
-    out["live_vwap"] = _na("VWAP needs intraday 5m candles computed during market hours - not run here")
-    out["opening_range"] = _na("Computed live after 09:30 IST from the first three 5-min candles - not available outside that window")
+    out.update(_session_stats(symbol))
     return out
+
+
+def _session_stats(symbol):
+    """VWAP and the 15-minute opening range from the latest session's 5-minute candles.
+
+    Index candles carry no volume, so for an index the "VWAP" falls back to the session's
+    average typical price (equal weight per 5-min bar) and says so. Outside market hours both
+    numbers describe the last completed session and are labelled with its date.
+    """
+    try:
+        import market_api
+        bars = (market_api.candles(symbol=symbol, tf="5m") or {}).get("bars") or []
+    except Exception as e:
+        reason = f"5-minute candles unavailable: {str(e)[:120]}"
+        return {"live_vwap": _na(reason), "opening_range": _na(reason)}
+    if not bars:
+        return {"live_vwap": _na("No 5-minute candles returned"), "opening_range": _na("No 5-minute candles returned")}
+    day = lambda b: datetime.fromtimestamp(b["t"] / 1000, IST).date()
+    last_day = day(bars[-1])
+    sess = [b for b in bars if day(b) == last_day]
+    today = datetime.now(IST).date()
+    live = last_day == today
+    tag = "today" if live else last_day.strftime("%a %d %b")
+    vol = sum((b.get("v") or 0) for b in sess)
+    tp = [((b["h"] + b["l"] + b["c"]) / 3, b.get("v") or 0) for b in sess]
+    if vol > 0:
+        vwap, kind = sum(p * v for p, v in tp) / vol, "vwap"
+    else:
+        vwap, kind = sum(p for p, _ in tp) / len(tp), "session_avg"
+    first = sess[:3]
+    orh, orl = max(b["h"] for b in first), min(b["l"] for b in first)
+    last = sess[-1]["c"]
+    return {
+        "live_vwap": _ok({"value": round(vwap, 2), "kind": kind, "session": last_day.isoformat(), "session_tag": tag, "live": live,
+                          "vs_price_pct": round((last / vwap - 1) * 100, 2), "bars": len(sess)}),
+        "opening_range": _ok({"high": round(orh, 2), "low": round(orl, 2), "width": round(orh - orl, 2), "session": last_day.isoformat(),
+                              "session_tag": tag, "live": live, "complete": len(first) == 3,
+                              "price_vs": "above" if last > orh else "below" if last < orl else "inside"}),
+    }
 
 
 def _stocks_to_watch(limit: int = 5):
@@ -288,6 +331,21 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     prev = mc["index_prev_close"]["value"] if mc.get("index_prev_close", {}).get("available") else None
     ohlc = mc["index_today_ohlc"]["value"] if mc.get("index_today_ohlc", {}).get("available") else None
     today_open = ohlc.get("open") if (ohlc and mc.get("market_open", {}).get("value")) else None
+    # Outside the live session the next session's previous close IS the last traded price, so the
+    # Gann ladder (and the "prev close" the page shows) must use it - not the close before it.
+    in_session = session_phase == "During session" and bool(mc.get("market_open", {}).get("value"))
+    if spot and not in_session:
+        last_sess = None
+        try:
+            last_sess = mc.get("live_vwap", {}).get("value", {}).get("session")
+        except Exception:
+            last_sess = None
+        mc["levels_base"] = _ok({"price": spot, "kind": "last close", "session": last_sess, "for": "next session",
+                                 "note": "Market not in session - the last close is the next session's previous close"})
+        prev, today_open = spot, None
+    elif prev:
+        mc["levels_base"] = _ok({"price": prev, "kind": "previous close", "session": None, "for": "today",
+                                 "note": "Live session - levels from the previous close"})
     bars = None
     try:
         from ut_bot import fetch_index_history
@@ -295,7 +353,8 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     except Exception:
         bars = None
     try:
-        gann = gann_levels.build(spot, prev, today_open, panchang["planets_sidereal_deg"], panchang["ayanamsa_lahiri_deg"], bars, now_ist.date())
+        gann = gann_levels.build(spot, prev, today_open, panchang["planets_sidereal_deg"], panchang["ayanamsa_lahiri_deg"], bars, now_ist.date(),
+                                 base_kind=(mc.get("levels_base") or {}).get("value", {}).get("kind"))
     except Exception as e:
         gann = {"available": False, "reason": f"Gann levels unavailable: {str(e)[:160]}"}
     bias = _day_bias(panchang["paksha"], panchang["tithi_number"])

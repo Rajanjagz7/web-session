@@ -1126,10 +1126,6 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (host && reg) host.outerHTML = tradeTable(reg.list, reg.withUnr, key); else render();
   }, true);
 
-/* ---------- styles ---------- */
-   const st = document.createElement('style');
-   st.textContent = `
-
 /* ============================================
    SIMPLIFIED JOURNAL VIEWS - 3 TABS ONLY
    ============================================ */
@@ -1316,6 +1312,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        return '—';
      }
    }
+
+  /* ---------- styles ---------- */
+  const st = document.createElement('style');
+  st.textContent = `
   .jv-banner{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;border:1px solid var(--warn,#c9922c);background:color-mix(in srgb,var(--warn,#c9922c) 12%,transparent);border-radius:10px;margin:10px 0;font-size:12.5px}
   .jv-tabs{display:flex;gap:6px;overflow-x:auto;margin:6px 0 12px;padding-bottom:2px;scrollbar-width:none}
   .jv-tabs button{white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text-2,inherit);font-size:13px}
