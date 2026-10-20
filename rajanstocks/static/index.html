@@ -2910,7 +2910,7 @@ function stCard(m){return`<div class="card st-card" id="stc-${m.key}"><div class
 async function renderIndicators(){const el=$('#v-indicators');if(!el)return;
   if(!ST.sym)ST.sym=App.sym.s;
   try{await loadStratMeta()}catch(e){el.innerHTML='<div class="page"><div class="empty">Could not load strategies. <button class="btn-xs" data-view="indicators">Retry</button></div></div>';return}
-  const M=ST.meta,newCount=M.strategies.filter(m=>m.gen==='new').length,oldCount=M.strategies.length-newCount;
+  const M=ST.meta;
   const list=M.strategies.filter(m=>ST.grp==='All'||m.group===ST.grp);   // one list - the old New / Old split is gone
   const PAGE=5,pages=Math.max(1,Math.ceil(list.length/PAGE));ST.page=Math.min(Math.max(0,ST.page),pages-1);
   const pageList=list.slice(ST.page*PAGE,ST.page*PAGE+PAGE);
@@ -2939,7 +2939,7 @@ function stDetail(m){const r=ST.res[m.key+'|'+ST.sym];
    ${r.events.length?`<h4 style="margin:12px 0 6px">Recent signals</h4><div class="tbl-wrap"><table><tbody>${r.events.slice().reverse().map(e=>`<tr><td class="muted">${esc(e.date||'')}</td><td>${esc(e.text)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted" style="margin-top:10px">No signals in the lookback window.</p>'}`;
   modal(m.name,`<p class="m2" style="margin-bottom:8px">${esc(m.desc)}</p>${body}`,{foot:m.chart?`<button class="btn pri" onclick="stGo('${m.key}','${esc(ST.sym)}')">Open on chart</button>`:'',wide:true})}
 document.addEventListener('click',e=>{const g=e.target.closest('[data-stg]');if(g){ST.grp=g.dataset.stg;ST.page=0;renderIndicators();return}
-  const gn=e.target.closest('[data-stgen]');if(gn){ST.gen=gn.dataset.stgen;ST.page=0;renderIndicators();return}
+
   const sp=e.target.closest('[data-stp]');if(sp){ST.page=+sp.dataset.stp;renderIndicators();return}
   const t=e.target.closest('[data-st]');if(!t||!ST.meta)return;const [a,key,arg]=t.dataset.st.split(':'),m=ST.meta.strategies.find(x=>x.key===key);if(!m)return;
   if(a==='oscan')optScan(m,arg);else if(a==='scan'){if(key==='rajan-ohol-options')go('daily');else stScan(m)}else if(a==='detail')stDetail(m);else if(a==='chart')stGo(key,ST.sym)});

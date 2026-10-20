@@ -132,7 +132,8 @@ def cache_version():
     now = datetime.now(_IST)
     mins = now.hour * 60 + now.minute
     bucket = "pre" if mins < 8 * 60 + 30 else "open" if mins < 15 * 60 + 45 else "post"
-    return {"version": f"{now.date().isoformat()}-{bucket}"}
+    build = (os.environ.get("VERCEL_GIT_COMMIT_SHA") or "")[:8]     # a new deploy also counts: open tabs reload onto it
+    return {"version": f"{now.date().isoformat()}-{bucket}-{build}"}
 
 
 @app.get("/api/news")
