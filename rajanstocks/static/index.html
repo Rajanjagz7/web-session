@@ -2198,7 +2198,8 @@ function closeOverlays(){
   try{const w=$('#v-trade');w&&w.classList.remove('wl-open')}catch(e){}
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
-function go(v){if(v==='godseye'){v='picks';setTimeout(()=>{const g=$('#pkGodseye');if(g)g.scrollIntoView({behavior:'smooth',block:'start'})},300)}
+function go(v){if(v==='stocks')v='markets';   /* old #stocks links / bookmarks: there is no separate Stocks screen any more (it used to leave a blank page) */
+  if(v==='godseye'){v='picks';setTimeout(()=>{const g=$('#pkGodseye');if(g)g.scrollIntoView({behavior:'smooth',block:'start'})},300)}
   /* the old full-chart Trade screen (Order / Indicators panel) is retired: any stock or index with options opens the clean Trade screen */
   if(v==='trade'||v==='mobile'){const sy=App.sym&&App.sym.s;if(sy&&typeof optUnderlyings==='function'&&optUnderlyings().some(x=>x.s===sy)){if(OPT.sym!==sy){OPT.sym=sy;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null}v='options'}}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
   ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodseye&&renderGodseye()})[v]?.();liveUpdate();window.scrollTo(0,0)}
@@ -3493,8 +3494,18 @@ function histQS(sym,tf){let q='';
   if(!sym.ikey){if(tf.sec>=3600){if(App.from)q+='&from='+App.from;if(App.to&&tf.sec>=86400)q+='&to='+App.to}
     if(!q&&App.span){q='&from='+new Date(Date.now()-App.span*864e5).toISOString().slice(0,10)}}
   return q}
+/* Intraday charts paint from the last few days first (one small request, ~0.3 s) and the full history is fetched right
+   behind it and swapped in without moving the view - instead of waiting 1-9 s for every window of history up front. */
+const quickDays=tf=>{const m=/^(\d+)([mH])$/.exec(tf.k);if(!m)return 0;const mins=+m[1]*(m[2]==='H'?60:1);return Math.max(3,Math.min(30,Math.ceil(320/(375/Math.max(1,mins)))+2))};
+function swapFull(sym,tf,k){return api(candleURL(sym,tf)).then(r=>{if(!(r.bars&&r.bars.length))return;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();CACHE[k]._note=r.note||null;CACHE[k]._span=App.span||0;
+  if(sym===App.sym&&tf===App.tf&&chart){chart.setData(series(sym,tf),sym,tf,true);chart.lgDirty=true;try{setChartLines()}catch(e){}}
+  if(typeof OPT!=='undefined'&&OPT.osym===sym&&OPT.tf===tf&&OPT.ochart){OPT.ochart.setData(series(sym,tf),sym,tf,true);try{optReadings(false)}catch(e){}}}).catch(()=>{})}
 async function fetchSeries(sym,tf){const k=sym.s+'|'+tf.k;if(PEND[k])return PEND[k];if(FAILS[k]&&Date.now()-FAILS[k]<8000)return;
-  return PEND[k]=(async()=>{try{const r=await api(candleURL(sym,tf));
+  return PEND[k]=(async()=>{try{
+    const qd=!CACHE[k]&&!sym.tv&&!histQS(sym,tf)?quickDays(tf):0;
+    if(qd){try{const q=await api(candleURL(sym,tf)+'&recent='+qd);
+      if(q.bars&&q.bars.length>=40){CACHE[k]=q.bars;CACHE[k]._ts=Date.now();CACHE[k]._partial=true;delete FAILS[k];swapFull(sym,tf,k);return}}catch(e){}}
+    const r=await api(candleURL(sym,tf));
     if(r.bars&&r.bars.length){CACHE[k]=r.bars;CACHE[k]._ts=Date.now();CACHE[k]._note=r.note||null;CACHE[k]._span=App.span||0;delete FAILS[k]}else{FAILS[k]=Date.now()}}
     catch(e){FAILS[k]=Date.now();console.warn('candles',e)}finally{delete PEND[k]}})()}
 let chartErrTimer=0,chartErrTries=0;
@@ -3695,8 +3706,12 @@ function optOrder(side){if(!netGuard())return;const o=OPT.osym;if(!o||!OPT.sel)r
   const px=o.ask>0?o.ask:o.last;if(!(px>0)){toast('No live price for this contract yet.','warn');return}
   if(qty*px>App.cash){toast('Not enough buying power for this order.','warn');return}
   EXTRA[o.s]=o;o.ikey=OPT.sel.key;o.cls='Options';App.meta[o.s]={ikey:OPT.sel.key,lot,und:OPT.sym,strike:OPT.sel.strike,side:OPT.sel.side,expiry:OPT.chain?OPT.chain.expiry:null,last:o.last,prev:o.prev};
-  const pl=tradePlan(OPT.ochart.data,o,OPT.tf,true),att=$('#opAtt').checked&&pl&&pl.sig==='BUY';OPT.att=$('#opAtt').checked;OPT.lots=lots;
-  fill({id:++OID,t:Date.now(),sym:o.s,side:'buy',type:'market',qty,tif:'Day',tp:att?pl.t1:null,sl:att?pl.sl:null,plan:pl?{sig:pl.sig,entry:pl.px,sl:pl.sl,t1:pl.t1,t2:pl.t2,tf:pl.tf,bias:pl.rd.bias}:null},px);
+  const pl=tradePlan(OPT.ochart.data,o,OPT.tf,true),attOn=$('#opAtt').checked;OPT.att=attOn;OPT.lots=lots;
+  /* "Attach stop-loss and target" must always attach one: from the trade plan when it says BUY, otherwise the same default as a
+     limit order (stop 30% under the premium, target 60% over). It used to attach nothing when the plan read WAIT. */
+  let slv=null,tpv=null;
+  if(attOn){if(pl&&pl.sig==='BUY'&&pl.px>pl.sl&&pl.sl<px&&pl.t1>px){slv=pl.sl;tpv=pl.t1}else{slv=+(px*0.7).toFixed(2);tpv=+(px*1.6).toFixed(2)}}
+  fill({id:++OID,t:Date.now(),sym:o.s,side:'buy',type:'market',qty,tif:'Day',tp:tpv,sl:slv,plan:pl?{sig:pl.sig,entry:pl.px,sl:pl.sl,t1:pl.t1,t2:pl.t2,tf:pl.tf,bias:pl.rd.bias}:null},px);
   savePaper();renderBottom();updOptTrade()}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-optype]');if(t){OPT.otype=t.dataset.optype;drawOptTrade();return}
   const c=e.target.closest('[data-opcancel]');if(c){const o=App.orders.find(x=>String(x.id)===c.dataset.opcancel);if(o){o.status='Cancelled';App.orders=App.orders.filter(x=>x!==o);App.history.push(Object.assign({},o,{status:'Cancelled',t2:Date.now()}));savePaper();renderBottom();updOptTrade();toast('Limit order cancelled','ok')}}});

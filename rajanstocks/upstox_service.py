@@ -250,7 +250,7 @@ def _throttle(max_wait=8.0):
             while _RL_TIMES and now - _RL_TIMES[0] > 60:
                 _RL_TIMES.popleft()
             last_second = sum(1 for t in _RL_TIMES if now - t < 1.0)
-            limit = 260 if getattr(_BG, 'on', 0) > 0 else 420   # background jobs leave ~1/3 of the budget for charts
+            limit = 150 if getattr(_BG, 'on', 0) > 0 else 420   # background jobs (picks build, 52-week fill, scans) leave 2/3 of the minute for charts
             if len(_RL_TIMES) < limit and last_second < 35:
                 _RL_TIMES.append(now)
                 _RL_LONG.append(now)
@@ -316,9 +316,9 @@ class UpstoxService:
 
     def _get(self, url, params=None, timeout=7):
         response = None
-        _note_call(url)
         for attempt in range(3):
             _throttle()
+            _note_call(url)              # count real requests, not the ones the throttle held back
             response = self.session.get(
                 url,
                 params=params,

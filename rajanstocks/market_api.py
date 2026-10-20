@@ -15,7 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Query
 
 from nse_service import nse_service
-from upstox_service import _BG, UpstoxRateLimited
+from upstox_service import _BG, UpstoxRateLimited, background
 
 upstox_service = nse_service.upstox
 
@@ -304,6 +304,34 @@ def _year_range(symbol, key):
     return shared_cache.fetch(f"yr52|{symbol}|{date.today().isoformat()}", 20 * 3600, compute)
 
 
+_YR_QUEUE, _YR_BUSY = [], threading.Event()
+
+
+def _year_range_lazy(symbol, key):
+    """52-week range without blocking the quote answer: use the cached value if there is one, otherwise queue it for a
+    single background worker (a first quote request of the day used to make ~100 candle calls in a row, in the foreground,
+    and starve the charts). Until it is filled the range shows as unknown."""
+    hit = shared_cache.get(f"yr52|{symbol}|{date.today().isoformat()}")
+    if hit:
+        return tuple(hit)
+    if (symbol, key) not in _YR_QUEUE:
+        _YR_QUEUE.append((symbol, key))
+    if not _YR_BUSY.is_set():
+        _YR_BUSY.set()
+
+        def worker():
+            try:
+                with background():
+                    while _YR_QUEUE:
+                        sy, ky = _YR_QUEUE.pop(0)
+                        _year_range(sy, ky)
+                        time.sleep(0.35)
+            finally:
+                _YR_BUSY.clear()
+        threading.Thread(target=worker, daemon=True, name="yr52-fill").start()
+    return (0.0, 0.0)
+
+
 @router.get("/quotes")
 def quotes(symbols: str = ""):
     ensure_universe()
@@ -330,7 +358,7 @@ def quotes(symbols: str = ""):
             prev = _num(q.get("prev_close_price")) or (last - net if last else 0.0)
             yh, yl = _num(q.get("year_high")), _num(q.get("year_low"))
             if not yh or not yl:
-                yh, yl = _year_range(s, k)
+                yh, yl = _year_range_lazy(s, k)
             out.append({
                 "s": s, "last": last, "prev": prev,
                 "open": _num(o.get("open")), "high": _num(o.get("high")), "low": _num(o.get("low")),
@@ -570,7 +598,9 @@ def _today_daily_bar(key):
 
 
 @router.get("/candles")
-def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("", alias="from"), to: str = ""):
+def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("", alias="from"), to: str = "", recent: int = 0):
+    """recent=N (intraday only): just the last N calendar days - one Upstox request instead of up to a dozen - so a chart can paint
+    at once; the client then asks for the full history in the background and swaps it in."""
     cfg = _parse_tf(tf)
     kind, interval, days, window, factor = cfg["kind"], cfg["interval"], cfg["days"], cfg["window"], cfg["factor"]
     sym = symbol.upper()
@@ -582,6 +612,10 @@ def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("
         sym = ikey
     elif not sym:
         raise HTTPException(400, "symbol or ikey required")
+    quick = bool(recent) and kind == "min" and not frm and not to
+    if quick:
+        days = max(3, min(int(recent), 30))
+        window = max(window, days + 1)                  # a single request window
     d_from = d_to = None
     try:
         if frm:
@@ -681,7 +715,7 @@ def candles(symbol: str = "", tf: str = "1D", ikey: str = "", frm: str = Query("
             bars = [b for b in bars if b["t"] <= hi]
         return bars
 
-    ckey = f"c|{sym}|{tf}|{frm}|{to}"
+    ckey = f"c|{sym}|{tf}|{frm}|{to}" + (f"|r{days}" if quick else "")
 
     def fetch_checked():
         b = fetch()
