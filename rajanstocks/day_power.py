@@ -150,4 +150,6 @@ def build(holidays, bars=None, n=3, start=None):
     days = _trading_days(first, n, holidays)
     return {"available": True, "days": [score_day(d, holidays, bars) for d in days],
             "method": __doc__.split("Traditional")[0].strip(),
-            "caveat": "Traditional market astrology and Gann time work - not a validated forecast. Act only on price confirmation."}
+            "caveat": "Traditional market astrology and Gann time work - not a validated forecast. Backtest on 494 Nifty sessions "
+                      "(Oct 2024-Oct 2026): the bullish/bearish calls matched Nifty's direction 49.8% of the time - no better than a coin "
+                      "flip. Use it as a mood guide only and act on price confirmation."}
