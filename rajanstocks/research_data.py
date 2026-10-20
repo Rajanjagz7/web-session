@@ -10,6 +10,7 @@ import csv
 import io
 import re
 import zipfile
+from datetime import datetime, timedelta, timezone
 
 import shared_cache
 from fastapi import APIRouter, HTTPException
@@ -60,12 +61,19 @@ def expired_candles(key: str, interval: str = "5minute", frm: str = "", to: str 
         raise HTTPException(400, "bad interval")
     if not (re.match(r"^\d{4}-\d{2}-\d{2}$", frm) and re.match(r"^\d{4}-\d{2}-\d{2}$", to)):
         raise HTTPException(400, "frm/to=YYYY-MM-DD")
+    ck = f"rx:exc:{key}:{interval}:{frm}:{to}"
+    got = shared_cache.get(ck)                                    # an expired contract never changes: ask Upstox once
+    if got:
+        return got
     up = _up()
     from urllib.parse import quote
     try:
-        return up._get(f"{up.BASE_V2}/expired-instruments/historical-candle/{quote(key, safe='')}/{interval}/{to}/{frm}", timeout=20)
+        data = up._get(f"{up.BASE_V2}/expired-instruments/historical-candle/{quote(key, safe='')}/{interval}/{to}/{frm}", timeout=20)
     except Exception as e:
         raise HTTPException(502, f"candles failed: {str(e)[:300]}")
+    if (data.get("data") or {}).get("candles"):
+        shared_cache.set(ck, data, 60 * 86400)
+    return data
 
 
 @router.get("/bhav")
@@ -105,10 +113,19 @@ def stock_candles(symbol: str, frm: str, to: str, interval: str = "1"):
         raise HTTPException(400, "interval 1/3/5/15")
     if not (re.match(r"^\d{4}-\d{2}-\d{2}$", frm) and re.match(r"^\d{4}-\d{2}-\d{2}$", to)):
         raise HTTPException(400, "frm/to=YYYY-MM-DD")
+    ck = f"rx:cdl:{symbol.upper()}:{interval}:{frm}:{to}"
+    past = to < datetime.now(timezone(timedelta(hours=5, minutes=30))).date().isoformat()   # a finished range is immutable
+    if past:
+        got = shared_cache.get(ck)
+        if got:
+            return got
     up = _up()
     key, _ = up._resolve_underlying(symbol.upper())
     try:
         rows = up.fetch_historical_candles(key, "minutes", interval, to, frm)
     except Exception as e:
         raise HTTPException(502, f"candles failed: {str(e)[:300]}")
-    return {"symbol": symbol.upper(), "candles": [[c["time"], c["open"], c["high"], c["low"], c["close"], c.get("volume", 0)] for c in rows]}
+    out = {"symbol": symbol.upper(), "candles": [[c["time"], c["open"], c["high"], c["low"], c["close"], c.get("volume", 0)] for c in rows]}
+    if past and out["candles"]:
+        shared_cache.set(ck, out, 60 * 86400)
+    return out
