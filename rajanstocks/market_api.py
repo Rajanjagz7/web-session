@@ -3,6 +3,7 @@
 All numbers come from Upstox (quotes, candles). Nothing is simulated.
 """
 import concurrent.futures
+import hashlib
 import os
 import re
 import threading
@@ -14,7 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Query
 
 from nse_service import nse_service
-from upstox_service import _BG
+from upstox_service import _BG, UpstoxRateLimited
 
 upstox_service = nse_service.upstox
 
@@ -242,6 +243,18 @@ def _cached(key, ttl, fn):
     return val
 
 
+def _shared(key, ttl, fn):
+    """Share one Upstox answer between every server instance for `ttl` seconds (Redis, or a local file without Redis).
+    N instances used to make N identical Upstox calls per refresh; now the first one asks and the rest read."""
+    got = shared_cache.get(key)
+    if got is not None:
+        return got
+    val = fn()
+    if val:
+        shared_cache.set(key, val, max(1, int(ttl)))
+    return val
+
+
 def _key(sym):
     key, _is_index = nse_service.upstox._resolve_underlying(sym)
     return key
@@ -343,7 +356,9 @@ def quotes(symbols: str = ""):
             else:
                 missing.append(s)
         if missing:
-            got = _cached("qf|" + ",".join(missing), 3 if market_open() else 45, lambda: fetch(missing))
+            qttl = 4 if market_open() else 120
+            qkey = "qs|" + hashlib.md5(",".join(missing).encode()).hexdigest()
+            got = _cached("qf|" + ",".join(missing), 3 if market_open() else 45, lambda: _shared(qkey, qttl, lambda: fetch(missing)))
             t0 = time.time()
             for q in got:
                 _QSYM[q["s"]] = (t0, q)
@@ -747,7 +762,9 @@ def oquote(keys: str):
     if not ks:
         raise HTTPException(400, "keys required")
     try:
-        raw = _cached("oq|" + ",".join(sorted(ks)), 4 if market_open() else 120, lambda: nse_service.upstox._full_quotes(ks))
+        okey = "oqs|" + hashlib.md5(",".join(sorted(ks)).encode()).hexdigest()
+        raw = _cached("oq|" + ",".join(sorted(ks)), 4 if market_open() else 120,
+                      lambda: _shared(okey, 4 if market_open() else 120, lambda: nse_service.upstox._full_quotes(ks)))
     except Exception as e:
         raise HTTPException(503, f"Option prices are temporarily unavailable: {str(e)[:140]}")
     out = []
@@ -1040,13 +1057,18 @@ def health():
             pass
 
     def probe():
+        # one probe per 5 minutes for ALL instances. Running out of request budget is not a broken feed: the
+        # app keeps serving the last known prices, so it must not raise the red "Data feed issue" banner.
         try:
             nse_service.upstox._full_quotes([_key("NIFTY")])
-            return None
+            return {"e": ""}
+        except UpstoxRateLimited:
+            return {"e": "", "busy": True}
         except Exception as e:
-            return str(e)[:160]
+            return {"e": str(e)[:160]}
 
-    err = _cached("token-probe", 300, probe)
+    res = _cached("token-probe", 300, lambda: _shared("token-probe", 300, probe))
+    err = res.get("e")
     if err:
         expired = "401" in err or "nvalid" in err or "xpired" in err
         out["state"] = "expired" if expired else "error"
@@ -1060,7 +1082,7 @@ def health():
                          ("." if out["extended"] else " (use an extended token to avoid daily updates).")
     else:
         out["state"] = "ok"
-        out["message"] = "Upstox connected."
+        out["message"] = "Upstox connected." + (" Busy right now - prices may be a few seconds old." if res.get("busy") else "")
     return out
 
 

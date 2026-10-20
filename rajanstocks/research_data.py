@@ -14,13 +14,38 @@ from datetime import datetime, timedelta, timezone
 
 import shared_cache
 from fastapi import APIRouter, HTTPException
+from upstox_service import UpstoxRateLimited, background
 
 router = APIRouter(prefix="/api/research")
 
 
+class _BgUp:
+    """The Upstox client with every call marked as background work, so it only gets a share of the shared request budget."""
+
+    def __init__(self, up):
+        self._u = up
+
+    def __getattr__(self, name):
+        attr = getattr(self._u, name)
+        if not callable(attr):
+            return attr
+
+        def run(*args, **kw):
+            with background():
+                return attr(*args, **kw)
+        return run
+
+
 def _up():
     from nse_service import nse_service
-    return nse_service.upstox
+    return _BgUp(nse_service.upstox)
+
+
+def _fail(e, what):
+    """429 + Retry-After when the budget share is used up (the workflow should wait and retry), 502 for real errors."""
+    if isinstance(e, UpstoxRateLimited):
+        return HTTPException(429, f"{what}: Upstox budget is busy, retry shortly", headers={"Retry-After": "30"})
+    return HTTPException(502, f"{what} failed: {str(e)[:300]}")
 
 
 def _cache(key, ttl, fn):
@@ -39,7 +64,7 @@ def expired_expiries(symbol: str = "NIFTY"):
     try:
         return _cache(f"rx:exp:{key}", 6 * 3600, lambda: up._get(f"{up.BASE_V2}/expired-instruments/expiries", params={"instrument_key": key}, timeout=15))
     except Exception as e:
-        raise HTTPException(502, f"expiries failed: {str(e)[:300]}")
+        raise _fail(e, "expiries")
 
 
 @router.get("/expired/contracts")
@@ -52,7 +77,7 @@ def expired_contracts(symbol: str = "NIFTY", expiry: str = ""):
         return _cache(f"rx:oc:{key}:{expiry}", 30 * 86400, lambda: up._get(f"{up.BASE_V2}/expired-instruments/option/contract",
                                                                          params={"instrument_key": key, "expiry_date": expiry}, timeout=20))
     except Exception as e:
-        raise HTTPException(502, f"contracts failed: {str(e)[:300]}")
+        raise _fail(e, "contracts")
 
 
 @router.get("/expired/candles")
@@ -70,7 +95,7 @@ def expired_candles(key: str, interval: str = "5minute", frm: str = "", to: str 
     try:
         data = up._get(f"{up.BASE_V2}/expired-instruments/historical-candle/{quote(key, safe='')}/{interval}/{to}/{frm}", timeout=20)
     except Exception as e:
-        raise HTTPException(502, f"candles failed: {str(e)[:300]}")
+        raise _fail(e, "candles")
     if (data.get("data") or {}).get("candles"):
         shared_cache.set(ck, data, 60 * 86400)
     return data
@@ -103,7 +128,7 @@ def bhav(date_: str = "", symbols: str = "NIFTY,BANKNIFTY,FINNIFTY,MIDCPNIFTY"):
     try:
         return _cache(f"rx:bhav:{d}:{','.join(sorted(want))}", 60 * 86400, fetch)
     except Exception as e:
-        raise HTTPException(502, f"bhav failed: {str(e)[:300]}")
+        raise _fail(e, "bhav")
 
 
 @router.get("/candles")
@@ -124,7 +149,7 @@ def stock_candles(symbol: str, frm: str, to: str, interval: str = "1"):
     try:
         rows = up.fetch_historical_candles(key, "minutes", interval, to, frm)
     except Exception as e:
-        raise HTTPException(502, f"candles failed: {str(e)[:300]}")
+        raise _fail(e, "candles")
     out = {"symbol": symbol.upper(), "candles": [[c["time"], c["open"], c["high"], c["low"], c["close"], c.get("volume", 0)] for c in rows]}
     if past and out["candles"]:
         shared_cache.set(ck, out, 60 * 86400)

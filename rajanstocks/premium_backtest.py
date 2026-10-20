@@ -47,17 +47,28 @@ LAST_ENTRY = 15 * 60
 EOD = 15 * 60 + 25
 
 
-def get(path, params, tries=4):
-    for k in range(tries):
+def get(path, params, tries=4, max_busy_wait=1800):
+    """GET with retries. HTTP 429 means the live app is protecting its Upstox budget: wait (Retry-After) and try again
+    for up to max_busy_wait seconds instead of recording 'no data'."""
+    k, waited = 0, 0.0
+    while k < tries:
         try:
             r = S.get(BASE + path, params=params, timeout=60)
             if r.status_code == 200:
                 return r.json()
             if r.status_code in (400, 404):
                 return None
+            if r.status_code == 429:
+                wait = min(60.0, float(r.headers.get("Retry-After") or 30))
+                if waited + wait > max_busy_wait:
+                    return None
+                time.sleep(wait)
+                waited += wait
+                continue                                    # a busy answer does not use up a retry
         except Exception:
             pass
         time.sleep(1.5 * (k + 1))
+        k += 1
     return None
 
 
