@@ -57,8 +57,10 @@ _RL_LONG = _collections.deque()      # call times in the last 30 minutes
 # overshot Upstox's real limits (50/s, 500/min, 2000/30 min) and every instance then saw 429s.
 # Instances now "lease" small blocks of permits from counters kept in Upstash Redis, which all of them share.
 # Sliding windows are built from small buckets: 3 x 20 s for the minute limit, 3 x 10 min for the 30-minute limit.
-LEASE_N, GLOBAL_PER_MIN, GLOBAL_PER_30M = 10, 360, 1800
-_LS = {"left": 0, "exp": 0.0, "deny": 0.0, "b20": None, "b10": None}
+# Permits are counted when a lease is TAKEN, not when a call is made, so every unused permit is wasted budget. Small, short leases
+# keep that waste to a few per instance. Caps sit just under Upstox's real limits (500/min, 2000/30 min).
+LEASE_N, LEASE_SECONDS, GLOBAL_PER_MIN, GLOBAL_PER_30M = 4, 4, 420, 1850
+_LS = {"left": 0, "exp": 0.0, "deny": 0.0, "b20": None, "b10": None, "n": 1}
 _LS_LOCK = _threading.Lock()
 
 
@@ -76,8 +78,23 @@ def _redis_pipe(cmds, timeout=2.5):
         return json.load(r)
 
 
+_FLUSHED = {}
+
+
+def _caller_delta():
+    """Calls per caller since the last lease, to be added to the shared (all instances) tally."""
+    d = {}
+    for k, v in list(_CALLERS.items()):
+        if v > _FLUSHED.get(k, 0):
+            d[k] = v - _FLUSHED.get(k, 0)
+            _FLUSHED[k] = v
+    return d
+
+
 def _lease_permit():
-    """Take one permit from this instance's lease, renewing the lease from the shared counters when it runs out."""
+    """Take one permit from this instance's lease, renewing the lease from the shared counters when it runs out.
+    The first lease on an instance is a single permit (a cold instance that makes one call wastes nothing); the size
+    doubles up to LEASE_N only while the instance keeps using its whole lease inside the lease time."""
     if not _redis_creds():
         return
     with _LS_LOCK:
@@ -87,7 +104,9 @@ def _lease_permit():
             return
         if now < _LS["deny"]:
             raise UpstoxRateLimited("The shared Upstox request budget is used up for the moment; serving the last known prices")
-        n, b20, b10 = LEASE_N, int(now // 20), int(now // 600)
+        busy = _LS["left"] == 0 and now < _LS["exp"] + 2 and _LS["b20"] is not None
+        n = min(LEASE_N, _LS.get("n", 1) * 2) if busy else 1
+        b20, b10 = int(now // 20), int(now // 600)
         cmds = []
         if _LS["left"] > 0 and _LS["b20"] is not None:       # the previous lease ran out of time: hand back what was not used
             cmds += [["DECRBY", f"rl2:a:{_LS['b20']}", _LS["left"]], ["DECRBY", f"rl2:b:{_LS['b10']}", _LS["left"]]]
@@ -96,10 +115,13 @@ def _lease_permit():
         cmds += [["INCRBY", f"rl2:a:{b20}", n], ["EXPIRE", f"rl2:a:{b20}", 130], ["GET", f"rl2:a:{b20 - 1}"], ["GET", f"rl2:a:{b20 - 2}"],
                  ["INCRBY", f"rl2:b:{b10}", n], ["EXPIRE", f"rl2:b:{b10}", 2400], ["GET", f"rl2:b:{b10 - 1}"], ["GET", f"rl2:b:{b10 - 2}"],
                  ["GET", "rl2:block"]]
+        who = _caller_delta()
+        if who:                                              # who is spending the budget, across every instance (diagnostics only)
+            cmds += [["HINCRBY", f"rl2:who:{b10}", name, c] for name, c in who.items()] + [["EXPIRE", f"rl2:who:{b10}", 2400]]
         try:
             res = _redis_pipe(cmds)[k:]
         except Exception:
-            _LS.update(left=LEASE_N - 1, exp=now + 8, b20=None, b10=None)      # Redis unreachable: fail open on the local limits
+            _LS.update(left=max(0, n - 1), exp=now + LEASE_SECONDS, b20=None, b10=None, n=n)    # Redis unreachable: fail open on the local limits
             return
         v = lambda i: int(res[i].get("result") or 0)
         s20, s10, blocked = v(0) + v(2) + v(3), v(4) + v(6) + v(7), res[8].get("result")
@@ -110,7 +132,7 @@ def _lease_permit():
                 pass
             _LS["deny"] = now + 3                                                          # do not hammer Redis while over the limit
             raise UpstoxRateLimited("The shared Upstox request budget is used up for the moment; serving the last known prices")
-        _LS.update(left=n - 1, exp=now + 8, b20=b20, b10=b10)
+        _LS.update(left=n - 1, exp=now + LEASE_SECONDS, b20=b20, b10=b10, n=n)
 
 
 def _global_block(seconds=8):
@@ -160,8 +182,17 @@ def budget_usage():
         r = _redis_pipe([["GET", f"rl2:a:{b20}"], ["GET", f"rl2:a:{b20 - 1}"], ["GET", f"rl2:a:{b20 - 2}"],
                          ["GET", f"rl2:b:{b10}"], ["GET", f"rl2:b:{b10 - 1}"], ["GET", f"rl2:b:{b10 - 2}"], ["GET", "rl2:block"]])
         v = lambda i: int(r[i].get("result") or 0)
+        who = {}
+        try:                                                  # all instances: calls per caller over the last ~30 minutes
+            for h in _redis_pipe([["HGETALL", f"rl2:who:{b10 - i}"] for i in range(3)]):
+                flat = h.get("result") or []
+                for name, c in zip(flat[::2], flat[1::2]):
+                    who[name] = who.get(name, 0) + int(c)
+        except Exception:
+            pass
         return {"shared": True, "last60s": v(0) + v(1) + v(2), "limit60s": GLOBAL_PER_MIN, "last30min": v(3) + v(4) + v(5),
-                "limit30min": GLOBAL_PER_30M, "blocked": bool(r[6].get("result"))}
+                "limit30min": GLOBAL_PER_30M, "blocked": bool(r[6].get("result")),
+                "allInstancesByCaller": dict(sorted(who.items(), key=lambda kv: -kv[1])[:12])}
     except Exception as e:
         return {"shared": True, "error": str(e)[:80]}
 

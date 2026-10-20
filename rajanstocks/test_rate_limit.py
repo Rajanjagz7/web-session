@@ -1,0 +1,160 @@
+"""Upstox shared request budget: leases are small and adaptive, so unused permits are not burned.
+
+A fake in-memory Redis stands in for Upstash; no network.
+"""
+import time
+
+import pytest
+
+import upstox_service as us
+
+
+class FakeRedis:
+    def __init__(self):
+        self.kv, self.h = {}, {}
+
+    def pipe(self, cmds, timeout=2.5):
+        out = []
+        for c in cmds:
+            op, args = c[0], c[1:]
+            if op in ("INCRBY", "DECRBY"):
+                self.kv[args[0]] = int(self.kv.get(args[0], 0)) + (int(args[1]) if op == "INCRBY" else -int(args[1]))
+                out.append({"result": self.kv[args[0]]})
+            elif op == "GET":
+                out.append({"result": self.kv.get(args[0])})
+            elif op in ("EXPIRE", "SETEX"):
+                if op == "SETEX":
+                    self.kv[args[0]] = args[2]
+                out.append({"result": 1})
+            elif op == "HINCRBY":
+                d = self.h.setdefault(args[0], {})
+                d[args[1]] = d.get(args[1], 0) + int(args[2])
+                out.append({"result": d[args[1]]})
+            elif op == "HGETALL":
+                flat = []
+                for k, v in self.h.get(args[0], {}).items():
+                    flat += [k, str(v)]
+                out.append({"result": flat})
+            else:
+                raise AssertionError("unexpected command " + op)
+        return out
+
+    def counted(self):
+        return sum(int(v) for k, v in self.kv.items() if k.startswith("rl2:a:"))
+
+
+@pytest.fixture
+def redis(monkeypatch):
+    r = FakeRedis()
+    monkeypatch.setattr(us, "_redis_creds", lambda: ("http://fake", "tok"))
+    monkeypatch.setattr(us, "_redis_pipe", r.pipe)
+    return r
+
+
+def fresh_instance():
+    us._LS.update(left=0, exp=0.0, deny=0.0, b20=None, b10=None, n=1)
+
+
+def test_cold_instances_that_make_one_call_waste_nothing(redis):
+    for _ in range(30):                       # 30 separate serverless instances, one call each
+        fresh_instance()
+        us._lease_permit()
+    assert redis.counted() == 30              # was 30 x 10 = 300 with the old fixed lease of 10
+
+
+def test_busy_instance_leases_grow_but_stay_small(redis):
+    fresh_instance()
+    for _ in range(20):
+        us._lease_permit()
+    assert 20 <= redis.counted() <= 20 + us.LEASE_N       # at most one lease of slack
+
+
+def test_idle_lease_is_handed_back_on_renewal(redis):
+    fresh_instance()
+    us._LS.update(left=3, exp=time.time() - 1, b20=int(time.time() // 20), b10=int(time.time() // 600))
+    key = f"rl2:a:{us._LS['b20']}"
+    redis.kv[key] = 3
+    us._lease_permit()
+    assert redis.kv[key] == 1                  # 3 unused permits returned, 1 new permit taken
+
+
+def test_global_cap_refuses_and_gives_the_permit_back(redis):
+    fresh_instance()
+    b20 = int(time.time() // 20)
+    redis.kv[f"rl2:a:{b20}"] = us.GLOBAL_PER_MIN       # the minute is already full
+    with pytest.raises(us.UpstoxRateLimited):
+        us._lease_permit()
+    assert redis.kv[f"rl2:a:{b20}"] == us.GLOBAL_PER_MIN      # the refused permit was returned
+    with pytest.raises(us.UpstoxRateLimited):                 # and it does not hammer Redis for a few seconds
+        us._lease_permit()
+
+
+def test_blocked_flag_stops_everyone(redis):
+    fresh_instance()
+    redis.kv["rl2:block"] = "1"
+    with pytest.raises(us.UpstoxRateLimited):
+        us._lease_permit()
+
+
+def test_shared_tally_shows_who_spends(redis):
+    fresh_instance()
+    us._CALLERS.clear()
+    us._FLUSHED.clear()
+    us._CALLERS.update({"market_api.py:quotes": 5, "research_data.py:expired_candles": 2})
+    us._lease_permit()
+    usage = us.budget_usage()
+    assert usage["allInstancesByCaller"] == {"market_api.py:quotes": 5, "research_data.py:expired_candles": 2}
+    assert usage["limit60s"] == us.GLOBAL_PER_MIN
+
+
+def test_caps_are_below_the_real_upstox_limits():
+    assert us.GLOBAL_PER_MIN < 500 and us.GLOBAL_PER_30M < 2000
+
+
+@pytest.fixture
+def isolated_cache(tmp_path, monkeypatch):
+    import shared_cache
+    monkeypatch.setattr(shared_cache, "_DISK", str(tmp_path))
+    monkeypatch.setattr(shared_cache, "_creds", lambda: None)
+    import market_api
+    market_api._cache.clear()
+    return market_api
+
+
+def test_instances_share_one_upstox_answer(isolated_cache):
+    ma = isolated_cache
+    calls = {"n": 0}
+
+    def ask():
+        calls["n"] += 1
+        return {"quotes": [1, 2, 3]}
+
+    for _ in range(5):                         # five "instances" (their own memory caches are empty each time)
+        ma._cache.clear()
+        assert ma._shared("qs|test", 4, ask) == {"quotes": [1, 2, 3]}
+    assert calls["n"] == 1
+
+
+def test_running_out_of_budget_is_not_a_red_banner(isolated_cache, monkeypatch):
+    ma = isolated_cache
+    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "not-a-jwt")
+    monkeypatch.setattr(ma, "_key", lambda s: "NSE_INDEX|Nifty 50")
+
+    def limited(keys):
+        raise us.UpstoxRateLimited("The shared Upstox request budget is used up for the moment")
+
+    monkeypatch.setattr(ma.nse_service.upstox, "_full_quotes", limited)
+    out = ma.health()
+    assert out["state"] == "ok" and "Busy" in out["message"]
+
+
+def test_real_upstox_errors_still_raise_the_banner(isolated_cache, monkeypatch):
+    ma = isolated_cache
+    monkeypatch.setenv("UPSTOX_ACCESS_TOKEN", "not-a-jwt")
+    monkeypatch.setattr(ma, "_key", lambda s: "NSE_INDEX|Nifty 50")
+
+    def broken(keys):
+        raise RuntimeError("Upstox API HTTP 401: invalid token")
+
+    monkeypatch.setattr(ma.nse_service.upstox, "_full_quotes", broken)
+    assert ma.health()["state"] == "expired"
