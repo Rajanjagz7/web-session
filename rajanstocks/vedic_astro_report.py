@@ -202,7 +202,7 @@ def _session_stats(symbol):
     """
     try:
         import market_api
-        bars = (market_api.candles(symbol=symbol, tf="5m") or {}).get("bars") or []
+        bars = (market_api.candles(symbol=symbol, tf="5m", ikey="", frm="", to="") or {}).get("bars") or []
     except Exception as e:
         reason = f"5-minute candles unavailable: {str(e)[:120]}"
         return {"live_vwap": _na(reason), "opening_range": _na(reason)}
