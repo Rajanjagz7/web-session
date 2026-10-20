@@ -17,7 +17,7 @@ the session is flagged as a likely shift in tone.
 This is traditional market astrology and Gann time work, not a validated forecast: a window only matters
 if price action and volume confirm it.
 """
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30))
 OPEN, CLOSE = 9 * 60 + 15, 15 * 60 + 30

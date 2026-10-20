@@ -108,7 +108,6 @@ def _equity(st):
 
 # ───────────────────────── market helpers ─────────────────────────
 def _quotes(keys):
-    import market_api
     from nse_service import nse_service
     return nse_service.upstox._full_quotes(list(keys))
 
@@ -159,7 +158,6 @@ def candidates(today):
     """Fresh signals on the last completed daily bar from the active strategies (same logic the backtest used)."""
     import backtest
     import bar_source
-    import market_api
     st0 = _load()
     scores, chosen, label = active_set(st0["cfg"])
     if not scores:

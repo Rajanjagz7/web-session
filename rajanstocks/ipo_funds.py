@@ -10,6 +10,7 @@ Sources (all public, fetched server-side and cached):
 """
 import html as _html
 import math
+import os
 import re
 import threading
 import time
@@ -31,6 +32,7 @@ _http.headers.update(UA)
 
 _mem = {}
 _mem_lock = threading.Lock()
+_VERCEL = bool(os.environ.get("VERCEL"))
 
 
 def _today():
@@ -510,19 +512,57 @@ def build_ipo_dashboard():
     }
 
 
+_DASH_KEY, _DASH_TTL, _DASH_STALE = "ipo:dash:v4", 900, 6 * 3600
+_dash_busy = threading.Event()
+
+
+def _dash_store(data):
+    shared_cache.set(_DASH_KEY, data, _DASH_TTL)
+    shared_cache.set(_DASH_KEY + ":stale", data, _DASH_STALE)
+    with _mem_lock:
+        _mem[_DASH_KEY] = (time.time(), data)
+
+
+def _dash_refresh():
+    """Rebuild the dashboard (about 7 s: three slow public sources) and keep a long-lived stale copy beside the fresh one."""
+    try:
+        data = build_ipo_dashboard()
+        if data:
+            _dash_store(data)
+        return data
+    finally:
+        _dash_busy.clear()
+
+
+def warm_dashboard():
+    """Server start (own-server mode): build it in the background so the first visit is instant."""
+    if not _dash_busy.is_set():
+        _dash_busy.set()
+        threading.Thread(target=_dash_refresh, daemon=True, name="ipo-warm").start()
+
+
 @router.get("/api/ipo/dashboard")
 def ipo_dashboard(refresh: bool = False):
-    key = "ipo:dash:v4"
-    if refresh:
-        with _mem_lock:
-            _mem.pop(key, None)
-        data = build_ipo_dashboard()
-        shared_cache.set(key, data, 900)
-        with _mem_lock:
-            _mem[key] = (time.time(), data)
-        return data
+    """Fresh copy when we have one; otherwise the last good copy straight away while a background rebuild runs
+    (serverless instances cannot run background work, so there it rebuilds inline)."""
     try:
-        return _cached(key, 900, build_ipo_dashboard)
+        if not refresh:
+            with _mem_lock:
+                hit = _mem.get(_DASH_KEY)
+            if hit and time.time() - hit[0] < _DASH_TTL:
+                return hit[1]
+            fresh = shared_cache.get(_DASH_KEY)
+            if fresh:
+                with _mem_lock:
+                    _mem[_DASH_KEY] = (time.time(), fresh)
+                return fresh
+            stale = shared_cache.get(_DASH_KEY + ":stale")
+            if stale and not _VERCEL:
+                if not _dash_busy.is_set():
+                    warm_dashboard()
+                return {**stale, "stale": True}
+        _dash_busy.set()
+        return _dash_refresh()
     except Exception as e:
         raise HTTPException(502, f"Could not load IPO data: {e}")
 

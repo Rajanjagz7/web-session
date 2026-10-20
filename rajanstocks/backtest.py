@@ -18,7 +18,6 @@ and past results do not guarantee future results.
 """
 import json
 import os
-import statistics
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone

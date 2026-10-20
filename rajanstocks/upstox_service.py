@@ -1,6 +1,5 @@
 import json
 import os
-import math
 import time
 import urllib.request
 from datetime import datetime, date, timedelta, timezone
@@ -123,6 +122,34 @@ def _global_block(seconds=8):
             pass
 
 
+_CALLS = _collections.Counter()      # Upstox requests by endpoint since start, for the diagnostics endpoint
+_CALLS_SINCE = time.time()
+
+
+_CALLERS = _collections.Counter()
+
+
+def _note_call(url):
+    ep = url.split("?")[0].replace("https://api.upstox.com", "")
+    _CALLS[ep[:70] if "historical-candle" not in ep else "/v3/historical-candle/*"] += 1
+    try:                                    # who asked: the first frame outside this module and the data services
+        import sys as _sys
+        f = _sys._getframe(2)
+        while f and os.path.basename(f.f_code.co_filename) in ("upstox_service.py", "nse_service.py", "bar_source.py", "shared_cache.py"):
+            f = f.f_back
+        if f:
+            _CALLERS[f"{os.path.basename(f.f_code.co_filename)}:{f.f_code.co_name}"] += 1
+    except Exception:
+        pass
+
+
+def call_stats():
+    """Upstox requests made by this process, by endpoint (read only)."""
+    mins = max((time.time() - _CALLS_SINCE) / 60, 1 / 60)
+    return {"sinceMin": round(mins, 1), "total": sum(_CALLS.values()), "perMin": round(sum(_CALLS.values()) / mins, 1),
+            "byEndpoint": dict(_CALLS.most_common(12)), "byCaller": dict(_CALLERS.most_common(12))}
+
+
 def budget_usage():
     """Current shared usage (read only) for the diagnostics endpoint."""
     if not _redis_creds():
@@ -220,6 +247,7 @@ class UpstoxService:
 
     def _get(self, url, params=None, timeout=7):
         response = None
+        _note_call(url)
         for attempt in range(3):
             _throttle()
             response = self.session.get(
@@ -392,9 +420,9 @@ class UpstoxService:
                     except Exception:
                         continue
             for payload in payloads:
-                for key, quote in (payload.get("data") or {}).items():
-                    instrument_token = quote.get("instrument_token")
-                    result[instrument_token or key] = quote
+                for key, q in (payload.get("data") or {}).items():
+                    instrument_token = q.get("instrument_token")
+                    result[instrument_token or key] = q
         return result
 
     @staticmethod

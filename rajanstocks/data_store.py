@@ -1,6 +1,5 @@
 import csv
 import glob
-import io
 import os
 
 from common import normalize_expiry, normalize_strike, to_float, record_key
@@ -49,10 +48,6 @@ def parse_bhavcopy_file(path):
         return _rows_from_reader(csv.DictReader(fh))
 
 
-def parse_bhavcopy_text(text):
-    return _rows_from_reader(csv.DictReader(io.StringIO(text)))
-
-
 def build_lookup(rows):
     lookup = {}
     for r in rows:
@@ -90,36 +85,6 @@ def bhav_row_to_record(row, prev_lookup):
         "oi": row["oi"],
         "oiPct": oi_pct,
         "volume": row["volume"],
-    }
-
-
-def live_row_to_record(row, baseline_lookup):
-    baseline = baseline_lookup.get(record_key(row))
-    prev_close = row.get("prevClose")
-    if prev_close is None and baseline is not None:
-        prev_close = baseline["close"]
-    prev_oi = baseline["oi"] if baseline is not None else None
-
-    oi = row.get("oi")
-    oi_pct = row.get("pChangeOi")
-    if oi_pct is None and prev_oi:
-        oi_pct = (oi - prev_oi) / prev_oi * 100
-
-    return {
-        "symbol": row["symbol"],
-        "isIndex": row["isIndex"],
-        "expiry": row["expiry"],
-        "strike": row["strike"],
-        "type": row["type"],
-        "open": row.get("open"),
-        "high": row.get("high"),
-        "low": row.get("low"),
-        "close": row.get("close"),
-        "prevCloseUsed": prev_close,
-        "spot": row.get("spot"),
-        "oi": oi,
-        "oiPct": oi_pct,
-        "volume": row.get("volume"),
     }
 
 

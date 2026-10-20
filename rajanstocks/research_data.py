@@ -10,7 +10,6 @@ import csv
 import io
 import re
 import zipfile
-from datetime import date
 
 import shared_cache
 from fastapi import APIRouter, HTTPException

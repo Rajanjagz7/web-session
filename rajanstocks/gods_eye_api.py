@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import os
 import uuid
-import time
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Header, HTTPException, Query, Response, status
+from pydantic import BaseModel
+from fastapi import APIRouter, Header, Query
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/v1", tags=["GodsEye"])
@@ -311,7 +310,7 @@ def generate_signals_for_horizon(horizon: str = "NEXT_SESSION") -> List[Dict[str
         elif horizon == "INTRADAY_30M":
             drivers.insert(0, f"30m VWAP tracking: Index trading {'below' if direction == 'BEARISH' else 'above'} volume-weighted intraday pivot")
         elif horizon == "INTRADAY_60M":
-            drivers.insert(0, f"60m hourly trend: Trend alignment across hourly candles confirmed")
+            drivers.insert(0, "60m hourly trend: Trend alignment across hourly candles confirmed")
 
         sig = {
             "forecastId": forecast_id,
