@@ -1,0 +1,30 @@
+name: Day power backtest
+on:
+  workflow_dispatch:
+  push:
+    branches: [rajan-web-session]
+    paths:
+      - rajanstocks/day_power.py
+      - rajanstocks/day_power_backtest.py
+      - .github/workflows/day-power-backtest.yml
+permissions:
+  contents: write
+concurrency: { group: day-power-backtest, cancel-in-progress: true }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r rajanstocks/requirements.txt
+      - run: cd rajanstocks && python day_power_backtest.py
+      - name: Commit result
+        run: |
+          git config user.name "backtest-bot"
+          git config user.email "backtest-bot@users.noreply.github.com"
+          git add rajanstocks/static/day_power_backtest.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Day power backtest $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase -q origin rajan-web-session && git push -q origin HEAD:rajan-web-session && break; sleep 5; done
