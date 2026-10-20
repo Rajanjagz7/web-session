@@ -808,6 +808,16 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-idx button.on{background:var(--gold);color:#1a1200;border-color:var(--gold)}
 .vx-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:700;background:var(--panel-2);color:var(--text-2);white-space:nowrap}
 .vx-chip.up{background:var(--up-bg);color:var(--up)}.vx-chip.down{background:var(--down-bg);color:var(--down)}.vx-chip.gold{background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold)}
+.vx-dp{background:radial-gradient(120% 140% at 50% 0%,#0b1020,#05070d)!important}.vx-dph small{letter-spacing:.12em;color:var(--text-3);font-size:10.5px}.vx-dph .dp-t{font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin:4px 0 2px;color:var(--text);text-transform:uppercase}
+.vx-dpg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:12px;align-items:start}
+.vx-dpc{border-radius:16px;padding:14px 16px;background:#06080d;border:1.5px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.vx-dpc.bull{border-color:#22c55e;box-shadow:0 0 18px #22c55e40,inset 0 0 10px #22c55e14}.vx-dpc.bear{border-color:#ef4444;box-shadow:0 0 18px #ef444440,inset 0 0 10px #ef444414}
+.vx-dpc.mix{border:1.5px solid transparent;background:linear-gradient(#06080d,#06080d) padding-box,linear-gradient(90deg,#22c55e,#ef4444) border-box;box-shadow:-8px 0 18px -8px #22c55e60,8px 0 18px -8px #ef444460}
+.vx-dpc small{color:var(--text-3);letter-spacing:.08em}.vx-dpc .wd{font-size:15px;letter-spacing:.06em}
+.vx-dpc .lab{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:30px;line-height:1.05;text-align:center;margin:6px 0}.vx-dpc.bull .lab,.vx-dpc .bull{color:#4ade80}.vx-dpc.bear .lab,.vx-dpc .bear{color:#f87171}
+.vx-dpc .dots{display:flex;gap:8px;justify-content:center}.vx-dpc .dots i{width:13px;height:13px;border-radius:50%;border:1.5px solid #ffffff30}.vx-dpc .dots i.on.bull{background:#4ade80;border-color:#4ade80}.vx-dpc .dots i.on.bear{background:#f87171;border-color:#f87171}
+.vx-dpc p{text-align:center;font-size:12.5px;color:var(--text-2);margin:4px 0}.vx-dpc details{font-size:12px;margin-top:4px}.vx-dpc summary{cursor:pointer;color:var(--text-3)}.vx-dpc ul{margin:6px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+@media(max-width:900px){.vx-dpg{grid-template-columns:1fr}.vx-dpc .lab{font-size:26px}}
 .vx-lean{display:flex;flex-direction:column;gap:6px;cursor:help}.vx-lean small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}
 .vx-lean b{font-size:20px;letter-spacing:.02em}.vx-lean.up b{color:var(--up)}.vx-lean.down b{color:var(--down)}.vx-lean.mute b{color:var(--gold)}
 .vx-meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--line) 50%,var(--up))}.vx-meter i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
@@ -2533,9 +2543,20 @@ setInterval(async()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||docum
   if(Date.now()-(VD._ts||0)<120000)return;const y=window.scrollY;await loadVedic(false);VD._lastSpot=null;if(App.view==='vedic'){vdPaint();window.scrollTo(0,y)}}catch(e){}},30000);
 setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden)return;const lb=document.getElementById('vxLadBox'),pb=document.getElementById('vxPlanBox');if(!VD||!VD.data)return;
   const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le)le.innerHTML=vxLeanHTML(r);if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
+/* Day Power: Vedic + Gann bias for the next 3 sessions (day_power.py) - every ingredient listed under "How it's worked out" */
+function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&dp.reason?`<section class="vx-card"><h3>Day power</h3><p class="muted">${esc(dp.reason)}</p></section>`:'';
+  const d0=dp.days[0].date,d1=dp.days[dp.days.length-1].date,mon=d=>{const x=new Date(d+'T12:00:00Z');return x.getUTCDate()+' '+MON[x.getUTCMonth()]};
+  return`<section class="vx-card vx-dp"><div class="vx-dph"><div><small>DAY POWER · NIFTY 50</small><div class="dp-t">Weekly day power · ${mon(d0)} – ${mon(d1)}</div><p class="muted">Vedic Moon + day-lord + timing, and Gann time cycles, mapped to market bias</p></div></div>
+   <div class="vx-dpg">${dp.days.map(x=>{const col=x.side==='bull'?'bull':x.side==='bear'?'bear':'mix';
+     const dots=Array.from({length:5},(_,i)=>`<i class="${i<x.dots?(x.side==='mix'?(i<Math.ceil(x.dots/2)+1?'on bull':'on bear'):'on '+col):''}"></i>`).join('');
+     return`<article class="vx-dpc ${col}"><small>${mon(x.date).toUpperCase()}</small><b class="wd">${esc(x.weekday.toUpperCase())}</b>
+       <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p>
+       <details><summary>How it's worked out · score ${x.score>0?'+':''}${x.score}</summary><ul>${x.parts.map(p=>`<li><span class="${p.pts>0?'up':p.pts<0?'down':'muted'}">${p.pts>0?'+':''}${p.pts}</span> <b>${esc(p.group)} · ${esc(p.name)}</b> — ${esc(p.why)}</li>`).join('')}</ul></details></article>`}).join('')}</div>
+   <p class="vx-note">${esc(dp.caveat||'')}</p></section>`}
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
+    ${vxDayPower(r.day_power)}
     <section class="vx-card"><h3>Session timeline (IST)</h3>${vxSpecial(r.special_timing)}${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');

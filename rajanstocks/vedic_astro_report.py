@@ -414,6 +414,19 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
                                  base_kind=(mc.get("levels_base") or {}).get("value", {}).get("kind"))
     except Exception as e:
         gann = {"available": False, "reason": f"Gann levels unavailable: {str(e)[:160]}"}
+    try:
+        import day_power
+        import nse_calendar
+        nb = bars if symbol.upper() == "NIFTY" else None
+        if nb is None and _left() > 3:
+            try:
+                nb = _daily_bars("NIFTY")             # cached for the day in Upstash
+            except Exception:
+                nb = None
+        nb = nb if isinstance(nb, list) else None
+        day_power_block = day_power.build(nse_calendar.HOLIDAYS, nb, 3)
+    except Exception as e:
+        day_power_block = {"available": False, "reason": f"Day power unavailable: {str(e)[:160]}"}
     bias = _day_bias(panchang["paksha"], panchang["tithi_number"])
     votes = []
     votes.append(("Vedic lunar bias", {"bullish": 1, "bearish": -1}.get(bias["tone"], 0), bias["label"]))
@@ -468,6 +481,7 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         },
         "watch_windows": windows,
         "special_timing": special_timing,
+        "day_power": day_power_block,
         "stocks_to_watch": _stw_result(f_stw, _left()),
         "risk_management": RISK_MANAGEMENT,
         "disclaimer": DISCLAIMER,
