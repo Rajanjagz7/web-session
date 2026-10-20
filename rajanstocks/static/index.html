@@ -2637,7 +2637,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
       <div class="vx-idx">${VX_INDICES.map(([k,l])=>`<button class="${VD.symbol===k?'on':''}" data-vxsym="${k}">${l}</button>`).join('')}</div>
       <div class="vx-meta">${esc(h.report_date)} · <span class="vx-chip ${h.session_phase==='During session'?'up':'mute'}">${esc(h.session_phase)}</span>${h.nse_trading_day.available&&h.nse_trading_day.value!=='No'?' · '+esc(h.nse_trading_day.value):''}</div></div>
     <div id="vxLean">${vxLeanHTML(r)}</div>
-    <div class="vx-today"><div><small>Tithi</small><b>${esc(p.tithi)}</b></div><div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="${rk.in_session?'rahu':''}"><small>Rahu Kaal</small><b>${esc(p.mumbai_rahu_kaal_ist)}</b><span>${rk.in_session?'during market hours':'outside market hours'}</span></div>
+    <div class="vx-today"><div><small>Tithi</small><b>${esc(p.tithi)}</b></div><div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="${rk.in_session?'rahu':''}"><small>Rahu Kaal · today</small><b>${esc(p.mumbai_rahu_kaal_ist)}</b><span>${rk.in_session?'during market hours':'outside market hours'}</span></div>
       <button class="btn-xs" data-act="vedic-retry" title="Recalculate now">${I('reset',14)} Refresh</button></div>
    </div>
    ${h.is_weekend||h.session_phase==='Market closed'?`<div class="vx-closed">${esc(h.weekend_message||'Market closed today.')} Panchang, planets and Gann levels below are live calculations, ready for the next session.</div>`:''}

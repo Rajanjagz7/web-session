@@ -11,8 +11,8 @@ Gann (Nifty daily candles up to the day before - no look-ahead)
   6 Time cycle       calendar days from the last 90-day swing high and swing low hitting 30/45/60/90/120/144/180/270/360
                      (+/-1 day) = a turn date: against the last 5 sessions' direction, +/-1
   7 Seasonal         the Sun's tropical longitude within 1 deg of a 45-degree point (Gann's seasonal dates): same
-Total S -> STRONG BULLISH (S >= 3), BULLISH (2), MILD BULLISH (1), MIX (-0.5..0.5, or the two halves disagree with |S| <= 1),
-MILD BEARISH (-1), BEARISH (-2), STRONG BEARISH (<= -3). Dots = strength out of 5.
+Total S -> STRONG BULLISH (S >= 3), BULLISH (1.5 to 2.5), MILD BULLISH (1), MIX (-0.5..0.5, or the two halves disagree
+with |S| <= 1), MILD BEARISH (-1), BEARISH (-1.5 to -2.5), STRONG BEARISH (<= -3). Dots = strength out of 5.
 
 Traditional market astrology and Gann time work - not a validated forecast (see day_power_backtest.json for how it
 scored on past Nifty sessions). Act only on price confirmation.
