@@ -63,6 +63,8 @@ import gods_eye_api  # noqa: E402
 app.include_router(gods_eye_api.router)
 import gods_eye_board  # noqa: E402
 app.include_router(gods_eye_board.router)
+import research_data  # noqa: E402
+app.include_router(research_data.router)
 
 @app.middleware("http")
 async def _no_stale_assets(request, call_next):
