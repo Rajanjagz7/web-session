@@ -5,12 +5,17 @@ momentum score from -10 to +10, a Bullish / Neutral / Bearish label, a divergenc
 
 Everything is computed from daily candles (TradingView history, no login) with plain, explainable maths:
 
-    score = trend-of-the-day (+/-4)  +  position vs the 20-day average (+/-3)  +  RSI(14) bias (+/-3)
+    score = day move (+/-3) + intraday pressure (+/-2) + position vs the 20-day average (+/-3) + RSI(14) bias (+/-2)
 
     * day move   : today's % change divided by the instrument's own average daily range, squashed with tanh,
                    so a 1% day means more for Nifty than for Bitcoin.
     * vs EMA20   : how far the close sits above/below its 20-day EMA, in the same range-adjusted units.
-    * RSI bias   : (RSI14 - 50) / 25, limited to +/-1, times 3.
+    * intraday   : how far price has come back from today's high versus up from today's low, in range units - a big
+                   slide off the high (sellers in control) pulls the score down even when the close-to-close change is small.
+    * RSI bias   : (RSI14 - 50) / 25, limited to +/-1, times 2.
+    * action     : the short-term part (day move + intraday) decides SELL ON RISE / BUY ON DIPS; when it is quiet the
+                   trend part (20-day average + RSI) decides; otherwise WAIT. Zone, stop and targets are sized from the
+                   instrument's own average daily range and today's high / low.
     * label      : score >= +2 Bullish, <= -2 Bearish, otherwise Neutral.
     * divergence : price makes a higher high while RSI makes a lower high (bearish), or price makes a
                    lower low while RSI makes a higher low (bullish), comparing the last 10 daily bars
@@ -53,7 +58,8 @@ _cache = {"ts": 0.0, "data": None, "ttl": 90}
 _lock = threading.Lock()
 
 METHOD = {
-    "summary": "Score = day move (±4) + position vs 20-day average (±3) + RSI(14) bias (±3). Range −10 to +10.",
+    "summary": "Score = day move (±3) + intraday pressure — slide from today's high vs bounce from today's low (±2) + position vs 20-day average (±3) + RSI(14) bias (±2). Range −10 to +10.",
+    "action": "Sell on rise / Buy on dips comes from today's move and intraday pressure first; if today is quiet, from the 20-day trend and RSI; otherwise Wait. Zone, stop-loss and targets are sized from the instrument's average daily range and today's high/low.",
     "label": "Bullish at +2 or more, Bearish at −2 or less, otherwise Neutral.",
     "divergence": "Bearish: price makes a higher high but RSI makes a lower high. Bullish: price makes a lower low but RSI makes a higher low (last 10 daily bars vs the 10 before).",
     "sparkline": "Closing prices of the last 14 daily candles.",
@@ -114,10 +120,15 @@ def analyse(bars):
     rs = rsi_series(closes)
     rsi = rs[-1] if rs[-1] is not None else 50.0
 
-    a = 4 * math.tanh(chg_pct / avg_rng)
+    o_d, h_d, l_d = bars[-1][1] or last, max(highs[-1], last), min(lows[-1], last)
+    from_hi = (h_d - last) / last * 100 if last else 0.0     # how far it has slid off today's high
+    from_lo = (last - l_d) / last * 100 if last else 0.0     # how far it has bounced off today's low
+    a = 3 * math.tanh(chg_pct / avg_rng)
+    d = 2 * math.tanh(1.2 * (from_lo - from_hi) / avg_rng)
     b = 3 * math.tanh(dev / (1.5 * avg_rng))
-    c = 3 * max(-1.0, min(1.0, (rsi - 50) / 25))
-    score = round(a + b + c, 1)
+    c = 2 * max(-1.0, min(1.0, (rsi - 50) / 25))
+    score = round(a + d + b + c, 1)
+    play = _play(a + d, b + c, last, h_d, l_d, avg_rng, from_hi, from_lo)
     label = "BULLISH" if score >= BULL_AT else "BEARISH" if score <= BEAR_AT else "NEUTRAL"
 
     # divergence: last 10 bars vs the 10 before
@@ -134,6 +145,8 @@ def analyse(bars):
 
     reasons = []
     reasons.append(f"Day move {chg_pct:+.2f}% against a normal daily range of {avg_rng:.2f}%")
+    reasons.append(f"Intraday: {from_hi:.2f}% off today's high {h_d:,.2f}, {from_lo:.2f}% above today's low {l_d:,.2f}"
+                   + (" - sellers in control" if d <= -0.8 else " - buyers in control" if d >= 0.8 else ""))
     reasons.append(f"Close is {abs(dev):.2f}% {'above' if dev >= 0 else 'below'} its 20-day average")
     reasons.append(f"RSI(14) is {rsi:.0f} ({'strong' if rsi >= 60 else 'weak' if rsi <= 40 else 'balanced'})")
     if div:
@@ -146,6 +159,7 @@ def analyse(bars):
         "label": label,
         "divergence": div,
         "spark": [round(x, 2) for x in closes[-14:]],
+        "action": play,
         "detail": {
             "rsi": round(rsi, 1),
             "ema20": round(e20, 2),
@@ -153,10 +167,36 @@ def analyse(bars):
             "avgRangePct": round(avg_rng, 2),
             "high20": round(max(highs[-20:]), 2),
             "low20": round(min(lows[-20:]), 2),
-            "parts": {"dayMove": round(a, 1), "trend": round(b, 1), "rsi": round(c, 1)},
+            "dayHigh": round(h_d, 2), "dayLow": round(l_d, 2), "dayOpen": round(o_d, 2),
+            "parts": {"dayMove": round(a, 1), "intraday": round(d, 1), "trend": round(b, 1), "rsi": round(c, 1)},
             "reasons": reasons,
         },
     }
+
+
+def _play(short, trend, last, hi, lo, avg_rng, from_hi, from_lo):
+    """SELL ON RISE / BUY ON DIPS / WAIT with a zone, stop and two targets sized from one normal day's range (u)."""
+    u = last * avg_rng / 100
+    r = lambda v: round(v, 2)
+    if short <= -1.5 or (abs(short) < 1.5 and trend <= -2):
+        side, why = "SELL", (f"Sold off today - {from_hi:.1f}% off the high {hi:,.2f}" if short <= -1.5 else "Below its 20-day average with weak RSI")
+        z_lo, z_hi = last + 0.15 * u, min(max(hi, last + 0.3 * u), last + 0.6 * u)
+        sl = max(hi, z_hi) + 0.15 * u
+        out = {"side": side, "label": "SELL ON RISE", "zone": [r(z_lo), r(z_hi)], "sl": r(sl), "targets": [r(last - 0.5 * u), r(min(lo, last - 0.25 * u) - 0.25 * u)]}
+        if trend >= 1:
+            why += " - counter-trend: the 20-day trend is still up, keep it quick"
+    elif short >= 1.5 or (abs(short) < 1.5 and trend >= 2):
+        side, why = "BUY", (f"Strong today - {from_lo:.1f}% up from the low {lo:,.2f}" if short >= 1.5 else "Above its 20-day average with firm RSI")
+        z_hi, z_lo = last - 0.15 * u, max(min(lo, last - 0.3 * u), last - 0.6 * u)
+        sl = min(lo, z_lo) - 0.15 * u
+        out = {"side": side, "label": "BUY ON DIPS", "zone": [r(z_lo), r(z_hi)], "sl": r(sl), "targets": [r(last + 0.5 * u), r(max(hi, last + 0.25 * u) + 0.25 * u)]}
+        if trend <= -1:
+            why += " - counter-trend: the 20-day trend is still down, keep it quick"
+    else:
+        return {"side": "WAIT", "label": "WAIT", "range": [r(lo), r(hi)],
+                "why": f"No clear edge - range {lo:,.2f} to {hi:,.2f}; act only on a break of either side"}
+    out["why"] = why
+    return out
 
 
 def _compute(item):

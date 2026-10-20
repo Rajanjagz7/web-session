@@ -25,8 +25,17 @@
       <div class="ob-kv"><div><small>Price</small><b>${esc(i.ccy)}${fmt(i.price, i.price >= 1000 ? 0 : 2)}</b></div><div><small>Day change</small><b class="${i.chgPct >= 0 ? 'up' : 'down'}">${sgn(i.chgPct, 2)}%</b></div>
         <div><small>RSI (14)</small><b>${d.rsi != null ? d.rsi : '—'}</b></div><div><small>vs 20-day avg</small><b class="${d.vsEma20Pct >= 0 ? 'up' : 'down'}">${sgn(d.vsEma20Pct, 2)}%</b></div>
         <div><small>20-day high</small><b>${fmt(d.high20, d.high20 >= 1000 ? 0 : 2)}</b></div><div><small>20-day low</small><b>${fmt(d.low20, d.low20 >= 1000 ? 0 : 2)}</b></div></div>
-      <div class="ob-parts"><div class="ob-ph">How the ${sgn(i.score)} was built</div>${part('Day move', p.dayMove || 0, 4)}${part('Vs 20-day avg', p.trend || 0, 3)}${part('RSI bias', p.rsi || 0, 3)}</div>
+      ${play(i)}
+      <div class="ob-parts"><div class="ob-ph">How the ${sgn(i.score)} was built</div>${part('Day move', p.dayMove || 0, 3)}${part('Intraday pressure', p.intraday || 0, 2)}${part('Vs 20-day avg', p.trend || 0, 3)}${part('RSI bias', p.rsi || 0, 2)}</div>
       <ul class="ob-why">${(d.reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>`;
+  }
+
+  function play(i) {
+    const a = i.action; if (!a) return '';
+    const dp = v => fmt(v, v >= 1000 ? 0 : 2), c = i.ccy || '';
+    if (a.side === 'WAIT') return `<div class="ob-play wait"><b>WAIT</b><span>${esc(a.why)}</span></div>`;
+    return `<div class="ob-play ${a.side === 'SELL' ? 'bear' : 'bull'}"><b>${esc(a.label)}</b><span>${esc(a.why)}</span>
+      <div class="ob-lv"><div><small>${a.side === 'SELL' ? 'Sell zone' : 'Buy zone'}</small><em>${c}${dp(a.zone[0])} – ${dp(a.zone[1])}</em></div><div><small>Stop-loss</small><em class="down">${c}${dp(a.sl)}</em></div><div><small>Targets</small><em class="up">${a.targets.map(t => c + dp(t)).join(' · ')}</em></div></div></div>`;
   }
 
   function card(i) {
@@ -37,6 +46,7 @@
       <div class="ob-name">${esc(i.name)}${i.stale ? ' <em class="ob-old" title="Showing the last good reading; live data was slow">delayed</em>' : ''}</div>
       <div class="ob-score">${sgn(i.score)}</div>
       <div class="ob-lab">${nice(i.label).toUpperCase()}</div>
+      ${i.action ? `<div class="ob-act ${i.action.side === 'SELL' ? 'bear' : i.action.side === 'BUY' ? 'bull' : 'neut'}">${esc(i.action.label)}</div>` : ''}
       <div class="ob-div ${i.divergence ? (i.divergence === 'BULLISH' ? 'bull' : 'bear') : 'none'}">${i.divergence ? `⚡ ${nice(i.divergence)} divergence` : '&nbsp;'}</div>
       ${spark(i.spark, col)}
       <div class="ob-tip">${open ? 'Hide details ▴' : 'Click for details ▾'}</div>
@@ -50,7 +60,7 @@
   function howCard(m) {
     if (!m) return '';
     return `<details class="ob-how"><summary>How is this made?</summary>
-      <ol><li><b>Data.</b> ${esc(m.source)}</li><li><b>Score.</b> ${esc(m.summary)}</li><li><b>Label.</b> ${esc(m.label)}</li><li><b>Divergence ⚡.</b> ${esc(m.divergence)}</li><li><b>Sparkline.</b> ${esc(m.sparkline)}</li></ol>
+      <ol><li><b>Data.</b> ${esc(m.source)}</li><li><b>Score.</b> ${esc(m.summary)}</li><li><b>Label.</b> ${esc(m.label)}</li>${m.action ? `<li><b>Action.</b> ${esc(m.action)}</li>` : ''}<li><b>Divergence ⚡.</b> ${esc(m.divergence)}</li><li><b>Sparkline.</b> ${esc(m.sparkline)}</li></ol>
       <p class="ob-note">${esc(m.note)}</p></details>`;
   }
 
@@ -111,6 +121,13 @@
   const st = document.createElement('style');
   st.textContent = `
   .ob{max-width:1100px;margin:0 auto}
+  .ob-act{align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.04em;padding:3px 8px;border-radius:6px;background:var(--panel-2,rgba(255,255,255,.06));color:var(--text-2,inherit)}
+  .ob-act.bear{background:color-mix(in srgb,var(--down,#f7525f) 18%,transparent);color:var(--down,#f7525f)}.ob-act.bull{background:color-mix(in srgb,var(--up,#22ab94) 18%,transparent);color:var(--up,#22ab94)}
+  .ob-play{margin:10px 0 4px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;font-size:13px}
+  .ob-play>b{font-size:14px;letter-spacing:.03em}.ob-play.bear>b{color:var(--down,#f7525f)}.ob-play.bull>b{color:var(--up,#22ab94)}.ob-play>span{color:var(--text-2,inherit)}
+  .ob-play.bear{background:color-mix(in srgb,var(--down,#f7525f) 7%,transparent)}.ob-play.bull{background:color-mix(in srgb,var(--up,#22ab94) 7%,transparent)}
+  .ob-lv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ob-lv small{display:block;font-size:10.5px;color:var(--text-3,#8a93a6)}.ob-lv em{font-style:normal;font-weight:700;font-size:13px}
+  @media(max-width:520px){.ob-lv{grid-template-columns:1fr 1fr}.ob-lv>div:last-child{grid-column:1/-1}}
   .ob-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:4px 0 14px}
   .ob-head h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .ob-head h2 small{font-size:15px;font-weight:600;color:var(--text-3,#8a93a6)}

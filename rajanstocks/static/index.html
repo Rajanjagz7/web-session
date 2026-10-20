@@ -634,7 +634,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <script src="/static/journal.js?v=20261020f"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
-<script src="/static/observer.js?v=20261020b"></script>
+<script src="/static/observer.js?v=20261020c"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2811,7 +2811,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    <div id="pkGodseye" class="pk-ge"></div>
    <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
-   ${f.kind!=='STOCK'?`<div class="card" style="margin:10px 0"><div class="card-h"><h3>Index F&amp;O calls for ${f.hz==='SWING'?'Swing':f.hz==='POS'?'Positional':'the day'}</h3><span class="muted" style="font-size:12px">${App.calls&&App.calls.asOf?'as of '+new Date(App.calls.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="padding:10px">${callsBlock()}</div></div>`:''}
+   
    ${body}
    <p class="disc">Rule-based screen of liquid NSE F&amp;O stocks using trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI. Levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
