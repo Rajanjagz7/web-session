@@ -797,7 +797,7 @@ HIDDEN = {
     # -- inconclusive and not positive enough to show --
     "vwap-rsi", "heikin-ashi-channel", "ema-9-15", "bottom-reversal", "hammer-support",
     # -- older option scans, replaced by the Expiry / Daily Divisor and Open = Low (10 pt) scans --
-    "opt-strat1", "opt-premium", "opt-ol", "opt-oh", "opt-spike", "rajan-premium-levels", "rajan-ohol-premium",
+    "opt-strat1", "opt-premium", "opt-spike", "rajan-premium-levels", "rajan-ohol-premium",
 }
 
 
