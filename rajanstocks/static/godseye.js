@@ -145,8 +145,15 @@
   }
 
   /* ---------- page ---------- */
+  /* God's Eye lives inside the Picks page (#pkGodseye); the old standalone view still works if it is ever shown. */
+  function host() {
+    if (typeof App === 'undefined') return null;
+    if (App.view === 'picks') return document.getElementById('pkGodseye');
+    if (App.view === 'godseye') return document.getElementById('v-godseye');
+    return null;
+  }
   function paint() {
-    const el = document.getElementById('v-godseye'); if (!el || (typeof App !== 'undefined' && App.view !== 'godseye')) return;
+    const el = host(); if (!el) return;
     const d = G.data, items = (d && d.items) || [], grps = ['All'].concat([...new Set(items.map(x => x.group))]);
     const list = items.filter(x => G.grp === 'All' || x.group === G.grp), s = d && d.summary;
     const upd = d ? new Date(d.as_of).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -166,10 +173,13 @@
         <tbody>${list.slice().sort((a, b) => (b.score ?? -99) - (a.score ?? -99)).map(heatRow).join('')}</tbody></table></div>`
         : `<div class="gx-grid">${list.map(card).join('')}</div>`}
       ${howItWorks()}`;
-    el.innerHTML = `<div class="page gx">
-      <div class="gx-bar0">${status}<span class="gx-upd">${G.busy && d ? 'Updating…' : upd ? 'Updated: ' + upd + ' IST' : ''}</span><button class="btn" data-gxr="1" ${G.busy ? 'disabled' : ''}>↻ Refresh</button></div>
-      <div class="gx-brand"><svg viewBox="0 0 48 28" class="gx-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
-        <h1>GOD'S EYE</h1><span>— The Observer</span></div>
+    const embed = el.id === 'pkGodseye';
+    el.innerHTML = `<div class="${embed ? 'gx gx-embed' : 'page gx'}">
+      <div class="gx-head">
+        <div class="gx-brand"><svg viewBox="0 0 48 28" class="gx-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
+          <h2>GOD'S EYE</h2><span>— The Observer</span></div>
+        <div class="gx-bar0">${status}<span class="gx-upd">${G.busy && d ? 'Updating…' : upd ? 'Updated ' + upd + ' IST' : ''}</span><button class="btn" data-gxr="1" ${G.busy ? 'disabled' : ''}>↻ Refresh</button></div>
+      </div>
       ${body}
       ${G.open ? detail() : ''}
     </div>`;
@@ -182,7 +192,7 @@
   };
 
   document.addEventListener('click', e => {
-    if (!e.target.closest('#v-godseye')) return;
+    if (!e.target.closest('.gx')) return;
     const t = e.target;
     if (t.closest('button[data-gxclose]') || t.classList.contains('gx-dbg')) { G.open = null; return paint(); }
     const c = t.closest('[data-gx]'); if (c && !t.closest('.gx-det')) { G.open = c.dataset.gx; return paint(); }
@@ -193,7 +203,7 @@
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && G.open) { G.open = null; paint(); } });
   setInterval(() => {
-    if (typeof App === 'undefined' || App.view !== 'godseye' || document.hidden) return;
+    if (typeof App === 'undefined' || !host() || document.hidden) return;
     const age = Date.now() - G.ts, openNow = typeof MKT !== 'undefined' && MKT.open;
     if (age > (openNow ? 60e3 : 300e3)) load(false); else if (openNow && !G.open) paint();   // live ticks for Indian indices
   }, 15e3);
@@ -201,13 +211,16 @@
   const css = `
   .page.gx{max-width:2200px;padding:12px clamp(14px,2vw,32px) 48px}
   .gx .muted{color:var(--text-3)}.gx .up{color:var(--up)}.gx .down{color:var(--down)}
-  .gx-bar0{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:6px 0 10px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .gx-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;margin:2px 0 14px}
+  .gx-bar0{display:flex;justify-content:flex-end;align-items:center;gap:12px}
+  .gx-embed{margin:14px 0 6px;padding:16px 18px 14px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 85%,#6366f1 6%),var(--panel))}
+  .gx-embed .gx-brand h2{font-size:26px}.gx-embed .gx-card{min-height:200px;padding:14px 16px 12px}.gx-embed .gx-score{font-size:34px}.gx-embed .gx-how{margin-top:12px}
   .gx-st{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:14px;font-size:12.5px;font-weight:700;background:var(--panel-2);color:var(--text-2)}
   .gx-st.on{background:color-mix(in srgb,var(--up) 20%,transparent);color:var(--up)}
   .gx-upd{color:var(--text-3);font-size:12.5px}
-  .gx-brand{display:flex;align-items:center;gap:12px;margin:2px 0 18px}
+  .gx-brand{display:flex;align-items:center;gap:12px}
   .gx-eye{width:44px;height:26px;color:#a78bfa}
-  .gx-brand h1{margin:0;font-size:32px;font-weight:900;letter-spacing:-.01em;background:linear-gradient(90deg,#60a5fa,#a78bfa 55%,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .gx-brand h2{margin:0;font-size:30px;font-weight:900;letter-spacing:-.01em;background:linear-gradient(90deg,#60a5fa,#a78bfa 55%,#34d399);-webkit-background-clip:text;background-clip:text;color:transparent}
   .gx-brand span{font-size:18px;font-weight:600;color:#8b9cf7}
   .gx-sum{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-bottom:14px;font-size:13px;color:var(--text-2)}
   .gx-mood{display:flex;width:140px;height:8px;border-radius:4px;overflow:hidden;gap:2px}.gx-mood span{display:block}
@@ -269,7 +282,7 @@
   .gx-kv small{display:block;font-size:11px;color:var(--text-3)}.gx-kv b{font-size:14px}.gx-kv b small{display:inline;font-size:11px}
   .gx-note{color:var(--text-3);font-size:11.5px;margin:12px 0 0}
   @media (max-width:760px){
-    .gx-brand h1{font-size:24px}.gx-brand span{font-size:14px}.gx-eye{width:34px}
+    .gx-brand h2{font-size:22px}.gx-embed{padding:12px}.gx-head{gap:8px}.gx-upd{display:none}.gx-brand span{font-size:14px}.gx-eye{width:34px}
     .gx-grid{grid-template-columns:1fr 1fr;gap:10px}.gx-card{padding:14px 14px 10px;min-height:196px;border-radius:14px}.gx-score{font-size:32px}.gx-top{flex-direction:column;gap:2px}.gx-px{font-size:11px}
     .gx-sum{gap:8px 12px}.gx-grow{display:none}
     .gx-dbg{align-items:flex-end;padding:0}.gx-det{border-radius:16px 16px 0 0;max-height:92vh;padding:14px}

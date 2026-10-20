@@ -626,7 +626,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script src="/static/journal.js?v=20261020b"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261020a"></script>
+<script src="/static/godseye.js?v=20261020b"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -833,6 +833,18 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-skel{height:120px;border-radius:12px;background:linear-gradient(90deg,var(--panel),var(--panel-2),var(--panel));background-size:200% 100%;animation:vxsk 1.2s linear infinite}@keyframes vxsk{to{background-position:-200% 0}}
 @media(max-width:1000px){.vx-hero{grid-template-columns:1fr 1fr}.vx-h1{grid-column:1/-1}}
 @media(max-width:640px){.vx-hero{grid-template-columns:1fr}.vx-setups{grid-template-columns:1fr}.vx-win summary{grid-template-columns:24px 1fr auto}.vx-win summary small{grid-column:2/-1}.vx-tabs{overflow-x:auto}.vx-seg span{display:none}.vx-tl-ticks i.opt{display:none}.vx-lad{grid-template-columns:80px 1fr 60px}}
+
+.wl-hl{font-size:10px;color:var(--text-3);white-space:nowrap}
+.opx-spot .opx-ohl{display:inline-flex;gap:10px;margin-left:12px;font-size:11.5px;color:var(--text-3);white-space:nowrap;align-self:center}.opx-spot .opx-ohl b{color:var(--text);font-weight:600;font-size:12px}.opx-spot .opx-ohl span{display:inline;font-size:11.5px}.opx-ohl b.up{color:var(--up)}.opx-ohl b.down{color:var(--down)}
+.opx-sw{display:flex;align-items:center;gap:10px;margin-left:auto;margin-right:14px}
+.opx-sw .seg button{min-width:44px;font-weight:700}.opx-sw .seg button.opx-ce.on{background:var(--up);color:#fff}.opx-sw .seg button.opx-pe.on{background:var(--down);color:#fff}
+.opx-step{display:flex;align-items:center;gap:4px}.opx-step b{min-width:56px;text-align:center;font-size:13px}
+.opx-pos{margin-top:12px}.opx-pos-empty{padding:10px 14px;font-size:12.5px}.opx-pos-w{overflow-x:auto}
+.opx-pt{width:100%;border-collapse:collapse;font-size:12.5px}.opx-pt th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);text-align:left;padding:6px 8px;white-space:nowrap}.opx-pt th.num,.opx-pt td.num{text-align:right}
+.opx-pt td{padding:6px 8px;border-top:1px solid var(--line);white-space:nowrap;vertical-align:middle}.opx-pt .jr-px{width:78px;height:28px;text-align:right}.opx-pt .jr-tsl{display:flex;gap:4px;justify-content:flex-end}.opx-pt .jr-u{width:46px;height:28px;padding:0 4px}
+.opx-pn{cursor:pointer;margin-right:6px}.opx-pn:hover{color:var(--brand);text-decoration:underline}
+.opx-close{color:var(--down);border-color:color-mix(in srgb,var(--down) 50%,transparent)}.opx-close:hover{background:var(--down);color:#fff}
+@media (max-width:760px){.opx-ohl{display:flex;margin:4px 0 0;gap:8px;font-size:11px;flex-wrap:wrap}.opx-sw{margin:6px 0;order:3;width:100%;justify-content:space-between}.opt-h{flex-wrap:wrap}}
 </style>
 </head>
 <body>
@@ -2042,12 +2054,12 @@ const spark7=s=>(s.spark&&s.spark.length>2)?s.spark.slice(-19).concat([s.last||s
 
 /* live-bound cells: data-px, data-chg, data-chga, data-pnl, data-pnlp, data-mv, data-eq, data-dpnl, data-cash, data-heat, data-range */
 function liveUpdate(){
-  $$('[data-px]').forEach(e=>{const s=SYM(e.dataset.px);e.textContent=s.last>0?fmtP(s.last,s.dp):'—'});
+  $$('[data-px]').forEach(e=>{const s=SYM(e.dataset.px);if(!s)return;e.textContent=s.last>0?fmtP(s.last,s.dp):'—'});
   $$('[data-chg]').forEach(e=>{const s=SYM(e.dataset.chg),c=s.last/s.prev-1;e.textContent=pct(c);e.className=e.className.replace(/\b(up|down)\b/g,'').trim()+' '+cls(c)});
   $$('[data-chga]').forEach(e=>{const s=SYM(e.dataset.chga),c=s.last-s.prev;e.textContent=(c>=0?'+':'−')+fmtP(Math.abs(c),s.dp);e.className=cls(c)});
-  $$('[data-pnl]').forEach(e=>{const p=posOf(e.dataset.pnl);if(!p)return;const v=p.q*(SYM(p.sym).last-p.avg);e.textContent=smoney(v);e.className='num '+cls(v)});
-  $$('[data-pnlp]').forEach(e=>{const p=posOf(e.dataset.pnlp);if(!p)return;const v=(SYM(p.sym).last/p.avg-1)*Math.sign(p.q);e.textContent=pct(v);e.className='num '+cls(v)});
-  $$('[data-mv]').forEach(e=>{const p=posOf(e.dataset.mv);if(p)e.textContent=money(p.q*SYM(p.sym).last)});
+  $$('[data-pnl]').forEach(e=>{const p=posOf(e.dataset.pnl);if(!p||!SYM(p.sym))return;const v=p.q*(SYM(p.sym).last-p.avg);e.textContent=smoney(v);e.className='num '+cls(v)});
+  $$('[data-pnlp]').forEach(e=>{const p=posOf(e.dataset.pnlp);if(!p||!SYM(p.sym))return;const v=(SYM(p.sym).last/p.avg-1)*Math.sign(p.q);e.textContent=pct(v);e.className='num '+cls(v)});
+  $$('[data-mv]').forEach(e=>{const p=posOf(e.dataset.mv);if(p&&SYM(p.sym))e.textContent=money(p.q*SYM(p.sym).last)});
   $$('[data-eq]').forEach(e=>e.textContent=money(equity()));
   {const px=p=>{const s=SYM(p.sym);return s&&s.last>0?s.last:p.avg},unr=App.positions.reduce((a,p)=>a+p.q*(px(p)-p.avg),0),inv=App.positions.reduce((a,p)=>a+Math.abs(p.q)*p.avg,0),
      real=(App.trades||[]).reduce((a,x)=>a+x.net,0),tot=real+unr,ar=n=>n>0.004?'▲':n<-0.004?'▼':'–';
@@ -2063,32 +2075,31 @@ $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.classNa
    $$('[data-heat]').forEach(e=>{const s=SYM(e.dataset.heat),c=s.last/s.prev-1;e.style.background=heatColor(c);e.querySelector('span').textContent=pct(c)});
    
    // NEW: Update open, prev close, high, low everywhere
-   $$('[data-open]').forEach(e=>{const s=SYM(e.dataset.open);if(s) e.textContent=fmtP(s.open, s.dp)});
+   $$('[data-open]').forEach(e=>{const s=SYM(e.dataset.open);if(s) e.textContent=s.open>0?fmtP(s.open, s.dp):'—'});
    $$('[data-prev]').forEach(e=>{const s=SYM(e.dataset.prev);if(s) e.textContent=fmtP(s.prev, s.dp)});
-   $$('[data-high]').forEach(e=>{const s=SYM(e.dataset.high);if(s) e.textContent=fmtP(s.hi, s.dp)});
-   $$('[data-low]').forEach(e=>{const s=SYM(e.dataset.low);if(s) e.textContent=fmtP(s.lo, s.dp)});
+   $$('[data-high]').forEach(e=>{const s=SYM(e.dataset.high);if(s) e.textContent=s.hi>0?fmtP(s.hi, s.dp):'—'});
+   $$('[data-low]').forEach(e=>{const s=SYM(e.dataset.low);if(s) e.textContent=s.lo>0&&s.lo<1e15?fmtP(s.lo, s.dp):'—'});
    
    // SL/Target crossover alerts
    App.positions.forEach(p=>{
      const s=SYM(p.sym);
      if(!s) return;
-     const last=s.last;
-     if(p.sl && p.q>0 && last<=p.sl) toast(`⚠️ SL HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'bad');
-     if(p.sl && p.q<0 && last>=p.sl) toast(`⚠️ SL HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'bad');
-     if(p.tp && p.q>0 && last>=p.tp) toast(`✅ TARGET HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'ok');
-     if(p.tp && p.q<0 && last<=p.tp) toast(`✅ TARGET HIT: ${s.s} @ ${fmtP(last,s.dp)}`, 'ok');
+     const last=s.last;if(!(last>0))return;
+     const sl=p.sl&&(p.q>0?last<=p.sl:last>=p.sl),tp=p.tp&&(p.q>0?last>=p.tp:last<=p.tp),hit=sl?'sl':tp?'tp':null;
+     if(hit&&p._hit!==hit)toast(hit==='sl'?`⚠️ SL HIT: ${s.s} @ ${fmtP(last,s.dp)}`:`✅ TARGET HIT: ${s.s} @ ${fmtP(last,s.dp)}`,hit==='sl'?'bad':'ok');   // once per crossing, not every tick
+     p._hit=hit;
    });
  }
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro'],['godseye',"God's Eye"]];
-   const PRIMARY=['picks','trade','markets','ipo','godseye'];
+const VIEWS=[['picks','Picks'],['trade','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
+   const PRIMARY=['picks','trade','markets','ipo'];
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
 const SUBVIEWS={options:['trade','Options'],mobile:['trade',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
 const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
-const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'));
+const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'),['godseye']);
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
 /* Header index strip: Nifty, Bank Nifty, Sensex, VIX with live change; click opens the chart. */
 const HX=[['NIFTY','Nifty'],['SENSEX','Sensex'],['BANKNIFTY','Bank Nifty'],['INDIAVIX','VIX']];
@@ -2113,7 +2124,7 @@ function closeOverlays(){
   try{const w=$('#v-trade');w&&w.classList.remove('wl-open')}catch(e){}
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
-function go(v){closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+function go(v){if(v==='godseye'){v='picks';setTimeout(()=>{const g=$('#pkGodseye');if(g)g.scrollIntoView({behavior:'smooth',block:'start'})},300)}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
   ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodseye&&renderGodseye()})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
@@ -2121,7 +2132,7 @@ function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.s
 let chart,mchart;
 function renderWatchlist(){const q=$('#wlFilter').value.toLowerCase();const groups={};
   SYMS.filter(s=>App.watch.has(s.s)&&(s.s.toLowerCase().includes(q)||s.n.toLowerCase().includes(q))).forEach(s=>(groups[s.cls]||=[]).push(s));
-  $('#wlList').innerHTML=Object.entries(groups).map(([g,l])=>`<div class="wl-g">${g}</div>`+l.map(s=>`<button class="wl-row ${s===App.sym?'on':''}" data-sym="${esc(s.s)}"><span><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span>${sparkSVG(spark7(s),54,22,s.last>=s.prev?'var(--up)':'var(--down)')}<span class="r"><span class="num" data-px="${esc(s.s)}"></span><br><span class="num" data-chg="${esc(s.s)}"></span></span></button>`).join('')).join('')||'<div class="empty">No matches</div>';liveUpdate()}
+  $('#wlList').innerHTML=Object.entries(groups).map(([g,l])=>`<div class="wl-g">${g}</div>`+l.map(s=>`<button class="wl-row ${s===App.sym?'on':''}" data-sym="${esc(s.s)}"><span><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span>${sparkSVG(spark7(s),54,22,s.last>=s.prev?'var(--up)':'var(--down)')}<span class="r"><span class="num" data-px="${esc(s.s)}"></span><br><span class="num" data-chg="${esc(s.s)}"></span><br><small class="num wl-hl" title="Today's low – high">L <span data-low="${esc(s.s)}"></span> · H <span data-high="${esc(s.s)}"></span></small></span></button>`).join('')).join('')||'<div class="empty">No matches</div>';liveUpdate()}
 /* ======================= Option chain picker on the chart (fewer clicks: symbol -> strike -> contract chart) ======================= */
 const OC={sym:null,expiry:'',data:null,busy:false,open:false};
 const ocHas=s=>!!s&&(s.cls==='Indices'||s.cls==='Stocks')&&!s.ikey&&!s.tv&&s.s!=='INDIAVIX';
@@ -2321,6 +2332,7 @@ function renderMarkets(){
   const idxRows=idx.map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${s.last>=s.prev?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('');
   $('#v-markets').innerHTML=`<div class="page mk">
    <div class="mk-head"><div><h1>Markets</h1><p class="muted">Key indices and movers alongside the full searchable stock list — one screen for what the market's doing.</p></div></div>
+   ${glHTML()}
    <div class="mk-dash">
      <div class="mk-side">
        <div class="card mk-ix"><div class="card-h"><h3>Key indices</h3></div>${idxRows}</div>
@@ -2673,7 +2685,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc((n.pubDate||'').slice(5,22))}</small></a>`).join(''):'';
   el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed — showing last session'}${P&&P.asOf?' · screened '+new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}`,`<button class="btn" data-act="rpicks">Refresh</button>`)}
    <div class="ixs">${idxHtml}</div>
-   ${glHTML()}
+   <div id="pkGodseye" class="pk-ge"></div>
    <div class="card" style="margin:10px 0"><div class="card-h"><h3>Market overview</h3><div class="chips">${['NIFTY','BANKNIFTY','SENSEX','FINNIFTY'].map(k=>`<button class="chip ${OV.sym===k?'on':''}" data-ovs="${k}">${k}</button>`).join('')}</div></div>
     <div style="padding:2px 14px"><b class="num" data-px="${OV.sym}"></b> <span class="num" data-chg="${OV.sym}"></span></div>
     <div class="pchart" id="ovChart" style="height:240px;margin:0"></div>
@@ -2683,8 +2695,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    ${f.kind!=='STOCK'?`<div class="card" style="margin:10px 0"><div class="card-h"><h3>Index F&amp;O calls for ${f.hz==='SWING'?'Swing':f.hz==='POS'?'Positional':'the day'}</h3><span class="muted" style="font-size:12px">${App.calls&&App.calls.asOf?'as of '+new Date(App.calls.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="padding:10px">${callsBlock()}</div></div>`:''}
    ${body}
    <p class="disc">Rule-based screen of liquid NSE F&amp;O stocks using trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI. Levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
-   <div class="two" style="margin-top:14px"><div class="movers" style="grid-template-columns:1fr 1fr">${mv('Top gainers',st.slice().sort((a,b)=>ch(b)-ch(a)))}${mv('Top losers',st.slice().sort((a,b)=>ch(a)-ch(b)))}</div>
-   <div class="card"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div></div>`;mountOverview();liveUpdate()}
+   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;mountOverview();liveUpdate();if(window.renderGodseye)renderGodseye()}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{App.picks=null;renderPicks();loadPicks(true)}});
 
 
@@ -2854,7 +2865,12 @@ function optUnderlyings(){return SYMS.filter(s=>s.cls==='Indices'&&!s.nofo&&s.s!
 async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const want=OPT.sym;
   try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(OPT.expiry?'&expiry='+OPT.expiry:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null}
   catch(e){OPT.chain=null;OPT.err='The option chain is not available for '+want+' right now.'}
-  OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}}}
+  OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}else if(OPT.chain&&!OPT.sel)opxAutoPick()}}
+/* Open a contract straight away: the ATM strike on the side last used (CE by default) - no extra tap needed. */
+function opxAutoPick(){const c=OPT.chain;if(!c||!c.rows||!c.rows.length)return;let side='CE';try{side=localStorage.getItem('opx-side')||'CE'}catch(e){}
+  const atm=c.atm||c.spot,row=c.rows.slice().sort((a,b)=>Math.abs(a.strike-atm)-Math.abs(b.strike-atm)).find(r=>r[side.toLowerCase()])||c.rows.find(r=>r.ce||r.pe);if(!row)return;
+  if(!row[side.toLowerCase()])side=side==='CE'?'PE':'CE';selectOption(side,row.strike,true)}
+function opxStep(dir){const c=OPT.chain;if(!c||!OPT.sel)return;const ks=c.rows.map(r=>r.strike).sort((a,b)=>a-b),i=ks.indexOf(OPT.sel.strike),k=ks[Math.max(0,Math.min(ks.length-1,i+dir))];if(k!=null&&k!==OPT.sel.strike)selectOption(OPT.sel.side,k)}
 const OPXF_DEF={span:5,oi:true,chg:false,vol:true,bars:true,liquid:false};
 OPT.f=(()=>{try{return Object.assign({},OPXF_DEF,JSON.parse(localStorage.getItem('rs-opxf2')||'{}'))}catch(e){return Object.assign({},OPXF_DEF)}})();
 OPT.span=OPT.f.span;OPT.mtab=OPT.mtab||'chain';OPT.wtab=OPT.wtab||'order';
@@ -2899,7 +2915,7 @@ function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f
   const xs=$('#optExp');if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('');
   const xc=$('#opxExp');if(xc)xc.innerHTML=c.expiries.slice(0,4).map(e=>`<button class="opx-chip ${e===c.expiry?'on':''}" data-opx="exp:${e}">${fmtExp(e)}</button>`).join('');
   const und=SYMS.find(x=>x.s===c.symbol),uch=und&&und.prev>0?und.last/und.prev-1:null,sp=$('#opxSpot');
-  if(sp)sp.innerHTML=`<b class="num">${fmtP(c.spot)}</b>${uch==null?'':`<span class="num ${cls(uch)}">${pct(uch)}</span>`}<small>${MKT.open?'Live':'Last session'} · ${new Date(c.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</small>`;
+  if(sp)sp.innerHTML=`<b class="num">${fmtP(c.spot)}</b>${uch==null?'':`<span class="num ${cls(uch)}">${pct(uch)}</span>`}<small>${MKT.open?'Live':'Last session'} · ${new Date(c.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</small>${und?`<span class="opx-ohl num"><span>O <b data-open="${esc(und.s)}">${fmtP(und.open,und.dp)}</b></span><span>H <b class="up" data-high="${esc(und.s)}">${fmtP(und.hi,und.dp)}</b></span><span>L <b class="down" data-low="${esc(und.s)}">${fmtP(und.lo,und.dp)}</b></span><span>Prev <b data-prev="${esc(und.s)}">${fmtP(und.prev,und.dp)}</b></span></span>`:''}`;
   const S=opxSummary(c),sm=$('#opxSum');
   if(sm)sm.innerHTML=[['PCR (OI)',S.pcr==null?'—':S.pcr.toFixed(2),S.pcr==null?'':S.pcr>=1.2?'up':S.pcr<=0.7?'down':'','Put OI ÷ Call OI. Above 1.2 leans bullish, below 0.7 bearish.'],
     ['ATM',fmtP(c.atm||0,0),'',''],['Max pain',S.mp==null?'—':fmtP(S.mp,0),'','Strike where option buyers lose the most at expiry.'],
@@ -2925,11 +2941,11 @@ function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f
   box.innerHTML=`<div class="oc-wrap"><table class="oc opx-oc"><thead><tr class="opx-side"><th colspan="${cols.length+1}" class="ce-h">CALLS</th><th></th><th colspan="${cols.length+1}" class="pe-h">PUTS</th></tr>
     <tr>${cols.map(k=>`<th>${hd(k)}</th>`).join('')}<th>LTP</th><th class="k">Strike</th><th>LTP</th>${cols.slice().reverse().map(k=>`<th>${hd(k)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
   const w=box.querySelector('.oc-wrap');if(w){if(st!=null)w.scrollTop=st;else{const a=w.querySelector('.opx-spotrow')||w.querySelector('tr.atm');if(a)w.scrollTop=a.offsetTop-w.clientHeight/2}}}
-function selectOption(side,strike){const c=OPT.chain;if(!c)return;const row=c.rows.find(r=>r.strike===strike),leg=row&&row[side.toLowerCase()];if(!leg)return;
+function selectOption(side,strike,auto){const c=OPT.chain;if(!c)return;if(!auto){try{localStorage.setItem('opx-side',side)}catch(e){}}const row=c.rows.find(r=>r.strike===strike),leg=row&&row[side.toLowerCase()];if(!leg)return;
   const label=`${c.symbol} ${fmtP(strike,strike%1?2:0)} ${side} ${fmtExp(c.expiry)}`;
   OPT.sel={side,strike,key:leg.key,label};
   OPT.osym={s:label,n:label,ikey:leg.key,dp:2,qdp:0,ex:'NFO',cls:'Options',sec:'Options',last:leg.ltp,prev:leg.prev||leg.ltp,open:leg.open,hi:leg.high,lo:leg.low,vol:leg.vol,oi:leg.oi,oiChg:leg.oiChg,bid:leg.bid,ask:leg.ask};
-  drawChain();drawDetail();if(opxMobile())opxTab('chart')}
+  drawChain();drawDetail();if(opxMobile()&&!auto)opxTab('chart')}
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
   if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
 function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
@@ -2938,20 +2954,38 @@ function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!O
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
   if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div id="opStrat"></div></div>`;OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
-  if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
+  if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opx-sw" id="opSw"></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
      <details class="opx-stats"><summary>Stats · OI · bid/ask</summary><div class="opt-stats" id="opStats"></div></details>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
-       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>`;
+       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>
+     <div class="opx-card opx-pos" id="opxPos"></div>`;
     OPT.shell=true;
     OPT.ochart=new Chart($('#ochart'),{onTool:()=>{},onLegend:(uid,a)=>{const x=OPT.ochart.ind.findIndex(i=>i.uid===uid);if(x<0)return;if(a==='hide'){OPT.ochart.ind[x].hidden=!OPT.ochart.ind[x].hidden;OPT.ochart.lgDirty=true;OPT.ochart.req()}else if(a==='rm'){OPT.ochart.ind.splice(x,1);OPT.ochart.indChanged();drawOptChips();saveOptInds()}}});
     loadOptInds().forEach(k=>optAddInd(k,true));OPT.ochart.indChanged();drawOptChips();$('#ozoom').innerHTML=zoomBtns();opxWtab(OPT.wtab)}
   $('#opName').textContent=OPT.sel.label;$('#opSub').textContent=` · ${OPT.sel.side==='CE'?'Call':'Put'} · spot ${fmtP(OPT.chain?OPT.chain.spot:0)}`;
-  drawOptTf();drawOptTrade();
+  const sw=$('#opSw');if(sw)sw.innerHTML=`<div class="seg" role="group" aria-label="Call or put">${['CE','PE'].map(sd=>`<button class="${OPT.sel.side===sd?'on':''} ${sd==='CE'?'opx-ce':'opx-pe'}" data-opx="side:${sd}" title="${sd==='CE'?'Call':'Put'} at ${fmtP(OPT.sel.strike,0)}">${sd}</button>`).join('')}</div>
+    <div class="opx-step"><button class="opx-ib" data-opx="step:-1" title="Lower strike" aria-label="Lower strike">‹</button><b class="num">${fmtP(OPT.sel.strike,OPT.sel.strike%1?2:0)}</b><button class="opx-ib" data-opx="step:1" title="Higher strike" aria-label="Higher strike">›</button></div>`;
+  drawOptTf();drawOptTrade();drawOptPos();
   optStats();optLoad(false)}
+setTimeout(()=>{if(typeof optOrder==='function'){const _oo=optOrder;optOrder=function(){const r=_oo.apply(this,arguments);setTimeout(drawOptPos,80);return r}}},0);
+/* Open positions on the Options screen with editable stop-loss / target / trailing stop (same rules as the Journal). */
+function drawOptPos(){const box=$('#opxPos');if(!box)return;const ps=App.positions.slice().sort((a,b)=>(SYM(b.sym)?.cls==='Options')-(SYM(a.sym)?.cls==='Options'));
+  if(!ps.length){box.innerHTML=`<div class="opx-ph">Open positions <span class="muted">· none</span></div><div class="opx-pos-empty muted">Buy or sell from the ticket above; your position shows here with stop-loss and target.</div>`;return}
+  box.innerHTML=`<div class="opx-ph">Open positions <span class="muted">· ${ps.length}</span></div><div class="opx-pos-w"><table class="opx-pt"><thead><tr><th>Position</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">LTP</th><th class="num">P&amp;L</th><th class="num" title="Exit if price reaches this">Stop-loss</th><th class="num" title="Book profit if price reaches this">Target</th><th class="num" title="Trailing stop: % or ₹ behind the best price">Trail</th><th></th></tr></thead><tbody>${ps.map(p=>{const s=SYM(p.sym)||{last:p.avg,dp:2},u=p.q*(s.last-p.avg),e=esc(p.sym);
+    return`<tr><td><b class="opx-pn" data-opx="pos:${e}" title="Open this contract">${e}</b><span class="side-tag ${p.q>0?'up':'down'}">${p.q>0?'Long':'Short'}</span></td><td class="num">${qn(Math.abs(p.q))}</td><td class="num">${fmtP(p.avg)}</td><td class="num" data-px="${e}">${fmtP(s.last)}</td><td class="num ${cls(u)}" data-pnl="${e}">${smoney(u)}</td>
+      <td class="num"><input class="inp jr-px" inputmode="decimal" data-jsl="${e}" value="${p.sl||''}" placeholder="Set" aria-label="Stop-loss for ${e}"></td><td class="num"><input class="inp jr-px" inputmode="decimal" data-jtp="${e}" value="${p.tp||''}" placeholder="Set" aria-label="Target for ${e}"></td>
+      <td class="num"><div class="jr-tsl"><input class="inp jr-px" inputmode="decimal" data-jtsl="${e}" value="${p.tsl?p.tsl.v:''}" placeholder="—" aria-label="Trailing stop for ${e}"><select class="inp jr-u" data-jtslu="${e}" aria-label="Trailing stop unit"><option value="pct" ${!p.tsl||p.tsl.u!=='abs'?'selected':''}>%</option><option value="abs" ${p.tsl&&p.tsl.u==='abs'?'selected':''}>₹</option></select></div></td>
+      <td><button class="btn-xs opx-close" data-opx="close:${e}">Exit</button></td></tr>`}).join('')}</tbody></table></div>`}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(!t||!t.closest('.opx'))return;const v=t.dataset.opx,i=v.indexOf(':'),k=i<0?v:v.slice(0,i),a=i<0?'':v.slice(i+1);
   if(k==='filters'){const fp=$('#opxFp'),open=fp.hidden;if(open){fp.innerHTML=opxFilterHtml();const fb=$('#opxFbtn');if(fb&&!opxMobile()){const rc=fb.getBoundingClientRect();fp.style.top=Math.max(8,rc.bottom+8)+'px';fp.style.right=Math.max(8,innerWidth-rc.right)+'px'}else{fp.style.top='';fp.style.right=''}}fp.hidden=!open;$('#opxScrim').hidden=!open}
+  else if(k==='side'){if(OPT.sel&&a!==OPT.sel.side)selectOption(a,OPT.sel.strike)}
+  else if(k==='step'){opxStep(+a)}
+  else if(k==='close'){closePos(a,'manual');setTimeout(drawOptPos,50)}
+  else if(k==='pos'){const c=OPT.chain,lab=(r,sd)=>`${c.symbol} ${fmtP(r.strike,r.strike%1?2:0)} ${sd} ${fmtExp(c.expiry)}`;let hit=null;
+    if(c)for(const r of c.rows)for(const sd of ['CE','PE'])if(r[sd.toLowerCase()]&&lab(r,sd)===a)hit=[sd,r.strike];
+    if(hit)selectOption(hit[0],hit[1]);else toast('That contract is on another underlying or expiry - pick it from the chain','info')}
   else if(k==='span'){OPT.f.span=+a;OPT.span=+a;opxSave();opxBadge();$('#opxFp').innerHTML=opxFilterHtml();drawChain()}
   else if(k==='freset'){OPT.f=Object.assign({},OPXF_DEF);OPT.span=OPT.f.span;opxSave();opxBadge();$('#opxFp').innerHTML=opxFilterHtml();drawChain()}
   else if(k==='exp'){if(OPT.chain&&a===OPT.chain.expiry)return;OPT.expiry=a;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
@@ -3046,7 +3080,7 @@ function loadOptInds(){try{return JSON.parse(localStorage.getItem(OIND_STORE)||'
 function saveOptInds(){try{if(OPT.ochart)localStorage.setItem(OIND_STORE,JSON.stringify(OPT.ochart.ind.map(i=>i.key)))}catch(e){}}
 
 /* ---- watchlist: My list / All F&O ---- */
-const wlRow=s=>`<button class="wl-row ${s===App.sym?'on':''}" data-sym="${esc(s.s)}"><span><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span>${sparkSVG(spark7(s),54,22,s.last>=s.prev?'var(--up)':'var(--down)')}<span class="r"><span class="num" data-px="${esc(s.s)}"></span><br><span class="num" data-chg="${esc(s.s)}"></span></span></button>`;
+const wlRow=s=>`<button class="wl-row ${s===App.sym?'on':''}" data-sym="${esc(s.s)}"><span><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span>${sparkSVG(spark7(s),54,22,s.last>=s.prev?'var(--up)':'var(--down)')}<span class="r"><span class="num" data-px="${esc(s.s)}"></span><br><span class="num" data-chg="${esc(s.s)}"></span><br><small class="num wl-hl" title="Today's low – high">L <span data-low="${esc(s.s)}"></span> · H <span data-high="${esc(s.s)}"></span></small></span></button>`;
 function renderWatchlist(){const f=$('#wlFilter');const q=(f?f.value:'').toLowerCase();App.wlTab=App.wlTab||'mine';const all=App.wlTab==='fo';
   const list=SYMS.filter(s=>(all||App.watch.has(s.s))&&(s.s.toLowerCase().includes(q)||s.n.toLowerCase().includes(q)));
   const groups={};list.forEach(s=>(groups[s.nofo?'Indices · '+s.grp:s.cls]||=[]).push(s));
@@ -3242,7 +3276,7 @@ function loadChart(keep){const k=App.sym.s+'|'+App.tf.k;
 /* ======================= Global markets & futures (GIFT Nifty, US futures, Nasdaq ...) ======================= */
 const GL={items:null,ts:0,busy:false};
 async function loadGlobal(force){if(GL.busy||(!force&&Date.now()-GL.ts<2500))return;GL.busy=true;GL.ts=Date.now();
-  try{GL.items=(await api('/api/m/global')).items;GL.err=null}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();if(App.view==='picks'){const el=$('#glStrip');if(el)el.innerHTML=glInner()}}
+  try{GL.items=(await api('/api/m/global')).items;GL.err=null}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();{const el=$('#glStrip');if(el)el.innerHTML=glInner()}}
 function glInner(){if(!GL.items)return GL.err?'<span class="muted">Global data is unavailable right now.</span>':'<span class="muted">Loading global markets…</span>';
   const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq','Nasdaq 100','S&P 500','Dow Jones','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','Bitcoin','USD / INR'];
   const list=order.map(n=>GL.items.find(i=>i.name===n)).filter(Boolean);
@@ -3636,7 +3670,7 @@ async function pollQuotes(){if(pollBusy)return;pollBusy=true;
 function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='options')optTick();
   if(App.view==='trade'&&App.sym.tv)refreshGlobalChart();
-  if(App.view==='picks')loadGlobal();
+  if(App.view==='markets')loadGlobal();
   if(App.view==='daily'&&Date.now()-(DAILY.ts||0)>(MKT.open?60000:600000)){DAILY.ts=Date.now();loadDaily(false)}
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
