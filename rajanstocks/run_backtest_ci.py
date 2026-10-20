@@ -20,7 +20,7 @@ import backtest  # noqa: E402
 
 IST = timezone(timedelta(hours=5, minutes=30))
 YH = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK", "SENSEX": "^BSESN", "FINNIFTY": "NIFTY_FIN_SERVICE.NS",
-      "MIDCPNIFTY": "NIFTY_MID_SELECT.NS"}
+      "MIDCPNIFTY": "NIFTY_MID_SELECT.NS", "INDIAVIX": "^INDIAVIX"}
 _cache = {}
 
 

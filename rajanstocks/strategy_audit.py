@@ -429,12 +429,27 @@ def info_checks():
     return out
 
 
+INFO_RES = {}
+
+
 def verdict(r):
+    if r.get("key") == "vix-range":
+        v = (INFO_RES or {}).get("vix-range") or {}
+        c = v.get("nextDayInsideRange")
+        if c is None:
+            return "WATCH", "Range tool - could not be checked"
+        return ("KEEP" if 0.55 <= c <= 0.85 else "REMOVE"), f"Range tool: next day stayed inside the range {c * 100:.0f}% of the time ({v.get('checked')} days)"
+    if r.get("signals", 1) == 0 and r.get("kind") != "intraday":
+        return "REMOVE", "Never gave a signal in ~4 years on 23 symbols"
     if r.get("kind") == "info":
         nr = r.get("nextRange") or {}
         a, b = (nr.get("is") or {}), (nr.get("oos") or {})
         if r["key"] == "vix-range":
-            return "INFO", "Range tool - see the VIX range check"
+            v = (INFO_RES or {}).get("vix-range") or {}
+            c = v.get("nextDayInsideRange")
+            if c is None:
+                return "WATCH", "Range tool - could not be checked"
+            return ("KEEP" if 0.55 <= c <= 0.85 else "REMOVE"), f"Range tool: next day stayed inside the range {c * 100:.0f}% of the time ({v.get('checked')} days)"
         if (a.get("n") or 0) + (b.get("n") or 0) < 30:
             return "WATCH", "Alert tool: too few alerts to judge"
         if (a.get("ratio") or 0) >= 1.15 and (b.get("ratio") or 0) >= 1.15:
@@ -478,6 +493,7 @@ if __name__ == "__main__":
     except Exception as e:
         print("intraday failed:", e)
     info = info_checks()
+    INFO_RES = info
     for k, r in res.items():
         r["verdict"], r["why"] = verdict(r)
     out = {"generatedAt": datetime.now(IST).isoformat(), "symbols": SYMS, "split": split, "results": res,
