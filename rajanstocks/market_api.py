@@ -140,7 +140,6 @@ for _c, _n, _g, _k in MORE_INDICES:
     nse_service.upstox.INDEX_KEYS[_c] = _k
 
 
-
 def bg(fn):
     """Run a worker as a low-priority background job (see the request throttle in upstox_service)."""
     import functools
@@ -217,7 +216,6 @@ def ensure_universe():
     except Exception as exc:
         print("[universe] refresh failed:", exc)
         _uni["t"] = time.time() - 6 * 3600 + 300   # retry in 5 minutes
-
 
 
 _cache = {}
@@ -346,7 +344,7 @@ def quotes(symbols: str = ""):
             else:
                 missing.append(s)
         if missing:
-            got = _cached("qf|" + ",".join(missing), 3, lambda: fetch(missing))
+            got = _cached("qf|" + ",".join(missing), 3 if market_open() else 45, lambda: fetch(missing))
             t0 = time.time()
             for q in got:
                 _QSYM[q["s"]] = (t0, q)
@@ -891,21 +889,6 @@ def global_markets():
     except Exception as e:
         raise HTTPException(502, f"Global markets unavailable: {e}")
     return {"items": items, "asOf": datetime.now(IST).isoformat(), "source": "TradingView feed (GIFT Nifty / MCX / crypto live, US instruments ~10 min delayed)"}
-
-
-def global_markets_legacy():
-    """Shape the original Rajan Trading UI expects: commodities[] + INR rate."""
-    items = global_markets()["items"]
-    comm = []
-    for it in items:
-        if it["id"] == "FX_IDC:USDINR":
-            continue
-        dec = 0 if it["price"] >= 20000 else 2
-        comm.append({"id": it["id"], "name": it["name"], "label": it["group"], "chart": it.get("chart", True), "price": it["price"], "chg": it["chg"],
-                     "chgPct": it["chgPct"], "priceFormatted": _in_fmt(it["price"], dec), "available": True, "mode": it["mode"]})
-    inr = next((i for i in items if i["id"] == "FX_IDC:USDINR"), None)
-    return {"success": True, "commodities": comm, "inrUsd": inr["price"] if inr else None,
-            "inrChgPct": inr["chgPct"] if inr else None, "items": items}
 
 
 # ----------------------------- Global instrument candles (TradingView history, no login) -----------------------------
@@ -1569,5 +1552,5 @@ def quick_index_calls(deadline_s=8):
 @router.get("/budget")
 def budget():
     """How much of the shared Upstox request budget is in use right now."""
-    from upstox_service import budget_usage
-    return budget_usage()
+    from upstox_service import budget_usage, call_stats
+    return {**budget_usage(), "calls": call_stats()}

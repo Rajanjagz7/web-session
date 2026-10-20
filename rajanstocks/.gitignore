@@ -9,3 +9,6 @@ push_state.json.tmp
 
 # Skyfield ephemeris data - downloaded at runtime by vedic_panchang.py, ~17MB, never commit
 *.bsp
+
+# Local disk cache of daily candles etc. (see shared_cache.py)
+.cache/

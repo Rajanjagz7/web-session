@@ -178,7 +178,7 @@ def _send(sub, title, body, url="/#picks", tag=None):
     if not _host_ok(sub.get("endpoint", "")):
         return "gone"
     try:
-        from pywebpush import webpush, WebPushException
+        from pywebpush import webpush
         webpush(subscription_info=sub,
                 data=json.dumps({"title": title[:120], "body": body[:300], "url": url, "tag": tag, "critical": False}),
                 vapid_private_key=priv,

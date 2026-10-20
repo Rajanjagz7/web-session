@@ -130,7 +130,6 @@ def _flat(d, prefix=""):
 
 
 # ----------------------------- additional strategies (ported from the Pine library) -----------------------------
-import math
 import statistics
 
 
@@ -169,7 +168,7 @@ def _raw_candle_oh_ol(symbol):
     bars = bar_source.daily_bars(symbol, 200)
     rows = []
     for b in bars:
-        tol = 0.0 if False else max(0.05, b["close"] * 0.0001)
+        tol = max(0.05, b["close"] * 0.0001)
         ol = b["high"] > b["low"] and abs(b["open"] - b["low"]) <= tol
         oh = b["high"] > b["low"] and abs(b["open"] - b["high"]) <= tol
         rows.append({"date": b["date"], "signal": "BUY" if ol and not oh else "SELL" if oh and not ol else None, "ol": ol, "oh": oh})
@@ -187,8 +186,6 @@ def _raw_volume_spurt(symbol):
     for i, b in enumerate(bars):
         spurt = sma[i] is not None and sma[i] > 0 and vols[i] > sma[i] * 2.0 and b["close"] > b["open"]
         rows.append({"date": b["date"], "signal": "SPURT" if spurt else None, "ratio": (vols[i] / sma[i]) if sma[i] else None})
-    if not any(vols):
-        raise HTTPException(400, f"{symbol} has no volume data (indices do not report volume)")
     last = bars[-1]
     return {"bars": rows[-120:], "current": {"date": last["date"], "close": last["close"], "volume": vols[-1], "avgVolume20": sma[-1],
             "ratio": rows[-1]["ratio"], "signal": rows[-1]["signal"]}}
@@ -302,7 +299,7 @@ def _run_raw(key, symbol):
     raise HTTPException(400, f"Unknown strategy '{key}'")
 
 
-def _recent_event(bars, n=3, fields=("signal",)):
+def _recent_event(bars, n=3):
     """Latest non-empty signal within the last n bars (date, signal)."""
     for r in reversed(bars[-n:]):
         sg = r.get("signal")
@@ -458,7 +455,7 @@ def summarize(key, symbol, raw):
         out.update(date=c["date"], close=c["close"])
         out["signal"] = c["signal"] or "NONE"
         out["bias"] = _bias(c["signal"])
-        out["headline"] = (f"Volume spurt today: {c['ratio']:.1f}x the 20-day average" if c["signal"] else f"Volume {c['ratio']:.1f}x the 20-day average - no spurt" if c["ratio"] else "No volume data")
+        out["headline"] = (f"Volume spurt today: {c['ratio']:.1f}x the 20-day average" if c["signal"] else f"Volume {c['ratio']:.1f}x the 20-day average - no spurt" if c["ratio"] else "Not applicable: indices report no volume")
         out["details"] = _flat({k: v for k, v in c.items() if k not in ("date", "signal")})
         out["events"] = [{"date": r["date"], "text": f"Spurt {r['ratio']:.1f}x"} for r in raw["bars"] if r.get("signal")][-12:]
 

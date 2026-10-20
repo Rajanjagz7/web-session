@@ -85,7 +85,7 @@ def _walk(bars, raw_long, raw_short, init_sl_fn, trail_fn, r1=1.0, r2=2.0, r3=3.
     for i in range(1, n):  # bar 0 can't look back; mirrors Pine's bar_index>entryBar guard
         b = bars[i]
         if pos:
-            hi, lo, c = b["high"], b["low"], b["close"]
+            hi, lo = b["high"], b["low"]
             exited = False
             if pos["side"] == "LONG":
                 if lo <= pos["stop"]:
@@ -413,7 +413,6 @@ def rajan_gann_sq9_scan(symbol, angle_step=0.25, lookback_days=250):
             # In daily bars, we check if open is near resistance and closes lower
             open_px = bars[i]["open"]
             close_px = bars[i]["close"]
-            high_px = bars[i]["high"]
             
             # Morning bearish: Open near d1 (resistance) and price falls
             if d1[i] is not None and open_px is not None:

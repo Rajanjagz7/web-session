@@ -12,7 +12,7 @@ mean_lunar_node_longitude()) by roughly 0-1.5 degrees at any given time.
 """
 import math
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from skyfield import framelib
 from skyfield.api import Loader, wgs84
 
@@ -147,7 +147,6 @@ def compute_panchang(dt_utc: datetime, lat: float = MUMBAI_LAT, lon: float = MUM
     planets["Ketu (true node)"] = round(ketu_true, 2)
 
     topos = wgs84.latlon(lat, lon)
-    observer = earth + topos
     t0 = ts.from_datetime(dt_utc.replace(hour=0, minute=0, second=0, microsecond=0))
     t1 = ts.from_datetime(dt_utc.replace(hour=23, minute=59, second=0, microsecond=0))
     from skyfield import almanac
