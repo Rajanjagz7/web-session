@@ -1,0 +1,237 @@
+"""God's Eye - The Observer.
+
+One card per instrument (Nifty, Sensex, Bank Nifty, Gold, Silver, Crude Oil, Bitcoin, Nasdaq) with a single
+momentum score from -10 to +10, a Bullish / Neutral / Bearish label, a divergence flag and a sparkline.
+
+Everything is computed from daily candles (TradingView history, no login) with plain, explainable maths:
+
+    score = trend-of-the-day (+/-4)  +  position vs the 20-day average (+/-3)  +  RSI(14) bias (+/-3)
+
+    * day move   : today's % change divided by the instrument's own average daily range, squashed with tanh,
+                   so a 1% day means more for Nifty than for Bitcoin.
+    * vs EMA20   : how far the close sits above/below its 20-day EMA, in the same range-adjusted units.
+    * RSI bias   : (RSI14 - 50) / 25, limited to +/-1, times 3.
+    * label      : score >= +2 Bullish, <= -2 Bearish, otherwise Neutral.
+    * divergence : price makes a higher high while RSI makes a lower high (bearish), or price makes a
+                   lower low while RSI makes a higher low (bullish), comparing the last 10 daily bars
+                   with the 10 before them.
+
+This is an informational read of recent price action. It is not a prediction and not advice.
+"""
+import math
+import os
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, wait
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter
+
+import shared_cache
+
+router = APIRouter(prefix="/api")
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+# key, display name, TradingView symbol, currency prefix
+INSTRUMENTS = [
+    ("NIFTY", "NIFTY", "NSE:NIFTY", "₹"),
+    ("SENSEX", "SENSEX", "BSE:SENSEX", "₹"),
+    ("BANKNIFTY", "BANKNIFTY", "NSE:BANKNIFTY", "₹"),
+    ("GOLD", "GOLD", "COMEX:GC1!", "$"),
+    ("SILVER", "SILVER", "COMEX:SI1!", "$"),
+    ("CRUDEOIL", "CRUDEOIL", "NYMEX:CL1!", "$"),
+    ("BITCOIN", "BITCOIN", "BITSTAMP:BTCUSD", "$"),
+    ("NASDAQ", "NASDAQ", "NASDAQ:NDX", ""),
+]
+
+BULL_AT, BEAR_AT = 2.0, -2.0
+BARS = 90
+TTL = 90  # seconds
+BUDGET = 18 if os.environ.get("VERCEL") else 45     # seconds to wait for all eight instruments
+_cache = {"ts": 0.0, "data": None, "ttl": 90}
+_lock = threading.Lock()
+
+METHOD = {
+    "summary": "Score = day move (±4) + position vs 20-day average (±3) + RSI(14) bias (±3). Range −10 to +10.",
+    "label": "Bullish at +2 or more, Bearish at −2 or less, otherwise Neutral.",
+    "divergence": "Bearish: price makes a higher high but RSI makes a lower high. Bullish: price makes a lower low but RSI makes a higher low (last 10 daily bars vs the 10 before).",
+    "sparkline": "Closing prices of the last 14 daily candles.",
+    "source": "Daily candles from the TradingView feed (Indian indices are delayed, crypto is live).",
+    "note": "Informational read of recent price action only. Not a prediction, not advice.",
+}
+
+
+def market_open(now=None):
+    now = now or datetime.now(IST)
+    if now.weekday() >= 5:
+        return False
+    return (now.hour, now.minute) >= (9, 15) and (now.hour, now.minute) <= (15, 30)
+
+
+def ema(vals, n):
+    k, e, out = 2 / (n + 1), None, []
+    for v in vals:
+        e = v if e is None else v * k + e * (1 - k)
+        out.append(e)
+    return out
+
+
+def rsi_series(closes, n=14):
+    """Wilder RSI. Returns a list the same length as closes (None until enough data)."""
+    out = [None] * len(closes)
+    if len(closes) <= n:
+        return out
+    gains = losses = 0.0
+    for i in range(1, n + 1):
+        d = closes[i] - closes[i - 1]
+        gains += max(d, 0)
+        losses += max(-d, 0)
+    ag, al = gains / n, losses / n
+    out[n] = 100.0 if al == 0 else 100 - 100 / (1 + ag / al)
+    for i in range(n + 1, len(closes)):
+        d = closes[i] - closes[i - 1]
+        ag = (ag * (n - 1) + max(d, 0)) / n
+        al = (al * (n - 1) + max(-d, 0)) / n
+        out[i] = 100.0 if al == 0 else 100 - 100 / (1 + ag / al)
+    return out
+
+
+def analyse(bars):
+    """bars: list of [t, o, h, l, c, v] oldest to newest. Returns the card payload or None."""
+    bars = [b for b in bars if b and b[4]]
+    if len(bars) < 30:
+        return None
+    closes = [b[4] for b in bars]
+    highs, lows = [b[2] for b in bars], [b[3] for b in bars]
+    last, prev = closes[-1], closes[-2]
+    chg_pct = (last - prev) / prev * 100 if prev else 0.0
+    rng = [(h - l) / c * 100 for h, l, c in zip(highs[-14:], lows[-14:], closes[-14:]) if c]
+    avg_rng = max(sum(rng) / len(rng), 0.05) if rng else 1.0
+
+    e20 = ema(closes, 20)[-1]
+    dev = (last - e20) / e20 * 100 if e20 else 0.0
+    rs = rsi_series(closes)
+    rsi = rs[-1] if rs[-1] is not None else 50.0
+
+    a = 4 * math.tanh(chg_pct / avg_rng)
+    b = 3 * math.tanh(dev / (1.5 * avg_rng))
+    c = 3 * max(-1.0, min(1.0, (rsi - 50) / 25))
+    score = round(a + b + c, 1)
+    label = "BULLISH" if score >= BULL_AT else "BEARISH" if score <= BEAR_AT else "NEUTRAL"
+
+    # divergence: last 10 bars vs the 10 before
+    div = None
+    if len(closes) >= 40 and all(r is not None for r in rs[-20:]):
+        r_hi, p_hi = max(highs[-10:]), max(highs[-20:-10])
+        r_lo, p_lo = min(lows[-10:]), min(lows[-20:-10])
+        rr_hi, pr_hi = max(rs[-10:]), max(rs[-20:-10])
+        rr_lo, pr_lo = min(rs[-10:]), min(rs[-20:-10])
+        if r_hi > p_hi and rr_hi < pr_hi - 2:
+            div = "BEARISH"
+        elif r_lo < p_lo and rr_lo > pr_lo + 2:
+            div = "BULLISH"
+
+    reasons = []
+    reasons.append(f"Day move {chg_pct:+.2f}% against a normal daily range of {avg_rng:.2f}%")
+    reasons.append(f"Close is {abs(dev):.2f}% {'above' if dev >= 0 else 'below'} its 20-day average")
+    reasons.append(f"RSI(14) is {rsi:.0f} ({'strong' if rsi >= 60 else 'weak' if rsi <= 40 else 'balanced'})")
+    if div:
+        reasons.append(f"{div.title()} divergence: price and RSI disagree over the last 20 bars")
+
+    return {
+        "price": round(last, 2),
+        "chgPct": round(chg_pct, 2),
+        "score": score,
+        "label": label,
+        "divergence": div,
+        "spark": [round(x, 2) for x in closes[-14:]],
+        "detail": {
+            "rsi": round(rsi, 1),
+            "ema20": round(e20, 2),
+            "vsEma20Pct": round(dev, 2),
+            "avgRangePct": round(avg_rng, 2),
+            "high20": round(max(highs[-20:]), 2),
+            "low20": round(min(lows[-20:]), 2),
+            "parts": {"dayMove": round(a, 1), "trend": round(b, 1), "rsi": round(c, 1)},
+            "reasons": reasons,
+        },
+    }
+
+
+def _compute(item):
+    import market_api  # heavy module; imported lazily so tests of analyse() stay light
+    key, name, sym, ccy = item
+    last_err = "no data"
+    for attempt in range(3):
+        try:
+            bars = market_api._tv_history(sym, "1D", BARS)
+            res = analyse(bars)
+            if res:
+                res.update(key=key, name=name, symbol=sym, ccy=ccy)
+                return res
+            last_err = "not enough history"
+        except Exception as e:  # 429 / network: back off and retry
+            last_err = str(e)[:80]
+        time.sleep(1.2 * (attempt + 1))
+    return {"key": key, "name": name, "symbol": sym, "ccy": ccy, "error": last_err}
+
+
+def _fetch(item):
+    """One instrument, shared across instances for TTL seconds (and kept 6 h as a stale fallback)."""
+    key = item[0]
+    got = shared_cache.get(f"obs|{key}")
+    if got:
+        return got
+    res = _compute(item)
+    if "error" not in res:
+        shared_cache.set(f"obs|{key}", res, TTL)
+        shared_cache.set(f"obs-stale|{key}", res, 6 * 3600)
+    return res
+
+
+def build():
+    """All instruments within a time budget. Anything still running is answered from the stale copy, or marked
+    `pending` so the page asks again in a few seconds (a serverless function must answer inside ~30 s)."""
+    pool = ThreadPoolExecutor(max_workers=4)
+    futs = {pool.submit(_fetch, it): it for it in INSTRUMENTS}
+    done, _ = wait(futs, timeout=BUDGET)
+    pool.shutdown(wait=False)
+    items = []
+    for it in INSTRUMENTS:
+        fut = next(f for f, i in futs.items() if i is it)
+        res = fut.result() if fut in done else None
+        if res is None or "error" in res:
+            old = shared_cache.get(f"obs-stale|{it[0]}")
+            if old:
+                res = dict(old, stale=True)
+            elif res is None:
+                res = {"key": it[0], "name": it[1], "symbol": it[2], "ccy": it[3], "pending": True}
+        items.append(res)
+    return {
+        "items": items,
+        "marketOpen": market_open(),
+        "asOf": datetime.now(IST).isoformat(timespec="seconds"),
+        "method": METHOD,
+    }
+
+
+def warm():
+    """Own-server mode: build once in the background so the first visit is instant."""
+    threading.Thread(target=lambda: observer(refresh=True), daemon=True, name="observer-warm").start()
+
+
+@router.get("/observer")
+def observer(refresh: bool = False):
+    with _lock:
+        fresh = _cache["data"] and time.time() - _cache["ts"] < _cache["ttl"]
+        if refresh or not fresh:
+            data = build()
+            if any("error" not in i and not i.get("pending") for i in data["items"]) or not _cache["data"]:
+                pending = any(i.get("pending") for i in data["items"])
+                _cache.update(ts=time.time(), data=data, ttl=4 if pending else TTL)
+            else:                       # every instrument failed: keep showing the last good read
+                data = _cache["data"]
+        else:
+            data = _cache["data"]
+    return data
