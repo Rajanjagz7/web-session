@@ -1020,7 +1020,8 @@ def gcandles(id: str, tf: str = "1D", count: int = 1500):
 
     def fetch():
         rows = []
-        for pres, pf in plans[:2]:                  # a base that comes back empty falls through to the next smaller one
+        coarse = [(r, 1) for r in ("15", "60") if u in "mH" and int(r) > mins]   # thin contracts (GIFT Bank Nifty) have no 1m/5m bars
+        for pres, pf in plans[:2] + coarse:         # a base that comes back empty falls through to the next one
             rows = _tv_history(id, pres, min(5000, count * pf))
             if rows:
                 break
