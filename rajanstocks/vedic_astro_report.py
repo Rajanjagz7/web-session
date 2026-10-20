@@ -202,10 +202,21 @@ def _session_stats(symbol):
     """
     try:
         import market_api
-        bars = (market_api.candles(symbol=symbol, tf="5m", ikey="", frm="", to="") or {}).get("bars") or []
+        up = market_api.upstox_service
+        key = market_api._key(symbol)
+        bars = []
+        try:  # today's live session first (cheap: one call)
+            bars = market_api._dedupe(up.fetch_intraday_candles(key, "minutes", "5"))
+        except Exception:
+            bars = []
+        if not bars:  # holiday / weekend / pre-open: the last completed session from the last week only
+            t = datetime.now(IST).date()
+            bars = market_api._dedupe(up.fetch_historical_candles(key, "minutes", "5", to_date=t.isoformat(),
+                                                                  from_date=(t - timedelta(days=7)).isoformat()))
     except Exception as e:
         reason = f"5-minute candles unavailable: {str(e)[:120]}"
         return {"live_vwap": _na(reason), "opening_range": _na(reason)}
+    bars = sorted(bars or [], key=lambda b: b["t"])
     if not bars:
         return {"live_vwap": _na("No 5-minute candles returned"), "opening_range": _na("No 5-minute candles returned")}
     day = lambda b: datetime.fromtimestamp(b["t"] / 1000, IST).date()
