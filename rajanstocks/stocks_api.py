@@ -158,7 +158,6 @@ def _sensex_live():
         if not m:
             continue
         n = re.search(r"!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", block)
-        ind = re.search(r"\n\|(?:\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|([^\n|\[<]+))\n\|[0-9]", block)
         out.append({"s": m.group(1), "n": ((n.group(2) or n.group(1)) if n else m.group(1)).strip(), "industry": ""})
     known = _equities()["by_sym"]
     out = [x for x in out if x["s"] in known]

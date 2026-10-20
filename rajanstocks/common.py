@@ -34,20 +34,5 @@ def to_float(value):
         return None
 
 
-def parse_bool(value, default=False):
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in ("1", "true", "yes", "on")
-
-
-def parse_float(value, default=0.0):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def record_key(record):
     return (record["symbol"], record["expiry"], record["strike"], record["type"])

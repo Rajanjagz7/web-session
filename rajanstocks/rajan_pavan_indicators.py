@@ -99,16 +99,6 @@ def _shifted_rolling_min(values, length):
     return out
 
 
-def _rolling_sum(values, length):
-    n = len(values)
-    out = [None] * n
-    for i in range(n):
-        if i + 1 < length:
-            continue
-        out[i] = sum(values[i - length + 1:i + 1])
-    return out
-
-
 def _rsi(closes, length):
     """Wilder's RSI — what Pine's ta.rsi() uses."""
     n = len(closes)
@@ -1273,16 +1263,6 @@ PARAM_MAP = {
         "pivotLeft": "pivot_left", "pivotRight": "pivot_right",
     },
 }
-
-
-def build_kwargs(key, raw):
-    mapping = PARAM_MAP[key]
-    out = {}
-    for query_name, py_name in mapping.items():
-        val = raw.get(query_name)
-        if val is not None:
-            out[py_name] = val
-    return out
 
 
 # Strategies added after the original 15 (Trend Target Ribbon, Dual-Phase Reversal).

@@ -120,7 +120,6 @@ def level_trades(bars, base_fn, valid_fn, levels, sl_list):
     for i, (m, o, h, l, c) in enumerate(bars):
         if m > LAST_ENTRY:
             break
-        hi_before = hi
         hi, lo = max(hi, h), min(lo, l)
         if not valid_fn(hi, i):
             break                                   # condition broken: the setup is over for the day
