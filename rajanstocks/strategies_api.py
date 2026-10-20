@@ -588,6 +588,10 @@ def _opt_rule(key, leg, prev_close, expiry=None):
     return False, ""
 
 
+def _pd_t(e):
+    return "targets " + " / ".join(f"{m:g}x {e * m:,.2f}" for m in (1.5, 2, 5, 10))
+
+
 def _pd_rule(key, p, o, h, l, pc, expiry):
     """Live match for the premium indicators (same rules as static/index.html pdEval and premium_backtest.py)."""
     tol = 0.5
@@ -597,7 +601,7 @@ def _pd_rule(key, p, o, h, l, pc, expiry):
     is_exp = expiry == datetime.now(market_api.IST).date().isoformat()
     if key == "pd-ohol10":
         ok = l >= o - 10 and p >= o and h > l
-        return ok, (f"Open {o:,.2f}, low {l:,.2f} (within 10) · BUY {p:,.2f} · SL {max(0.05, p - 3):,.2f} (3 pts)") if ok else ""
+        return ok, (f"Open {o:,.2f}, low {l:,.2f} (within 10) · BUY {p:,.2f} · SL {max(0.05, p - 3):,.2f} (3 pts) · {_pd_t(p)}") if ok else ""
     if o < 20 or (key == "pd-expiry") != is_exp:
         return False, ""
     if key == "pd-expiry":
@@ -611,13 +615,13 @@ def _pd_rule(key, p, o, h, l, pc, expiry):
             base, why = pc, "High = prev close"
         else:
             if abs(l - o) <= tol and p > o:
-                return True, f"Open = Low clean buy · entry {p:,.2f} · SL {max(0.05, p - 10):,.2f}-{max(0.05, p - 5):,.2f}"
+                return True, f"Open = Low clean buy · entry {p:,.2f} · SL {max(0.05, p - 10):,.2f}-{max(0.05, p - 5):,.2f} · {_pd_t(p)}"
             return False, ""
         ks = (2, 4)
     for k in ks:
         lv = base / k
         if l <= lv + 0.05 and lv - 10 <= p <= lv + max(3, lv * 0.1):
-            return True, (f"{why} {base:,.2f} · premium at /{k:g} = {lv:,.2f} (buy zone) · SL {max(0.05, lv - 10):,.2f}-{max(0.05, lv - 5):,.2f}")
+            return True, (f"{why} {base:,.2f} · premium at /{k:g} = {lv:,.2f} (buy zone) · SL {max(0.05, lv - 10):,.2f}-{max(0.05, lv - 5):,.2f} · {_pd_t(lv)}")
     return False, ""
 
 

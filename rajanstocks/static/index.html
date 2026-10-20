@@ -681,7 +681,7 @@ td.ltp .pd-tag{display:block;font-size:9.5px;font-weight:700;line-height:1.15;ma
 td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.pd-ran .pd-tag{color:#93c5fd}
 .opx-lv{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:11.5px}.opx-lv:empty{display:none}.opx-lv span{padding:4px 8px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line)}
 .opx-lv span.hit{border-color:#22c55e;background:color-mix(in srgb,#16a34a 22%,transparent);color:#4ade80;font-weight:700}.opx-lv span.near{border-color:#f59e0b;color:#fbbf24}.opx-lv span.ran{border-color:#3b82f6;color:#93c5fd}.opx-lv span.stop{opacity:.55;text-decoration:line-through}
-.opx-lv b.h{font-weight:700;color:var(--text-2)}
+.opx-lv b.h{font-weight:700;color:var(--text-2)}.opx-lv span.tg{border-color:#22c55e55;color:var(--text-2)}
 .opx-wi{padding:0 0 6px}.opx-wi .opx-ph{padding:12px 14px 6px;font-weight:700}.wi-kpis{display:flex;flex-wrap:wrap;gap:6px 16px;padding:0 14px 8px;font-size:12.5px;color:var(--text-3)}.wi-kpis b{color:var(--text);font-weight:700}
 .wi-tw{overflow-x:auto;padding:0 8px}.wi-t{width:100%;border-collapse:collapse;font-size:13px}.wi-t th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .wi-t th:first-child,.wi-t td:first-child{text-align:left}.wi-t td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.wi-t td small{font-size:11px;margin-left:4px}.wi-t tr.wi-0{background:color-mix(in srgb,var(--brand) 8%,transparent)}
@@ -3026,11 +3026,13 @@ function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;cons
   else if(l>=o-10&&p>=o&&h>l)sigs.push({name:'O=L±10',ind:'Open = Low within 10 pts',entry:p,sl:+Math.max(0.05,p-3).toFixed(2),st:'hit',soft:1});
   const rank={hit:0,near:1,ran:2,stop:3},top=sigs.filter(x=>!x.soft).sort((a,b)=>(rank[a.st]-rank[b.st])||(Math.abs(p-a.entry)-Math.abs(p-b.entry)))[0]||sigs[0]||null;   // nearest level wins
   return{levels:lv,sigs,top}}
-function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''}`).join('\n')}
+const PD_T=[1.5,2,5,10],pdTg=e=>PD_T.map(m=>m+'x '+fmtP(e*m)).join(' · ');   // user targets: 1.5x 2x 5x 10x the entry premium
+function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''} · targets ${pdTg(x.entry)}`).join('\n')}
 function pdStrip(){const box=$('#opLv'),o=OPT.osym;if(!box)return;if(!o||!OPT.sel){box.innerHTML='';return}
   const pd=pdEval({ltp:o.last,open:o.open,high:o.hi,low:o.lo,prev:o.prev},pdIsExpiry());
   if(!pd||!(pd.levels.length||pd.sigs.length)){box.innerHTML=`<span class="muted">No premium-divisor setup: ${pdIsExpiry()?'needs Open = High on expiry':'needs High = Open or High = prev close'} and a premium of 20+.</span>`;return}
-  box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="hit">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')}
+  box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="hit">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')
+    +(()=>{const t=pd.sigs.find(x=>x.st==='hit'&&!x.soft)||pd.sigs.find(x=>x.st==='hit');return t?`<span class="tg">Targets from ${fmtP(t.entry)}: ${pdTg(t.entry)}</span>`:''})()}
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
   if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
   const xs=$('#optExp');if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('');
