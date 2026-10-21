@@ -728,7 +728,8 @@ def _notify(t):
         import push_signals
         push_signals.notify_all(f"auto|{t['id']}", f"PAPER ENTRY · {t['sym']} {t['strike']:.0f} {t['opt']}",
                                 f"{t['lots']} lot(s) @ ₹{t['entry']} · stop {t['stopU']} · target {t['targetU'] if t['targetU'] else 'trailing'} · "
-                                f"{len(t.get('indicators') or [])} indicator(s): {', '.join((t.get('indicators') or [t['strategy']])[:3])}")
+                                f"{len(t.get('indicators') or [])} indicator(s): {', '.join((t.get('indicators') or [t['strategy']])[:3])}",
+                                bucket="index" if t.get("kind") == "index" else "stock")
     except Exception as e:
         print(f"[auto] notify failed: {e}")
 

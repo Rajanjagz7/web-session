@@ -244,7 +244,10 @@ def run_cycle(force=False, dry=False):
         return report
 
 
-def notify_all(idem, title, body, url="/#journal", kind="trade"):
+PUSH_BUCKETS = {"index": 2, "stock": 3}   # user: 5 trade pushes a day = 2 index-option + 3 stock-option trades
+
+
+def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
     """One push to every subscribed device, never the same id twice. Trade events (auto entries, profit locks, exits) use
     their own daily budget (MAX_TRADE_PER_DAY): they used to share the 5-a-day recommendation cap, so the first five 09:15
     entries used it up and no exit / stop alert could be sent for the rest of the day."""
@@ -261,6 +264,13 @@ def notify_all(idem, title, body, url="/#journal", kind="trade"):
                 st["sentT"].pop(d, None)
         else:
             sent_by, cap = st["sent"].setdefault(today, {}), MAX_PER_DAY
+        if bucket in PUSH_BUCKETS:                        # per-kind daily budget (2 index + 3 stock option trades)
+            bk = st.setdefault("sentB", {})
+            for d in [d for d in bk if d < today]:
+                bk.pop(d, None)
+            used = bk.setdefault(today, {})
+            if used.get(bucket, 0) >= PUSH_BUCKETS[bucket]:
+                return 0
         n = 0
         for ep, rec in list(st["subs"].items()):
             if sent_by.get(ep, 0) >= cap:
@@ -272,6 +282,8 @@ def notify_all(idem, title, body, url="/#journal", kind="trade"):
             elif res == "gone":
                 st["subs"].pop(ep, None)
         if n:
+            if bucket in PUSH_BUCKETS:
+                st["sentB"][today][bucket] = st["sentB"][today].get(bucket, 0) + 1
             seen.add(idem)
             st["seen"][today] = sorted(seen)
             st["log"].append({"at": now.isoformat(), "id": idem, "title": title})
