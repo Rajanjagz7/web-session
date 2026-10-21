@@ -1,0 +1,259 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: checkout.spec.ts >> Checkout — validation (CV-01..CV-03) >> CV-01 invalid email format is rejected
+- Location: tests\checkout.spec.ts:56:7
+
+# Error details
+
+```
+Test timeout of 120000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=f13e2]:
+  - generic [ref=f13e4]:
+    - status [ref=f13e5]
+    - generic [ref=f13e6]:
+      - generic [ref=f13e7]:
+        - link "Skip to content" [ref=f13e8]:
+          - /url: "#checkout-main"
+        - generic [ref=f13e9]:
+          - banner [ref=f13e10]:
+            - generic [ref=f13e15]:
+              - link "ZeroGap Supply Co Navigate to Online Store" [ref=f13e18]:
+                - /url: https://bcppqf-4m.myshopify.com
+                - img "ZeroGap Supply Co"
+                - generic [ref=f13e19]: Navigate to Online Store
+              - link "Cart" [ref=f13e21]:
+                - /url: https://bcppqf-4m.myshopify.com/cart
+          - complementary [ref=f13e25]:
+            - button "Order summary Total price $9.96" [ref=f13e28] [cursor=pointer]:
+              - generic [ref=f13e29]:
+                - generic [ref=f13e30]: Order summary
+                - generic [ref=f13e34]:
+                  - generic [ref=f13e35]: Total price
+                  - paragraph [ref=f13e37]:
+                    - strong [ref=f13e38]: $9.96
+          - generic [ref=f13e41]:
+            - main [ref=f13e42]:
+              - heading "ZeroGap Supply Co Checkout" [level=1] [ref=f13e43]
+              - generic [ref=f13e45]:
+                - status [ref=f13e46]
+                - generic [ref=f13e47]:
+                  - generic [ref=f13e48]:
+                    - region "Contact" [ref=f13e49]:
+                      - generic [ref=f13e53]:
+                        - generic [ref=f13e54]:
+                          - heading "Contact" [level=2] [ref=f13e55]
+                          - link "Sign in" [ref=f13e56]:
+                            - /url: https://bcppqf-4m.myshopify.com/customer_authentication/login?locale=en-AU&region_country=AU&return_to=%2Fcheckouts%2Fcn%2FhWNIDv12lNHIyCRKVES4DiWy%2Fen-au%3F_r%3DAQABteq4azzN-wfueKIzwlPmhdb_GIB3cZpyTk8kri5IMGe3ypOm%26company_location_id%26locale%3Den-AU
+                        - generic [ref=f13e58]:
+                          - generic [ref=f13e60]:
+                            - generic [ref=f13e63]:
+                              - generic: Email
+                              - textbox "Email" [invalid] [ref=f13e64]: not-an-email
+                              - generic [ref=f13e66]:
+                                - img "More information about how your contact info is used" [ref=f13e68]
+                                - tooltip [ref=f13e71]: Used for your order confirmation and cart reminders
+                            - generic [ref=f13e72]: Enter a valid email
+                          - generic [ref=f13e75]:
+                            - checkbox "Email me with news and offers" [ref=f13e77] [cursor=pointer]
+                            - generic [ref=f13e78] [cursor=pointer]: Email me with news and offers
+                    - group [ref=f13e82]:
+                      - generic [ref=f13e83]:
+                        - heading "Delivery" [level=2] [ref=f13e85]
+                        - generic [ref=f13e90]:
+                          - generic [ref=f13e94]:
+                            - generic [ref=f13e95]:
+                              - generic [ref=f13e99]:
+                                - generic: Country/Region
+                                - combobox "Country/Region" [ref=f13e100]:
+                                  - option "Australia" [selected]
+                              - generic [ref=f13e101]:
+                                - generic [ref=f13e103]:
+                                  - generic: First name
+                                  - textbox "First name" [ref=f13e104]
+                                - generic [ref=f13e106]:
+                                  - generic: Last name
+                                  - textbox "Last name" [ref=f13e107]
+                              - generic [ref=f13e112]:
+                                - generic: Address
+                                - textbox "Address" [ref=f13e113]
+                              - generic [ref=f13e120]:
+                                - generic: Apartment, suite, etc. (optional)
+                                - textbox "Apartment, suite, etc. (optional)" [ref=f13e121]
+                              - generic [ref=f13e122]:
+                                - generic [ref=f13e124]:
+                                  - generic: Suburb
+                                  - textbox "Suburb" [ref=f13e125]
+                                - generic [ref=f13e128]:
+                                  - generic: State/territory
+                                  - combobox "State/territory" [ref=f13e129]:
+                                    - option "Australian Capital Territory"
+                                    - option "New South Wales"
+                                    - option "Northern Territory"
+                                    - option "Queensland"
+                                    - option "South Australia"
+                                    - option "Tasmania"
+                                    - option "Victoria"
+                                    - option "Western Australia"
+                                - generic [ref=f13e132]:
+                                  - generic: Postcode
+                                  - textbox "Postcode" [ref=f13e133]
+                              - generic [ref=f13e136]:
+                                - generic: Phone (optional)
+                                - textbox "Phone (optional)" [ref=f13e137]
+                                - generic [ref=f13e139]:
+                                  - img "More information about Phone" [ref=f13e140]
+                                  - tooltip [ref=f13e143]: In case we need to contact you about your order
+                              - generic [ref=f13e145]:
+                                - checkbox "Save this information for next time" [ref=f13e147] [cursor=pointer]
+                                - generic [ref=f13e148] [cursor=pointer]: Save this information for next time
+                            - generic [ref=f13e149]:
+                              - textbox [ref=f13e150]
+                              - textbox [ref=f13e151]
+                              - textbox [ref=f13e152]
+                              - textbox [ref=f13e153]
+                              - textbox [ref=f13e154]: AU
+                              - textbox [ref=f13e155]
+                              - textbox [ref=f13e156]
+                              - textbox [ref=f13e157]
+                              - textbox [ref=f13e158]
+                              - textbox [ref=f13e159]
+                          - generic [ref=f13e160]:
+                            - heading "Shipping method" [level=2] [ref=f13e161]
+                            - paragraph [ref=f13e166]: Enter your shipping address to view available shipping methods.
+                    - generic [ref=f13e168]:
+                      - region "Payment" [ref=f13e171]:
+                        - group [ref=f13e172]:
+                          - generic [ref=f13e173]:
+                            - heading "Payment" [level=2] [ref=f13e176]
+                            - paragraph [ref=f13e178]: All transactions are secure and encrypted.
+                          - generic [ref=f13e181]:
+                            - group [ref=f13e187]:
+                              - generic [ref=f13e188]:
+                                - generic [ref=f13e189]:
+                                  - generic [ref=f13e190] [cursor=pointer]:
+                                    - generic [ref=f13e191]:
+                                      - radio "Credit card, UnionPay and JCB" [checked] [ref=f13e193]
+                                      - strong [ref=f13e195]: Credit card
+                                    - generic [ref=f13e198]:
+                                      - status [ref=f13e199]
+                                      - generic [ref=f13e201]:
+                                        - img "VISA" [ref=f13e203]
+                                        - img "MASTERCARD" [ref=f13e205]
+                                        - img "AMEX" [ref=f13e207]
+                                        - generic [ref=f13e208]: "+2"
+                                        - tooltip [ref=f13e212]
+                                  - generic [ref=f13e222]:
+                                    - generic [ref=f13e225]:
+                                      - generic [ref=f13e228]:
+                                        - generic: Card number
+                                        - iframe [ref=f13e231]:
+                                          - generic [ref=f15e2]:
+                                            - generic [ref=f15e3]:
+                                              - generic [ref=f15e4]: Credit Card Number
+                                              - textbox "Credit Card Number" [ref=f15e5]
+                                            - generic [ref=f15e8]: Name on card
+                                            - textbox [ref=f15e9]
+                                            - generic [ref=f15e10]: Expiry month
+                                            - textbox [ref=f15e11]
+                                            - generic [ref=f15e12]: Expiry year
+                                            - textbox [ref=f15e13]
+                                            - generic [ref=f15e14]: Expiry date (MM / YY)
+                                            - textbox [ref=f15e15]
+                                            - generic [ref=f15e16]: Security code
+                                            - textbox [ref=f15e17]
+                                            - generic [ref=f15e18]: Issue date (MM / YY)
+                                            - textbox [ref=f15e19]
+                                            - generic [ref=f15e20]: Issue number
+                                            - textbox [ref=f15e21]
+                                            - button [ref=f15e22]
+                                      - generic [ref=f13e238]:
+                                        - generic [ref=f13e241]:
+                                          - generic: Expiration date (MM / YY)
+                                          - iframe [ref=f13e244]:
+                                            - generic [ref=f16e2]:
+                                              - generic [ref=f16e3]: Credit Card Number
+                                              - textbox [ref=f16e4]
+                                              - generic [ref=f16e5]: Name on card
+                                              - textbox [ref=f16e6]
+                                              - generic [ref=f16e7]: Expiry month
+                                              - textbox [ref=f16e8]
+                                              - generic [ref=f16e9]: Expiry year
+                                              - textbox [ref=f16e10]
+                                              - generic [ref=f16e11]:
+                                                - generic [ref=f16e12]: Expiry date (MM / YY)
+                                                - textbox "Expiry date (MM / YY)" [ref=f16e13]
+                                              - generic [ref=f16e16]: Security code
+                                              - textbox [ref=f16e17]
+                                              - generic [ref=f16e18]: Issue date (MM / YY)
+                                              - textbox [ref=f16e19]
+                                              - generic [ref=f16e20]: Issue number
+                                              - textbox [ref=f16e21]
+                                              - button [ref=f16e22]
+                                        - generic [ref=f13e249]:
+                                          - generic: Security code
+                                          - generic [ref=f13e250]:
+                                            - iframe [ref=f13e252]
+                                            - generic [ref=f13e253]:
+                                              - img "More information about Security code" [ref=f13e254]
+                                              - tooltip [ref=f13e257]: 3-digit security code usually found on the back of your card. American Express cards have a 4-digit code located on the front.
+                                      - generic [ref=f13e262]:
+                                        - generic: Name on card
+                                        - iframe [ref=f13e265]
+                                    - generic [ref=f13e270]:
+                                      - checkbox "Use shipping address as billing address" [checked] [ref=f13e272] [cursor=pointer]
+                                      - generic [ref=f13e273] [cursor=pointer]: Use shipping address as billing address
+                                - radio [ref=f13e277] [cursor=pointer]
+                                - generic [ref=f13e279] [cursor=pointer]:
+                                  - radio "Cash on Delivery (COD)" [ref=f13e281]
+                                  - strong [ref=f13e284]: Cash on Delivery (COD)
+                            - textbox [ref=f13e286]
+                      - generic [ref=f13e291]:
+                        - region [ref=f13e292]:
+                          - heading "Order summary" [level=2] [ref=f13e293]
+                          - button "Add discount" [ref=f13e294] [cursor=pointer]
+                          - button "Order summary Total 1 item AUD $9.96" [ref=f13e299] [cursor=pointer]:
+                            - generic [ref=f13e301]:
+                              - generic [ref=f13e302]: Order summary
+                              - generic [ref=f13e307]:
+                                - strong [ref=f13e309]: Total
+                                - generic [ref=f13e310]: 1 item
+                              - generic [ref=f13e314]:
+                                - generic [ref=f13e315]: AUD
+                                - strong [ref=f13e318]:
+                                  - generic "$9.96" [ref=f13e320]
+                        - generic [ref=f13e327]:
+                          - heading "Finalize order" [level=2] [ref=f13e328]
+                          - generic [ref=f13e334]:
+                            - button "Pay now $9.96" [disabled]:
+                              - generic:
+                                - generic:
+                                  - generic: Pay now
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic "$9.96"
+                  - button [ref=f13e336] [cursor=pointer]: Submit
+            - contentinfo [ref=f13e337]:
+              - list [ref=f13e341]:
+                - listitem [ref=f13e342]:
+                  - button "Terms and policies" [ref=f13e343] [cursor=pointer]
+      - generic:
+        - progressbar
+  - generic [ref=f13e344]: Opens external website in a new window.
+  - generic [ref=f13e345]: Opens in a new window.
+  - generic [ref=f13e346]: Opens external website.
+  - status [ref=f13e347]
+  - alert [ref=f13e348]
+```
