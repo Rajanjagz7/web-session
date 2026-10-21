@@ -131,7 +131,9 @@ def _lease_permit():
         b20, b10 = int(now // 20), int(now // 600)
         cmds = []
         if _LS["left"] > 0 and _LS["b20"] is not None:       # the previous lease ran out of time: hand back what was not used
-            cmds += [["DECRBY", f"rl2:a:{_LS['b20']}", _LS["left"]], ["DECRBY", f"rl2:b:{_LS['b10']}", _LS["left"]]]
+            # EXPIRE again: DECRBY on an already-expired counter re-creates it WITHOUT a TTL (left junk keys forever)
+            cmds += [["DECRBY", f"rl2:a:{_LS['b20']}", _LS["left"]], ["EXPIRE", f"rl2:a:{_LS['b20']}", 130],
+                     ["DECRBY", f"rl2:b:{_LS['b10']}", _LS["left"]], ["EXPIRE", f"rl2:b:{_LS['b10']}", 2400]]
         _LS["left"] = 0
         k = len(cmds)
         cmds += [["INCRBY", f"rl2:a:{b20}", n], ["EXPIRE", f"rl2:a:{b20}", 130], ["GET", f"rl2:a:{b20 - 1}"], ["GET", f"rl2:a:{b20 - 2}"],
