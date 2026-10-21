@@ -13,9 +13,9 @@
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader']];
    const GROUPS = {};
-   const TAB_TIPS = { new: 'Log a trade: buy price, SL, target, quantity - R:R is worked out for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report' };
+   const TAB_TIPS = { new: 'Log a trade: buy price, SL, target, quantity - R:R is worked out for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -1071,9 +1071,9 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo };
+    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, stocks: () => sbCard() };
     if (!bodies[ui.tab]) ui.tab = 'portfolio';
-    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
+    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' || ui.tab === 'stocks' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
     if (ui.tab === 'portfolio') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
       try { d = JSON.parse(dEl.textContent); } catch (e) { }
@@ -1426,7 +1426,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) { SB.d = await r.json(); SB.ts = Date.now(); } } catch (e) { }
      SB.busy = false;
      { const bk = document.getElementById('jvBooks'); if (bk) { const t = document.createElement('div'); t.innerHTML = booksCard(); bk.replaceWith(t.firstElementChild); } }
-     if (effTab() === 'algo' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
+     if (effTab() === 'stocks' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
    }
    setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden) sbLoad(false); }, 30000);
    function sbCard() {
@@ -1462,7 +1462,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books · ₹${((oCap + sCap) / 1e5).toFixed(0)} L paper capital</h3><span class="muted" style="font-size:12px">each book is tracked separately</span></div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Book</th><th class="num">Capital</th><th class="num">Equity</th><th class="num">P&amp;L</th><th class="num">In use</th><th class="num">Free</th></tr></thead><tbody>
        ${row('Options & Trade screen', oCap, oEq, c.used, c.avail, 'option auto trader + your trades')}
-       ${row('Stock trader', sCap, sEq, d ? d.used : null, d ? d.cash : null, 'intraday · swing · positional (Algo tab)')}
+       ${row('Stock trader', sCap, sEq, d ? d.used : null, d ? d.cash : null, 'intraday · swing · positional (Stock trader tab)')}
        <tr class="jv-tot"><td><b>Total</b></td><td class="num"><b>${inr(oCap + sCap, 0)}</b></td><td class="num ${tEq == null ? '' : cc(tEq - oCap - sCap)}"><b>${tEq == null ? '…' : inr(tEq, 0)}</b></td><td class="num ${tEq == null ? '' : cc(tEq - oCap - sCap)}"><b>${tEq == null ? '…' : sinr(tEq - oCap - sCap)}</b></td><td class="num">${d ? inr(c.used + d.used, 0) : '…'}</td><td class="num up">${d ? inr(c.avail + d.cash, 0) : '…'}</td></tr></tbody></table></div></div>`;
    }
 
@@ -1474,7 +1474,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      // Backtest data
      const bt = typeof SV !== 'undefined' && SV.bt ? SV.bt : null;
      
-     return sbCard() + `<div class="jv-grid">
+     return `<div class="jv-grid">
        <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
          <div class="jv-list">
            <div><span>Status</span><b>${auto.length ? 'Active' : 'Idle'}</b></div>
