@@ -496,7 +496,7 @@ def _close(st, t, px, why):
              cost=round(cost, 2), net=round(gross - cost, 2),
              R=round((gross - cost) / t["initialRisk"], 2) if t.get("initialRisk") else None, last=round(px, 2))
     st["log"].append({"at": _now().isoformat(), "msg": f"EXIT {t['sym']} {t['strike']:.0f}{t['opt']} @ {px:.2f} ({why}) net {t['net']:+.0f}"})
-    kind = "Take profit hit" if why == "TARGET" else "Stop loss hit" if why in ("STOP", "TSL") else None
+    kind = None                                      # exits are not pushed (user: only 5 trade pushes a day) - they stay in the journal
     if kind:                                         # phone pushes: only take profit / stop loss (entries, locks, time exits stay in the journal)
         _push(f"auto-exit|{t['id']}", f"{kind} · {t['sym']} {t['strike']:.0f} {t['opt']}",
               f"Exit @ ₹{px:.2f} (entry ₹{t['entry']}) · net {'+' if t['net'] >= 0 else '−'}₹{abs(t['net']):,.0f}")
@@ -717,7 +717,7 @@ def _run_cycle(now, force, dry):
         return rep
 
 
-PUSH_ENTRIES = False      # phone pushes only for take profit / stop loss (user choice); entries stay in the journal
+PUSH_ENTRIES = True       # user: push the auto trader's trades, max 5 a day (push_signals.MAX_TRADE_PER_DAY)
 PUSH_LOCKS = False
 
 

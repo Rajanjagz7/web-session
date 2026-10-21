@@ -930,6 +930,13 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .opx-pn{cursor:pointer;margin-right:6px}.opx-pn:hover{color:var(--brand);text-decoration:underline}
 .opx-close{color:var(--down);border-color:color-mix(in srgb,var(--down) 50%,transparent)}.opx-close:hover{background:var(--down);color:#fff}
 @media (max-width:760px){.opx-ohl{display:flex;margin:4px 0 0;gap:8px;font-size:11px;flex-wrap:wrap}.opx-sw{margin:6px 0;order:3;width:100%;justify-content:space-between}.opt-h{flex-wrap:wrap}}
+/* mobile: cards never wider than the screen - long contract names and button rows wrap */
+.pk-grid{grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr))}.pk{min-width:0;overflow-wrap:anywhere}.pk>*{min-width:0}
+.pk-h>*{min-width:0}.pk-f{flex-wrap:wrap}.pk-f>span:last-child{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-left:auto}
+.pk-f .btn-xs{max-width:100%;white-space:normal;text-align:center}.pk-lv>div{min-width:0}
+@media(max-width:480px){.pk-lv{grid-template-columns:1fr 1fr !important}.pk-sig .bar{min-width:40px}}
+.view{min-width:0;max-width:100%}.view .card,.nws,.nw,.pk-ge{min-width:0;overflow-wrap:anywhere}
+@media(max-width:600px){.pk-tools .inp,.pk-tools #pkQ{min-width:0;flex:1 1 140px}}
 </style>
 </head>
 <body>
@@ -1329,10 +1336,10 @@ const EV={
  'N-04':{cat:'trading',name:'Order cancelled',pri:'normal',def:['inapp'],hidden:true,lock:[],need:['side','sym'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.sym} cancelled`,'The order will not be executed']},
  'N-05':{cat:'trading',name:'Order rejected',pri:'high',def:['inapp'],hidden:true,lock:[],need:['reason'],t:v=>[`Order rejected: ${v.reason}`,v.sym?`${cap(v.side||'')} ${v.qty||''} ${v.sym}`.trim():'']},
  'N-06':{cat:'trading',name:'Order expired',pri:'normal',def:['inapp','email'],hidden:true,lock:[],need:['sym'],t:v=>[`Day order for ${v.sym} expired`,'It was not filled before the session ended']},
- 'N-07':{cat:'trading',name:'Take profit hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`Take profit hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
- 'N-08':{cat:'trading',name:'Stop loss hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`${v.label||'Stop loss'} hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
- 'N-09':{cat:'price',name:'Price crosses above',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed above ${v.level} — now ${v.price}`,'Your price alert was triggered']},
- 'N-10':{cat:'price',name:'Price crosses below',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed below ${v.level} — now ${v.price}`,'Your price alert was triggered']},
+ 'N-07':{cat:'trading',name:'Take profit hit',pri:'high',def:['inapp'],lock:[],need:['sym','price'],t:v=>[`Take profit hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-08':{cat:'trading',name:'Stop loss hit',pri:'high',def:['inapp'],lock:[],need:['sym','price'],t:v=>[`${v.label||'Stop loss'} hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-09':{cat:'price',name:'Price crosses above',pri:'high',def:['inapp'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed above ${v.level} — now ${v.price}`,'Your price alert was triggered']},
+ 'N-10':{cat:'price',name:'Price crosses below',pri:'high',def:['inapp'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed below ${v.level} — now ${v.price}`,'Your price alert was triggered']},
  'N-11':{cat:'price',name:'Day change exceeds %',pri:'high',def:['inapp'],hidden:true,lock:[],need:['sym','dir','pct'],t:v=>[`${v.sym} is ${v.dir} ${v.pct}% today`,v.price?`Last price ${v.price}`:'']},
  'N-12':{cat:'account',name:'Deposit received',pri:'normal',def:['inapp','email'],hidden:true,lock:[],need:['amount'],t:v=>[`${v.amount} deposit received`,v.note||'Funds were credited to your account']},
  'N-13':{cat:'account',name:'Withdrawal requested / sent',pri:'high',def:['inapp','email'],hidden:true,lock:['email'],need:['amount'],t:v=>[`${v.amount} withdrawal ${v.state||'sent'}`,v.note||'']},
@@ -1354,10 +1361,11 @@ const jget=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==nul
 const jset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const IST_MIN=()=>{const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',weekday:'short',hour12:false}).formatToParts(new Date()),g=t=>(f.find(p=>p.type===t)||{}).value;return{m:(+g('hour')%24)*60+ +g('minute'),d:g('weekday')}};
 function defaultPrefs(){const ev={};for(const id in EV){ev[id]={};CH.forEach(c=>ev[id][c]=EV[id].def.includes(c)||EV[id].lock.includes(c))}
-  return{v:2,ev,quiet:{on:false,start:'22:00',end:'07:00',tz:(Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata')},sound:false,bp:10000,paused:{}}}
-function load(){S.notifs=jget(KEY.n,[]);S.alerts=jget(KEY.a,[]);S.audit=jget(KEY.au,[]);const d=defaultPrefs(),p=jget(KEY.p,null);
+  return{v:3,ev,quiet:{on:false,start:'22:00',end:'07:00',tz:(Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata')},sound:false,bp:10000,paused:{}}}
+function load(){S.notifs=jget(KEY.n,[]);S.alerts=jget(KEY.a,[]);S.audit=jget(KEY.au,[]);
+  try{if(!localStorage.getItem('rn_audit_wiped_1')){S.audit=[];localStorage.setItem(KEY.au,'[]');localStorage.setItem('rn_audit_wiped_1','1')}}catch(e){}   /* one-time clear (user request) */const d=defaultPrefs(),p=jget(KEY.p,null);
   if(p){for(const id in d.ev)if(p.ev&&p.ev[id])Object.assign(d.ev[id],p.ev[id]);Object.assign(d.quiet,p.quiet||{});d.sound=!!p.sound;d.bp=p.bp>0?p.bp:d.bp;d.paused=p.paused||{};
-    if(p.v!==2){for(const id in d.ev)d.ev[id].push=['N-07','N-08','N-09','N-10'].includes(id)}}   /* v2: push only for take profit, stop loss and price alerts */
+    if(p.v!==3){for(const id in d.ev)d.ev[id].push=false}}   /* v3: no on-device pushes by default (the auto trader sends up to 5 a day) */
   for(const id in EV)EV[id].lock.forEach(c=>d.ev[id][c]=true);S.prefs=d;prune()}
 function prune(){const cut=Date.now()-DAYS*864e5;S.notifs=S.notifs.filter(n=>n.t>=cut).slice(0,KEEP)}
 const saveN=()=>jset(KEY.n,S.notifs),saveP=()=>jset(KEY.p,S.prefs),saveA=()=>jset(KEY.a,S.alerts),saveAu=()=>jset(KEY.au,S.audit.slice(0,300));
@@ -1580,7 +1588,7 @@ function logHtml(){const q=S.f.dq.trim().toLowerCase(),rows=[];S.notifs.forEach(
   const l=rows.sort((a,b)=>b.d.at-a.d.at).filter(r=>!q||(r.n.title+' '+r.n.evt+' '+r.d.ch+' '+r.d.status+' '+r.d.reason).toLowerCase().includes(q)).slice(0,S.f.dn);
   return`<div class="rn-bar"><input id="rnLq" placeholder="Search delivery log" value="${esc(S.f.dq)}" aria-label="Search delivery log"><span class="rn-note">Statuses: queued, sent, delivered, opened, failed, suppressed</span></div>
   ${l.length?`<div class="rn-tw"><table><thead><tr><th>Time</th><th>Event</th><th>Channel</th><th>Status</th><th>Reason</th><th class="r">Attempts</th></tr></thead><tbody>${l.map(({n,d})=>`<tr><td>${new Date(d.at).toLocaleString('en-IN')}</td><td>${n.evt} · ${esc(n.title)}${n.test?' (test)':''}</td><td>${CHL[d.ch]}</td><td><span class="rn-st d-${d.status}">${d.status}</span></td><td>${esc(d.reason)}</td><td class="r">${d.attempts}</td></tr>`).join('')}</tbody></table></div>`:'<div class="rn-empty">No deliveries yet.</div>'}`}
-function auditHtml(){return S.audit.length?`<div class="rn-tw"><table><thead><tr><th>When</th><th>What</th><th>Detail</th><th>Device</th></tr></thead><tbody>${S.audit.slice(0,200).map(a=>`<tr><td>${new Date(a.t).toLocaleString('en-IN')}</td><td>${esc(a.what)}</td><td>${esc(a.detail)}</td><td>${esc(a.dev)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="rn-empty">Preference, alert and security actions are recorded here.</div>'}
+function auditHtml(){return S.audit.length?`<div class="rn-bar"><span class="rn-sp"></span><button class="rn-btn" data-rn="clearaudit">Clear audit log</button></div><div class="rn-tw"><table><thead><tr><th>When</th><th>What</th><th>Detail</th><th>Device</th></tr></thead><tbody>${S.audit.slice(0,200).map(a=>`<tr><td>${new Date(a.t).toLocaleString('en-IN')}</td><td>${esc(a.what)}</td><td>${esc(a.detail)}</td><td>${esc(a.dev)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="rn-empty">Preference, alert and security actions are recorded here.</div>'}
 function csv(){const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',rows=filtered().slice().reverse(),h=['notification_id','event','category','priority','title','body','created_at','read','channels'];
   const out=[h.join(','),...rows.map(n=>[n.id,n.evt,n.cat,n.pri,n.title,n.body,new Date(n.t).toISOString(),n.read,n.deliv.map(d=>d.ch+':'+d.status).join('|')].map(q).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));a.download='notifications-'+new Date().toISOString().slice(0,10)+'.csv';a.click()}
@@ -1703,7 +1711,7 @@ document.addEventListener('click',e=>{
   const bg=$('#rnCentre');if(bg&&e.target===bg){closeCentre();return}
   const t=e.target.closest('[data-rn]');if(!t)return;const[k,a,b]=t.dataset.rn.split(':');
   if(e.target.closest('.rn-sec button')&&k!=='sec')return;
-  if(k==='del'){e.stopPropagation();removeNotif(a)}else if(k==='clearall'){clearAllNotifs()}else if(k==='closepop'){closePop()}
+  if(k==='del'){e.stopPropagation();removeNotif(a)}else if(k==='clearall'){clearAllNotifs()}else if(k==='clearaudit'){S.audit=[];saveAu();openCentre('audit')}else if(k==='closepop'){closePop()}
   else if(k==='open'){const n=S.notifs.find(x=>x.id===a);if(n)open(n)}
   else if(k==='sec'){const n=S.notifs.find(x=>x.id===a);if(n){n.answered=b;n.read=true;saveN();audit(b==='yes'?'Confirmed new sign-in':'Secured account from sign-in alert',n.title);if(b==='no')toastInfo('Other sessions were signed out. Please reset your password.');refresh()}}
   else if(k==='readall'){markAll()}else if(k==='centre')openCentre(a);else if(k==='close')closeCentre();

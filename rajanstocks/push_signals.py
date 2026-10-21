@@ -32,7 +32,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter()
 
 MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "5"))
-MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "40"))   # trade events (entry / profit lock / exit) have their own budget
+MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "5"))   # user: at most 5 phone pushes a day (the auto trader's first 5 trades); after that it trades silently
 CYCLE_SECONDS = 300
 STATE_KEY = "rajanone:push:v1"
 STATE_FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "push_state.json")

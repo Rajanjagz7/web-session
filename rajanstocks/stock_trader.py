@@ -146,7 +146,7 @@ def _close(st, t, px, why, now):
     t.update(status="CLOSED", exit=round(px, 2), exitReason=why, closedAt=now.isoformat(), gross=round(gross, 2), cost=round(cost, 2),
              net=round(gross - cost, 2), R=round((gross - cost) / t["risk"], 2) if t.get("risk") else None, last=round(px, 2))
     st["log"].append({"at": now.isoformat(), "msg": f"EXIT {t['hz']} {t['side']} {t['sym']} @ {px:.2f} ({why}) net {t['net']:+.0f}"})
-    kind = "Take profit hit" if why == "TARGET" else "Stop loss hit" if why in ("STOP", "BREAKEVEN") else None
+    kind = None                                      # no stock-trader pushes (user: only the auto trader's 5 a day)
     if kind:
         try:
             import push_signals
