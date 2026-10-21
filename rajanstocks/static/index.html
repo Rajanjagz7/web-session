@@ -1324,20 +1324,20 @@ const PRI={critical:3,high:2,normal:1};
 const cap=s=>String(s||'').charAt(0).toUpperCase()+String(s||'').slice(1);
 const EV={
  'N-01':{cat:'trading',name:'Order placed',pri:'normal',def:['inapp'],lock:[],need:['side','qty','sym','price'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.qty} ${v.sym} @ ${v.price} placed`,'Waiting for the price to reach your level']},
- 'N-02':{cat:'trading',name:'Order filled',pri:'high',def:['inapp','push','email'],lock:['email'],need:['side','qty','sym','price'],t:v=>[`${v.side==='buy'?'Bought':'Sold'} ${v.qty} ${v.sym} @ ${v.price}`,`Order fully executed${v.pnl?' · '+v.pnl:''}`]},
- 'N-03':{cat:'trading',name:'Order partially filled',pri:'high',def:['inapp','push'],lock:[],need:['filled','qty','sym','price'],t:v=>[`${v.filled} of ${v.qty} ${v.sym} filled @ ${v.price}`,'The rest of the order is still working']},
+ 'N-02':{cat:'trading',name:'Order filled',pri:'high',def:['inapp','email'],lock:['email'],need:['side','qty','sym','price'],t:v=>[`${v.side==='buy'?'Bought':'Sold'} ${v.qty} ${v.sym} @ ${v.price}`,`Order fully executed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-03':{cat:'trading',name:'Order partially filled',pri:'high',def:['inapp'],lock:[],need:['filled','qty','sym','price'],t:v=>[`${v.filled} of ${v.qty} ${v.sym} filled @ ${v.price}`,'The rest of the order is still working']},
  'N-04':{cat:'trading',name:'Order cancelled',pri:'normal',def:['inapp'],lock:[],need:['side','sym'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.sym} cancelled`,'The order will not be executed']},
- 'N-05':{cat:'trading',name:'Order rejected',pri:'high',def:['inapp','push'],lock:[],need:['reason'],t:v=>[`Order rejected: ${v.reason}`,v.sym?`${cap(v.side||'')} ${v.qty||''} ${v.sym}`.trim():'']},
+ 'N-05':{cat:'trading',name:'Order rejected',pri:'high',def:['inapp'],lock:[],need:['reason'],t:v=>[`Order rejected: ${v.reason}`,v.sym?`${cap(v.side||'')} ${v.qty||''} ${v.sym}`.trim():'']},
  'N-06':{cat:'trading',name:'Order expired',pri:'normal',def:['inapp','email'],lock:[],need:['sym'],t:v=>[`Day order for ${v.sym} expired`,'It was not filled before the session ended']},
  'N-07':{cat:'trading',name:'Take profit hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`Take profit hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
  'N-08':{cat:'trading',name:'Stop loss hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`${v.label||'Stop loss'} hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
  'N-09':{cat:'price',name:'Price crosses above',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed above ${v.level} — now ${v.price}`,'Your price alert was triggered']},
  'N-10':{cat:'price',name:'Price crosses below',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed below ${v.level} — now ${v.price}`,'Your price alert was triggered']},
- 'N-11':{cat:'price',name:'Day change exceeds %',pri:'high',def:['inapp','push'],lock:[],need:['sym','dir','pct'],t:v=>[`${v.sym} is ${v.dir} ${v.pct}% today`,v.price?`Last price ${v.price}`:'']},
+ 'N-11':{cat:'price',name:'Day change exceeds %',pri:'high',def:['inapp'],lock:[],need:['sym','dir','pct'],t:v=>[`${v.sym} is ${v.dir} ${v.pct}% today`,v.price?`Last price ${v.price}`:'']},
  'N-12':{cat:'account',name:'Deposit received',pri:'normal',def:['inapp','email'],lock:[],need:['amount'],t:v=>[`${v.amount} deposit received`,v.note||'Funds were credited to your account']},
  'N-13':{cat:'account',name:'Withdrawal requested / sent',pri:'high',def:['inapp','email'],lock:['email'],need:['amount'],t:v=>[`${v.amount} withdrawal ${v.state||'sent'}`,v.note||'']},
- 'N-14':{cat:'account',name:'Margin / buying-power warning',pri:'critical',def:['inapp','push','email'],lock:['email'],need:['threshold','available'],t:v=>[`Buying power is below ${v.threshold}`,`Available cash ${v.available}`]},
- 'N-15':{cat:'security',name:'New device sign-in',pri:'critical',def:['push','email','sms'],lock:['push','email','sms'],need:['device'],t:v=>[`New sign-in from ${v.device}${v.place?', '+v.place:''}`,'Was this you?']},
+ 'N-14':{cat:'account',name:'Margin / buying-power warning',pri:'critical',def:['inapp','email'],lock:['email'],need:['threshold','available'],t:v=>[`Buying power is below ${v.threshold}`,`Available cash ${v.available}`]},
+ 'N-15':{cat:'security',name:'New device sign-in',pri:'critical',def:['email','sms'],lock:['email','sms'],need:['device'],t:v=>[`New sign-in from ${v.device}${v.place?', '+v.place:''}`,'Was this you?']},
  'N-16':{cat:'security',name:'Password or 2FA changed',pri:'critical',def:['email','sms'],lock:['email','sms'],need:[],t:v=>[`Your ${v.what||'password'} was changed`,'If this was not you, secure your account now']},
  'SYS-01':{cat:'price',name:'Price alert expired',pri:'normal',def:['inapp'],lock:[],need:['sym'],hidden:true,t:v=>[`Price alert on ${v.sym} expired`,v.note||'It did not trigger before its expiry date']},
  'SYS-02':{cat:'trading',name:'General',pri:'normal',def:['inapp'],lock:[],need:['title'],hidden:true,t:v=>[v.title,v.body||'']},
@@ -1354,9 +1354,10 @@ const jget=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==nul
 const jset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 const IST_MIN=()=>{const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',weekday:'short',hour12:false}).formatToParts(new Date()),g=t=>(f.find(p=>p.type===t)||{}).value;return{m:(+g('hour')%24)*60+ +g('minute'),d:g('weekday')}};
 function defaultPrefs(){const ev={};for(const id in EV){ev[id]={};CH.forEach(c=>ev[id][c]=EV[id].def.includes(c)||EV[id].lock.includes(c))}
-  return{ev,quiet:{on:false,start:'22:00',end:'07:00',tz:(Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata')},sound:false,bp:10000,paused:{}}}
+  return{v:2,ev,quiet:{on:false,start:'22:00',end:'07:00',tz:(Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Kolkata')},sound:false,bp:10000,paused:{}}}
 function load(){S.notifs=jget(KEY.n,[]);S.alerts=jget(KEY.a,[]);S.audit=jget(KEY.au,[]);const d=defaultPrefs(),p=jget(KEY.p,null);
-  if(p){for(const id in d.ev)if(p.ev&&p.ev[id])Object.assign(d.ev[id],p.ev[id]);Object.assign(d.quiet,p.quiet||{});d.sound=!!p.sound;d.bp=p.bp>0?p.bp:d.bp;d.paused=p.paused||{}}
+  if(p){for(const id in d.ev)if(p.ev&&p.ev[id])Object.assign(d.ev[id],p.ev[id]);Object.assign(d.quiet,p.quiet||{});d.sound=!!p.sound;d.bp=p.bp>0?p.bp:d.bp;d.paused=p.paused||{};
+    if(p.v!==2){for(const id in d.ev)d.ev[id].push=['N-07','N-08','N-09','N-10'].includes(id)}}   /* v2: push only for take profit, stop loss and price alerts */
   for(const id in EV)EV[id].lock.forEach(c=>d.ev[id][c]=true);S.prefs=d;prune()}
 function prune(){const cut=Date.now()-DAYS*864e5;S.notifs=S.notifs.filter(n=>n.t>=cut).slice(0,KEEP)}
 const saveN=()=>jset(KEY.n,S.notifs),saveP=()=>jset(KEY.p,S.prefs),saveA=()=>jset(KEY.a,S.alerts),saveAu=()=>jset(KEY.au,S.audit.slice(0,300));

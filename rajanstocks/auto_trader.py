@@ -496,8 +496,10 @@ def _close(st, t, px, why):
              cost=round(cost, 2), net=round(gross - cost, 2),
              R=round((gross - cost) / t["initialRisk"], 2) if t.get("initialRisk") else None, last=round(px, 2))
     st["log"].append({"at": _now().isoformat(), "msg": f"EXIT {t['sym']} {t['strike']:.0f}{t['opt']} @ {px:.2f} ({why}) net {t['net']:+.0f}"})
-    _push(f"auto-exit|{t['id']}", f"PAPER EXIT ({why}) · {t['sym']} {t['strike']:.0f} {t['opt']}",
-          f"Exit @ ₹{px:.2f} (entry ₹{t['entry']}) · net {'+' if t['net'] >= 0 else '−'}₹{abs(t['net']):,.0f}")
+    kind = "Take profit hit" if why == "TARGET" else "Stop loss hit" if why in ("STOP", "TSL") else None
+    if kind:                                         # phone pushes: only take profit / stop loss (entries, locks, time exits stay in the journal)
+        _push(f"auto-exit|{t['id']}", f"{kind} · {t['sym']} {t['strike']:.0f} {t['opt']}",
+              f"Exit @ ₹{px:.2f} (entry ₹{t['entry']}) · net {'+' if t['net'] >= 0 else '−'}₹{abs(t['net']):,.0f}")
 
 
 def _push(idem, title, body):
@@ -601,7 +603,7 @@ def _profit_lock(t, px):
         t["premSL"] = stop
         t["lock"] = {"mode": "trail" if keep else "breakeven", "keep": round(keep), "best": round(best), "at": _now().isoformat()}
         t["stopMoved"] = _now().isoformat()
-        if first:
+        if first and PUSH_LOCKS:
             _push(f"auto-lock|{t['id']}|{t['lock']['mode']}", f"PROFIT LOCKED · {t['sym']} {t.get('strike', 0):.0f} {t.get('opt', '')}",
                   f"Profit ₹{best:,.0f} - stop moved to ₹{stop:.2f} ({'keeps ₹' + format(round(keep), ',') if keep else 'breakeven'})")
 
@@ -715,7 +717,13 @@ def _run_cycle(now, force, dry):
         return rep
 
 
+PUSH_ENTRIES = False      # phone pushes only for take profit / stop loss (user choice); entries stay in the journal
+PUSH_LOCKS = False
+
+
 def _notify(t):
+    if not PUSH_ENTRIES:
+        return
     try:
         import push_signals
         push_signals.notify_all(f"auto|{t['id']}", f"PAPER ENTRY · {t['sym']} {t['strike']:.0f} {t['opt']}",

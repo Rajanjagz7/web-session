@@ -146,6 +146,15 @@ def _close(st, t, px, why, now):
     t.update(status="CLOSED", exit=round(px, 2), exitReason=why, closedAt=now.isoformat(), gross=round(gross, 2), cost=round(cost, 2),
              net=round(gross - cost, 2), R=round((gross - cost) / t["risk"], 2) if t.get("risk") else None, last=round(px, 2))
     st["log"].append({"at": now.isoformat(), "msg": f"EXIT {t['hz']} {t['side']} {t['sym']} @ {px:.2f} ({why}) net {t['net']:+.0f}"})
+    kind = "Take profit hit" if why == "TARGET" else "Stop loss hit" if why in ("STOP", "BREAKEVEN") else None
+    if kind:
+        try:
+            import push_signals
+            push_signals.notify_all(f"stock-exit|{t['id']}", f"{kind} · {t['sym']} ({t['hz']})",
+                                    f"Exit @ ₹{px:,.2f} (entry ₹{t['entry']:,.2f}) · net {'+' if t['net'] >= 0 else '−'}₹{abs(t['net']):,.0f}",
+                                    url="/#journal", kind="trade")
+        except Exception as e:
+            print(f"[stockbot] notify failed: {e}")
 
 
 def manage(st, now):
@@ -246,12 +255,10 @@ def enter(st, now):
             room -= 1
             entered.append(t["id"])
             st["log"].append({"at": now.isoformat(), "msg": f"ENTRY {hz} {pl['side']} {qty} {p['s']} @ {px:.2f} · SL {stop:.2f} · T1 {t1:.2f} · T2 {t2:.2f}"})
-            try:
+            if False:                                    # entry pushes off (user wants only take profit / stop loss pushes)
                 import push_signals
                 push_signals.notify_all(f"stock|{t['id']}", f"STOCK {hz.upper()} {pl['side']} · {p['s']}",
                                         f"{qty} @ ₹{px:,.2f} · SL ₹{stop:,.2f} · T1 ₹{t1:,.2f} · T2 ₹{t2:,.2f}", url="/#journal", kind="trade")
-            except Exception:
-                pass
     return entered
 
 
