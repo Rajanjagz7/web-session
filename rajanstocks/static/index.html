@@ -1323,22 +1323,22 @@ const CATS=[['trading','Trading'],['price','Price alerts'],['account','Account']
 const PRI={critical:3,high:2,normal:1};
 const cap=s=>String(s||'').charAt(0).toUpperCase()+String(s||'').slice(1);
 const EV={
- 'N-01':{cat:'trading',name:'Order placed',pri:'normal',def:['inapp'],lock:[],need:['side','qty','sym','price'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.qty} ${v.sym} @ ${v.price} placed`,'Waiting for the price to reach your level']},
- 'N-02':{cat:'trading',name:'Order filled',pri:'high',def:['inapp','email'],lock:['email'],need:['side','qty','sym','price'],t:v=>[`${v.side==='buy'?'Bought':'Sold'} ${v.qty} ${v.sym} @ ${v.price}`,`Order fully executed${v.pnl?' · '+v.pnl:''}`]},
- 'N-03':{cat:'trading',name:'Order partially filled',pri:'high',def:['inapp'],lock:[],need:['filled','qty','sym','price'],t:v=>[`${v.filled} of ${v.qty} ${v.sym} filled @ ${v.price}`,'The rest of the order is still working']},
- 'N-04':{cat:'trading',name:'Order cancelled',pri:'normal',def:['inapp'],lock:[],need:['side','sym'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.sym} cancelled`,'The order will not be executed']},
- 'N-05':{cat:'trading',name:'Order rejected',pri:'high',def:['inapp'],lock:[],need:['reason'],t:v=>[`Order rejected: ${v.reason}`,v.sym?`${cap(v.side||'')} ${v.qty||''} ${v.sym}`.trim():'']},
- 'N-06':{cat:'trading',name:'Order expired',pri:'normal',def:['inapp','email'],lock:[],need:['sym'],t:v=>[`Day order for ${v.sym} expired`,'It was not filled before the session ended']},
+ 'N-01':{cat:'trading',name:'Order placed',pri:'normal',def:['inapp'],hidden:true,lock:[],need:['side','qty','sym','price'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.qty} ${v.sym} @ ${v.price} placed`,'Waiting for the price to reach your level']},
+ 'N-02':{cat:'trading',name:'Order filled',pri:'high',def:['inapp','email'],hidden:true,lock:['email'],need:['side','qty','sym','price'],t:v=>[`${v.side==='buy'?'Bought':'Sold'} ${v.qty} ${v.sym} @ ${v.price}`,`Order fully executed${v.pnl?' · '+v.pnl:''}`]},
+ 'N-03':{cat:'trading',name:'Order partially filled',pri:'high',def:['inapp'],hidden:true,lock:[],need:['filled','qty','sym','price'],t:v=>[`${v.filled} of ${v.qty} ${v.sym} filled @ ${v.price}`,'The rest of the order is still working']},
+ 'N-04':{cat:'trading',name:'Order cancelled',pri:'normal',def:['inapp'],hidden:true,lock:[],need:['side','sym'],t:v=>[`${cap(v.type||'limit')} ${v.side} ${v.sym} cancelled`,'The order will not be executed']},
+ 'N-05':{cat:'trading',name:'Order rejected',pri:'high',def:['inapp'],hidden:true,lock:[],need:['reason'],t:v=>[`Order rejected: ${v.reason}`,v.sym?`${cap(v.side||'')} ${v.qty||''} ${v.sym}`.trim():'']},
+ 'N-06':{cat:'trading',name:'Order expired',pri:'normal',def:['inapp','email'],hidden:true,lock:[],need:['sym'],t:v=>[`Day order for ${v.sym} expired`,'It was not filled before the session ended']},
  'N-07':{cat:'trading',name:'Take profit hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`Take profit hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
  'N-08':{cat:'trading',name:'Stop loss hit',pri:'high',def:['inapp','push'],lock:[],need:['sym','price'],t:v=>[`${v.label||'Stop loss'} hit on ${v.sym} @ ${v.price}`,`Position closed${v.pnl?' · '+v.pnl:''}`]},
  'N-09':{cat:'price',name:'Price crosses above',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed above ${v.level} — now ${v.price}`,'Your price alert was triggered']},
  'N-10':{cat:'price',name:'Price crosses below',pri:'high',def:['inapp','push'],lock:[],need:['sym','level','price'],t:v=>[`${v.sym} crossed below ${v.level} — now ${v.price}`,'Your price alert was triggered']},
- 'N-11':{cat:'price',name:'Day change exceeds %',pri:'high',def:['inapp'],lock:[],need:['sym','dir','pct'],t:v=>[`${v.sym} is ${v.dir} ${v.pct}% today`,v.price?`Last price ${v.price}`:'']},
- 'N-12':{cat:'account',name:'Deposit received',pri:'normal',def:['inapp','email'],lock:[],need:['amount'],t:v=>[`${v.amount} deposit received`,v.note||'Funds were credited to your account']},
- 'N-13':{cat:'account',name:'Withdrawal requested / sent',pri:'high',def:['inapp','email'],lock:['email'],need:['amount'],t:v=>[`${v.amount} withdrawal ${v.state||'sent'}`,v.note||'']},
- 'N-14':{cat:'account',name:'Margin / buying-power warning',pri:'critical',def:['inapp','email'],lock:['email'],need:['threshold','available'],t:v=>[`Buying power is below ${v.threshold}`,`Available cash ${v.available}`]},
- 'N-15':{cat:'security',name:'New device sign-in',pri:'critical',def:['email','sms'],lock:['email','sms'],need:['device'],t:v=>[`New sign-in from ${v.device}${v.place?', '+v.place:''}`,'Was this you?']},
- 'N-16':{cat:'security',name:'Password or 2FA changed',pri:'critical',def:['email','sms'],lock:['email','sms'],need:[],t:v=>[`Your ${v.what||'password'} was changed`,'If this was not you, secure your account now']},
+ 'N-11':{cat:'price',name:'Day change exceeds %',pri:'high',def:['inapp'],hidden:true,lock:[],need:['sym','dir','pct'],t:v=>[`${v.sym} is ${v.dir} ${v.pct}% today`,v.price?`Last price ${v.price}`:'']},
+ 'N-12':{cat:'account',name:'Deposit received',pri:'normal',def:['inapp','email'],hidden:true,lock:[],need:['amount'],t:v=>[`${v.amount} deposit received`,v.note||'Funds were credited to your account']},
+ 'N-13':{cat:'account',name:'Withdrawal requested / sent',pri:'high',def:['inapp','email'],hidden:true,lock:['email'],need:['amount'],t:v=>[`${v.amount} withdrawal ${v.state||'sent'}`,v.note||'']},
+ 'N-14':{cat:'account',name:'Margin / buying-power warning',pri:'critical',def:['inapp','email'],hidden:true,lock:['email'],need:['threshold','available'],t:v=>[`Buying power is below ${v.threshold}`,`Available cash ${v.available}`]},
+ 'N-15':{cat:'security',name:'New device sign-in',pri:'critical',def:['email','sms'],hidden:true,lock:['email','sms'],need:['device'],t:v=>[`New sign-in from ${v.device}${v.place?', '+v.place:''}`,'Was this you?']},
+ 'N-16':{cat:'security',name:'Password or 2FA changed',pri:'critical',def:['email','sms'],hidden:true,lock:['email','sms'],need:[],t:v=>[`Your ${v.what||'password'} was changed`,'If this was not you, secure your account now']},
  'SYS-01':{cat:'price',name:'Price alert expired',pri:'normal',def:['inapp'],lock:[],need:['sym'],hidden:true,t:v=>[`Price alert on ${v.sym} expired`,v.note||'It did not trigger before its expiry date']},
  'SYS-02':{cat:'trading',name:'General',pri:'normal',def:['inapp'],lock:[],need:['title'],hidden:true,t:v=>[v.title,v.body||'']},
 };
@@ -1553,7 +1553,7 @@ function drawAlertList(){const h=$('#rnAlList');if(!h)return;const ord={Active:0
     <td class="r">${a.status==='Active'?`<button class="rn-btn sm" data-rn="al:pause:${a.id}">Pause</button>`:a.status==='Paused'?`<button class="rn-btn sm" data-rn="al:resume:${a.id}">Resume</button>`:''}<button class="rn-btn sm" data-rn="al:edit:${a.id}">Edit</button><button class="rn-btn sm" data-rn="al:del:${a.id}">Delete</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="rn-empty">No alerts yet. Create one above, or use the Alert button on the chart.</div>'}
 function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notification.permission:'unsupported';
   const rows=CATS.map(([ck,cl])=>{const ids=Object.keys(EV).filter(i=>EV[i].cat===ck&&!EV[i].hidden);
-    return`<tr class="rn-cat"><td colspan="2"><b>${cl}</b></td></tr>`+ids.map(id=>`<tr><td>${id} · ${esc(EV[id].name)}<small class="rn-pr p-${EV[id].pri}">${EV[id].pri}</small></td>${CH_UI.map(c=>{const lock=EV[id].lock.includes(c),on=lock||P.ev[id][c];
+    if(!ids.length)return'';return`<tr class="rn-cat"><td colspan="2"><b>${cl}</b></td></tr>`+ids.map(id=>`<tr><td>${id} · ${esc(EV[id].name)}<small class="rn-pr p-${EV[id].pri}">${EV[id].pri}</small></td>${CH_UI.map(c=>{const lock=EV[id].lock.includes(c),on=lock||P.ev[id][c];
       return`<td class="c"><label class="rn-sw ${lock?'lock':''}" title="${lock?'Locked: this channel cannot be turned off for this event':''}"><input type="checkbox" data-pref="${id}:${c}" ${on?'checked':''} ${lock?'disabled':''} aria-label="${esc(EV[id].name)} ${CHL[c]}"><span></span></label>${lock?'<i class="rn-lk" aria-hidden="true">🔒</i>':''}</td>`}).join('')}</tr>`).join('')}).join('');
   const subbed=(()=>{try{return!!localStorage.getItem('rn_push_sub')}catch(e){return false}})(),mobile=/Android|iPhone|iPad/i.test(navigator.userAgent||'');
   const wp=`<div class="rn-card"><h3>Push to this ${mobile?'phone':'device'} <span class="rn-st ${subbed?'s-Active':''}">${subbed?'On':'Off'}</span></h3>
