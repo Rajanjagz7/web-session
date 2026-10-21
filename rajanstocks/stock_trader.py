@@ -5,8 +5,10 @@ Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
     market_api._horizon_fit) are taken in order of that horizon's score, BUY or SELL as the plan says.
   * Up to 3 new trades per horizon per day; at most 6 intraday, 10 swing and 10 positional trades open at once.
     One open trade per stock per horizon.
-  * Size: risk 0.5% of capital (Rs 5,000 on Rs 10 L) between entry and stop, value capped at 15% of capital and at the
-    free cash. SELL trades on swing / positional stand for a futures short (cash stocks cannot be held short overnight).
+  * Size: risk 0.5% of capital (Rs 5,000 on Rs 10 L) between entry and stop, position value capped at 10% of capital.
+    Capital blocked: delivery buys (swing / positional BUY) the full value; intraday trades and swing / positional SELLs
+    (a futures short - cash stocks cannot be held short overnight) 20% margin. Skipped when the free capital is not enough,
+    or when the plan's stop is more than 12% away.
 Exits:
   * stop, or Target 2; when Target 1 is reached the stop moves to the entry (breakeven).
   * intraday: square off at 15:15. swing: after 15 sessions. positional: after 40 sessions.
@@ -31,7 +33,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 KEY = "rajanone:stockbot:v1"
 FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "stockbot_state.json")
 HZ = ("intraday", "swing", "positional")
-CFG = {"capital": 1000000.0, "riskPct": 0.5, "maxValuePct": 15.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
+CFG = {"capital": 1000000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
        "maxOpen": {"intraday": 6, "swing": 10, "positional": 10}, "maxSessions": {"swing": 15, "positional": 40},
        "windowStart": "09:20", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
 _lock = threading.Lock()
@@ -99,10 +101,15 @@ def _sessions_between(a, b):
     return n
 
 
+def _blocked(t):
+    full = t["side"] == "BUY" and t["hz"] != "intraday"
+    return t["entry"] * t["qty"] * (1 if full else CFG["marginPct"] / 100)
+
+
 def _cash(st):
-    """Free cash: capital + booked P&L - value tied up in open trades."""
+    """Free capital: capital + booked P&L - capital blocked by open trades (full value for delivery buys, margin otherwise)."""
     booked = sum(t.get("net", 0) for t in st["trades"] if t["status"] == "CLOSED")
-    used = sum(t["entry"] * t["qty"] for t in st["trades"] if t["status"] == "OPEN")
+    used = sum(_blocked(t) for t in st["trades"] if t["status"] == "OPEN")
     return CFG["capital"] + booked - used, used, booked
 
 
@@ -206,7 +213,10 @@ def enter(st, now):
             stop = px - d * risk_u                                    # same distances as the plan, from the live price
             t1 = px + d * abs(pl["t1"] - pl["entry"])
             t2 = px + d * abs(pl["t2"] - pl["entry"])
-            qty = int(min(risk_amt / max(risk_u, 0.01), max_val / px, max(0.0, cash) / px))
+            if risk_u > 0.12 * px or t2 <= 0 or t1 <= 0:
+                continue                                              # an unrealistic plan is never traded
+            per_unit = px * (1 if (d > 0 and hz != "intraday") else CFG["marginPct"] / 100)
+            qty = int(min(risk_amt / max(risk_u, 0.01), max_val / px, max(0.0, cash) / per_unit))
             if qty < 1:
                 continue
             st["seq"] = st.get("seq", 0) + 1
@@ -215,7 +225,7 @@ def enter(st, now):
                  "t1": round(t1, 2), "t2": round(t2, 2), "risk": round(risk_u * qty, 2), "why": pl.get("why") or "", "hold": pl.get("hold") or "",
                  "status": "OPEN", "last": round(px, 2), "unrealised": 0.0}
             st["trades"].append(t)
-            cash -= px * qty
+            cash -= per_unit * qty
             room -= 1
             entered.append(t["id"])
             st["log"].append({"at": now.isoformat(), "msg": f"ENTRY {hz} {pl['side']} {qty} {p['s']} @ {px:.2f} · SL {stop:.2f} · T1 {t1:.2f} · T2 {t2:.2f}"})

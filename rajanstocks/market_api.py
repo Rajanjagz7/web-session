@@ -1323,7 +1323,7 @@ def _horizon_plans(ltp, hi, lo, atr, rows, intra, short, long_, score, e20):
         r_s = ltp - min(ltp - 1.5 * atr, min(r["low"] for r in prev5) - 0.25 * atr)
     else:
         r_s = max(ltp + 1.5 * atr, max(r["high"] for r in prev5) + 0.25 * atr) - ltp
-    r_s = min(max(r_s, 1.5 * atr), 3 * atr)
+    r_s = min(max(r_s, 1.5 * atr), 3 * atr, 0.07 * ltp)            # never more than 7% of the price
     p_s = mk(short, r_s, 1.5, 2.5, "swing", "Exit on a daily close beyond the stop; book half at Target 1 and move the stop to entry.", 0.5 * atr)
     # positional: 20-session structure
     prev20 = rows[-21:-1] or rows[-20:]
@@ -1332,7 +1332,7 @@ def _horizon_plans(ltp, hi, lo, atr, rows, intra, short, long_, score, e20):
         r_p = ltp - (min(r["low"] for r in prev20) - 0.25 * atr)
     else:
         r_p = (max(r["high"] for r in prev20) + 0.25 * atr) - ltp
-    r_p = min(max(r_p, 2.5 * atr), 5 * atr)
+    r_p = min(max(r_p, 2.5 * atr), 5 * atr, 0.12 * ltp)            # never more than 12% of the price (3R target stays above 0)
     trail = f" (now {e20:,.2f})" if e20 else ""
     p_p = mk(long_, r_p, 2.0, 3.0, "positional", f"Hold while the weekly close stays on the right side of the 20-day EMA{trail}; exit on a weekly close beyond the stop.", 0.5 * atr)
     return {"intraday": p_i, "swing": p_s, "positional": p_p}
