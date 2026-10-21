@@ -5,6 +5,7 @@ All numbers come from Upstox (quotes, candles). Nothing is simulated.
 import concurrent.futures
 import hashlib
 import os
+import math
 import re
 import threading
 import time
@@ -1265,6 +1266,7 @@ def _pick(sym, q, rows):
         stop = min(stop, ltp + 3 * atr)
     risk = abs(entry - stop)
     t1, t2 = entry + sgn * 1.5 * risk, entry + sgn * 2.5 * risk
+    plans = _horizon_plans(ltp, hi, lo, atr, rows, intra, short, long_, score, e20)
     return {
         "s": sym, "n": NAME.get(sym, sym), "sec": SECTOR.get(sym, ""),
         "ltp": round(ltp, 2), "chg": round(chg, 2), "prev": round(prev, 2),
@@ -1278,7 +1280,61 @@ def _pick(sym, q, rows):
         "rsi": round(rsi, 1) if rsi is not None else None,
         "volx": round(volx, 2), "atr": round(atr, 2), "reasons": reasons,
         "spark": [round(c, 2) for c in closes[-20:]],
+        "plans": plans,
     }
+
+
+def _horizon_plans(ltp, hi, lo, atr, rows, intra, short, long_, score, e20):
+    """One plan per holding period, each with its own direction, stop, targets and how long to hold.
+      Intraday   - today's trend vs open / day range; stop just beyond today's low (high), 0.3-0.6 ATR; targets 1R / 2R;
+                   square off by 15:15.
+      Swing      - 20-day EMA side; stop beyond the last 5 sessions' swing, 1.5-3 ATR; targets 1.5R / 2.5R; 3-10 sessions.
+      Positional - 50-day EMA side; stop beyond the last 20 sessions' swing, 2.5-5 ATR; targets 2R / 3R; 2-6 weeks,
+                   trail under the 20-day EMA.
+    Expected time to target uses a normal pace of ~0.5 ATR of progress a session (intraday: ~1 ATR a day)."""
+    def mk(d, risk, k1, k2, hold, exit_rule, pace):
+        if d == 0:
+            d = 1 if score > 0 else -1 if score < 0 else 0
+        if d == 0:
+            return {"side": "WAIT", "hold": {"swing": "-", "positional": "-"}.get(hold, hold), "exit": "No clear direction on this time frame - wait."}
+        stop = ltp - d * risk
+        t1, t2 = ltp + d * k1 * risk, ltp + d * k2 * risk
+        n1 = max(1, math.ceil(k1 * risk / max(pace, 1e-9)))
+        n2 = max(n1, math.ceil(k2 * risk / max(pace, 1e-9)))
+        if hold == "swing":
+            hold = f"about {n1}-{min(n2, 15)} sessions (T1 ~{n1}, T2 ~{n2} at a normal pace); review after 15"
+        elif hold == "positional":
+            w1, w2 = max(1, math.ceil(n1 / 5)), max(2, math.ceil(n2 / 5))
+            hold = f"about {w1}-{min(w2, 8)} weeks (T1 ~{n1} sessions, T2 ~{n2})"
+        return {"side": "BUY" if d > 0 else "SELL", "entry": round(ltp, 2), "stop": round(stop, 2), "t1": round(t1, 2), "t2": round(t2, 2),
+                "rr": k1, "riskPct": round(risk / ltp * 100, 2), "hold": hold, "exit": exit_rule, "eta": (n1, n2)}
+    # intraday: risk to just beyond today's extreme, kept within 0.3-0.6 ATR
+    di = intra if intra else 0
+    ext = (ltp - lo) if di >= 0 else (hi - ltp)
+    r_i = min(max(ext + 0.1 * atr, 0.3 * atr), 0.6 * atr)
+    p_i = mk(di, r_i, 1.0, 2.0, "Today only", "Square off by 15:15 even if no target or stop is hit.", 1e9)
+    if p_i.get("eta"):
+        p_i["eta"] = None
+    # swing: 5-session structure
+    prev5 = rows[-6:-1] or rows[-5:]
+    ds = short or (1 if score > 0 else -1 if score < 0 else 0)
+    if ds >= 0:
+        r_s = ltp - min(ltp - 1.5 * atr, min(r["low"] for r in prev5) - 0.25 * atr)
+    else:
+        r_s = max(ltp + 1.5 * atr, max(r["high"] for r in prev5) + 0.25 * atr) - ltp
+    r_s = min(max(r_s, 1.5 * atr), 3 * atr)
+    p_s = mk(short, r_s, 1.5, 2.5, "swing", "Exit on a daily close beyond the stop; book half at Target 1 and move the stop to entry.", 0.5 * atr)
+    # positional: 20-session structure
+    prev20 = rows[-21:-1] or rows[-20:]
+    dp = long_ or (1 if score > 0 else -1 if score < 0 else 0)
+    if dp >= 0:
+        r_p = ltp - (min(r["low"] for r in prev20) - 0.25 * atr)
+    else:
+        r_p = (max(r["high"] for r in prev20) + 0.25 * atr) - ltp
+    r_p = min(max(r_p, 2.5 * atr), 5 * atr)
+    trail = f" (now {e20:,.2f})" if e20 else ""
+    p_p = mk(long_, r_p, 2.0, 3.0, "positional", f"Hold while the weekly close stays on the right side of the 20-day EMA{trail}; exit on a weekly close beyond the stop.", 0.5 * atr)
+    return {"intraday": p_i, "swing": p_s, "positional": p_p}
 
 
 PICK_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")

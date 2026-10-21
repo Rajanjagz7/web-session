@@ -683,6 +683,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .hg{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid #8b5cf6;border-radius:10px;font-size:13px}.hg-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:6px}.hg-h .muted{font-size:12px}
 .hg-k{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;margin-bottom:8px}.hg-n{font-size:12px;margin:6px 0 0}.hg-t td small{color:var(--text-3);margin-left:3px}.hg-t tr{cursor:default}
 @media(max-width:560px){.hg-t thead{display:none}.hg-t,.hg-t tbody{display:block}.hg-t tr{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:8px 0;border-top:1px solid var(--line)}.hg-t td{border:0!important;padding:0!important;text-align:left!important;white-space:normal}}
+.pk-hp{margin:8px 0}.pk-hpt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.pk-hold{font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.45}
+.pk-ht{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0 2px}.pk-ht th{font-size:10.5px;color:var(--text-3);text-align:left;font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}.pk-ht th.num,.pk-ht td.num{text-align:right}
+.pk-ht td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}.pk-ht td small{display:block;color:var(--text-3);font-size:10.5px}.pk-hn{display:block;font-size:11.5px;margin-bottom:6px}
 .bl-t tr{cursor:pointer}.bl-act{white-space:nowrap;text-align:right!important}.bl-act button{width:26px;height:24px;border-radius:6px;border:0;font-weight:800;font-size:11px;cursor:pointer;margin-left:3px}
 .bl-act-m{display:none}.bl-act-m button{width:24px;height:22px;border-radius:6px;border:0;font-weight:800;font-size:11px;margin:4px 4px 0 0;cursor:pointer}
 @media(max-width:560px){.bl-t .bl-act{display:none}.bl-act-m{display:flex}}
@@ -2746,17 +2749,30 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
     </article>`;
   }
 
-  const L=p.signal!=='SELL';
+  const hp=PK_HZ[App.pk.hz]&&p.plans?p.plans[PK_HZ[App.pk.hz][0]]:null,hs=hp&&hp.side!=='WAIT'?hp.side:null;   // a chosen horizon decides the direction shown
+  const L=hs?hs==='BUY':p.signal!=='SELL';p=hs?Object.assign({},p,{signal:hs}):p;
   return`<article class="pk">
    <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}</small></div>
     <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
    <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
    <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
    <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
-   <div class="pk-lv"><div><small>Entry</small><b class="num">${fmtP(p.entry)}</b></div><div><small>Stop</small><b class="num down">${fmtP(p.stop)}</b></div><div><small>Target 1</small><b class="num ${L?"up":"down"}">${fmtP(p.target)}</b></div><div><small>Target 2</small><b class="num ${L?"up":"down"}">${fmtP(p.target2)}</b></div></div>
+   ${pkPlans(p)}
    <ul class="pk-why">${p.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>No strong trend, volume or range signal today</li>'}</ul>
    <div class="pk-f"><span class="muted">R:R ${p.rr} · RSI ${p.rsi??'—'} · Vol ${p.volx}×</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button> <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button> <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
   </article>`}
+/* per-horizon plan: Intraday (today, square off 15:15) · Swing (days) · Positional (weeks) - each with its own stop / targets */
+const PK_HZ={INTRA:['intraday','Intraday'],SWING:['swing','Swing'],POS:['positional','Positional']};
+function pkPlans(p){const P=p.plans,sel=PK_HZ[App.pk.hz];
+  if(!P)return`<div class="pk-lv"><div><small>Entry</small><b class="num">${fmtP(p.entry)}</b></div><div><small>Stop</small><b class="num down">${fmtP(p.stop)}</b></div><div><small>Target 1</small><b class="num">${fmtP(p.target)}</b></div><div><small>Target 2</small><b class="num">${fmtP(p.target2)}</b></div></div>`;
+  const one=(k,l)=>{const x=P[k];if(!x||x.side==='WAIT')return`<div class="pk-hp"><div class="pk-hpt"><b>${l}</b><span class="badge b-mute">WAIT</span></div><small class="muted">${esc(x?x.exit:'No plan')}</small></div>`;
+    const up=x.side==='BUY';return`<div class="pk-hp"><div class="pk-hpt"><b>${l}</b><span class="badge ${up?'b-up':'b-down'}">${x.side}</span><small class="muted">risk ${x.riskPct}% · R:R 1:${x.rr}</small></div>
+      <div class="pk-lv"><div><small>Entry</small><b class="num">${fmtP(x.entry)}</b></div><div><small>Stop</small><b class="num down">${fmtP(x.stop)}</b></div><div><small>Target 1</small><b class="num ${up?'up':'down'}">${fmtP(x.t1)}</b></div><div><small>Target 2</small><b class="num ${up?'up':'down'}">${fmtP(x.t2)}</b></div></div>
+      <div class="pk-hold">⏱ <b>Hold:</b> ${esc(x.hold)} · ${esc(x.exit)}</div></div>`};
+  if(sel)return one(sel[0],sel[1]);
+  const row=(k,l)=>{const x=P[k];if(!x||x.side==='WAIT')return`<tr><td><b>${l}</b></td><td><span class="badge b-mute">WAIT</span></td><td colspan="4" class="muted">no clear direction</td></tr>`;const up=x.side==='BUY';
+    return`<tr><td><b>${l}</b><small>${esc(String(x.hold).split(' (')[0])}</small></td><td><span class="badge ${up?'b-up':'b-down'}">${x.side}</span></td><td class="num down">${fmtP(x.stop)}</td><td class="num ${up?'up':'down'}">${fmtP(x.t1)}</td><td class="num ${up?'up':'down'}">${fmtP(x.t2)}</td></tr>`};
+  return`<table class="pk-ht"><thead><tr><th>Horizon · hold</th><th></th><th class="num">Stop</th><th class="num">T1</th><th class="num">T2</th></tr></thead><tbody>${row('intraday','Intraday')}${row('swing','Swing')}${row('positional','Positional')}</tbody></table><small class="muted pk-hn">Entry ${fmtP(p.ltp)} · pick a horizon above for its full plan and exit rule.</small>`}
 function callCard(c){const go=c.signal==='BUY CALL'||c.signal==='BUY PUT',up=c.signal==='BUY CALL';
   const cls2=go?(up?'b-up':'b-down'):'b-mute';
   const hz=App.pk&&App.pk.hz;
@@ -2798,9 +2814,13 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   else if(!P.error&&!Array.isArray(P.picks))body='<div class="empty">Screening liquid NSE F&O stocks on live data…</div>';
   else if(P.error)body=`<div class="empty">Could not load picks (${esc(P.error)}). <button class="btn-xs" data-act="rpicks">Retry</button></div>`;
   else{let l;
-    if(f.sig==='BUY')l=P.buy.slice();else if(f.sig==='SELL')l=P.sell.slice();else if(f.sig==='EVERY')l=P.picks.slice();else l=P.buy.concat(P.sell);
+    const hzKey=f.hz!=='ALL'?{INTRA:'intraday',SWING:'swing',POS:'positional'}[f.hz]:null;
+    if(hzKey){   /* a horizon is chosen: Buy / Sell follow THAT horizon's own plan, so intraday and positional lists differ */
+      l=P.picks.filter(p=>{if(p.kind==='index')return f.sig!=='SELL'||p.signal==='SELL';const x=p.plans&&p.plans[hzKey];
+        if(!x)return f.sig==='BUY'?p.signal==='BUY'&&p[hzKey]==='Bullish':f.sig==='SELL'?p.signal==='SELL'&&p[hzKey]==='Bearish':p[hzKey]!=='Neutral';
+        if(f.sig==='EVERY')return true;if(x.side==='WAIT'||p[hzKey]==='Neutral')return false;return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})}
+    else if(f.sig==='BUY')l=P.buy.slice();else if(f.sig==='SELL')l=P.sell.slice();else if(f.sig==='EVERY')l=P.picks.slice();else l=P.buy.concat(P.sell);
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
-    if(f.hz!=='ALL'){const key={INTRA:'intraday',SWING:'swing',POS:'positional'}[f.hz];l=l.filter(p=>p.kind==='index'||p[key]===(p.signal==='SELL'?'Bearish':'Bullish'))}
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
     const SORTS={strength:(a,b)=>(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
     
