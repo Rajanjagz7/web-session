@@ -155,13 +155,14 @@ def _market_context(symbol: str = "NIFTY"):
     out = {}
     try:
         import market_api
-        row = market_api.quote_map([symbol]).get(symbol)         # shared batch - no extra Upstox call
+        q = market_api.quotes() or {}                            # shared all-symbols batch - no extra Upstox call
+        row = {r.get("s"): r for r in q.get("quotes") or []}.get(symbol) or market_api.quote_map([symbol]).get(symbol)
         if row:
             out["index_prev_close"] = _ok(row["prev"])
             out["index_today_ohlc"] = _ok({"open": row["open"], "high": row["high"], "low": row["low"]})
             out["index_last"] = _ok(row["last"])
-            out["market_open"] = _ok(q["marketOpen"])
-            out["quotes_as_of"] = _ok(q["asOf"])
+            out["market_open"] = _ok(q.get("marketOpen"))
+            out["quotes_as_of"] = _ok(q.get("asOf"))
             out["quotes_stale"] = _ok(q.get("stale", False))
         else:
             out["index_prev_close"] = out["index_today_ohlc"] = out["index_last"] = _na(f"{symbol} not in quote response")
