@@ -3689,8 +3689,8 @@ function syncGlobalSym(){const s=App.sym;if(!s||!s.tv||!GL.items)return;const it
     else c.push({t:b.t+Math.floor((now-b.t)/sec)*sec,o:px,h:px,l:px,c:px,v:0});   /* history ended earlier (thin contract): start a new bar, never stretch an old one */
     chart.setData(c,s,App.tf,true);renderSymbar();updatePlan()}}
 let gRefreshTs=0;
-async function refreshGlobalChart(){const s=App.sym;if(!s.tv||Date.now()-gRefreshTs<20000)return;gRefreshTs=Date.now();loadGlobal(true);
-  try{const r=await api(candleURL(s,App.tf));if(r.bars&&r.bars.length&&App.sym===s){const k=s.s+'|'+App.tf.k;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();chart.setData(r.bars,s,App.tf,true);updatePlan()}}catch(e){}}
+async function refreshGlobalChart(){const s=App.sym;if(!s.tv||Date.now()-gRefreshTs<60000)return;gRefreshTs=Date.now();
+  try{const r=await api(candleURL(s,App.tf));if(r.bars&&r.bars.length&&App.sym===s){const k=s.s+'|'+App.tf.k;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();chart.setData(r.bars,s,App.tf,true);syncGlobalSym();updatePlan()}}catch(e){}}   /* re-apply the live price: history is cached for minutes */
 document.addEventListener('click',e=>{const g=e.target.closest('[data-gl]');if(g){openGlobal(g.dataset.gl);return}
   const p=e.target.closest('[data-pkpage]');if(p&&!p.disabled){App.pk.page=+p.dataset.pkpage;renderPicks();window.scrollTo({top:0,behavior:'smooth'})}});
 document.addEventListener('change',e=>{if(e.target.id==='pkSort'){App.pk.sort=e.target.value;App.pk.page=0;renderPicks()}else if(e.target.id==='pkSize'){App.pk.size=+e.target.value;App.pk.page=0;renderPicks()}});
@@ -4095,12 +4095,13 @@ async function pollQuotes(){if(pollBusy)return;pollBusy=true;
   pollBusy=false;setStatus();uiRefresh()}
 function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='options')optTick();
-  if(App.view==='trade'&&App.sym.tv)refreshGlobalChart();
+  if(App.view==='trade'&&App.sym.tv){loadGlobal();refreshGlobalChart()}   /* live price every ~3 s; history reload separately */
   if(App.view==='markets')loadGlobal();
   if(App.view==='daily'&&Date.now()-(DAILY.ts||0)>(MKT.open?60000:600000)){DAILY.ts=Date.now();loadDaily(false)}
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
   liveUpdate()}
+setInterval(()=>{try{if(App.view==='trade'&&App.sym&&App.sym.tv&&!document.hidden){loadGlobal();refreshGlobalChart()}}catch(e){}},3000);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
 function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:(MKT.err||MKT.stale)?20000:MKT.open?5000:60000))}
 /* Auto cache-clear: /api/cache-version flips twice a day (before market open, after market close).
    When it changes, drop every cache this origin holds and reload once so nobody is ever stuck
