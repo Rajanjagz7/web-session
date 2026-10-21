@@ -608,6 +608,11 @@ def run_cycle(force=False, dry=False):
     finally:
         if not dry:
             shared_cache.unlock("auto-cycle")
+            try:                                   # the stock paper trader rides on the same schedule
+                import stock_trader
+                stock_trader.run_cycle()
+            except Exception as e:
+                print(f"[stockbot] cycle failed: {e}")
 
 
 _MARK_AT = 0.0

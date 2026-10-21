@@ -631,7 +631,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
-<script src="/static/journal.js?v=20261021e"></script>
+<script src="/static/journal.js?v=20261021f"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
 <script src="/static/observer.js?v=20261021a"></script>
@@ -1419,6 +1419,10 @@ async function pushOff(){const reg=await swReg(),sub=reg&&await reg.pushManager.
 async function signalTick(){try{if(!localStorage.getItem('rn_push_sub'))return;const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})),m=n.getHours()*60+n.getMinutes();
   if(n.getDay()===0||n.getDay()===6||m<555||m>930)return;await fetch('/api/cron/signal-push')}catch(e){}}
 setInterval(signalTick,300000);setTimeout(signalTick,20000);
+/* paper traders tick while any tab is open in market hours (the server de-dupes with a lock): option auto trader + stock trader */
+async function botTick(){try{const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})),m=n.getHours()*60+n.getMinutes();
+  if(n.getDay()===0||n.getDay()===6||m<555||m>930||document.hidden)return;await fetch('/api/stockbot/run')}catch(e){}}
+setInterval(botTick,120000);setTimeout(botTick,30000);
 async function pushTest(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)throw new Error('Enable push on this device first');
   const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),title:'Test push',body:'Delivered by the push server — this works even when the app is closed.',url:'/',tag:'rn-test-'+Date.now()})});
   const j=await r.json().catch(()=>({}));

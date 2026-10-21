@@ -53,6 +53,8 @@ import research_data  # noqa: E402
 app.include_router(research_data.router)
 import observer_api  # noqa: E402
 app.include_router(observer_api.router)
+import stock_trader  # noqa: E402
+app.include_router(stock_trader.router)
 
 @app.middleware("http")
 async def _no_stale_assets(request, call_next):

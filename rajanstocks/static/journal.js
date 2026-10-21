@@ -201,7 +201,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const blocks = [];
     if (opts && opts.recording) {
       const ds = dayStats(f.date), sod = startOfDayEquity(f.date), lim = sod * S.dailyLossPct / 100;
-      if (ds.entries >= S.maxTrades) blocks.push(`Daily trade limit reached (${ds.entries}/${S.maxTrades}).`);
+      // no daily trade limit any more
       if (ds.pnl + ds.unr <= -lim) blocks.push(`Daily loss limit reached (${sinr(ds.pnl + ds.unr)} ≤ −${inr(lim, 0)}).`);
       if (ds.open >= S.maxOpen) blocks.push(`Max open positions reached (${ds.open}/${S.maxOpen}).`);
       if (overBudget) blocks.push(`Risk ${inr(risk, 0)} exceeds the per-trade budget ${inr(bud, 0)}.`);
@@ -307,7 +307,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return `${kpi('Equity', inr(L.eq, 0), 'booked ' + sinr(L.booked) + ' · open ' + sinr(L.unr), cc(L.eq - S.capital), 'Virtual equity = capital + booked P&L + open (marked-to-market) P&L')}
       ${kpi('Net P&L', sinr(L.booked + L.unr), m.n + ' closed · ' + openN + ' open', cc(L.booked + L.unr), 'Total P&L: closed trades plus open positions at live prices')}
       ${kpi('Today', sinr(todayAll), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll), "Today's net P&L: booked today plus open positions at live prices")}
-      ${kpi('Trades', ds.entries + '/' + S.maxTrades, 'auto ' + AUTO.list.filter(t => t.date === day).length, ds.entries >= S.maxTrades ? 'down' : '', 'Manual entries used today out of your daily limit, plus automated entries')}
+      ${kpi('Trades', String(ds.entries + AUTO.list.filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.filter(t => t.date === day).length, '', 'Manual entries used today out of your daily limit, plus automated entries')}
       ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Win rate of closed trades, with average win and average loss')}
       ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R (multiples of initial risk)')}
       ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss. Above 1.5 is healthy')}
@@ -379,7 +379,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          <div><span>Total Equity</span><b class="${cc(eq - S.capital)}">${inr(eq, 0)}</b></div>
          <div><span>Closed P&amp;L</span><b class="${cc(booked)}">${sinr(booked)}</b></div>
          <div><span>Open P&L</span><b class="${cc(unr)}">${unr > 0 ? '+' + inr(unr, 0) : inr(unr, 0)}</b></div>
-         <div><span>Today</span><b>${ds.entries} / ${S.maxTrades} trades</b></div>
+         <div><span>Today</span><b>${ds.entries} trades</b></div>
          <div><span>Win Rate</span><b>${(m.winRate * 100).toFixed(0)}%</b></div>
          <div><span>Current Positions</span><b>${open.length}</b></div>
        </div></div>
@@ -394,7 +394,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          <div><span>Entries without a stop-loss</span><b class="${noSL ? 'down' : 'up'}">${noSL}</b></div>
          <div><span>Rule overrides (limit / budget / R:R)</span><b class="${overrides ? 'down' : 'up'}">${overrides}</b></div>
          <div><span>Closed trades missing a review</span><b class="${missing ? 'down' : 'up'}">${missing}</b></div>
-         <div><span>Trades today / limit</span><b>${ds.entries} / ${S.maxTrades}</b></div></div></div>
+         </div></div>
      </div>
      <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
    }
@@ -552,14 +552,14 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const box = document.getElementById('jvCalc'); if (!box) return;
     const f = fillTargets(Object.assign({}, readForm())), v = validate(f, { recording: false }), ds = dayStats(f.date || today());
     const msgs = v.errs.map(e => `<li class="down">✖ ${E(e)}</li>`).concat(v.warns.map(w => `<li class="warn">⚠ ${E(w)}</li>`));
-    if (ds.entries >= S.maxTrades) msgs.push(`<li class="down">⛔ Daily limit reached — ${ds.entries}/${S.maxTrades} entries used.</li>`);
+
     box.innerHTML = `<div class="jv-calc-grid">
       <div><small>Risk budget (${S.riskPct}% of ${inr(equity(), 0)})</small><b>${inr(v.bud, 0)}</b></div>
       <div><small>Initial risk (₹)</small><b class="${v.overBudget ? 'down' : ''}">${v.risk ? inr(v.risk, 0) : '—'}</b></div>
       <div><small>Suggested quantity</small><b>${v.sugg || '—'}</b></div>
       <div><small>R:R (to target)</small><b>${v.plannedRR != null ? v.plannedRR.toFixed(2) + ':1' : '—'}</b></div>
-      <div><small>Trades today</small><b>${ds.entries} / ${S.maxTrades}</b></div></div><ul class="jv-msgs">${msgs.join('') || '<li class="up">✓ Plan passes all checks</li>'}</ul>`;
-    const ovr = document.getElementById('jvOvr'); if (ovr) ovr.hidden = !(v.overBudget || (v.plannedRR != null && v.plannedRR < S.minRR) || ds.entries >= S.maxTrades);
+      <div><small>Trades today</small><b>${ds.entries}</b></div></div><ul class="jv-msgs">${msgs.join('') || '<li class="up">✓ Plan passes all checks</li>'}</ul>`;
+    const ovr = document.getElementById('jvOvr'); if (ovr) ovr.hidden = !(v.overBudget || (v.plannedRR != null && v.plannedRR < S.minRR) );
   }
 
   function buildTrade(f, status, ovrReason, ovrFlag) {
@@ -1055,7 +1055,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       ${kpi('Equity', inr(equity() + autoNet + unr, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', cc(autoNet + realised() + unr), 'Capital + booked P&L + open P&L at live prices')}
       ${kpi('Closed P&L', sinr(m.net), m.n + ' trades', cc(m.net), 'Net P&L of closed trades only')}
       ${kpi('Open', open.length, openAuto + ' auto · ' + (open.length - openAuto) + ' manual', '', 'Open positions')}
-      ${kpi('Today', (ds.entries + autoToday) + '', 'manual ' + ds.entries + '/' + S.maxTrades + ' · auto ' + autoToday, (ds.entries >= S.maxTrades) ? 'down' : '', 'Entries taken today against your limits')}
+      ${kpi('Today', (ds.entries + autoToday) + '', 'manual ' + ds.entries + ' · auto ' + autoToday, '', 'Entries taken today against your limits')}
       ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'PF ' + (m.pf === Infinity ? '∞' : m.pf.toFixed(2)), '', 'Win rate and profit factor')}
       ${kpi('Exp.', rr(m.expR), 'DD ' + inr(m.maxDD, 0), cc(m.expR), 'Expectancy in R, and maximum drawdown')}
     </div>`;
@@ -1305,7 +1305,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        <div class="jv-kpi"><small>Open P&L</small><b class="${cc(unr)}">${unr > 0 ? '+' + inr(unr, 0) : inr(unr, 0)}</b></div>
        <div class="jv-kpi"><small>Win Rate</small><b>${winRate.toFixed(0)}%</b></div>
        <div class="jv-kpi"><small>Positions</small><b>${open.length}</b></div>
-       <div class="jv-kpi"><small>Today</small><b>${ds.entries} / ${S.maxTrades}</b></div>
+       <div class="jv-kpi"><small>Today</small><b>${ds.entries}</b></div>
      </div>
      
      <div class="jv-grid">
@@ -1416,6 +1416,37 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      return `<table class="jv-t"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
    }
 
+   /* ---- Stock paper trader (server, its own Rs 10 L): intraday / swing / positional plans from Picks ---- */
+   const SB = { d: null, ts: 0, busy: false };
+   async function sbLoad(force) {
+     if (SB.busy || (!force && Date.now() - SB.ts < 30000)) return;
+     SB.busy = true;
+     try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) { SB.d = await r.json(); SB.ts = Date.now(); } } catch (e) { }
+     SB.busy = false;
+     if (effTab() === 'algo' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
+   }
+   setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden) sbLoad(false); }, 30000);
+   function sbCard() {
+     const d = SB.d;
+     if (!d) { sbLoad(true); return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Loading…</div></div>`; }
+     const HZL = { intraday: 'Intraday', swing: 'Swing', positional: 'Positional' };
+     const rows = Object.entries(d.byHorizon).map(([k, v]) => `<tr><td><b>${HZL[k]}</b></td><td class="num">${v.open}</td><td class="num">${v.closed}</td><td class="num ${v.winRate == null ? '' : v.winRate >= 50 ? 'up' : 'down'}">${v.winRate == null ? '—' : v.winRate + '%'}</td><td class="num">${v.pf == null ? '—' : v.pf}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num ${cc(v.unrealised)}">${sinr(v.unrealised)}</td></tr>`).join('');
+     const open = d.open.map(t => { const up = t.side === 'BUY'; return `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${up ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b><small class="muted" style="display:block">${E(t.why || '')}</small></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.last)}</td><td class="num down">${px(t.stop)}${t.t1Hit ? ' <small class="up">BE</small>' : ''}</td><td class="num">${px(t.t1)} · ${px(t.t2)}</td><td class="num ${cc(t.unrealised)}">${sinr(t.unrealised || 0)}</td><td><button class="btn jv-exit" data-sb="exit" data-id="${E(t.id)}">Exit</button></td></tr>`; }).join('');
+     const pc = pagerBar(d.closed, 'sbc');
+     const closed = pc.part.map(t => `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${t.side === 'BUY' ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.exit)}</td><td>${E(t.exitReason)}</td><td class="num ${cc(t.net)}">${sinr(t.net)}</td><td class="muted">${E(String(t.date).slice(5))}</td></tr>`).join('');
+     return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L (paper)</h3><span class="jv-hr"><span class="muted" style="font-size:12px">${d.lastRun ? 'last run ' + new Date(d.lastRun).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'waits for market hours'}</span><button class="btn" data-sb="reset">Reset</button></span></div>
+       <div class="jv-capg"><div><small>Equity</small><b class="${cc(d.equity - d.capital)}">${inr(d.equity, 0)}</b><span class="muted">booked ${sinr(d.booked)} · open ${sinr(d.unrealised)}</span></div>
+         <div><small>In use</small><b>${inr(d.used, 0)}</b><span class="muted">${(d.used / d.capital * 100).toFixed(1)}% of ₹10 L</span></div><div><small>Free cash</small><b class="up">${inr(d.cash, 0)}</b><span class="muted">${d.all.closed} closed · ${d.all.winRate == null ? '—' : d.all.winRate + '% won'}</span></div></div>
+       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th class="num">Open</th><th class="num">Closed</th><th class="num">Win %</th><th class="num">PF</th><th class="num">Booked</th><th class="num">Open P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>
+       ${open ? `<h4 class="jv-sbh">Open (${d.open.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">LTP</th><th class="num">SL</th><th class="num">T1 · T2</th><th class="num">P&amp;L</th><th></th></tr></thead><tbody>${open}</tbody></table></div>` : '<div class="empty">No open stock trades. New ones are taken 09:20-14:30 (intraday until 13:30) from the Picks plans.</div>'}
+       ${closed ? `<h4 class="jv-sbh">Closed (${d.closed.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">Exit</th><th>Why</th><th class="num">Net</th><th>Date</th></tr></thead><tbody>${closed}</tbody></table></div>${pc.bar}` : ''}
+       <details class="jv-sbr"><summary>Rules</summary><pre>${E(d.rules || '')}</pre></details></div>`;
+   }
+   document.addEventListener('click', e => { const b = e.target.closest('[data-sb]'); if (!b || !e.target.closest('#v-journal')) return; e.preventDefault(); e.stopPropagation();
+     if (b.dataset.sb === 'exit') { b.disabled = true; jpost('/api/stockbot/trade/' + encodeURIComponent(b.dataset.id) + '/exit').then(r => { if (!r.ok) toast_(r.err, 'warn'); sbLoad(true); }); }
+     else if (b.dataset.sb === 'reset') smallForm('Reset stock trader', '<p>Close the record of every stock-trader trade and start again with ₹10,00,000? This cannot be undone.</p>', 'Reset', () => { jpost('/api/stockbot/reset').then(() => { window.closeModal && window.closeModal(); sbLoad(true); }); });
+   }, true);
+
    function viewAlgo() {
      const auto = AUTO.list;
      const openAuto = auto.filter(t => entered(t) && statusOf(t) !== 'Closed');
@@ -1424,7 +1455,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      // Backtest data
      const bt = typeof SV !== 'undefined' && SV.bt ? SV.bt : null;
      
-     return `<div class="jv-grid">
+     return sbCard() + `<div class="jv-grid">
        <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
          <div class="jv-list">
            <div><span>Status</span><b>${auto.length ? 'Active' : 'Idle'}</b></div>
@@ -1547,6 +1578,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-capg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:4px 14px 12px}.jv-capg>div{display:flex;flex-direction:column;gap:2px;min-width:0}.jv-capg small{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.jv-capg b{font-size:18px}.jv-capg span{font-size:11.5px}
   .jv-capbar{height:6px;border-radius:3px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden;margin-top:4px}.jv-capbar i{display:block;height:100%;border-radius:3px;background:var(--up,#22ab94)}.jv-capbar i.warn{background:#f59e0b}.jv-capbar i.down{background:var(--down,#f7525f)}.jv-capbar i.mute{background:#8b5cf6}
   @media(max-width:640px){.jv-capg{grid-template-columns:1fr}}
+  .jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
