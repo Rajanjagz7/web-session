@@ -1343,9 +1343,10 @@ def _horizon_fit(plans, ltp, prev, hi, lo, op, atr, closes, rows, volx, rsi, e20
       Intraday   - today's momentum: move >= 0.4x the normal daily range in the plan's direction, volume at least normal,
                    trading in the top (bottom) 35% of today's range.  Score: move in ATRs, volume, closeness to the extreme.
       Swing      - a pullback or a fresh breakout inside the 20-day trend, NOT a stock that has already run: price within
-                   1.5 ATR of the 20-day EMA on the trend side with RSI 40-65 (35-60 for sells), or a close beyond the last
+                   1 ATR of the 20-day EMA on the trend side, moved back toward it over the last 3 sessions, RSI 40-65
+                   (35-60 for sells), or a close beyond the last
                    5 sessions' high (low) on 1.3x volume.  Score: room left to run + breakout bonus.
-      Positional - an established trend: 50-day EMA rising (falling) > 0.5% over 10 sessions, 3-month return > 5% in the same
+      Positional - an established trend: 50-day EMA rising (falling) > 1% over 10 sessions, 3-month return > 8% in the same
                    direction, 20-day EMA on the right side of the 50-day, and not more than 3 ATR stretched.
                    Score: 3-month return + slope of the 50-day EMA."""
     atr = atr or ltp * 0.015
@@ -1366,7 +1367,8 @@ def _horizon_fit(plans, ltp, prev, hi, lo, op, atr, closes, rows, volx, rsi, e20
     prev5 = rows[-6:-1] or rows[-5:]
     brk = d > 0 and ltp > max(r["high"] for r in prev5) and volx >= 1.3 or d < 0 and ltp < min(r["low"] for r in prev5) and volx >= 1.3
     rsi_ok = rsi is not None and ((40 <= rsi <= 65) if d > 0 else (35 <= rsi <= 60))
-    pull = d != 0 and 0 <= d * ext <= 1.5 and rsi_ok
+    back = len(closes) >= 4 and d * (ltp - closes[-4]) < 0          # moved against the trend over the last 3 sessions = a real pullback
+    pull = d != 0 and 0 <= d * ext <= 1.0 and rsi_ok and back
     ok = d != 0 and (pull or (brk and d * ext <= 2.5))
     p.update(ok=bool(ok), fit=round(max(0.0, 1.5 - abs(ext)) * 30 + (25 if brk else 0) + (10 if rsi_ok else 0), 1),
              why=("Fresh 5-session breakout on volume" if brk else f"Pullback: {abs(ext):.1f} ATR from the 20-day EMA, RSI {rsi:.0f}" if rsi is not None else "Pullback to the 20-day EMA")
@@ -1379,9 +1381,9 @@ def _horizon_fit(plans, ltp, prev, hi, lo, op, atr, closes, rows, volx, rsi, e20
     base = closes[-61] if len(closes) >= 61 else closes[0]
     r60 = (ltp / base - 1) * 100 if base else 0.0
     stack = e20 and e50 and d * (e20 - e50) > 0
-    ok = d != 0 and d * slope > 0.5 and d * r60 > 5 and bool(stack) and d * ext <= 3
+    ok = d != 0 and d * slope > 1.0 and d * r60 > 8 and bool(stack) and d * ext <= 3
     p.update(ok=bool(ok), fit=round(max(0.0, d * r60) + max(0.0, d * slope) * 10, 1),
-             why=f"3-month {r60:+.1f}%, 50-day EMA {slope:+.1f}% in 10 sessions" + ("" if ok else (" - trend not established" if d * slope <= 0.5 or d * r60 <= 5 else " - too stretched")))
+             why=f"3-month {r60:+.1f}%, 50-day EMA {slope:+.1f}% in 10 sessions" + ("" if ok else (" - trend not established" if d * slope <= 1.0 or d * r60 <= 8 else " - too stretched")))
     best = max(("intraday", "swing", "positional"), key=lambda k: (plans[k].get("ok", False), plans[k].get("fit", 0)))
     for k in plans:
         plans[k]["best"] = k == best and plans[k].get("ok", False)
