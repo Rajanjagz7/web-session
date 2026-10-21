@@ -631,7 +631,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
-<script src="/static/journal.js?v=20261020f"></script>
+<script src="/static/journal.js?v=20261021a"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
 <script src="/static/observer.js?v=20261020d"></script>
@@ -2188,7 +2188,7 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=windo
   const eq=t?t.eq:equity(),cap=t?t.capital:1000000,pl=eq-cap,pc=cap?pl/cap*100:0;
   const sh=v=>{const a=Math.abs(v);return a>=1e7?(a/1e7).toFixed(2)+' Cr':a>=1e5?(a/1e5).toFixed(2)+' L':Math.round(a).toLocaleString('en-IN')};
   const k=pl>0.5?'up':pl<-0.5?'down':'';
-  c.className='pf-chip '+k;c.innerHTML=`<small>Portfolio</small><b>₹${sh(eq)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;
+  c.className='pf-chip '+k;c.innerHTML=`<small>P&amp;L</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;   // profit / loss only - the capital is in the tooltip
   c.title=t?`Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} · booked ${t.booked>=0?'+':'−'}₹${Math.round(Math.abs(t.booked)).toLocaleString('en-IN')} · open ${t.unr>=0?'+':'−'}₹${Math.round(Math.abs(t.unr)).toLocaleString('en-IN')} (${t.open} open) — click for the journal`:'Portfolio value'}
 function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
 const NAVI={picks:'trendup',trade:'candle',options:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
@@ -3918,7 +3918,17 @@ function trig(s,pv){
     if(p.tsl){const better=L?(!(p.peak>0)||s.last>p.peak):(!(p.peak>0)||s.last<p.peak);   /* trailing stop follows the best price and never moves back */
       if(better){p.peak=s.last;const d=p.tsl.u==='abs'?p.tsl.v:s.last*p.tsl.v/100,st=+(L?s.last-d:s.last+d).toFixed(s.dp||2);
         if(!(p.sl>0)||(L?st>p.sl:st<p.sl)){p.sl=st;savePaper();setChartLines()}}}
-    if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){closePos(s.s,p.tsl?'TSL':'SL')}}}
+    profitLock(p,s);
+    if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){closePos(s.s,p.tsl||p.lock?'TSL':'SL')}}}
+/* Auto profit lock (buys and sells): once open profit reaches Rs 1,500 the stop moves to cost + charges (breakeven);
+   from Rs 2,000 it trails, keeping 50% of the best profit seen. The stop only ever tightens. */
+const LOCK_BE=1500,LOCK_TRAIL=2000,LOCK_KEEP=0.5;
+function profitLock(p,s){if(!p||!(s.last>0)||!p.q)return;const L=p.q>0,qa=Math.abs(p.q),pnl=(s.last-p.avg)*p.q;
+  if(!(pnl<=(p.best||0)))p.best=pnl;const best=p.best||0;if(best<LOCK_BE)return;
+  let feeU=0;try{const k=kindOf(s);feeU=(calcCharges(k,'buy',qa*p.avg).total+calcCharges(k,'sell',qa*s.last).total)/qa}catch(e){}
+  const keep=best>=LOCK_TRAIL?LOCK_KEEP*best:0,st=+(L?p.avg+feeU+keep/qa:p.avg-feeU-keep/qa).toFixed(s.dp||2);
+  if(!(p.sl>0)||(L?st>p.sl:st<p.sl)){p.sl=st;p.lock={keep:Math.round(keep),best:Math.round(best),mode:keep?'trail':'breakeven'};savePaper();try{setChartLines()}catch(e){}
+    try{toast(`${s.s}: profit ₹${Math.round(best).toLocaleString('en-IN')} - stop moved to ${fmtP(st)} (${keep?'locks ₹'+Math.round(keep).toLocaleString('en-IN'):'breakeven'})`,'ok')}catch(e){}}}
 function setStatus(){const t=$('#liveTxt'),d=$('#liveDot'),b=$('#liveBox');if(!t)return;const S=(w,full,c)=>{t.textContent=w;d.style.background=c;if(b)b.title=full};
   if(netOff())return S('Offline','No internet — prices are not live and trading is disabled','var(--down)');
   if(MKT.err)return S('No feed','Live prices unavailable — retrying','var(--down)');

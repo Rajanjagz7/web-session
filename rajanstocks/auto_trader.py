@@ -529,9 +529,10 @@ def manage(st, now):
                 if new != t["stopU"]:
                     t["stopU"] = round(new, 2)
                     t["stopMoved"] = _now().isoformat()
+        _profit_lock(t, opt_px if opt_px > 0 else exit_px)
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if t.get("premSL") and exit_px <= t["premSL"]:
-            why = "STOP"                              # option premium stop (30% cap) - catches time decay too
+            why = "TSL" if t.get("lock") else "STOP"   # option premium stop (30% cap) - catches time decay too
         elif d * (und_px - t["stopU"]) <= 0:
             why = "TSL" if (tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) else "STOP"
         elif t.get("targetU") is not None and d * (und_px - t["targetU"]) >= 0:
@@ -544,6 +545,29 @@ def manage(st, now):
             why = "REVERSE"
         if why:
             _close(st, t, exit_px, why)
+
+
+LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 1500.0, 2000.0, 0.5
+
+
+def _profit_lock(t, px):
+    """Auto profit lock on the option premium: at Rs 1,500 open profit the premium stop moves to entry + charges
+    (breakeven); from Rs 2,000 it trails, keeping 50% of the best profit seen. Only ever tightens."""
+    qty = (t.get("lots") or 0) * (t.get("lot") or 0)
+    if not (px and px > 0 and qty > 0):
+        return
+    pnl = (px - t["entry"]) * qty
+    best = max(float(t.get("bestPnl") or 0.0), pnl)
+    t["bestPnl"] = round(best, 2)
+    if best < LOCK_BE:
+        return
+    fee_u = 80.0 / qty                                  # ~ two option legs of brokerage + taxes per lot set
+    keep = LOCK_KEEP * best if best >= LOCK_TRAIL else 0.0
+    stop = round(t["entry"] + fee_u + keep / qty, 2)
+    if stop > float(t.get("premSL") or 0):
+        t["premSL"] = stop
+        t["lock"] = {"mode": "trail" if keep else "breakeven", "keep": round(keep), "best": round(best), "at": _now().isoformat()}
+        t["stopMoved"] = _now().isoformat()
 
 
 def _reversed(t, today):
