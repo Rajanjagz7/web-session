@@ -73,6 +73,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
             ['portfolio', 'positions', 'algo'].includes(effTab())) render();          // a new / closed trade: redraw; prices alone update in place
       }
     } catch (e) { /* offline: keep what we have */ }
+    AUTO.ts = Date.now();                   // also after a failure: the next try waits its turn
     AUTO.busy = false;
   }
   /* Trade-screen paper positions (buys AND sells / option writing) and their closed fills, mirrored read-only */
@@ -1412,7 +1413,9 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
    async function sbLoad(force) {
      if (SB.busy || (!force && Date.now() - SB.ts < 60000)) return;
      SB.busy = true;
-     try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) { SB.d = await r.json(); SB.ts = Date.now(); } } catch (e) { }
+     try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) SB.d = await r.json(); else if (!SB.d) SB.d = { error: r.status }; }
+     catch (e) { if (!SB.d) SB.d = { error: 'network' }; }
+     SB.ts = Date.now();                    // success OR failure: the next try waits (a failure used to retry in a tight loop)
      SB.busy = false;
      { const bk = document.getElementById('jvBooks'); if (bk) { const t = document.createElement('div'); t.innerHTML = booksCard(); bk.replaceWith(t.firstElementChild); } }
      if (effTab() === 'stocks' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
@@ -1421,7 +1424,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
    function sbCard() {
      const d = SB.d;
      if (d && !d.byHorizon) return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Stock trader status is unavailable right now. <button class="btn-xs" data-sb="reload">Retry</button></div></div>`;
-     if (!d) { sbLoad(true); return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Loading…</div></div>`; }
+     if (!d) { sbLoad(false); return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Loading…</div></div>`; }
      const HZL = { intraday: 'Intraday', swing: 'Swing', positional: 'Positional' };
      const rows = Object.entries(d.byHorizon).map(([k, v]) => `<tr><td><b>${HZL[k]}</b></td><td class="num">${v.open}</td><td class="num">${v.closed}</td><td class="num ${v.winRate == null ? '' : v.winRate >= 50 ? 'up' : 'down'}">${v.winRate == null ? '—' : v.winRate + '%'}</td><td class="num">${v.pf == null ? '—' : v.pf}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num ${cc(v.unrealised)}">${sinr(v.unrealised)}</td></tr>`).join('');
      const open = d.open.map(t => { const up = t.side === 'BUY'; return `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${up ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b><small class="muted" style="display:block">${E(t.why || '')}</small></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.last)}</td><td class="num down">${px(t.stop)}${t.t1Hit ? ' <small class="up">BE</small>' : ''}</td><td class="num">${px(t.t1)} · ${px(t.t2)}</td><td class="num ${cc(t.unrealised)}">${sinr(t.unrealised || 0)}</td><td><button class="btn jv-exit" data-sb="exit" data-id="${E(t.id)}">Exit</button></td></tr>`; }).join('');
