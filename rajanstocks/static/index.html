@@ -742,7 +742,8 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .opx-fp-f{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}.opx-fp-f .btn{flex:1}
 .opx-dock{display:none}
 .tdock{display:none}
-@media (max-width:900px){#v-trade.on .tdock{display:flex;position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));z-index:55;gap:10px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.25)}.tdock button{flex:1;height:46px;border:0;border-radius:11px;font:inherit;font-weight:800;font-size:15px;color:#fff;cursor:pointer}.tdock .buy{background:var(--up)}.tdock .sell{background:var(--down)}#v-trade.on{padding-bottom:70px}}
+@media (max-width:900px){#v-trade.on .tdock{display:flex;position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));z-index:55;gap:10px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.25)}.tdock button{flex:1;height:46px;border:0;border-radius:11px;font:inherit;font-weight:800;font-size:15px;color:#fff;cursor:pointer}.tdock .buy{background:var(--up)}.tdock .sell{background:var(--down)}
+.tdock.gone{display:none !important}#v-trade.on{padding-bottom:70px}}
 @media (max-width:1180px){.opx-grid{grid-template-columns:fit-content(58%) minmax(400px,1fr)}}
 @media (max-width:899px){
   .opx{padding:8px 10px 90px;gap:8px}
@@ -2286,7 +2287,9 @@ function renderSymbar(){const s=App.sym;const star=App.watch.has(s.s);
   ${s.cap?`<div class="sb-stat">Market cap<span>${fmtN(s.cap)}</span></div>`:''}${s.pe?`<div class="sb-stat">P/E<span>${s.pe}</span></div>`:''}
   <div class="sb-stat">Position<span>${(p=>p?`${p.q>0?'+':''}${qfmt(p.q,s)} @ ${fmtP(p.avg,s.dp)}`:'—')(posOf(s.s))}</span></div>
   <div class="sb-stat sb-ohl">Open <span class="num" data-open="${esc(s.s)}"></span> · Prev Close <span class="num" data-prev="${esc(s.s)}"></span></div>
-  <div class="sb-stat sb-ohl">High <span class="num up" data-high="${esc(s.s)}"></span> · Low <span class="num down" data-low="${esc(s.s)}"></span></div>`}
+  <div class="sb-stat sb-ohl">High <span class="num up" data-high="${esc(s.s)}"></span> · Low <span class="num down" data-low="${esc(s.s)}"></span></div>`;sbFill(s)}
+function sbFill(s){const f=(a,v)=>{const e=document.querySelector(`#symbar [data-${a}]`);if(e)e.textContent=v>0&&v<1e15?fmtP(v,s.dp):'—'};   /* fill straight away - the price poll can be a minute away when NSE is shut */
+  f('open',s.open);f('prev',s.prev);f('high',s.hi);f('low',s.lo);const p=document.querySelector('#symbar [data-px]');if(p&&s.last>0)p.textContent=fmtP(s.last,s.dp)}
 const CTYPES=[['candles','Candles'],['hollow','Hollow candles'],['bars','Bars (OHLC)'],['line','Line'],['area','Area'],['ha','Heikin Ashi']];
 function renderToolbar(){const nInd=chart.ind.length;
   $('#toolbar').innerHTML=`<button class="tb-btn wl-toggle" data-act="wl" aria-label="Watchlist">${I('list',16)}</button>
@@ -4101,7 +4104,10 @@ function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
   liveUpdate()}
-setInterval(()=>{try{if(App.view==='trade'&&App.sym&&App.sym.tv&&!document.hidden){loadGlobal();refreshGlobalChart()}}catch(e){}},3000);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
+setInterval(()=>{try{if(App.view==='trade'&&App.sym&&App.sym.tv&&!document.hidden){loadGlobal();refreshGlobalChart()}}catch(e){}},3000);
+function dockCheck(){const d=document.getElementById('tradeDock');if(!d)return;const seg=document.querySelector('#v-trade.on .side-seg');let vis=false;
+  if(seg&&seg.offsetParent){const r=seg.getBoundingClientRect();vis=r.bottom>0&&r.top<innerHeight-60}d.classList.toggle('gone',vis)}   /* one Buy/Sell at a time: hide the dock while the order ticket's own Buy/Sell is on screen */
+addEventListener('scroll',dockCheck,{passive:true,capture:true});addEventListener('resize',dockCheck);setInterval(dockCheck,800);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
 function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:(MKT.err||MKT.stale)?20000:MKT.open?5000:60000))}
 /* Auto cache-clear: /api/cache-version flips twice a day (before market open, after market close).
    When it changes, drop every cache this origin holds and reload once so nobody is ever stuck
