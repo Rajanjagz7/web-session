@@ -57,7 +57,10 @@ def _load():
     try:
         if r:
             resp = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", STATE_KEY], timeout=8)
-            raw = resp.json().get("result")
+            j = resp.json()
+            if j.get("error") or resp.status_code != 200:          # store refused (e.g. request limit): never treat as "empty"
+                raise RuntimeError(f"state store error: {j.get('error') or resp.status_code}")
+            raw = j.get("result")
             return json.loads(raw) if raw else _empty()
         with open(STATE_FILE, encoding="utf-8") as f:
             return json.load(f)
@@ -65,10 +68,15 @@ def _load():
         return _empty()
     except Exception as e:
         print(f"[push-signals] state load failed: {e}")
-        return _empty()
+        st = _empty()
+        st["_readonly"] = True                                      # a failed read must never be saved over the real state
+        return st
 
 
 def _save(st):
+    if st.get("_readonly"):
+        print("[push-signals] state was not read - not saving")
+        return
     today = datetime.now(IST).date()
     keep = {(today - timedelta(days=i)).isoformat() for i in range(3)}
     st["sent"] = {d: v for d, v in st["sent"].items() if d in keep}

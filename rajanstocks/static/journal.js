@@ -60,7 +60,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return t;
   }
   async function syncAuto(force) {
-    if (AUTO.busy || (!force && Date.now() - AUTO.ts < 30000)) return;
+    if (AUTO.busy || (!force && Date.now() - AUTO.ts < 60000)) return;
     AUTO.busy = true;
     try {
       const r = await fetch('/api/auto/status', { cache: 'no-store' });
@@ -358,7 +358,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function tslShow(t) { if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
   setInterval(() => { refreshLive(); if (!document.hidden) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
-  setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 15000);
+  setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
 
    function viewOverview() {
      const L = filtered(), m = metrics(L), day = today(), ds = dayStats(day);
@@ -1410,14 +1410,14 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
    /* ---- Stock paper trader (server, its own Rs 10 L): intraday / swing / positional plans from Picks ---- */
    const SB = { d: null, ts: 0, busy: false };
    async function sbLoad(force) {
-     if (SB.busy || (!force && Date.now() - SB.ts < 30000)) return;
+     if (SB.busy || (!force && Date.now() - SB.ts < 60000)) return;
      SB.busy = true;
      try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) { SB.d = await r.json(); SB.ts = Date.now(); } } catch (e) { }
      SB.busy = false;
      { const bk = document.getElementById('jvBooks'); if (bk) { const t = document.createElement('div'); t.innerHTML = booksCard(); bk.replaceWith(t.firstElementChild); } }
      if (effTab() === 'stocks' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
    }
-   setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden) sbLoad(false); }, 30000);
+   setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden) sbLoad(false); }, 60000);
    function sbCard() {
      const d = SB.d;
      if (d && !d.byHorizon) return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Stock trader status is unavailable right now. <button class="btn-xs" data-sb="reload">Retry</button></div></div>`;

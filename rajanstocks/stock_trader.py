@@ -63,7 +63,10 @@ def _load():
     try:
         r = _remote()
         if r:
-            raw = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json().get("result")
+            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
+            if j.get("error"):
+                raise RuntimeError(f"state store error: {j['error']}")
+            raw = j.get("result")
             d = json.loads(raw) if raw else {}
         else:
             with open(FILE, encoding="utf-8") as f:
@@ -73,10 +76,14 @@ def _load():
         pass
     except Exception as e:
         print(f"[stockbot] load failed: {e}")
+        st["_readonly"] = True
     return st
 
 
 def _save(st):
+    if st.get("_readonly"):
+        print("[stockbot] state was not read - not saving")
+        return
     st["log"] = st["log"][-150:]
     try:
         r = _remote()
@@ -270,7 +277,7 @@ def status():
     now = _now()
     st = _load()
     last = st.get("lastRun")
-    if nse_calendar.session_open(now) and (not last or (now - datetime.fromisoformat(last)).total_seconds() > 60):
+    if nse_calendar.session_open(now) and (not last or (now - datetime.fromisoformat(last)).total_seconds() > 180):
         try:
             run_cycle()
             st = _load()
@@ -306,6 +313,8 @@ def manual_exit(tid: str):
 
 @router.post("/reset")
 def reset():
+    if _load().get("_readonly"):
+        raise HTTPException(503, "The state store is not answering - reset refused so nothing is lost")
     with _lock:
         _save({"trades": [], "log": [{"at": _now().isoformat(), "msg": "Reset to Rs 10,00,000"}], "seq": 0})
     return {"ok": True}

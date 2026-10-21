@@ -57,7 +57,10 @@ def _load():
     try:
         r = _remote()
         if r:
-            raw = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json().get("result")
+            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
+            if j.get("error"):                                      # store refused (e.g. request limit): never treat as "empty"
+                raise RuntimeError(f"state store error: {j['error']}")
+            raw = j.get("result")
             d = json.loads(raw) if raw else {}
         else:
             with open(FILE, encoding="utf-8") as f:
@@ -82,10 +85,14 @@ def _load():
         pass
     except Exception as e:
         print(f"[auto] state load failed: {e}")
+        st["_readonly"] = True                                      # never save an empty state over the real trades
     return st
 
 
 def _save(st):
+    if st.get("_readonly"):
+        print("[auto] state was not read - not saving")
+        return
     st.pop("_dirty", None)
     st["log"] = st["log"][-120:]
     try:
@@ -618,7 +625,7 @@ def run_cycle(force=False, dry=False):
 _MARK_AT = 0.0
 
 
-def mark_open_positions(min_gap=15):
+def mark_open_positions(min_gap=45):
     """Mark the open positions to market and run their exit checks (stop, target, trailing stop, expiry, time).
     Server-side scheduling is not available on Vercel (the 5-minute cycle only runs while a browser tab with notifications on is
     open), so positions used to keep their entry price - P&L frozen at 0, stops never checked - until that happened. The status
