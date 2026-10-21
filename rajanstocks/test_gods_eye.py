@@ -92,8 +92,15 @@ class TestGodsEyePreMarket:
         assert "Leakage detected" in str(exc.value)
 
     # PM-008, PM-009, PM-010: Signal Calculation Fixtures
-    def test_pm008_pm009_pm010_signal_calculation_fixtures(self):
-        """PM-008, PM-009, PM-010: Bearish live index momentum and boundary classification fixtures."""
+    def test_pm008_pm009_pm010_signal_calculation_fixtures(self, monkeypatch):
+        """PM-008, PM-009, PM-010: Bearish live index momentum and boundary classification fixtures.
+        The index momentum is a fixed bearish fixture: this test used to read the LIVE Nifty and failed on any up day."""
+        import gods_eye_api
+
+        def bearish(symbols):
+            return {s: {"ltp": 22800.0, "chg": -1.3, "signal": "SELL", "reasons": ["Trading below today's open, lower 12% of day range", "-1.8% vs 20-day EMA"],
+                        "atm": 22800.0, "pcr": 0.78, "tot_ce_oi": 160e6, "tot_pe_oi": 125e6} for s in symbols}
+        monkeypatch.setattr(gods_eye_api, "_get_live_index_market_data", bearish)
         nifty = client.get("/api/v1/premarket/signals/NIFTY").json()
         assert nifty["direction"] == "BEARISH"
         assert nifty["signalStrength"] in ("STRONG", "MODERATE")
