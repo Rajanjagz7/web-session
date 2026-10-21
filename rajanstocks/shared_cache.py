@@ -170,7 +170,18 @@ def kv(cmds, timeout=6.0):
 
 def kv_status():
     return {"active": "backup" if _FO["on"] else "primary", "backupConfigured": bool(_backup_creds()),
-            "since": _FO["since"], "why": _FO["why"]}
+            "since": _FO["since"], "why": _FO["why"], "backupSetup": _backup_setup()}
+
+
+def _backup_setup():
+    """Which backup settings Vercel passed in - names and checks only, never the values."""
+    e = os.environ.get
+    url = e("BACKUP_UPSTASH_REDIS_REST_URL") or e("BACKUP_KV_REST_API_URL") or ""
+    p = _creds()
+    return {"urlSet": bool(url), "tokenSet": bool(e("BACKUP_UPSTASH_REDIS_REST_TOKEN") or e("BACKUP_KV_REST_API_TOKEN")),
+            "urlLooksRight": url.startswith("https://") and ".upstash.io" in url,
+            "sameAsPrimary": bool(url and p and url.rstrip("/") == p[0].rstrip("/")),
+            "backupNames": sorted(k for k in os.environ if k.startswith("BACKUP"))}
 
 
 def _enc(v):
