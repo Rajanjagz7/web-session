@@ -63,7 +63,7 @@ METHOD = {
     "label": "Bullish at +2 or more, Bearish at −2 or less, otherwise Neutral.",
     "divergence": "Bearish: price makes a higher high but RSI makes a lower high. Bullish: price makes a lower low but RSI makes a higher low (last 10 daily bars vs the 10 before).",
     "sparkline": "Closing prices of the last 14 daily candles.",
-    "source": "Daily candles from the TradingView feed (Indian indices are delayed, crypto is live).",
+    "source": "Daily candles from the TradingView feed. Indian indices and stocks use the live quote for today (the free feed is about 15 min late); crypto is live; US indices, gold, silver and crude are about 10 min delayed.",
     "note": "Informational read of recent price action only. Not a prediction, not advice.",
 }
 
@@ -199,6 +199,34 @@ def _play(short, trend, last, hi, lo, avg_rng, from_hi, from_lo):
     return out
 
 
+def live_overlay(bars, q):
+    """Indian indices and stocks: the free chart feed is ~15 min late, so today's candle is rebuilt from the app's live
+    quote (Upstox). If the feed's last bar is yesterday (its close = today's previous close) a new bar is added."""
+    if not q or not (q.get("last") or 0) > 0 or not bars:
+        return bars
+    last, prev = float(q["last"]), float(q.get("prev") or 0)
+    o = float(q.get("open") or 0) or last
+    h = max(float(q.get("high") or 0) or last, last)
+    l = min(float(q.get("low") or 0) or last, last)
+    bars = [list(x) for x in bars]
+    if prev > 0 and abs(bars[-1][4] - prev) / prev < 0.0005:
+        bars.append([bars[-1][0] + 86400, o, h, l, last, 0])          # feed has no bar for today yet
+    else:
+        bars[-1][1:5] = [o, h, l, last]                               # live quote is the truth for today
+    return bars
+
+
+def _live_quote(key, sym):
+    if not (sym.startswith("NSE:") or sym.startswith("BSE:")):
+        return None
+    try:
+        import market_api
+        r = market_api.quotes(symbols=key)
+        return next((x for x in ((r or {}).get("quotes") or []) if x.get("s") == key), None)
+    except Exception:
+        return None
+
+
 def _compute(item):
     import market_api  # heavy module; imported lazily so tests of analyse() stay light
     key, name, sym, ccy = item
@@ -206,6 +234,9 @@ def _compute(item):
     for attempt in range(3):
         try:
             bars = market_api._tv_history(sym, "1D", BARS)
+            lq = _live_quote(key, sym)
+            if lq:
+                bars = live_overlay(bars, lq)
             res = analyse(bars)
             if res:
                 res.update(key=key, name=name, symbol=sym, ccy=ccy)
