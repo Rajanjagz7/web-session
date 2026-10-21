@@ -93,8 +93,12 @@ _LIMIT = ("limit exceeded", "max requests", "max daily", "rate limit")
 
 
 def _backup_creds():
-    url, tok = os.environ.get("BACKUP_UPSTASH_REDIS_REST_URL"), os.environ.get("BACKUP_UPSTASH_REDIS_REST_TOKEN")
-    return (url, tok) if url and tok else None
+    # BACKUP_UPSTASH_* (added by hand) or BACKUP_KV_REST_API_* (Vercel Storage "Connect" with custom prefix BACKUP)
+    url = os.environ.get("BACKUP_UPSTASH_REDIS_REST_URL") or os.environ.get("BACKUP_KV_REST_API_URL")
+    tok = os.environ.get("BACKUP_UPSTASH_REDIS_REST_TOKEN") or os.environ.get("BACKUP_KV_REST_API_TOKEN")
+    if not (url and tok) or (_creds() and url.rstrip("/") == _creds()[0].rstrip("/")):
+        return None                                  # missing, or accidentally the same database as the primary
+    return (url, tok)
 
 
 def _refused(res):
