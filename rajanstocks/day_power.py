@@ -26,6 +26,12 @@ BENEFIC = {"Jupiter", "Venus", "Moon", "Mercury"}
 GANN_DAYS = (30, 45, 60, 90, 120, 144, 180, 270, 360)
 
 
+def _sg(v):
+    """+0.4 / -0.6 / 0.0 (never "-0.0")."""
+    v = 0.0 if abs(v) < 0.05 else v
+    return f"{v:+.1f}" if v else "0.0"
+
+
 def _sep(a, b):
     d = abs((a - b) % 360)
     return min(d, 360 - d)
@@ -89,7 +95,7 @@ def score_day(d, holidays, bars=None):
         first = sum(s["score"] for s in sl[:mid]) / max(1, mid)
         second = sum(s["score"] for s in sl[mid:]) / max(1, len(sl) - mid)
         add("Vedic", "Session timing", 1 if avg > 0.5 else -1 if avg < -0.5 else 0,
-            f"hora/choghadiya average {avg:+.1f} (first half {first:+.1f}, second half {second:+.1f})")
+            f"hora/choghadiya average {_sg(avg)} (first half {_sg(first)}, second half {_sg(second)})")
     except Exception as e:
         add("Vedic", "Session timing", 0, f"unavailable ({str(e)[:40]})")
     # 6 Gann time cycle + 7 seasonal (direction = against the last 5 sessions)

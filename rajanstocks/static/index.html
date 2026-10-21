@@ -686,6 +686,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pk-hp{margin:8px 0}.pk-hwhy{font-size:12px;color:var(--text-2);margin:2px 0 4px}.pk-hwhy.warn{color:#f59e0b}.pk-ht tr.pk-no td{opacity:.55}.pk-hpt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.pk-hold{font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.45}
 .pk-ht{width:100%;border-collapse:collapse;font-size:12.5px;margin:8px 0 2px}.pk-ht th{font-size:10.5px;color:var(--text-3);text-align:left;font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}.pk-ht th.num,.pk-ht td.num{text-align:right}
 .pk-ht td{padding:6px;border-bottom:1px solid var(--line);vertical-align:middle}.pk-ht td small{display:block;color:var(--text-3);font-size:10.5px}.pk-hn{display:block;font-size:11.5px;margin-bottom:6px}
+.vx-dp0{opacity:.7}.vx-dpn{font-size:11.5px;margin:6px 0 0}
 .bl-t tr{cursor:pointer}.bl-act{white-space:nowrap;text-align:right!important}.bl-act button{width:26px;height:24px;border-radius:6px;border:0;font-weight:800;font-size:11px;cursor:pointer;margin-left:3px}
 .bl-act-m{display:none}.bl-act-m button{width:24px;height:22px;border-radius:6px;border:0;font-weight:800;font-size:11px;margin:4px 4px 0 0;cursor:pointer}
 @media(max-width:560px){.bl-t .bl-act{display:none}.bl-act-m{display:flex}}
@@ -2591,7 +2592,7 @@ function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&
      const dots=Array.from({length:5},(_,i)=>`<i class="${i<x.dots?(x.side==='mix'?(i<Math.ceil(x.dots/2)+1?'on bull':'on bear'):'on '+col):''}"></i>`).join('');
      return`<article class="vx-dpc ${col}"><small>${mon(x.date).toUpperCase()}</small><b class="wd">${esc(x.weekday.toUpperCase())}</b>
        <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p>
-       <details><summary>How it's worked out · score ${x.score>0?'+':''}${x.score}</summary><ul>${x.parts.map(p=>`<li><span class="${p.pts>0?'up':p.pts<0?'down':'muted'}">${p.pts>0?'+':''}${p.pts}</span> <b>${esc(p.group)} · ${esc(p.name)}</b> — ${esc(p.why)}</li>`).join('')}</ul></details></article>`}).join('')}</div>
+       <details><summary>How it's worked out · score ${x.score>0?'+':''}${x.score}</summary><ul>${x.parts.map(p=>`<li class="${p.pts?'':'vx-dp0'}"><span class="${p.pts>0?'up':p.pts<0?'down':'muted'}">${p.pts>0?'+':''}${p.pts}</span> <b>${esc(p.group)} · ${esc(p.name)}</b> — ${esc(p.why)}${p.pts?'':' <small class="muted">· no effect today</small>'}</li>`).join('')}</ul><p class="muted vx-dpn">+ pushes up · − pushes down · 0 = this factor is neutral today (that is normal - it only counts on certain days)</p></details></article>`}).join('')}</div>
    <p class="vx-note">${esc(dp.caveat||'')}</p></section>`}
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
