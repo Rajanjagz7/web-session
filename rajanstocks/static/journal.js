@@ -304,10 +304,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function kpiBlock(m, ds, day) {
     const L = liveTotals(day), todayBooked = ds.pnl + L.autoToday, todayAll = todayBooked + L.unr;
     const openN = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length;
-    return `${kpi('Equity', inr(L.eq, 0), 'booked ' + sinr(L.booked) + ' · open ' + sinr(L.unr), cc(L.eq - S.capital), 'Virtual equity = capital + booked P&L + open (marked-to-market) P&L')}
-      ${kpi('Net P&L', sinr(L.booked + L.unr), m.n + ' closed · ' + openN + ' open', cc(L.booked + L.unr), 'Total P&L: closed trades plus open positions at live prices')}
-      ${kpi('Today', sinr(todayAll), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll), "Today's net P&L: booked today plus open positions at live prices")}
-      ${kpi('Trades', String(ds.entries + AUTO.list.filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.filter(t => t.date === day).length, '', 'Manual entries used today out of your daily limit, plus automated entries')}
+    return `      ${kpi('Trades', String(ds.entries + AUTO.list.filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.filter(t => t.date === day).length, '', 'Manual entries used today out of your daily limit, plus automated entries')}
       ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Win rate of closed trades, with average win and average loss')}
       ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R (multiples of initial risk)')}
       ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss. Above 1.5 is healthy')}
@@ -375,16 +372,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
      ${booksCard()}
+     <div class="jv-sec">Options book · performance</div>
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
-     ${capCard()}
-     <div class="card"><div class="card-h"><h3>Quick Stats</h3><div class="jv-actions"><button class="btn pri" data-jv="reset">Reset portfolio</button></div></div><div class="jv-list">
-         <div><span>Total Equity</span><b class="${cc(eq - S.capital)}">${inr(eq, 0)}</b></div>
-         <div><span>Closed P&amp;L</span><b class="${cc(booked)}">${sinr(booked)}</b></div>
-         <div><span>Open P&L</span><b class="${cc(unr)}">${unr > 0 ? '+' + inr(unr, 0) : inr(unr, 0)}</b></div>
-         <div><span>Today</span><b>${ds.entries} trades</b></div>
-         <div><span>Win Rate</span><b>${(m.winRate * 100).toFixed(0)}%</b></div>
-         <div><span>Current Positions</span><b>${open.length}</b></div>
-       </div></div>
      <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>
      <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
      <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>
@@ -1374,7 +1363,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(part.map(t => t.id).join(','))}">${open.length ? positionTable(part) : `<div class="empty">No open ${ui.side === 'buy' ? 'buy ' : ui.side === 'sell' ? 'sell ' : ''}positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div>`}</div>${bar}
        <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹1,500 open profit the stop moves to cost + charges; from ₹2,000 it trails, keeping 50% of the best profit.</p></div>`;
      const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
-     return sw + capCard() + sigCard + openCard + closedCard;
+     return sw + sigCard + openCard + closedCard;
    }
 
    /* accuracy of the Buy / Sell test trades placed from Trade -> Signals, per signal and side */
@@ -1455,15 +1444,18 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
    /* two separate paper books: options / Trade screen (this journal) and the stock trader - each Rs 10 L, Rs 20 L together */
    function booksCard() {
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
-     const L = liveTotals(today()), c = capUse();
-     const oEq = L.eq, oCap = S.capital, sEq = d ? d.equity : null, sCap = d ? d.capital : 1000000;
-     const row = (n, cap, eq, used, free, note) => `<tr><td><b>${n}</b><small class="muted" style="display:block">${note}</small></td><td class="num">${inr(cap, 0)}</td><td class="num ${eq == null ? '' : cc(eq - cap)}">${eq == null ? '…' : inr(eq, 0)}</td><td class="num ${eq == null ? '' : cc(eq - cap)}">${eq == null ? '…' : sinr(eq - cap)}</td><td class="num">${used == null ? '…' : inr(used, 0)}</td><td class="num up">${free == null ? '…' : inr(free, 0)}</td></tr>`;
-     const tEq = sEq == null ? null : oEq + sEq;
-     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books · ₹${((oCap + sCap) / 1e5).toFixed(0)} L paper capital</h3><span class="muted" style="font-size:12px">each book is tracked separately</span></div>
-       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Book</th><th class="num">Capital</th><th class="num">Equity</th><th class="num">P&amp;L</th><th class="num">In use</th><th class="num">Free</th></tr></thead><tbody>
-       ${row('Options & Trade screen', oCap, oEq, c.used, c.avail, 'option auto trader + your trades')}
-       ${row('Stock trader', sCap, sEq, d ? d.used : null, d ? d.cash : null, 'intraday · swing · positional (Stock trader tab)')}
-       <tr class="jv-tot"><td><b>Total</b></td><td class="num"><b>${inr(oCap + sCap, 0)}</b></td><td class="num ${tEq == null ? '' : cc(tEq - oCap - sCap)}"><b>${tEq == null ? '…' : inr(tEq, 0)}</b></td><td class="num ${tEq == null ? '' : cc(tEq - oCap - sCap)}"><b>${tEq == null ? '…' : sinr(tEq - oCap - sCap)}</b></td><td class="num">${d ? inr(c.used + d.used, 0) : '…'}</td><td class="num up">${d ? inr(c.avail + d.cash, 0) : '…'}</td></tr></tbody></table></div></div>`;
+     const day = today(), L = liveTotals(day), c = capUse(), ds = dayStats(day), oToday = ds.pnl + L.autoToday + L.unr;
+     const oCap = S.capital, sCap = d ? d.capital : 1000000, tile = (cls, title, sub, eq, cap, lines) => `<div class="jv-book ${cls}"><div class="jv-bt"><b>${title}</b><small class="muted">${sub}</small></div>
+       <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div><div class="jv-bl">${lines}</div></div>`;
+     const kv = (k, v, cl) => `<div><small>${k}</small><b class="${cl || ''}">${v}</b></div>`;
+     const o = tile('', 'Options book', 'option auto trader + your Trade-screen trades · ₹10 L', L.eq, oCap,
+       kv('Today', sinr(oToday), cc(oToday)) + kv('In use', inr(c.used, 0)) + kv('Free', inr(c.avail, 0), 'up') + kv('Max used today', c.peak > 0 ? `${inr(c.peak, 0)} <small class="muted">${E(c.peakAt)}</small>` : '—'));
+     const st = tile('', 'Stock trader', 'intraday · swing · positional · ₹10 L', d ? d.equity : null, sCap,
+       d ? kv('Open P&L', sinr(d.unrealised), cc(d.unrealised)) + kv('In use', inr(d.used, 0)) + kv('Free', inr(d.cash, 0), 'up') + kv('Closed', `${d.all.closed}${d.all.winRate == null ? '' : ' · ' + d.all.winRate + '% won'}`) : kv('', 'loading…'));
+     const tEq = d ? L.eq + d.equity : null;
+     const tot = tile('jv-btot', 'Total', '₹20 L paper capital', tEq, oCap + sCap, d ? kv('In use', inr(c.used + d.used, 0)) + kv('Free', inr(c.avail + d.cash, 0), 'up') : '');
+     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the options book to ₹10 L">Reset options book</button></div></div>
+       <div class="jv-books">${o}${st}${tot}</div></div>`;
    }
 
    function viewAlgo() {
@@ -1597,6 +1589,12 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-capg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:4px 14px 12px}.jv-capg>div{display:flex;flex-direction:column;gap:2px;min-width:0}.jv-capg small{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.jv-capg b{font-size:18px}.jv-capg span{font-size:11.5px}
   .jv-capbar{height:6px;border-radius:3px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden;margin-top:4px}.jv-capbar i{display:block;height:100%;border-radius:3px;background:var(--up,#22ab94)}.jv-capbar i.warn{background:#f59e0b}.jv-capbar i.down{background:var(--down,#f7525f)}.jv-capbar i.mute{background:#8b5cf6}
   @media(max-width:640px){.jv-capg{grid-template-columns:1fr}}
+  .jv-sec{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin:14px 2px 6px}
+  .jv-books{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:4px 12px 12px}.jv-book{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+  .jv-book.jv-btot{background:var(--panel-2,rgba(255,255,255,.04))}.jv-bt{display:flex;flex-direction:column;gap:1px}.jv-bt small{font-size:11px}
+  .jv-beq{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0}.jv-beq span{font-size:20px;font-weight:800}.jv-beq em{font-style:normal;font-weight:700;font-size:13px}
+  .jv-bl{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}.jv-bl small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}.jv-bl b{font-size:13px}
+  @media(max-width:760px){.jv-books{grid-template-columns:1fr}}
   .jv-tot td{border-top:2px solid var(--line)}.jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
