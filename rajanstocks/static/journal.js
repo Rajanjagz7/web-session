@@ -1,3 +1,4 @@
+window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})),m=n.getHours()*60+n.getMinutes(),d=n.getDay();return d>0&&d<6&&m>=555&&m<=945}catch(e){return true}};   /* weekdays 09:15-15:45 IST: background refreshes only then */
 /* Rajan Algo — Paper-Trading Journal (replaces the old Journal + Portfolio screens)
    Implements "Trading Strategy & Indicator Validation BRD" v1.0 + TradeLab UI specification.
    Everything here is a SIMULATION: no broker orders are ever sent.
@@ -358,8 +359,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   }
   function tslShow(t) { if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
-  setInterval(() => { refreshLive(); if (!document.hidden) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
-  setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
+  setInterval(() => { refreshLive(); if (!document.hidden && window.rjMkt()) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
+  setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden && window.rjMkt()) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
 
    function viewOverview() {
      const L = filtered(), m = metrics(L), day = today(), ds = dayStats(day);
@@ -1420,7 +1421,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      { const bk = document.getElementById('jvBooks'); if (bk) { const t = document.createElement('div'); t.innerHTML = booksCard(); bk.replaceWith(t.firstElementChild); } }
      if (effTab() === 'stocks' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
    }
-   setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden) sbLoad(false); }, 60000);
+   setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden && window.rjMkt()) sbLoad(false); }, 60000);
    function sbCard() {
      const d = SB.d;
      if (d && !d.byHorizon) return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Stock trader status is unavailable right now. <button class="btn-xs" data-sb="reload">Retry</button></div></div>`;
@@ -1608,7 +1609,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   document.head.appendChild(st);
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
-  setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) syncAuto(true); }, 60000);
+  setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent && window.rjMkt()) syncAuto(true); }, 60000);
   window.JV = { cap: () => capUse(), render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate,
     /* live portfolio for the header: capital + booked + open (marked to market) */
     totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday;

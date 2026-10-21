@@ -632,10 +632,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 </style>
-<script src="/static/journal.js?v=20261021l"></script>
+<script src="/static/journal.js?v=20261022a"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
-<script src="/static/observer.js?v=20261021a"></script>
+<script src="/static/observer.js?v=20261022a"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1440,6 +1440,7 @@ setInterval(signalTick,300000);setTimeout(signalTick,20000);
 async function botTick(){try{const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})),m=n.getHours()*60+n.getMinutes();
   if(n.getDay()===0||n.getDay()===6||m<555||m>930||document.hidden)return;await fetch('/api/stockbot/run')}catch(e){}}
 setInterval(botTick,300000);setTimeout(botTick,30000);
+window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})),m=n.getHours()*60+n.getMinutes(),d=n.getDay();return d>0&&d<6&&m>=555&&m<=945}catch(e){return true}};   /* weekdays 09:15-15:45 IST: background refreshes only then */
 async function pushTest(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)throw new Error('Enable push on this device first');
   const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),title:'Test push',body:'Delivered by the push server — this works even when the app is closed.',url:'/',tag:'rn-test-'+Date.now()})});
   const j=await r.json().catch(()=>({}));
@@ -4244,7 +4245,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'vedic');
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
-  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
+  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>{if(window.rjMkt())loadPicks()},300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
 </script>
 </body>
 </html>
