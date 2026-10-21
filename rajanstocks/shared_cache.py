@@ -176,6 +176,18 @@ def kv_status():
             "since": _FO["since"], "why": _FO["why"], "backupSetup": _backup_setup()}
 
 
+def _ping_backup():
+    """One PING to the backup: 'ok', or the error text (e.g. WRONGPASS = wrong token)."""
+    b = _backup_creds()
+    if not b:
+        return None
+    try:
+        r = _pipe_to(b, [["PING"]], 4.0)[0]
+        return "ok" if r.get("result") == "PONG" else str(r.get("error"))[:120]
+    except Exception as e:
+        return str(e)[:120]
+
+
 def _backup_setup():
     """Which backup settings Vercel passed in - names and checks only, never the values."""
     e = os.environ.get
@@ -184,6 +196,7 @@ def _backup_setup():
     return {"urlSet": bool(url), "tokenSet": bool(e("BACKUP_UPSTASH_REDIS_REST_TOKEN") or e("BACKUP_KV_REST_API_TOKEN")),
             "urlLooksRight": url.startswith("https://") and ".upstash.io" in url,
             "sameAsPrimary": bool(url and p and url.rstrip("/") == p[0].rstrip("/")),
+            "backupAnswers": _ping_backup(),
             "backupNames": sorted(k for k in os.environ if k.startswith("BACKUP"))}
 
 
