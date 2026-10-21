@@ -8,7 +8,7 @@ output so the UI can chart, list and scan them uniformly.
 import concurrent.futures
 import re
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 
@@ -555,6 +555,13 @@ OPT_SCANS += [
      "Stocks (Daily scan): the buy side lost money; the Open = High sell side was slightly positive."),
 ]
 OPT_SCANS += [
+    ("hedge-seller", "Hedged Seller (credit spread)", "Option scans",
+     "Option SELLING with a hedge: sell the OTM call / put about k expected moves away (expected move from India VIX and the "
+     "sessions left) and buy the option w strikes further out, so the loss is capped. Exit together at expiry or when the spread "
+     "is worth the stop multiple of the credit. k, w, stop, sides and entry day come from the backtest on real expired option "
+     "prices (static/hedge_backtest.json) - the live win rate and worst loss are shown in Trade -> Signals."),
+]
+OPT_SCANS += [
     ("sensex-310", "SENSEX Indicator", "Option scans",
      "SENSEX options only. Previous close Rs 310-340 and today's low inside Rs 52-58 -> buy in the 52-58 zone. Targets 88 / 92 / 105. "
      "SL 10 points under the entry. BACKTEST (SENSEX, 1-min, Oct 2024-Oct 2026): only 31 setups, lost at every target (profit factor 0.24-0.33). Experimental."),
@@ -610,6 +617,76 @@ def _opt_rule(key, leg, prev_close, expiry=None):
         return True, (f"Open=High, touched {name} support {level:,.2f} off prev close {prev_close:,.2f} · "
                       f"entry {ltp:,.2f} · SL {sl:,.2f} (10 pts) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
     return False, ""
+
+
+_HG = {"ts": 0, "p": None}
+
+
+def _hedge_params():
+    """Best variant of the hedged-selling backtest (static/hedge_backtest.json); sensible defaults until it exists."""
+    import json as _json
+    import os as _os
+    if time.time() - _HG["ts"] > 600:
+        p = {"k": 1.5, "w": 2, "stop": 2.0, "mode": "condor", "entry": "T-1 09:30", "stats": None}
+        try:
+            with open(_os.path.join(_os.path.dirname(__file__), "static", "hedge_backtest.json")) as f:
+                b = (_json.load(f) or {}).get("best")
+            if b:
+                p = {"k": b["k"], "w": b["w"], "stop": float(str(b["stop"]).split("x")[0]) if "x" in str(b["stop"]) else None,
+                     "mode": b["mode"], "entry": b["entry"], "stats": {x: b.get(x) for x in ("n", "winRate", "pf", "worst")}}
+        except Exception:
+            pass
+        _HG.update(ts=time.time(), p=p)
+    return _HG["p"]
+
+
+def _hedge_rows(sym, c):
+    """The short leg of each hedged spread for this chain (both sides, or the side away from the trend)."""
+    import math
+    P = _hedge_params()
+    spot = float(c.get("spot") or 0)
+    if spot <= 0:
+        return []
+    try:
+        vix = float(get_india_vix() or 0) if sym in ("NIFTY", "BANKNIFTY", "SENSEX", "FINNIFTY", "MIDCPNIFTY", "BANKEX") else 0   # index options only
+    except Exception:
+        vix = 0
+    if vix <= 0:
+        return []
+    today = datetime.now(market_api.IST).date()
+    exp = date.fromisoformat(c["expiry"])
+    n = max(1, sum(1 for k in range((exp - today).days + 1) if (today + timedelta(days=k)).weekday() < 5))
+    em = spot * vix / 100 * math.sqrt(n / 252)
+    rows = sorted([r for r in c["rows"]], key=lambda r: r["strike"])
+    out = []
+    for side in ("CE", "PE"):
+        lg = side.lower()
+        live = [r for r in rows if r.get(lg) and r[lg].get("ltp", 0) > 0]
+        if side == "CE":
+            idx = next((i for i, r in enumerate(live) if r["strike"] >= spot + P["k"] * em), None)
+            j = None if idx is None else idx + P["w"]
+        else:
+            cand = [i for i, r in enumerate(live) if r["strike"] <= spot - P["k"] * em]
+            idx = cand[-1] if cand else None
+            j = None if idx is None else idx - P["w"]
+        if idx is None or j is None or j < 0 or j >= len(live):
+            continue
+        sh, hg = live[idx][lg], live[j][lg]
+        credit = round(sh["ltp"] - hg["ltp"], 2)
+        if credit <= 0.5:
+            continue
+        lot = int(c.get("lot") or 1)
+        width = abs(live[j]["strike"] - live[idx]["strike"])
+        stop = f" · exit if spread >= {P['stop'] * credit:,.2f}" if P.get("stop") else " · hold to expiry"
+        st = P.get("stats")
+        bt = f" · backtest {st['winRate']}% won ({st['n']} trades)" if st else ""
+        tag = (f"SELL {live[idx]['strike']:g} {side} @ {sh['ltp']:,.2f} + BUY {live[j]['strike']:g} {side} @ {hg['ltp']:,.2f} hedge · "
+               f"credit {credit:,.2f} (Rs {credit * lot:,.0f}/lot) · max loss Rs {(width - credit) * lot:,.0f}/lot · "
+               f"{P['k']}x expected move ±{em:,.0f} ({n} session{'s' if n > 1 else ''}, VIX {vix:.1f}){stop}{bt}")
+        out.append({"symbol": sym, "expiry": c["expiry"], "strike": live[idx]["strike"], "side": side, "key": sh["key"], "ltp": sh["ltp"],
+                    "open": sh.get("open"), "high": sh.get("high"), "low": sh.get("low"), "prev": sh.get("prev"), "oi": sh.get("oi"),
+                    "oiChg": sh.get("oiChg"), "vol": sh.get("vol") or 0, "tag": tag})
+    return out
 
 
 ZONES = {   # user rules, 20 Oct 2026 (same numbers in static/index.html ZONES and premium_backtest.py)
@@ -726,6 +803,9 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
             try:
                 c = first if ex == first["expiry"] else market_api.chain(symbol=sym, expiry=ex)
             except Exception:
+                continue
+            if key == "hedge-seller":
+                out += _hedge_rows(sym, c)
                 continue
             legs = [(side.upper(), r["strike"], r[side]) for r in c["rows"] for side in ("ce", "pe") if r.get(side)]
             vols = sorted(l["vol"] for _, _, l in legs if l["vol"] > 0)

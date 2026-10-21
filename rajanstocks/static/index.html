@@ -631,10 +631,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
-<script src="/static/journal.js?v=20261021a"></script>
+<script src="/static/journal.js?v=20261021b"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
-<script src="/static/observer.js?v=20261020d"></script>
+<script src="/static/observer.js?v=20261021a"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -680,6 +680,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .bl-col{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}.bl-h{display:flex;justify-content:space-between;padding:7px 10px;font-weight:700;font-size:12px;letter-spacing:.04em}.bl-h span{font-weight:500;color:var(--text-3);letter-spacing:0}.bl-h.ce{color:var(--up);background:color-mix(in srgb,var(--up) 8%,transparent)}.bl-h.pe{color:var(--down);background:color-mix(in srgb,var(--down) 8%,transparent)}
 .bl-t{width:100%;border-collapse:collapse;font-size:12px}.bl-t th{font-size:10.5px;color:var(--text-3);text-align:left;padding:5px 8px;font-weight:600;border-bottom:1px solid var(--line)}.bl-t th.num,.bl-t td.num{text-align:right}.bl-t td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 @media(max-width:560px){.bl-t{font-size:11.5px}.bl-t th,.bl-t td{padding:5px 4px}.bl-t .bl-ltp{display:none}.bl-t .bl-tag{font-size:9.5px;padding:2px 5px}}
+.hg{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid #8b5cf6;border-radius:10px;font-size:13px}.hg-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:6px}.hg-h .muted{font-size:12px}
+.hg-k{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;margin-bottom:8px}.hg-n{font-size:12px;margin:6px 0 0}.hg-t td small{color:var(--text-3);margin-left:3px}.hg-t tr{cursor:default}
+@media(max-width:560px){.hg-t thead{display:none}.hg-t,.hg-t tbody{display:block}.hg-t tr{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:8px 0;border-top:1px solid var(--line)}.hg-t td{border:0!important;padding:0!important;text-align:left!important;white-space:normal}}
 .bl-t tr{cursor:pointer}.bl-t tr:hover td{background:var(--panel-2)}.bl-t tr.hit td:first-child{box-shadow:inset 3px 0 0 #22c55e}.bl-t tr.near td:first-child{box-shadow:inset 3px 0 0 #f59e0b}.bl-t tr.sel td{background:color-mix(in srgb,var(--brand) 12%,transparent)}.bl-t em{font-style:normal;font-size:9.5px;color:var(--brand);margin-left:4px}
 .bl-tag{font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px}.bl-tag.hit{background:color-mix(in srgb,#16a34a 22%,transparent);color:#4ade80}.bl-tag.near{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#fbbf24}
 .bl-none{padding:14px 10px;color:var(--text-3);font-size:12px}.bl-ctl{display:flex;gap:10px;align-items:center}.bl-ctl label{display:flex;gap:6px;align-items:center;font-size:12px}.bl-ps{height:28px;padding:0 6px;width:auto}.bl-pg{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:6px 8px;font-size:11.5px;color:var(--text-3)}.bl-note{font-size:11px;margin:8px 0 0}
@@ -2185,11 +2188,11 @@ setInterval(()=>{if(!document.hidden)renderHdrIdx()},3000);setTimeout(()=>render
 /* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
 setInterval(()=>{if(!document.hidden)renderPfChip()},4000);setTimeout(()=>renderPfChip(),800);
 function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
-  const eq=t?t.eq:equity(),cap=t?t.capital:1000000,pl=eq-cap,pc=cap?pl/cap*100:0;
+  const eq=t?t.eq:equity(),cap=t?t.capital:1000000,pl=t&&typeof t.today==='number'?t.today:eq-cap,pc=cap?pl/cap*100:0;   // today's total P&L: booked today + open positions
   const sh=v=>{const a=Math.abs(v);return a>=1e7?(a/1e7).toFixed(2)+' Cr':a>=1e5?(a/1e5).toFixed(2)+' L':Math.round(a).toLocaleString('en-IN')};
   const k=pl>0.5?'up':pl<-0.5?'down':'';
-  c.className='pf-chip '+k;c.innerHTML=`<small>P&amp;L</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;   // profit / loss only - the capital is in the tooltip
-  c.title=t?`Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} · booked ${t.booked>=0?'+':'−'}₹${Math.round(Math.abs(t.booked)).toLocaleString('en-IN')} · open ${t.unr>=0?'+':'−'}₹${Math.round(Math.abs(t.unr)).toLocaleString('en-IN')} (${t.open} open) — click for the journal`:'Portfolio value'}
+  c.className='pf-chip '+k;c.innerHTML=`<small>Today P&amp;L</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;   // profit / loss only - the capital is in the tooltip
+  c.title=t?`Today's P&L ${pl>=0?'+':'−'}₹${Math.round(Math.abs(pl)).toLocaleString('en-IN')} (booked today ${t.todayBooked>=0?'+':'−'}₹${Math.round(Math.abs(t.todayBooked)).toLocaleString('en-IN')} + open) · Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} · booked ${t.booked>=0?'+':'−'}₹${Math.round(Math.abs(t.booked)).toLocaleString('en-IN')} · open ${t.unr>=0?'+':'−'}₹${Math.round(Math.abs(t.unr)).toLocaleString('en-IN')} (${t.open} open) — click for the journal`:'Portfolio value'}
 function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
 const NAVI={picks:'trendup',trade:'candle',options:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
@@ -3092,10 +3095,56 @@ function drawBuyList(){const box=$('#opBuyList');if(!box)return;const hits=OPT.h
     return`<div class="bl-col"><div class="bl-h ${sd==='CE'?'ce':'pe'}">${sd==='CE'?'CALLS':'PUTS'} <span>${allRows.filter(h=>h.t.st==='hit').length} buy · ${allRows.filter(h=>h.t.st==='near').length} near</span></div>
       ${rows.length?`<table class="bl-t"><thead><tr><th>Strike</th><th>Signal</th><th class="num">Buy at</th><th class="num bl-ltp">LTP</th><th class="num">SL</th><th class="num">Target</th></tr></thead><tbody>${rows.map(h=>{const tg=h.t.zone?h.t.zone.t[0]:h.t.entry*1.5,sel=OPT.sel&&OPT.sel.side===sd&&OPT.sel.strike===h.k;
         return`<tr class="${h.t.st} ${sel?'sel':''}" data-opt="${sd}:${h.k}" title="${esc(h.t.ind)} · entry ${fmtP(h.t.entry)} · SL ${fmtP(h.t.sl)} · targets ${esc(pdTg(h.t.entry,h.t))}"><td><b>${fmtP(h.k,h.k%1?2:0)}</b>${h.k===c0atm()?'<em>ATM</em>':''}</td><td><span class="bl-tag ${h.t.st}">${h.t.st==='hit'?'BUY':'near'} ${esc(h.t.name)}</span></td><td class="num"><b>${fmtP(h.t.entry)}</b></td><td class="num bl-ltp">${fmtP(h.ltp)}</td><td class="num down">${fmtP(h.t.sl)}</td><td class="num up">${fmtP(tg)}</td></tr>`}).join('')}</tbody></table>`:`<div class="bl-none">No ${sd==='CE'?'call':'put'} at a buy level</div>`}${pager}</div>`};
-  box.innerHTML=`<div data-ob-one="${esc(String(OPT.sym||'').toUpperCase())}"></div><div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
+  box.innerHTML=`<div data-ob-one="${esc(String(OPT.sym||'').toUpperCase())}"></div>${hedgeHTML()}<div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
     <div class="bl-ctl"><label class="muted">Rows <select class="inp bl-ps" data-blps>${PS.map(n=>`<option ${n===ps?'selected':''}>${n}</option>`).join('')}</select></label><div class="seg" role="group"><button type="button" class="${all?'':'on'}" data-buyall="0" title="Expiry/Daily divisor levels, Open = Low clean buy, SENSEX and 38-42 zones">Levels</button><button type="button" class="${all?'on':''}" data-buyall="1" title="Also Open = Low within 10 points (many contracts qualify)">+ O=L ±10</button></div></div></div>
     <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Buy at = your entry premium for that signal; SL = its stop (indicator points, capped at 35% for small premiums). Green = premium is at your buy value now · amber = getting close. Target shows the first target (all targets in the tooltip and on the chart strip).</p></div>`;{const h=box.querySelector('[data-ob-one]');if(h&&window.obsOne)obsOne(OPT.sym,h)}}
 const c0atm=()=>OPT.chain&&OPT.chain.atm;
+/* ---- Hedged Seller: sell an OTM option k expected-moves away and buy the one w strikes further as the hedge (credit spread /
+   iron condor). Parameters and the win rate come from the backtest on real expired option prices (static/hedge_backtest.json). ---- */
+const HG={bt:null},inrN=v=>Math.round(Math.abs(+v||0)).toLocaleString('en-IN');
+fetch('/static/hedge_backtest.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{HG.bt=j;if(OPT.chain&&typeof drawBuyList==='function')drawBuyList()}).catch(()=>{});
+function hgParams(){const b=HG.bt&&HG.bt.best;return b?{k:b.k,w:b.w,stop:parseFloat(b.stop)||null,mode:b.mode,entry:b.entry,st:b}:{k:1.5,w:2,stop:2,mode:'condor',entry:'T-1 09:30',st:null}}
+function hgSessions(exp){const n=new Date(Date.now()+330*60000),today=n.toISOString().slice(0,10),late=n.getUTCHours()*60+n.getUTCMinutes()>=15*60+30;let k=0;
+  for(let d=new Date(today+'T00:00:00Z');d.toISOString().slice(0,10)<=exp;d.setUTCDate(d.getUTCDate()+1)){const w=d.getUTCDay(),iso=d.toISOString().slice(0,10);if(w===0||w===6)continue;if(iso===today&&late)continue;k++}return k}
+function hgVol(){const u=SYM(OPT.sym)||{};if(u.cls==='Indices'){const v=SYM('INDIAVIX');return v&&v.last>0?{v:v.last/100,src:'India VIX '+v.last.toFixed(2)}:null}
+  const g=window.obsOneData&&obsOneData(OPT.sym);const r=g&&g.detail&&g.detail.avgRangePct;return r?{v:r/100/1.6*Math.sqrt(252),src:'its own daily range (no VIX for stocks)'}:null}
+function hgSpread(sd,k,w,spot,em){const rows=(OPT.chain.rows||[]).filter(r=>r[sd.toLowerCase()]&&r[sd.toLowerCase()].ltp>0).sort((a,b)=>a.strike-b.strike);if(!rows.length)return null;
+  const i=sd==='CE'?rows.findIndex(r=>r.strike>=spot+k*em):(()=>{let x=-1;rows.forEach((r,j)=>{if(r.strike<=spot-k*em)x=j});return x})();if(i<0)return null;
+  const j=sd==='CE'?i+w:i-w;if(j<0||j>=rows.length)return null;const sh=rows[i],hg=rows[j],L=sd.toLowerCase();
+  const cr=+(sh[L].ltp-hg[L].ltp).toFixed(2);return cr>0?{sd,short:sh.strike,long:hg.strike,sp:sh[L].ltp,lp:hg[L].ltp,credit:cr,width:Math.abs(hg.strike-sh.strike)}:null}
+function hedgeHTML(){const c=OPT.chain;if(!c||!c.rows||!(c.spot>0))return'';const P=hgParams(),n=Math.max(1,hgSessions(c.expiry)),V=hgVol(),lot=c.lot||1;
+  const head=`<div class="hg"><div class="hg-h"><b>🛡 Hedged Seller · ${esc(OPT.sym)} ${fmtExp(c.expiry)}</b><span class="muted">sell OTM + buy a further hedge · loss is capped</span></div>`;
+  if(!V)return head+`<div class="muted hg-n">Waiting for volatility data…</div></div>`;
+  const em=c.spot*V.v*Math.sqrt(n/252),g=window.obsOneData&&obsOneData(OPT.sym),up=g&&g.detail?g.detail.vsEma20Pct>=0:null;
+  let sides=['CE','PE'];if(P.mode==='trend'&&up!=null)sides=[up?'PE':'CE'];
+  const legs=sides.map(sd=>hgSpread(sd,P.k,P.w,c.spot,em)).filter(Boolean);
+  const best=P.st,when=P.entry.startsWith('T-1')?2:1,okDay=n===when;
+  const stat=best?`Backtest (real expired option prices, ${best.n} trades): <b>${best.winRate}% won</b> · profit factor ${best.pf} · avg win ₹${inrN(best.avgWin)} · avg loss ₹${inrN(Math.abs(best.avgLoss))} · worst ₹${inrN(Math.abs(best.worst))} per lot.`:'Backtest still running - defaults shown (1.5 expected moves, hedge 2 strikes out, exit at 2x credit).';
+  const rows=legs.map(x=>{const mp=x.credit*lot,ml=(x.width-x.credit)*lot,be=x.sd==='CE'?x.short+x.credit:x.short-x.credit,stp=P.stop?+(P.stop*x.credit).toFixed(2):null;
+    return`<tr><td><span class="side-tag ${x.sd==='CE'?'down':'up'}">${x.sd==='CE'?'Bear call':'Bull put'}</span></td><td>Sell <b>${fmtP(x.short,0)} ${x.sd}</b> @ ${fmtP(x.sp)}</td><td>Buy <b>${fmtP(x.long,0)} ${x.sd}</b> @ ${fmtP(x.lp)}</td>
+      <td class="num up">${fmtP(x.credit)}<small> ₹${inrN(Math.round(mp))}</small></td><td class="num down">₹${inrN(Math.round(ml))}</td><td class="num">${fmtP(be,0)}</td><td class="num">${stp?fmtP(stp):'expiry'}</td>
+      <td><button type="button" class="btn-xs pri" data-hgplace="${x.sd}:${x.short}:${x.long}:${x.credit}">Place (paper)</button></td></tr>`}).join('');
+  return head+`<div class="hg-k"><span>Spot <b>${fmtP(c.spot)}</b></span><span>Expected move (${n} session${n>1?'s':''}) <b>±${fmtP(em,0)}</b> <small class="muted">from ${esc(V.src)}</small></span><span>Rule <b>${P.k}× move · hedge ${P.w} strikes · ${P.mode==='trend'?'trend side only':'both sides'}</b></span>
+    <span class="${okDay?'up':'muted'}">${okDay?'✔ Entry day: enter at/after 09:30':'Best entry: '+esc(P.entry)+(P.entry.startsWith('T-1')?' (the session before expiry)':'')}</span></div>
+    ${legs.length?`<div class="tbl-wrap"><table class="bl-t hg-t"><thead><tr><th>Spread</th><th>Sell</th><th>Hedge (buy)</th><th class="num">Credit · max profit</th><th class="num">Max loss</th><th class="num">Breakeven</th><th class="num">Exit if spread ≥</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="muted hg-n">No strikes in this chain far enough out yet - widen the strike filter.</div>'}
+    <p class="muted hg-n">${stat} ${(SYM(OPT.sym)||{}).cls!=='Indices'?'<b>Stock options were not part of the backtest</b> - treat as untested. ':''}High win rate comes with rare larger losses - the hedge caps them at the max loss shown. Paper trading only.</p></div>`}
+/* place both legs as paper trades: buy the hedge first, then sell the short leg; the pair exits together */
+function hgPlace(sd,shortK,longK,credit){if(!OPT.chain)return;const was=OPT.att,ot=OPT.otype,keep=OPT.sel?{s:OPT.sel.side,k:OPT.sel.strike}:null;const P=hgParams();
+  const noAtt=()=>{OPT.att=false;const a=$('#opAtt');if(a)a.checked=false};   // the pair is managed together: no per-leg stop / target
+  try{OPT.otype='market';
+    selectOption(sd,longK,true);noAtt();const lsym=OPT.osym&&OPT.osym.s;optOrder('buy');
+    selectOption(sd,shortK,true);noAtt();const ssym=OPT.osym&&OPT.osym.s;optOrder('sell');
+    const sp=posOf(ssym),lp=posOf(lsym);
+    if(sp&&sp.q<0&&lp&&lp.q>0){credit=+(sp.avg-lp.avg).toFixed(2);App.meta[ssym].spread={hedge:lsym,credit,stop:P.stop?+(P.stop*Math.max(credit,0.05)).toFixed(2):null,qty:Math.abs(sp.q)};App.meta[lsym].hedgeOf=ssym;savePaper();
+      toast(`Spread placed: sell ${fmtP(shortK,0)} ${sd} / buy ${fmtP(longK,0)} ${sd} · credit ${fmtP(credit)}`,'ok')}
+    else if(lp&&!(sp&&sp.q<0)){closePos(lsym,'manual');toast('Could not sell the short leg (margin?) - hedge closed again.','warn')}}
+  finally{OPT.att=was;OPT.otype=ot;if(keep)selectOption(keep.s,keep.k,true);if(opxMobile())opxTab('signals');else opxWtab('signals')}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-hgplace]');if(!b)return;const [sd,sk,lk,cr]=b.dataset.hgplace.split(':');hgPlace(sd,+sk,+lk,+cr)});
+/* spread exits together: short leg value - hedge value >= stop, or either leg closed */
+setInterval(()=>{try{for(const p of App.positions.slice()){const m=App.meta[p.sym];if(!m||!m.spread||p.q>=0)continue;const h=posOf(m.spread.hedge),s1=SYM(p.sym),s2=SYM(m.spread.hedge);
+    if(!h){closePos(p.sym,'TSL');continue}
+    if(m.spread.stop&&s1&&s2&&s1.last>0&&s2.last>=0&&s1.last-s2.last>=m.spread.stop){closePos(p.sym,'SL');closePos(m.spread.hedge,'SL');toast(`${p.sym}: spread hit its stop - both legs closed`,'warn')}}
+  for(const p of App.positions.slice()){const m=App.meta[p.sym];if(m&&m.hedgeOf&&p.q>0&&!posOf(m.hedgeOf))closePos(p.sym,'manual')}}catch(e){}},5000);
 document.addEventListener('change',e=>{if(e.target.matches('[data-blps]')){OPT.blPs=+e.target.value;OPT.blPg={CE:0,PE:0};try{localStorage.setItem('bl-ps',OPT.blPs)}catch(x){}drawBuyList()}});
 try{OPT.blPs=+localStorage.getItem('bl-ps')||6;OPT.buyAll=localStorage.getItem('bl-all')!=='0'}catch(e){}
 document.addEventListener('click',e=>{const pgb=e.target.closest('[data-blpg]');if(pgb){const [sd,n]=pgb.dataset.blpg.split(':');OPT.blPg[sd]=Math.max(0,+n);drawBuyList();return}
@@ -3923,7 +3972,7 @@ function trig(s,pv){
 /* Auto profit lock (buys and sells): once open profit reaches Rs 1,500 the stop moves to cost + charges (breakeven);
    from Rs 2,000 it trails, keeping 50% of the best profit seen. The stop only ever tightens. */
 const LOCK_BE=1500,LOCK_TRAIL=2000,LOCK_KEEP=0.5;
-function profitLock(p,s){if(!p||!(s.last>0)||!p.q)return;const L=p.q>0,qa=Math.abs(p.q),pnl=(s.last-p.avg)*p.q;
+function profitLock(p,s){if(!p||!(s.last>0)||!p.q)return;{const m=App.meta[p.sym];if(m&&(m.spread||m.hedgeOf))return}const L=p.q>0,qa=Math.abs(p.q),pnl=(s.last-p.avg)*p.q;
   if(!(pnl<=(p.best||0)))p.best=pnl;const best=p.best||0;if(best<LOCK_BE)return;
   let feeU=0;try{const k=kindOf(s);feeU=(calcCharges(k,'buy',qa*p.avg).total+calcCharges(k,'sell',qa*s.last).total)/qa}catch(e){}
   const keep=best>=LOCK_TRAIL?LOCK_KEEP*best:0,st=+(L?p.avg+feeU+keep/qa:p.avg-feeU-keep/qa).toFixed(s.dp||2);

@@ -477,6 +477,16 @@ def _close(st, t, px, why):
              cost=round(cost, 2), net=round(gross - cost, 2),
              R=round((gross - cost) / t["initialRisk"], 2) if t.get("initialRisk") else None, last=round(px, 2))
     st["log"].append({"at": _now().isoformat(), "msg": f"EXIT {t['sym']} {t['strike']:.0f}{t['opt']} @ {px:.2f} ({why}) net {t['net']:+.0f}"})
+    _push(f"auto-exit|{t['id']}", f"PAPER EXIT ({why}) · {t['sym']} {t['strike']:.0f} {t['opt']}",
+          f"Exit @ ₹{px:.2f} (entry ₹{t['entry']}) · net {'+' if t['net'] >= 0 else '−'}₹{abs(t['net']):,.0f}")
+
+
+def _push(idem, title, body):
+    try:
+        import push_signals
+        push_signals.notify_all(idem, title, body, url="/#journal", kind="trade")
+    except Exception as e:
+        print(f"[auto] notify failed: {e}")
 
 
 def manage(st, now):
@@ -565,9 +575,13 @@ def _profit_lock(t, px):
     keep = LOCK_KEEP * best if best >= LOCK_TRAIL else 0.0
     stop = round(t["entry"] + fee_u + keep / qty, 2)
     if stop > float(t.get("premSL") or 0):
+        first = not t.get("lock") or (keep and t["lock"].get("mode") != "trail")
         t["premSL"] = stop
         t["lock"] = {"mode": "trail" if keep else "breakeven", "keep": round(keep), "best": round(best), "at": _now().isoformat()}
         t["stopMoved"] = _now().isoformat()
+        if first:
+            _push(f"auto-lock|{t['id']}|{t['lock']['mode']}", f"PROFIT LOCKED · {t['sym']} {t.get('strike', 0):.0f} {t.get('opt', '')}",
+                  f"Profit ₹{best:,.0f} - stop moved to ₹{stop:.2f} ({'keeps ₹' + format(round(keep), ',') if keep else 'breakeven'})")
 
 
 def _reversed(t, today):

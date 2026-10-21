@@ -291,12 +291,26 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
     const day = today();
-    k.innerHTML = kpiBlock(metrics(filtered()), dayStats(day), day);
+    patchKids(k, kpiBlock(metrics(filtered()), dayStats(day), day));      // only the numbers that changed are touched - no page redraw
     const o = document.getElementById('jvOpen');
-    if (o) { const w = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild, x = w ? w.scrollLeft : 0;
-      o.innerHTML = tradeTable(allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), true, 'open');
-      const w2 = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild; if (w2) w2.scrollLeft = x; }
+    if (o) {
+      const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), ids = open.map(t => t.id).join(',');
+      if (o.dataset.ids === ids && o.querySelector('table')) {
+        open.forEach(t => { const r = o.querySelector(`tr[data-id="${CSS.escape(String(t.id))}"] [data-c="pnl"]`); if (!r) return;
+          const u = unrealised(t), v = u == null ? '—' : sinr(u); if (r.textContent !== v) { r.innerHTML = `<b>${v}</b>`; r.className = 'num ' + cc(u || 0); } });
+      } else {
+        const w = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild, x = w ? w.scrollLeft : 0;
+        o.innerHTML = tradeTable(open, true, 'open'); o.dataset.ids = ids;
+        const w2 = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild; if (w2) w2.scrollLeft = x;
+      }
+    }
     const ts = document.getElementById('jvLiveTs'); if (ts) ts.textContent = 'live · updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  function patchKids(host, html) {
+    const tmp = document.createElement('div'); tmp.innerHTML = html;
+    const a = host.children, b = tmp.children;
+    if (a.length !== b.length) { host.innerHTML = html; return; }
+    for (let i = 0; i < b.length; i++) if (a[i].innerHTML !== b[i].innerHTML) { a[i].innerHTML = b[i].innerHTML; a[i].className = b[i].className; a[i].title = b[i].title; }
   }
   function curPx(t) { return t.auto ? ((t.raw && t.raw.last) || t.entry) : (live(t.symbol || t.instrument) || t.entry); }
   function livePositions() {
@@ -334,7 +348,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          <div><span>Win Rate</span><b>${(m.winRate * 100).toFixed(0)}%</b></div>
          <div><span>Current Positions</span><b>${open.length}</b></div>
        </div></div>
-     <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen">${tradeTable(open, true, 'open')}</div></div>
+     <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
      <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>
      <div class="jv-grid">
        <div class="card"><div class="card-h"><h3>Equity curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
@@ -415,7 +429,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td class="num" title="${t.sl !== t.sl0 ? 'Initial SL ' + px(t.sl0) + ' · ' : ''}Trailing: ${E(t.tsl || 'off')}">${px(t.sl)}${t.sl !== t.sl0 ? ' <small class="up">↑</small>' : ''}</td>
         <td class="num jv-tg" title="Targets T1 / T2 / T3">${[t.t1, t.t2, t.t3].map(x => x ? px(x) : '–').join(' · ')}</td>
         <td class="num">${t.qty}</td>
-        <td class="num ${cc(v)}" title="${closedish ? 'Booked P&L after costs' : 'Open P&L at live price'}"><b>${pnl}</b></td>
+        <td class="num ${cc(v)}" data-c="pnl" title="${closedish ? 'Booked P&L after costs' : 'Open P&L at live price'}"><b>${pnl}</b></td>
         <td class="num ${cc(c.R)}">${rr(c.R)}</td>
         <td><span class="badge ${stCls}">${st}</span></td>
         <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span title="${E(t.exitType || '')}">${E(t.exitType || '—')}</span>`}</td>
@@ -1482,5 +1496,6 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) syncAuto(true); }, 60000);
   window.JV = { render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate,
     /* live portfolio for the header: capital + booked + open (marked to market) */
-    totals: () => { const L = liveTotals(today()); return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
+    totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday;
+      return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayBooked + L.unr, todayBooked, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
 })();

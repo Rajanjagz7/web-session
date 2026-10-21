@@ -116,8 +116,10 @@
     catch (e) { ONE[k].d = ONE[k].d || { error: 'network', key: k }; }
     ONE[k].ts = Date.now(); ONE[k].busy = false;
     document.querySelectorAll('[data-ob-one="' + k + '"]').forEach(h => { h.innerHTML = oneHTML(ONE[k].d); });
+    if (!c && typeof window.drawBuyList === 'function') try { window.drawBuyList(); } catch (e) { }
   };
 
+  window.obsOneData = sym => { const c = ONE[String(sym || '').toUpperCase()]; return c && c.d && !c.d.error ? c.d : null; };
   window.obsRefresh = () => load(true);        // the Picks page Refresh button refreshes the Observer too
   window.obsMount = function (host) {
     if (!host) return;

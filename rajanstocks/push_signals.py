@@ -32,6 +32,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter()
 
 MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "5"))
+MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "40"))   # trade events (entry / profit lock / exit) have their own budget
 CYCLE_SECONDS = 300
 STATE_KEY = "rajanone:push:v1"
 STATE_FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "push_state.json")
@@ -236,9 +237,10 @@ def run_cycle(force=False, dry=False):
         return report
 
 
-def notify_all(idem, title, body, url="/#journal"):
-    """One recommendation push to every subscribed device, honouring the 5-per-device-per-day cap
-    and never sending the same id twice."""
+def notify_all(idem, title, body, url="/#journal", kind="trade"):
+    """One push to every subscribed device, never the same id twice. Trade events (auto entries, profit locks, exits) use
+    their own daily budget (MAX_TRADE_PER_DAY): they used to share the 5-a-day recommendation cap, so the first five 09:15
+    entries used it up and no exit / stop alert could be sent for the rest of the day."""
     now = datetime.now(IST)
     today = now.date().isoformat()
     with _lock:
@@ -246,10 +248,15 @@ def notify_all(idem, title, body, url="/#journal"):
         seen = set(st["seen"].setdefault(today, []))
         if idem in seen:
             return 0
-        sent_by = st["sent"].setdefault(today, {})
+        if kind == "trade":
+            sent_by, cap = st.setdefault("sentT", {}).setdefault(today, {}), MAX_TRADE_PER_DAY
+            for d in [d for d in st["sentT"] if d < today]:
+                st["sentT"].pop(d, None)
+        else:
+            sent_by, cap = st["sent"].setdefault(today, {}), MAX_PER_DAY
         n = 0
         for ep, rec in list(st["subs"].items()):
-            if sent_by.get(ep, 0) >= MAX_PER_DAY:
+            if sent_by.get(ep, 0) >= cap:
                 continue
             res = _send(rec["sub"], title, body, url=url, tag=idem)
             if res == "ok":
@@ -301,7 +308,8 @@ def status():
     st = _load()
     today = datetime.now(IST).date().isoformat()
     return {
-        "subscribers": len(st["subs"]), "maxPerDay": MAX_PER_DAY, "sentToday": st["sent"].get(today, {}),
+        "subscribers": len(st["subs"]), "maxPerDay": MAX_PER_DAY, "maxTradePerDay": MAX_TRADE_PER_DAY,
+        "sentToday": {"signals": len(st["sent"].get(today, {})), "tradeEvents": sum((st.get("sentT") or {}).get(today, {}).values())},
         "recent": st["log"][-10:], "configured": bool(os.environ.get("VAPID_PRIVATE_KEY")),
         "durableStore": bool(_remote()), "marketHours": market_hours(),
     }
