@@ -135,7 +135,7 @@ def get_many(keys):
             for k, v in zip(remote, res):
                 if v:
                     out[k] = _dec(v)
-                    _MEM[k] = (time.time() + 20, out[k])          # 20 s local copy: repeat reads cost nothing
+                    _MEM[k] = (time.time() + 120, out[k])         # 2 min local copy: repeat reads cost nothing
         except Exception:
             pass
     return out

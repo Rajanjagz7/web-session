@@ -66,7 +66,7 @@ def _load(cached=False):
     try:
         r = _remote()
         if r:
-            raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 30 else None
+            raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 60 else None
             if raw is None:
                 j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
                 if j.get("error"):
