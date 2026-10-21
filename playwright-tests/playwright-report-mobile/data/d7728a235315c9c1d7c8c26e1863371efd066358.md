@@ -1,0 +1,514 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: product-details.spec.ts >> Product page — details (PD-01..PD-05) >> PD-01 product images load, no broken image icons
+- Location: tests\product-details.spec.ts:5:7
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded while setting up "unlockedPage".
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=f2e1]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e7]:
+      - group [ref=f2e9]:
+        - button "Menu" [ref=f2e10] [cursor=pointer]
+      - heading [level=1] [ref=f2e13]:
+        - link [ref=f2e14] [cursor=pointer]:
+          - /url: /
+          - img "ZeroGap Supply Co" [ref=f2e15]
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17] [cursor=pointer]
+        - link [ref=f2e21] [cursor=pointer]:
+          - /url: /pages/wishlist
+        - button [ref=f2e24] [cursor=pointer]
+  - main [ref=f2e31]:
+    - group "1 / 1" [ref=f2e39]:
+      - generic [ref=f2e42]:
+        - heading "PROFESSIONAL GROOMING" [level=6] [ref=f2e43]
+        - heading "LEVEL UP YOUR GROOMING GAME" [level=2] [ref=f2e44]
+        - generic [ref=f2e45]: Premium pomades, beard care and shave essentials — built for the modern man.
+        - generic [ref=f2e46]:
+          - link "Shop Styling" [ref=f2e47] [cursor=pointer]:
+            - /url: /collections
+          - link "Explore Bundles" [ref=f2e49] [cursor=pointer]:
+            - /url: /collections/bundles-kits
+    - generic [ref=f2e55]:
+      - heading "WHO WE ARE" [level=6] [ref=f2e57]
+      - heading [level=3] [ref=f2e60]:
+        - text: Built for barbers,creators, and men who care about precision. ZeroGap brings
+        - strong [ref=f2e61]: professional-grade
+        - text: grooming essentials in one sharp online experience.
+    - generic [ref=f2e67]:
+      - generic [ref=f2e68]:
+        - listitem [ref=f2e69]:
+          - heading "UNLOCK THE SHARP" [level=2] [ref=f2e70]
+        - listitem [ref=f2e71]:
+          - heading "DISCOVER THE ZERO GAP" [level=2] [ref=f2e72]
+      - generic [ref=f2e73]:
+        - listitem [ref=f2e74]:
+          - heading "UNLOCK THE SHARP" [level=2] [ref=f2e75]
+        - listitem [ref=f2e76]:
+          - heading "DISCOVER THE ZERO GAP" [level=2] [ref=f2e77]
+    - generic [ref=f2e81]:
+      - generic [ref=f2e82]:
+        - heading "OUR CATEGORIES" [level=6] [ref=f2e83]
+        - heading "KEY GROOMING ESSENTIALS" [level=2] [ref=f2e84]
+      - list "Slider" [ref=f2e88]:
+        - group "1 / 2" [ref=f2e89]:
+          - generic [ref=f2e91]:
+            - generic [ref=f2e92]:
+              - link [ref=f2e94]:
+                - /url: /products/uppercut-matte-pomade
+                - img "Uppercut Deluxe Matte Pomade" [ref=f2e96]
+              - generic:
+                - list:
+                  - listitem [ref=f2e97]:
+                    - generic "Add to wishlist" [ref=f2e99] [cursor=pointer]
+            - generic [ref=f2e101]:
+              - generic [ref=f2e102]: "Vendor:"
+              - generic [ref=f2e103]: Uppercut Deluxe
+              - heading [level=6] [ref=f2e104]:
+                - link "Uppercut Deluxe Matte Pomade" [ref=f2e105]:
+                  - /url: /products/uppercut-matte-pomade
+              - generic [ref=f2e108]:
+                - generic [ref=f2e109]: Regular price
+                - text: $11.82 AUD
+              - generic [ref=f2e110]:
+                - button "Sold out Uppercut Deluxe Matte Pomade" [ref=f2e113] [cursor=pointer]:
+                  - generic [ref=f2e114]: QUICK ADD
+                  - generic [ref=f2e115]: ›
+                - generic [ref=f2e116]: IN STOCK
+        - group "2 / 2" [ref=f2e118]:
+          - generic [ref=f2e120]:
+            - generic [ref=f2e121]:
+              - link [ref=f2e123]:
+                - /url: /products/uppercut-deluxe-pomade
+                - img "Uppercut Deluxe Pomade" [ref=f2e125]
+              - generic:
+                - list:
+                  - listitem [ref=f2e126]:
+                    - generic "Add to wishlist" [ref=f2e128] [cursor=pointer]
+            - generic [ref=f2e130]:
+              - generic [ref=f2e131]: "Vendor:"
+              - generic [ref=f2e132]: Uppercut Deluxe
+              - heading [level=6] [ref=f2e133]:
+                - link "Uppercut Deluxe Pomade" [ref=f2e134]:
+                  - /url: /products/uppercut-deluxe-pomade
+              - generic [ref=f2e137]:
+                - generic [ref=f2e138]: Regular price
+                - text: $11.82 AUD
+              - generic [ref=f2e139]:
+                - button "Sold out Uppercut Deluxe Pomade" [ref=f2e142] [cursor=pointer]:
+                  - generic [ref=f2e143]: QUICK ADD
+                  - generic [ref=f2e144]: ›
+                - generic [ref=f2e145]: IN STOCK
+    - generic [ref=f2e150]:
+      - generic [ref=f2e151]:
+        - heading "FEATURED" [level=6] [ref=f2e152]
+        - heading "BEST SELLERS" [level=2] [ref=f2e153]
+      - list "Slider" [ref=f2e157]:
+        - group "1 / 8" [ref=f2e158]:
+          - generic [ref=f2e160]:
+            - generic [ref=f2e161]:
+              - link [ref=f2e163]:
+                - /url: /products/prorapid-tattoo-series-inca-09-after-shave-perfumed-cologne-400-ml
+                - img "ProRapid Tattoo Series Inca 09 After Shave Perfumed Cologne 400 ml" [ref=f2e165]
+              - generic:
+                - list:
+                  - listitem [ref=f2e166]:
+                    - generic "Add to wishlist" [ref=f2e168] [cursor=pointer]
+            - generic [ref=f2e170]:
+              - heading [level=6] [ref=f2e171]:
+                - link "ProRapid Tattoo Series Inca 09 After Shave Perfumed Cologne 400 ml" [ref=f2e172]:
+                  - /url: /products/prorapid-tattoo-series-inca-09-after-shave-perfumed-cologne-400-ml
+              - generic [ref=f2e175]:
+                - generic [ref=f2e176]: Regular price
+                - text: $6.32 AUD
+              - generic [ref=f2e177]:
+                - button "Sold out ProRapid Tattoo Series Inca 09 After Shave Perfumed Cologne 400 ml" [ref=f2e180] [cursor=pointer]:
+                  - generic [ref=f2e181]: QUICK ADD
+                  - generic [ref=f2e182]: ›
+                - generic [ref=f2e183]: IN STOCK
+        - group "2 / 8" [ref=f2e185]:
+          - generic [ref=f2e187]:
+            - generic [ref=f2e188]:
+              - link [ref=f2e190]:
+                - /url: /products/prorapid-tattoo-series-inca-02-after-shave-perfumed-cologne-400-ml
+                - img "ProRapid Tattoo Series Inca 02 After Shave Perfumed Cologne 400 ml" [ref=f2e192]
+              - generic:
+                - list:
+                  - listitem [ref=f2e193]:
+                    - generic "Add to wishlist" [ref=f2e195] [cursor=pointer]
+            - generic [ref=f2e197]:
+              - heading [level=6] [ref=f2e198]:
+                - link "ProRapid Tattoo Series Inca 02 After Shave Perfumed Cologne 400 ml" [ref=f2e199]:
+                  - /url: /products/prorapid-tattoo-series-inca-02-after-shave-perfumed-cologne-400-ml
+              - generic [ref=f2e202]:
+                - generic [ref=f2e203]: Regular price
+                - text: $6.32 AUD
+              - generic [ref=f2e204]:
+                - button "Sold out ProRapid Tattoo Series Inca 02 After Shave Perfumed Cologne 400 ml" [ref=f2e207] [cursor=pointer]:
+                  - generic [ref=f2e208]: QUICK ADD
+                  - generic [ref=f2e209]: ›
+                - generic [ref=f2e210]: IN STOCK
+        - group "3 / 8" [ref=f2e212]:
+          - generic [ref=f2e214]:
+            - generic [ref=f2e215]:
+              - link [ref=f2e217]:
+                - /url: /products/prorapid-tattoo-series-inca-07-after-shave-perfumed-cologne-400-ml
+                - img "ProRapid Tattoo Series Inca 07 After Shave Perfumed Cologne 400 ml" [ref=f2e219]
+              - generic:
+                - list:
+                  - listitem [ref=f2e220]:
+                    - generic "Add to wishlist" [ref=f2e222] [cursor=pointer]
+            - generic [ref=f2e224]:
+              - heading [level=6] [ref=f2e225]:
+                - link "ProRapid Tattoo Series Inca 07 After Shave Perfumed Cologne 400 ml" [ref=f2e226]:
+                  - /url: /products/prorapid-tattoo-series-inca-07-after-shave-perfumed-cologne-400-ml
+              - generic [ref=f2e229]:
+                - generic [ref=f2e230]: Regular price
+                - text: $6.32 AUD
+              - generic [ref=f2e231]:
+                - button "Sold out ProRapid Tattoo Series Inca 07 After Shave Perfumed Cologne 400 ml" [ref=f2e234] [cursor=pointer]:
+                  - generic [ref=f2e235]: QUICK ADD
+                  - generic [ref=f2e236]: ›
+                - generic [ref=f2e237]: IN STOCK
+        - group "4 / 8" [ref=f2e239]:
+          - generic [ref=f2e241]:
+            - generic [ref=f2e242]:
+              - link [ref=f2e244]:
+                - /url: /products/prorapid-tattoo-series-inca-08-after-shave-perfumed-cologne-400-ml
+                - img "ProRapid Tattoo Series Inca 08 After Shave Perfumed Cologne 400 ml" [ref=f2e246]
+              - generic:
+                - list:
+                  - listitem [ref=f2e247]:
+                    - generic "Add to wishlist" [ref=f2e249] [cursor=pointer]
+            - generic [ref=f2e251]:
+              - heading [level=6] [ref=f2e252]:
+                - link "ProRapid Tattoo Series Inca 08 After Shave Perfumed Cologne 400 ml" [ref=f2e253]:
+                  - /url: /products/prorapid-tattoo-series-inca-08-after-shave-perfumed-cologne-400-ml
+              - generic [ref=f2e256]:
+                - generic [ref=f2e257]: Regular price
+                - text: $6.32 AUD
+              - generic [ref=f2e258]:
+                - button "Sold out ProRapid Tattoo Series Inca 08 After Shave Perfumed Cologne 400 ml" [ref=f2e261] [cursor=pointer]:
+                  - generic [ref=f2e262]: QUICK ADD
+                  - generic [ref=f2e263]: ›
+                - generic [ref=f2e264]: IN STOCK
+        - group "5 / 8" [ref=f2e266]:
+          - generic [ref=f2e268]:
+            - generic [ref=f2e269]:
+              - link [ref=f2e271]:
+                - /url: /products/prorapid-inca-01-styling-hair-wax-150ml
+                - img "ProRapid INCA 01 Styling Hair Wax 150ML" [ref=f2e273]
+              - generic:
+                - list:
+                  - listitem [ref=f2e274]:
+                    - generic "Add to wishlist" [ref=f2e276] [cursor=pointer]
+            - generic [ref=f2e278]:
+              - heading [level=6] [ref=f2e279]:
+                - link "ProRapid INCA 01 Styling Hair Wax 150ML" [ref=f2e280]:
+                  - /url: /products/prorapid-inca-01-styling-hair-wax-150ml
+              - generic [ref=f2e283]:
+                - generic [ref=f2e284]: Regular price
+                - text: $5.91 AUD
+              - generic [ref=f2e285]:
+                - button "Sold out ProRapid INCA 01 Styling Hair Wax 150ML" [ref=f2e288] [cursor=pointer]:
+                  - generic [ref=f2e289]: QUICK ADD
+                  - generic [ref=f2e290]: ›
+                - generic [ref=f2e291]: IN STOCK
+        - group "6 / 8" [ref=f2e293]:
+          - generic [ref=f2e295]:
+            - generic [ref=f2e296]:
+              - link [ref=f2e298]:
+                - /url: /products/prorapid-inca-05-styling-hair-wax-150ml
+                - img "ProRapid INCA 05 Styling Hair Wax 150ML" [ref=f2e300]
+              - generic:
+                - list:
+                  - listitem [ref=f2e301]:
+                    - generic "Add to wishlist" [ref=f2e303] [cursor=pointer]
+            - generic [ref=f2e305]:
+              - heading [level=6] [ref=f2e306]:
+                - link "ProRapid INCA 05 Styling Hair Wax 150ML" [ref=f2e307]:
+                  - /url: /products/prorapid-inca-05-styling-hair-wax-150ml
+              - generic [ref=f2e310]:
+                - generic [ref=f2e311]: Regular price
+                - text: $5.00 AUD
+              - generic [ref=f2e312]:
+                - button "Sold out ProRapid INCA 05 Styling Hair Wax 150ML" [ref=f2e315] [cursor=pointer]:
+                  - generic [ref=f2e316]: QUICK ADD
+                  - generic [ref=f2e317]: ›
+                - generic [ref=f2e318]: IN STOCK
+        - group "7 / 8" [ref=f2e320]:
+          - generic [ref=f2e322]:
+            - generic [ref=f2e323]:
+              - link [ref=f2e325]:
+                - /url: /products/prorapid-tattoo-series-inca-05-after-shave-perfumed-cologne-400-ml
+                - img "ProRapid Tattoo Series Inca 05 After Shave Perfumed Cologne 400 ml" [ref=f2e327]
+              - generic:
+                - list:
+                  - listitem [ref=f2e328]:
+                    - generic "Add to wishlist" [ref=f2e330] [cursor=pointer]
+            - generic [ref=f2e332]:
+              - heading [level=6] [ref=f2e333]:
+                - link "ProRapid Tattoo Series Inca 05 After Shave Perfumed Cologne 400 ml" [ref=f2e334]:
+                  - /url: /products/prorapid-tattoo-series-inca-05-after-shave-perfumed-cologne-400-ml
+              - generic [ref=f2e337]:
+                - generic [ref=f2e338]: Regular price
+                - text: $6.32 AUD
+              - generic [ref=f2e339]:
+                - button "Sold out ProRapid Tattoo Series Inca 05 After Shave Perfumed Cologne 400 ml" [ref=f2e342] [cursor=pointer]:
+                  - generic [ref=f2e343]: QUICK ADD
+                  - generic [ref=f2e344]: ›
+                - generic [ref=f2e345]: IN STOCK
+        - group "8 / 8" [ref=f2e347]:
+          - generic [ref=f2e349]:
+            - generic [ref=f2e350]:
+              - link [ref=f2e352]:
+                - /url: /products/prorapid-tattoo-series-inca-03-after-shave-perfumed-cologne-400-ml
+                - img "ProRapid Tattoo Series Inca 03 After Shave Perfumed Cologne 400 ml" [ref=f2e354]
+              - generic:
+                - list:
+                  - listitem [ref=f2e355]:
+                    - generic "Add to wishlist" [ref=f2e357] [cursor=pointer]
+            - generic [ref=f2e359]:
+              - heading [level=6] [ref=f2e360]:
+                - link "ProRapid Tattoo Series Inca 03 After Shave Perfumed Cologne 400 ml" [ref=f2e361]:
+                  - /url: /products/prorapid-tattoo-series-inca-03-after-shave-perfumed-cologne-400-ml
+              - generic [ref=f2e364]:
+                - generic [ref=f2e365]: Regular price
+                - text: $6.32 AUD
+              - generic [ref=f2e366]:
+                - button "Sold out ProRapid Tattoo Series Inca 03 After Shave Perfumed Cologne 400 ml" [ref=f2e369] [cursor=pointer]:
+                  - generic [ref=f2e370]: QUICK ADD
+                  - generic [ref=f2e371]: ›
+                - generic [ref=f2e372]: IN STOCK
+      - link "View all products in the ProRapid Men collection" [ref=f2e375] [cursor=pointer]:
+        - /url: /collections/prorapid
+        - text: View all
+    - generic [ref=f2e383]:
+      - heading "FEATURED" [level=6] [ref=f2e384]
+      - heading "BUILT FOR ALL-DAY HOLD" [level=2] [ref=f2e385]
+      - generic [ref=f2e386]: From matte to high-shine — find your finish in the Uppercut range.
+      - generic [ref=f2e387]:
+        - link "Shop Now" [ref=f2e388] [cursor=pointer]:
+          - /url: /collections/hair-products
+        - link "View Bundles" [ref=f2e390] [cursor=pointer]:
+          - /url: /collections/bundles-kits
+    - generic [ref=f2e395]:
+      - heading "SINCE 2026 · PRECISION" [level=2] [ref=f2e397]
+      - generic [ref=f2e402]:
+        - generic [ref=f2e403]:
+          - heading "HOW WE DO" [level=6] [ref=f2e404]
+          - 'heading "FROM TOOLS TO TECHNIQUE: SHARPEN YOUR ROUTINE" [level=2] [ref=f2e405]'
+          - paragraph [ref=f2e406]: From matte to high-shine — find your finish in the Uppercut range.
+        - generic [ref=f2e407]:
+          - generic [ref=f2e410]:
+            - heading "Professional Performance" [level=3] [ref=f2e411]
+            - paragraph [ref=f2e412]: Powerful motors and precision blades built to last.
+          - generic [ref=f2e415]:
+            - heading "Clean Everyday Grooming" [level=3] [ref=f2e416]
+            - paragraph [ref=f2e417]: Reliable tools for sharp results at home or in the shop.
+        - list [ref=f2e419]:
+          - listitem [ref=f2e420]: Built for Barbers
+          - listitem [ref=f2e421]: Reliable Accessories
+        - link "About ZeroGap" [ref=f2e422] [cursor=pointer]:
+          - /url: /pages/about-us
+    - generic [ref=f2e427]:
+      - generic [ref=f2e428]:
+        - heading "WHY ZEROGAP" [level=6] [ref=f2e429]
+        - heading "WHY CUSTOMERS CHOOSE ZEROGAP" [level=2] [ref=f2e430]
+      - list [ref=f2e432]:
+        - listitem [ref=f2e433]:
+          - generic [ref=f2e437]:
+            - heading "Fast Australia Shipping" [level=4] [ref=f2e438]
+            - paragraph [ref=f2e440]: Quick, tracked delivery Australia-wide on every order.
+        - listitem [ref=f2e441]:
+          - generic [ref=f2e445]:
+            - heading "Quality Grooming Tools" [level=4] [ref=f2e446]
+            - paragraph [ref=f2e448]: Barber-grade machines and accessories built to perform.
+        - listitem [ref=f2e449]:
+          - generic [ref=f2e453]:
+            - heading "Secure Checkout" [level=4] [ref=f2e454]
+            - paragraph [ref=f2e456]: Shopify-secured payments with trusted methods.
+        - listitem [ref=f2e457]:
+          - generic [ref=f2e461]:
+            - heading "Warranty Support" [level=4] [ref=f2e462]
+            - paragraph [ref=f2e464]: 12-month warranty and responsive local support.
+    - generic [ref=f2e469]:
+      - generic [ref=f2e470]:
+        - heading "FAQ's" [level=6] [ref=f2e471]
+        - heading "Need Guidance? We've Provided" [level=2] [ref=f2e472]
+        - paragraph [ref=f2e473]: Answers to the questions we hear most. Still stuck? Our team is here to help.
+        - link "View All FAQs" [ref=f2e474] [cursor=pointer]:
+          - /url: /pages/faq
+      - generic [ref=f2e476]:
+        - group [ref=f2e478]:
+          - button [expanded] [ref=f2e479] [cursor=pointer]:
+            - heading "How do I apply for a trade account?" [level=3] [ref=f2e480]
+          - region "How do I apply for a trade account?" [ref=f2e483]:
+            - paragraph [ref=f2e484]: Complete the online trade-account application and provide the requested business details. Approval, pricing tier and any payment terms are subject to ZeroGap review and may be changed or withdrawn in accordance with the applicable trade terms.
+        - group [ref=f2e486]:
+          - button [ref=f2e487] [cursor=pointer]:
+            - heading "Are prices shown in Australian dollars?" [level=3] [ref=f2e488]
+        - group [ref=f2e492]:
+          - button [ref=f2e493] [cursor=pointer]:
+            - heading "Who can order from ZeroGap ?" [level=3] [ref=f2e494]
+        - group [ref=f2e498]:
+          - button [ref=f2e499] [cursor=pointer]:
+            - heading "Is there a minimum order?" [level=3] [ref=f2e500]
+        - group [ref=f2e504]:
+          - button [ref=f2e505] [cursor=pointer]:
+            - heading "What happens if an item is out of stock?" [level=3] [ref=f2e506]
+        - group [ref=f2e510]:
+          - button [ref=f2e511] [cursor=pointer]:
+            - heading "How is shipping calculated?" [level=3] [ref=f2e512]
+    - generic [ref=f2e519]:
+      - generic [ref=f2e520]:
+        - heading "GUIDES" [level=6] [ref=f2e521]
+        - heading "EXPLORE OUR GROOMING GUIDES" [level=2] [ref=f2e522]
+      - list [ref=f2e526]:
+        - group "1 / 3" [ref=f2e527]:
+          - generic [ref=f2e529]:
+            - generic [ref=f2e531]:
+              - link [ref=f2e533]:
+                - /url: /blogs/news/how-to-pick-your-perfect-pomade-1
+                - img "How to Pick Your Perfect Pomade" [ref=f2e534]
+              - generic [ref=f2e535]: 01 Aug, 2026
+            - generic [ref=f2e537]:
+              - generic [ref=f2e538]: Ajit Dadresa
+              - heading [level=3] [ref=f2e539]:
+                - link "How to Pick Your Perfect Pomade" [ref=f2e540]:
+                  - /url: /blogs/news/how-to-pick-your-perfect-pomade-1
+              - paragraph [ref=f2e541]: Matte, deluxe or clay — matching finish and hold to your hair.
+              - link "Read more" [ref=f2e542] [cursor=pointer]:
+                - /url: /blogs/news/how-to-pick-your-perfect-pomade-1
+        - group "2 / 3" [ref=f2e544]:
+          - generic [ref=f2e546]:
+            - generic [ref=f2e548]:
+              - link [ref=f2e550]:
+                - /url: /blogs/news/beard-oil-vs-balm-what-you-need
+                - 'img "Beard Oil vs Balm: What You Need" [ref=f2e551]'
+              - generic [ref=f2e552]: 01 Aug, 2026
+            - generic [ref=f2e554]:
+              - generic [ref=f2e555]: Ajit Dadresa
+              - heading [level=3] [ref=f2e556]:
+                - 'link "Beard Oil vs Balm: What You Need" [ref=f2e557]':
+                  - /url: /blogs/news/beard-oil-vs-balm-what-you-need
+              - paragraph [ref=f2e558]: When to use oil, when to use balm, and how to layer both.
+              - link "Read more" [ref=f2e559] [cursor=pointer]:
+                - /url: /blogs/news/beard-oil-vs-balm-what-you-need
+        - group "3 / 3" [ref=f2e561]:
+          - generic [ref=f2e563]:
+            - generic [ref=f2e565]:
+              - link [ref=f2e567]:
+                - /url: /blogs/news/how-to-pick-your-perfect-pomade
+                - img "How to Pick Your Perfect Pomade" [ref=f2e568]
+              - generic [ref=f2e569]: 01 Aug, 2026
+            - generic [ref=f2e571]:
+              - generic [ref=f2e572]: Ajit Dadresa
+              - heading [level=3] [ref=f2e573]:
+                - link "How to Pick Your Perfect Pomade" [ref=f2e574]:
+                  - /url: /blogs/news/how-to-pick-your-perfect-pomade
+              - paragraph [ref=f2e575]: Matte, deluxe or clay — matching finish and hold to your hair.
+              - link "Read more" [ref=f2e576] [cursor=pointer]:
+                - /url: /blogs/news/how-to-pick-your-perfect-pomade
+    - list [ref=f2e585]:
+      - group "1 / 5" [ref=f2e586]:
+        - link:
+          - /url: "#"
+      - group "2 / 5" [ref=f2e587]:
+        - link:
+          - /url: "#"
+      - group "3 / 5" [ref=f2e588]:
+        - link:
+          - /url: "#"
+      - group "4 / 5" [ref=f2e589]:
+        - link:
+          - /url: "#"
+      - group "5 / 5" [ref=f2e590]:
+        - link:
+          - /url: /collections/mousepads
+    - generic [ref=f2e595]:
+      - paragraph [ref=f2e597]: NEWSLETTER
+      - heading "JOIN THE ZEROGAP LIST" [level=2] [ref=f2e598]
+      - paragraph [ref=f2e600]: Get grooming tips, product drops, and exclusive offers.
+      - generic [ref=f2e604]:
+        - textbox "Your email address" [ref=f2e605]
+        - button "Subscribe" [ref=f2e606] [cursor=pointer]
+  - contentinfo [ref=f2e608]:
+    - generic [ref=f2e611]:
+      - generic [ref=f2e613]:
+        - link:
+          - /url: /
+        - paragraph [ref=f2e615]: Professional-grade grooming and barbering tools, built for sharp cuts and clean fades. Australia-wide shipping.
+        - generic [ref=f2e620]:
+          - textbox "Your email address" [ref=f2e621]
+          - button "Subscribe" [ref=f2e622] [cursor=pointer]
+      - generic [ref=f2e623]:
+        - heading "Useful links" [level=2] [ref=f2e624] [cursor=pointer]
+        - generic [ref=f2e625] [cursor=pointer]
+      - generic [ref=f2e628]:
+        - heading "Help & Support" [level=2] [ref=f2e629] [cursor=pointer]
+        - generic [ref=f2e630] [cursor=pointer]
+      - generic [ref=f2e633]:
+        - heading "Resources" [level=2] [ref=f2e634] [cursor=pointer]
+        - generic [ref=f2e635] [cursor=pointer]
+      - list [ref=f2e640]:
+        - listitem [ref=f2e641]:
+          - link "TW" [ref=f2e642] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=f2e646]:
+          - link "FB" [ref=f2e647] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=f2e651]:
+          - link "IN" [ref=f2e652] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=f2e656]:
+          - link "Snapchat" [ref=f2e657] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=f2e660]:
+          - link "Vimeo" [ref=f2e661] [cursor=pointer]:
+            - /url: "#"
+    - generic [ref=f2e667]:
+      - generic [ref=f2e668]:
+        - generic [ref=f2e669]: Payment methods
+        - list [ref=f2e670]:
+          - listitem [ref=f2e671]:
+            - img "American Express" [ref=f2e672]
+          - listitem [ref=f2e677]:
+            - img "Apple Pay" [ref=f2e678]
+          - listitem [ref=f2e689]:
+            - img "Google Pay" [ref=f2e690]
+          - listitem [ref=f2e698]:
+            - img "Mastercard" [ref=f2e699]
+          - listitem [ref=f2e706]:
+            - img "PayPal" [ref=f2e707]
+          - listitem [ref=f2e713]:
+            - img "Union Pay" [ref=f2e714]
+          - listitem [ref=f2e720]:
+            - img "Visa" [ref=f2e721]
+      - paragraph [ref=f2e728]: © 2026 ZeroGap Supply Co.
+  - link "To top" [ref=f2e729]:
+    - /url: "#zerogap-supply-co"
+  - generic [ref=f2e735]:
+    - link "Home" [ref=f2e736] [cursor=pointer]:
+      - /url: /
+    - link "Shop" [ref=f2e741] [cursor=pointer]:
+      - /url: /collections
+    - link "Wishlist" [ref=f2e746] [cursor=pointer]:
+      - /url: /pages/wishlist
+    - link "Log in" [ref=f2e751] [cursor=pointer]:
+      - /url: https://shopify.com/74156900421/account?locale=en&region_country=AU&buyer_flags=eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJiY3BwcWYtNG0ubXlzaG9waWZ5LmNvbSIsImZsYWdzIjpbXSwiZXhwIjoxNzkzMTgyODc1LCJuYmYiOjE3OTI1NzgwNzV9.sUzMe8hdMKU7ygtxd8RDU6X4WS14VFcpdZVtu2IgL70
+```
