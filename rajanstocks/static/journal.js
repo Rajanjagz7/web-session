@@ -322,6 +322,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
     liveCap();
+    { const bk = document.getElementById('jvBooks'); if (bk) { sbLoad(false); const t = document.createElement('div'); t.innerHTML = booksCard(); const n = t.firstElementChild; if (n.innerHTML !== bk.innerHTML) bk.innerHTML = n.innerHTML; } }
     const day = today();
     patchKids(k, kpiBlock(metrics(filtered()), dayStats(day), day));      // only the numbers that changed are touched - no page redraw
     const o = document.getElementById('jvOpen');
@@ -373,6 +374,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const missing = closedTrades().filter(t => !t.reviewed).length;
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
+     ${booksCard()}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
      ${capCard()}
      <div class="card"><div class="card-h"><h3>Quick Stats</h3><div class="jv-actions"><button class="btn pri" data-jv="reset">Reset portfolio</button></div></div><div class="jv-list">
@@ -1423,6 +1425,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      SB.busy = true;
      try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) { SB.d = await r.json(); SB.ts = Date.now(); } } catch (e) { }
      SB.busy = false;
+     { const bk = document.getElementById('jvBooks'); if (bk) { const t = document.createElement('div'); t.innerHTML = booksCard(); bk.replaceWith(t.firstElementChild); } }
      if (effTab() === 'algo' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
    }
    setInterval(() => { const h = document.getElementById('jvSB'); if (h && h.offsetParent && !document.hidden) sbLoad(false); }, 30000);
@@ -1448,6 +1451,20 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      if (b.dataset.sb === 'exit') { b.disabled = true; jpost('/api/stockbot/trade/' + encodeURIComponent(b.dataset.id) + '/exit').then(r => { if (!r.ok) toast_(r.err, 'warn'); sbLoad(true); }); }
      else if (b.dataset.sb === 'reset') smallForm('Reset stock trader', '<p>Close the record of every stock-trader trade and start again with ₹10,00,000? This cannot be undone.</p>', 'Reset', () => { jpost('/api/stockbot/reset').then(() => { window.closeModal && window.closeModal(); sbLoad(true); }); });
    }, true);
+
+   /* two separate paper books: options / Trade screen (this journal) and the stock trader - each Rs 10 L, Rs 20 L together */
+   function booksCard() {
+     const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
+     const L = liveTotals(today()), c = capUse();
+     const oEq = L.eq, oCap = S.capital, sEq = d ? d.equity : null, sCap = d ? d.capital : 1000000;
+     const row = (n, cap, eq, used, free, note) => `<tr><td><b>${n}</b><small class="muted" style="display:block">${note}</small></td><td class="num">${inr(cap, 0)}</td><td class="num ${eq == null ? '' : cc(eq - cap)}">${eq == null ? '…' : inr(eq, 0)}</td><td class="num ${eq == null ? '' : cc(eq - cap)}">${eq == null ? '…' : sinr(eq - cap)}</td><td class="num">${used == null ? '…' : inr(used, 0)}</td><td class="num up">${free == null ? '…' : inr(free, 0)}</td></tr>`;
+     const tEq = sEq == null ? null : oEq + sEq;
+     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books · ₹${((oCap + sCap) / 1e5).toFixed(0)} L paper capital</h3><span class="muted" style="font-size:12px">each book is tracked separately</span></div>
+       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Book</th><th class="num">Capital</th><th class="num">Equity</th><th class="num">P&amp;L</th><th class="num">In use</th><th class="num">Free</th></tr></thead><tbody>
+       ${row('Options & Trade screen', oCap, oEq, c.used, c.avail, 'option auto trader + your trades')}
+       ${row('Stock trader', sCap, sEq, d ? d.used : null, d ? d.cash : null, 'intraday · swing · positional (Algo tab)')}
+       <tr class="jv-tot"><td><b>Total</b></td><td class="num"><b>${inr(oCap + sCap, 0)}</b></td><td class="num ${tEq == null ? '' : cc(tEq - oCap - sCap)}"><b>${tEq == null ? '…' : inr(tEq, 0)}</b></td><td class="num ${tEq == null ? '' : cc(tEq - oCap - sCap)}"><b>${tEq == null ? '…' : sinr(tEq - oCap - sCap)}</b></td><td class="num">${d ? inr(c.used + d.used, 0) : '…'}</td><td class="num up">${d ? inr(c.avail + d.cash, 0) : '…'}</td></tr></tbody></table></div></div>`;
+   }
 
    function viewAlgo() {
      const auto = AUTO.list;
@@ -1580,7 +1597,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-capg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:4px 14px 12px}.jv-capg>div{display:flex;flex-direction:column;gap:2px;min-width:0}.jv-capg small{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.jv-capg b{font-size:18px}.jv-capg span{font-size:11.5px}
   .jv-capbar{height:6px;border-radius:3px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden;margin-top:4px}.jv-capbar i{display:block;height:100%;border-radius:3px;background:var(--up,#22ab94)}.jv-capbar i.warn{background:#f59e0b}.jv-capbar i.down{background:var(--down,#f7525f)}.jv-capbar i.mute{background:#8b5cf6}
   @media(max-width:640px){.jv-capg{grid-template-columns:1fr}}
-  .jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
+  .jv-tot td{border-top:2px solid var(--line)}.jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
