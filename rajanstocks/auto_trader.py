@@ -572,6 +572,37 @@ def run_cycle(force=False, dry=False):
             shared_cache.unlock("auto-cycle")
 
 
+_MARK_AT = 0.0
+
+
+def mark_open_positions(min_gap=15):
+    """Mark the open positions to market and run their exit checks (stop, target, trailing stop, expiry, time).
+    Server-side scheduling is not available on Vercel (the 5-minute cycle only runs while a browser tab with notifications on is
+    open), so positions used to keep their entry price - P&L frozen at 0, stops never checked - until that happened. The status
+    read now does this itself, at most once per `min_gap` seconds across all instances, only in market hours, and never while a
+    full cycle is running (they share a lock). Returns True when it ran."""
+    global _MARK_AT
+    if time.time() - _MARK_AT < min_gap:
+        return False
+    import nse_calendar
+    now = _now()
+    if not nse_calendar.session_open(now):
+        return False
+    if not shared_cache.lock("auto-cycle", max(10, min_gap)):
+        return False
+    try:
+        with _lock:
+            st = _load()
+            if not any(t["status"] == "OPEN" for t in st["trades"]):
+                return False
+            _MARK_AT = time.time()
+            manage(st, now)
+            _save(st)
+        return True
+    finally:
+        shared_cache.unlock("auto-cycle")
+
+
 def _run_cycle(now, force, dry):
     with _lock:
         st = _load()
@@ -727,6 +758,10 @@ def tighten_stop(tid: str, b: StopBody):
 
 @router.get("/status")
 def status():
+    try:
+        mark_open_positions()
+    except Exception as e:                                 # a failed mark must never break the status screen
+        print(f"[auto] mark-to-market failed: {e}")
     st = _load()
     if st.get("_dirty"):
         with _lock:
