@@ -221,3 +221,55 @@ def diagnose():
     except Exception as e:
         out.update(ok=False, error=str(e)[:300])
     return out
+
+
+# ---- one-time move of the saved state to a new Upstash database ----
+STATE_KEYS = ("rajanone:auto:v1", "rajanone:push:v1", "rajanone:stockbot:v1")   # auto trader, push subscriptions, stock trader
+
+
+def _old_creds():
+    url, tok = os.environ.get("OLD_UPSTASH_REDIS_REST_URL"), os.environ.get("OLD_UPSTASH_REDIS_REST_TOKEN")
+    return (url, tok) if url and tok else None
+
+
+def _pipe_to(creds, cmds, timeout=8.0):
+    url, tok = creds
+    req = urllib.request.Request(url.rstrip("/") + "/pipeline", data=json.dumps(cmds).encode(), method="POST",
+                                 headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
+
+
+def migrate_state(overwrite=False):
+    """Copy the saved state keys from the OLD database (OLD_UPSTASH_REDIS_REST_URL / _TOKEN) into the current one.
+    Never overwrites a key that already has data in the new database unless overwrite=True. Returns what happened per key
+    (sizes only - no contents, no tokens)."""
+    old, new = _old_creds(), _creds()
+    if not old or not new:
+        return {"ok": False, "reason": "set OLD_UPSTASH_REDIS_REST_URL and OLD_UPSTASH_REDIS_REST_TOKEN (old database) next to the new UPSTASH_* values"}
+    if old[0].rstrip("/") == new[0].rstrip("/"):
+        return {"ok": False, "reason": "old and new database are the same"}
+    try:
+        got = _pipe_to(old, [["GET", k] for k in STATE_KEYS])
+    except Exception as e:
+        return {"ok": False, "reason": f"old database not reachable: {str(e)[:120]}"}
+    errs = [g.get("error") for g in got if g.get("error")]
+    if errs:
+        return {"ok": False, "reason": f"old database refused the read (still over its limit?): {errs[0][:160]}"}
+    have = _pipe_to(new, [["EXISTS", k] for k in STATE_KEYS])
+    out, cmds = {}, []
+    for k, g, h in zip(STATE_KEYS, got, have):
+        raw = g.get("result")
+        if not raw:
+            out[k] = "nothing saved in the old database"
+        elif h.get("result") and not overwrite:
+            out[k] = "kept: the new database already has data for this (use ?overwrite=1 to replace)"
+        else:
+            cmds.append(["SET", k, raw])
+            out[k] = f"copied ({len(raw):,} bytes)"
+    if cmds:
+        res = _pipe_to(new, cmds)
+        bad = [r.get("error") for r in res if r.get("error")]
+        if bad:
+            return {"ok": False, "reason": f"new database refused the write: {bad[0][:160]}", "keys": out}
+    return {"ok": True, "keys": out}

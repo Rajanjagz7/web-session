@@ -1803,6 +1803,19 @@ def kv_health():
     return shared_cache.diagnose()
 
 
+@router.api_route("/kv-migrate", methods=["GET", "POST"])
+def kv_migrate(overwrite: int = 0):
+    """One-time copy of the auto trader / stock trader / push state from the old Upstash database to the new one."""
+    r = shared_cache.migrate_state(bool(overwrite))
+    if r.get("ok"):
+        try:                                     # drop any copy the state modules hold in memory so the moved data shows at once
+            import auto_trader, stock_trader
+            auto_trader._RC.clear(); stock_trader._RC.clear()
+        except Exception:
+            pass
+    return r
+
+
 @router.get("/budget")
 def budget():
     """How much of the shared Upstox request budget is in use right now."""
