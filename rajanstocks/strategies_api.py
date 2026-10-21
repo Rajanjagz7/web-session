@@ -561,6 +561,14 @@ OPT_SCANS += [
      "is worth the stop multiple of the credit. k, w, stop, sides and entry day come from the backtest on real expired option "
      "prices (static/hedge_backtest.json) - the live win rate and worst loss are shown in Trade -> Signals."),
 ]
+OPT_SCANS += [
+    ("meta-bounce", "Meta Bounce", "Option scans",
+     "ATM / OTM option premium bounces off its first-15-minute low (09:15-09:30 support): the day low came back to that support, "
+     "then the premium is 3% above it -> buy. SL 1% under the support, target 1:3 of the risk; the first-15-minute high is shown as "
+     "resistance. BACKTEST (NIFTY + BANKNIFTY + SENSEX, ATM/OTM, 1-min, Oct 2024-Oct 2026, 12,628 trades): profit factor 1.08 "
+     "(1.03 older / 1.20 recent), +0.7 pts a trade - close to break-even after charges. Best on NIFTY (1:2 PF 1.21). "
+     "Previous-day-low support lost money (PF 0.85); swing-low support about break-even. Experimental."),
+]
 ATM_OTM_ONLY = {"opt-strat1", "opt-premium", "rajan-premium-levels", "pd-expiry", "pd-daily", "pd-ohol10", "sensex-310", "prem-38-42", "meta-bounce"}
 OPT_SCANS += [
     ("sensex-310", "SENSEX Indicator", "Option scans",
@@ -618,6 +626,52 @@ def _opt_rule(key, leg, prev_close, expiry=None):
         return True, (f"Open=High, touched {name} support {level:,.2f} off prev close {prev_close:,.2f} · "
                       f"entry {ltp:,.2f} · SL {sl:,.2f} (10 pts) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
     return False, ""
+
+
+_ORB = {}
+
+
+def _orb(ikey):
+    """Low / high of an option's 09:15-09:30 premium (5-minute candles), fetched once per contract per day."""
+    today = datetime.now(market_api.IST).date().isoformat()
+    k = (ikey, today)
+    if k not in _ORB:
+        lo = hi = None
+        try:
+            bars = (market_api.candles(ikey=ikey, tf="5m", recent=1) or {}).get("bars") or []
+            for b in bars:
+                t = datetime.fromtimestamp(b["t"] / 1000, market_api.IST)
+                if t.date().isoformat() == today and (t.hour, t.minute) < (9, 30):
+                    lo = b["l"] if lo is None else min(lo, b["l"])
+                    hi = b["h"] if hi is None else max(hi, b["h"])
+        except Exception:
+            return None, None                    # try again next scan
+        if len(_ORB) > 2000:
+            _ORB.clear()
+        _ORB[k] = (lo, hi)
+    return _ORB[k]
+
+
+def _meta_bounce(c, side, strike, leg):
+    """Meta Bounce (backtested best variant): support = first-15-minute low; day low touched it (not broken by more than the
+    1% stop); premium now 3-8% above it -> buy, SL 1% under support, target 1:3."""
+    now = datetime.now(market_api.IST)
+    if (now.hour, now.minute) < (9, 31) or (now.hour, now.minute) > (15, 0):
+        return False, ""
+    atm, rows = c.get("atm") or 0, c.get("rows") or []
+    step = abs(rows[1]["strike"] - rows[0]["strike"]) if len(rows) > 1 else 50
+    if not atm or abs(strike - atm) > 3 * step or leg["ltp"] <= 0 or not leg.get("key"):
+        return False, ""
+    S, R = _orb(leg["key"])
+    if not S or S < 10:
+        return False, ""
+    lo, px = leg["low"], leg["ltp"]
+    if not (S * 0.99 <= lo <= S * 1.01 and S * 1.03 <= px <= S * 1.08):
+        return False, ""
+    sl = round(S * 0.99, 2)
+    tgt = round(px + 3 * (px - sl), 2)
+    return True, (f"First-15-min support {S:,.2f} (resistance {R:,.2f}) · day low {lo:,.2f} touched it · entry {px:,.2f} "
+                  f"(buy above {S * 1.03:,.2f}) · SL {sl:,.2f} · target {tgt:,.2f} (1:3)")
 
 
 _HG = {"ts": 0, "p": None}
@@ -842,6 +896,8 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
                             near = "open" if near_open else "prev close"
                             tag = (f"Index {ohol_plan['idx_pattern']}, premium day-low {dl:,.2f} within {pts:.0f} pts of {near} · "
                                    f"entry {leg['ltp']:,.2f} · SL {sl:,.2f} (VIX tier {ohol_plan['tier']}) · T1 {t1:,.2f} · T2 {t2:,.2f} · T3 {t3:,.2f}")
+                elif key == "meta-bounce":
+                    ok, tag = _meta_bounce(c, side, strike, leg)
                 elif key == "sensex-310" and sym != "SENSEX":
                     ok, tag = False, ""
                 else:
