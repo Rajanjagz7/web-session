@@ -81,20 +81,23 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function paperList() {
     if (typeof App === 'undefined') return [];
     const out = [];
+    const sigOf = m => (m && m.sig) ? m.sig : null;
     (App.positions || []).forEach(p => {
       if (!p || !p.q) return;
-      const L = p.q > 0;
+      const L = p.q > 0, sg = sigOf((App.meta || {})[p.sym]);
       out.push({ id: 'P|' + p.sym, paper: true, symbol: p.sym, instrument: p.sym, dir: L ? 'Long' : 'Short', entry: p.avg, qty: Math.abs(p.q), mult: 1,
         sl: p.sl || null, sl0: p.sl || p.avg, t2: p.tp || null, initRisk: p.sl ? Math.abs(p.avg - p.sl) * Math.abs(p.q) : 0, status: 'Open', exits: [],
-        date: p.day || today(), market: /\b(CE|PE)\b/.test(p.sym) ? 'Options' : 'Equity', setup: L ? 'Trade screen · buy' : 'Trade screen · sell (write)',
+        date: p.day || today(), market: /\b(CE|PE)\b/.test(p.sym) ? 'Options' : 'Equity', sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
+        setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : L ? 'Trade screen · buy' : 'Trade screen · sell (write)',
         tsl: lockTxt(p) || (p.tsl ? `${p.tsl.v}${p.tsl.u === 'abs' ? ' ₹' : '%'} trail` : 'Off / Fixed SL'), pos: p });
     });
     (App.trades || []).forEach(x => {
       if (!(x.closeQty > 0) || !(x.avgBefore > 0)) return;
-      const ty = EXIT_SRC[x.src] || 'Manual Exit';
+      const ty = EXIT_SRC[x.src] || 'Manual Exit', sg = sigOf(x.meta);
       out.push({ id: 'PT|' + x.id, paper: true, symbol: x.sym, instrument: x.sym, dir: x.side === 'sell' ? 'Long' : 'Short', entry: x.avgBefore, qty: x.closeQty, mult: 1,
         sl: null, sl0: x.avgBefore, initRisk: 0, status: 'Closed', date: x.day, market: /\b(CE|PE)\b/.test(x.sym) ? 'Options' : 'Equity',
-        setup: x.side === 'sell' ? 'Trade screen · buy' : 'Trade screen · sell (write)', exits: [{ qty: x.closeQty, price: x.price, type: ty, date: x.day, time: '' }],
+        sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
+        setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : x.side === 'sell' ? 'Trade screen · buy' : 'Trade screen · sell (write)', exits: [{ qty: x.closeQty, price: x.price, type: ty, date: x.day, time: '' }],
         exitType: ty, costOverride: x.charges || 0, slipOverride: 0, reviewed: true, tsl: '' });
     });
     return out;
@@ -294,7 +297,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     patchKids(k, kpiBlock(metrics(filtered()), dayStats(day), day));      // only the numbers that changed are touched - no page redraw
     const o = document.getElementById('jvOpen');
     if (o) {
-      const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), ids = open.map(t => t.id).join(',');
+      const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed' && sideOk(t)), ids = open.map(t => t.id).join(',');
       if (o.dataset.ids === ids && o.querySelector('table')) {
         open.forEach(t => { const r = o.querySelector(`tr[data-id="${CSS.escape(String(t.id))}"] [data-c="pnl"]`); if (!r) return;
           const u = unrealised(t), v = u == null ? '—' : sinr(u); if (r.textContent !== v) { r.innerHTML = `<b>${v}</b>`; r.className = 'num ' + cc(u || 0); } });
@@ -315,7 +318,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function curPx(t) { return t.auto ? ((t.raw && t.raw.last) || t.entry) : (live(t.symbol || t.instrument) || t.entry); }
   function livePositions() {
     const tb = document.getElementById('jvPosOpen'); if (!tb) return false;
-    const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
+    const open = posOpenPage().part;
     if (open.map(t => t.id).join(',') !== tb.dataset.ids) return false;
     open.forEach(t => {
       const row = tb.querySelector(`tr[data-pid="${CSS.escape(String(t.id))}"]`); if (!row) return;
@@ -334,10 +337,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      let cum = 0; const curve = [S.capital]; m.sorted.forEach(r => { cum += r.c.net; curve.push(S.capital + cum); });
      const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
      let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
-     const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
+     const openAll = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), open = openAll.filter(sideOk);
      const noSL = T.filter(t => entered(t) && !(t.sl0 > 0)).length, overrides = T.filter(t => t.override).length;
      const missing = closedTrades().filter(t => !t.reviewed).length;
-     const recent = L.slice().sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+     const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
      <div class="card"><div class="card-h"><h3>Quick Stats</h3><div class="jv-actions"><button class="btn pri" data-jv="reset">Reset portfolio</button></div></div><div class="jv-list">
@@ -348,6 +351,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          <div><span>Win Rate</span><b>${(m.winRate * 100).toFixed(0)}%</b></div>
          <div><span>Current Positions</span><b>${open.length}</b></div>
        </div></div>
+     <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>
      <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
      <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>
      <div class="jv-grid">
@@ -399,10 +403,19 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     ${chips.length ? `<div class="jv-chips">${chips.map(([k, l]) => `<button class="jv-chip" data-jvclr="${k}" title="Remove this filter">${E(l)} ✕</button>`).join('')}</div>` : ''}`;
   }
 
-  const PG_SIZES = [5, 10, 100, 1000];
+  const PG_SIZES = [5, 10, 15, 1000];
+  /* Buy / Sell split: one switch for every journal table */
+  const sideOk = t => !ui.side || ui.side === 'all' || (ui.side === 'sell' ? t.dir === 'Short' : t.dir !== 'Short');
+  function sideBar(list) {
+    const nb = list.filter(t => t.dir !== 'Short').length, ns = list.length - nb, cur = ui.side || 'all';
+    return `<div class="jv-seg jv-sidesw" role="group" aria-label="Buy or sell trades">${[['all', 'All', list.length], ['buy', 'Buy', nb], ['sell', 'Sell', ns]].map(([k, l, n]) =>
+      `<button class="${cur === k ? 'on' : ''} ${k}" data-jvside="${k}">${l} <small>${n}</small></button>`).join('')}</div>`;
+  }
+  document.addEventListener('click', e => { const b = e.target.closest('[data-jvside]'); if (!b || !e.target.closest('#v-journal')) return;
+    ui.side = b.dataset.jvside; Object.values(ui.pg || {}).forEach(x => x.p = 0); render(); }, true);
   function pagerBar(list, key) {
     ui.pg = ui.pg || {};
-    const pg = ui.pg[key] || (ui.pg[key] = { p: 0, s: 10 });
+    const pg = ui.pg[key] || (ui.pg[key] = { p: 0, s: 5 });
     const pages = Math.max(1, Math.ceil(list.length / pg.s)); pg.p = Math.min(pg.p, pages - 1);
     const part = list.slice(pg.p * pg.s, (pg.p + 1) * pg.s);
     const bar = list.length > PG_SIZES[0] ? `<div class="jv-pg"><div class="jv-seg jv-seg-s" title="Rows per page">${PG_SIZES.map(n => `<button class="${pg.s === n ? 'on' : ''}" data-jvps="${key}:${n}">${n}</button>`).join('')}</div>
@@ -424,7 +437,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : t.paper ? '<span class="jv-tag m" title="Placed from the Trade screen">T</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${String(t.id).replace(/^A-\d{4}/, 'A-')}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
         <td title="${t.date} ${t.time || ''}">${String(t.date).slice(5)}</td>
         <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small title="${E(tips)}">${E(t.setup || '')}</small></td>
-        <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'S' : 'L'}</span></td>
+        <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'SELL' : 'BUY'}</span></td>
         <td class="num">${px(t.entry)}</td>
         <td class="num" title="${t.sl !== t.sl0 ? 'Initial SL ' + px(t.sl0) + ' · ' : ''}Trailing: ${E(t.tsl || 'off')}">${px(t.sl)}${t.sl !== t.sl0 ? ' <small class="up">↑</small>' : ''}</td>
         <td class="num jv-tg" title="Targets T1 / T2 / T3">${[t.t1, t.t2, t.t3].map(x => x ? px(x) : '–').join(' · ')}</td>
@@ -1026,7 +1039,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
     const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo };
     if (!bodies[ui.tab]) ui.tab = 'portfolio';
-    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
+    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
     if (ui.tab === 'portfolio') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
       try { d = JSON.parse(dEl.textContent); } catch (e) { }
@@ -1220,7 +1233,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       else if (k === 'd') { const t = today(); if (v === 'all') { ui.f.from = ''; ui.f.to = ''; } else if (v === 'today') { ui.f.from = t; ui.f.to = t; } else { ui.f.from = istShift(v === '7d' ? 6 : 29); ui.f.to = ''; } }
       Object.values(ui.pg || {}).forEach(x => x.p = 0); render(); return; }
     if (c) { const k = c.dataset.jvclr; if (k === 'date') { ui.f.from = ''; ui.f.to = ''; } else ui.f[k] = ''; render(); return; }
-    const [key, val] = (pg || ps).dataset[pg ? 'jvpg' : 'jvps'].split(':'), st = (ui.pg[key] = ui.pg[key] || { p: 0, s: 10 });
+    const [key, val] = (pg || ps).dataset[pg ? 'jvpg' : 'jvps'].split(':'), st = (ui.pg[key] = ui.pg[key] || { p: 0, s: 5 });
     if (pg) st.p = Math.max(0, +val); else { st.s = +val; st.p = 0; }
     const host = document.querySelector(`.jv-tw[data-jvt="${key}"]`), reg = ui.tbl && ui.tbl[key];
     if (host && reg) host.outerHTML = tradeTable(reg.list, reg.withUnr, key); else render();
@@ -1311,22 +1324,36 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      }
    }
 
+   function posOpenPage() {
+     const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed' && sideOk(t));
+     return { open, ...pagerBar(open, 'po') };
+   }
    function viewPositions() {
      const all = allTrades();
-     const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
-     
-     const closed = all.filter(t => statusOf(t) === 'Closed').slice(-20);
-     if (!open.length) {
-       return `<div class="card"><div class="card-h"><h3>Current Positions</h3></div>
-         <div class="tbl-wrap" id="jvPosOpen" data-ids=""><div class="empty">No open positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div></div></div>
-         ${closed.length ? `<div class="card"><div class="card-h"><h3>Closed Positions (Recent)</h3></div><div class="tbl-wrap">${positionTable(closed)}</div></div>` : ''}`;
-     }
-     
-     return `<div class="card"><div class="card-h"><h3>Current Positions (${open.length})</h3></div>
-       <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(open.map(t => t.id).join(','))}">${positionTable(open)}</div>
-       <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹1,500 open profit the stop moves to cost + charges; from ₹2,000 it trails, keeping 50% of the best profit.</p></div>
-       <div class="card"><div class="card-h"><h3>Closed Positions (Recent)</h3></div>
-         <div class="tbl-wrap">${positionTable(closed)}</div></div>`;
+     const sigCard = sigResults(all);
+     const allOpen = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
+     const { open, part, bar } = posOpenPage();
+     const closedAll = all.filter(t => statusOf(t) === 'Closed').sort((a, b) => lastExit(b).localeCompare(lastExit(a)));
+     const closed = closedAll.filter(sideOk), pc = pagerBar(closed, 'pc');
+     const sw = `<div class="jv-pos-bar">${sideBar(allOpen.concat(closedAll))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>`;
+     const openCard = `<div class="card"><div class="card-h"><h3>Current Positions (${open.length})</h3></div>
+       <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(part.map(t => t.id).join(','))}">${open.length ? positionTable(part) : `<div class="empty">No open ${ui.side === 'buy' ? 'buy ' : ui.side === 'sell' ? 'sell ' : ''}positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div>`}</div>${bar}
+       <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹1,500 open profit the stop moves to cost + charges; from ₹2,000 it trails, keeping 50% of the best profit.</p></div>`;
+     const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
+     return sw + sigCard + openCard + closedCard;
+   }
+
+   /* accuracy of the Buy / Sell test trades placed from Trade -> Signals, per signal and side */
+   function sigResults(all) {
+     const done = all.filter(t => t.paper && t.sig && statusOf(t) === 'Closed');
+     const openN = all.filter(t => t.paper && t.sig && statusOf(t) !== 'Closed').length;
+     if (!done.length && !openN) return '';
+     const g = {};
+     done.forEach(t => { const k = t.sig, c = calc(t); (g[k] = g[k] || { n: 0, w: 0, net: 0 }); g[k].n++; if (c.net > 0) g[k].w++; g[k].net += c.net; });
+     const rows = Object.entries(g).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `<tr><td><b>${E(k)}</b></td><td class="num">${v.n}</td><td class="num ${v.w / v.n >= 0.5 ? 'up' : 'down'}">${(v.w / v.n * 100).toFixed(0)}%</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td></tr>`).join('');
+     return `<div class="card"><div class="card-h"><h3>Signal test results</h3><span class="muted" style="font-size:12px">${done.length} closed · ${openN} open</span></div>
+       ${rows ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Signal · side</th><th class="num">Trades</th><th class="num">Win %</th><th class="num">Net P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">Tests are open - results show here when they close.</div>'}
+       <p class="muted" style="font-size:12px;margin:6px 2px 0">From the B / S buttons in Trade → Signals. BUY = the signal as given; SELL = the opposite trade with a small stop.</p></div>`;
    }
 
    function positionTable(trades) {
@@ -1343,7 +1370,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit at the live price">Exit</button>` : `<span class="muted">${E(t.exitType || 'Closed')}</span>`;
        return `<tr data-pid="${E(t.id)}"${t.auto ? ' class="auto-row"' : ''}>
          <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small>${E(t.setup || '')}</small></span></td>
-         <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'L' : 'S'}</span></td>
+         <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'BUY' : 'SELL'}</span></td>
          <td class="num">${px(t.entry)}</td>
          <td class="num" data-c="sl">${px(t.sl)}</td>
          <td class="num" data-c="tsl">${E(open ? tslShow(t) : '—')}</td>
@@ -1485,6 +1512,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-pgb{display:flex;align-items:center;gap:6px}.jv-pgb button{width:28px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);cursor:pointer;font-size:14px}.jv-pgb button:disabled{opacity:.35;cursor:not-allowed}.jv-pgb b{font-variant-numeric:tabular-nums}
   .jv-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.jv-cv{height:120px}
   .jv-exit{height:24px;padding:0 10px;border-radius:6px;border:1px solid color-mix(in srgb,var(--down,#f7525f) 55%,transparent);background:color-mix(in srgb,var(--down,#f7525f) 12%,transparent);color:var(--down,#f7525f);font-size:11.5px;font-weight:700;cursor:pointer}
+  .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
   .jv-hr{display:flex;align-items:center;gap:10px;margin-left:auto}
