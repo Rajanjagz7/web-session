@@ -1413,6 +1413,12 @@ async function pushEnable(){const reg=await swReg();if(!reg||!reg.pushManager)th
   try{localStorage.setItem('rn_push_sub',JSON.stringify(sub))}catch(e){}
   try{await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})})}catch(e){}
   audit('Web Push enabled on this device',(sub.endpoint.split('/')[2]||''));return sub}
+/* re-register this phone with the server twice a day (and on every app open after a gap): if the server moved to its backup
+   database, push keeps working without turning it on again */
+async function pushRefresh(){try{if(!localStorage.getItem('rn_push_sub')||typeof Notification==='undefined'||Notification.permission!=='granted')return;
+  const last=+localStorage.getItem('rn_push_reg')||0;if(Date.now()-last<12*3600e3)return;const reg=await swReg(),sub=reg&&reg.pushManager&&await reg.pushManager.getSubscription();if(!sub)return;
+  const r=await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});if(r.ok)localStorage.setItem('rn_push_reg',String(Date.now()))}catch(e){}}
+setTimeout(pushRefresh,15000);setInterval(pushRefresh,3600e3);
 async function pushOff(){const reg=await swReg(),sub=reg&&await reg.pushManager.getSubscription();if(sub){try{await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})})}catch(e){}await sub.unsubscribe()}try{localStorage.removeItem('rn_push_sub')}catch(e){}audit('Web Push turned off on this device')}
 /* While the app is open (any tab, even in the background) and push is enabled, nudge the server to evaluate
    fresh BUY/SELL ideas every 5 minutes in market hours. The server de-duplicates and caps at 5 pushes/day/device. */

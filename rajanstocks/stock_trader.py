@@ -68,7 +68,7 @@ def _load(cached=False):
         if r:
             raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 60 else None
             if raw is None:
-                j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
+                j = shared_cache.kv([["GET", KEY]], 8.0)[0]                # primary, or the backup database
                 if j.get("error"):
                     raise RuntimeError(f"state store error: {j['error']}")
                 raw = j.get("result")
@@ -97,7 +97,7 @@ def _save(st):
             body = json.dumps(st)
             if body == _RC.get("raw"):
                 return
-            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["SET", KEY, body], timeout=8).json()
+            j = shared_cache.kv([["SET", KEY, body]], 8.0)[0]
             if not j.get("error"):
                 _RC.update(t=time.time(), raw=body)
         else:

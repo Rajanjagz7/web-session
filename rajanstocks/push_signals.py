@@ -56,10 +56,10 @@ def _load():
     r = _remote()
     try:
         if r:
-            resp = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", STATE_KEY], timeout=8)
-            j = resp.json()
-            if j.get("error") or resp.status_code != 200:          # store refused (e.g. request limit): never treat as "empty"
-                raise RuntimeError(f"state store error: {j.get('error') or resp.status_code}")
+            import shared_cache
+            j = shared_cache.kv([["GET", STATE_KEY]], 8.0)[0]          # primary, or the backup database
+            if j.get("error"):                                      # store refused (e.g. request limit): never treat as "empty"
+                raise RuntimeError(f"state store error: {j.get('error')}")
             raw = j.get("result")
             return json.loads(raw) if raw else _empty()
         with open(STATE_FILE, encoding="utf-8") as f:
@@ -85,8 +85,8 @@ def _save(st):
     r = _remote()
     try:
         if r:
-            requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"},
-                          json=["SET", STATE_KEY, json.dumps(st)], timeout=8)
+            import shared_cache
+            shared_cache.kv([["SET", STATE_KEY, json.dumps(st)]], 8.0)
         else:
             tmp = STATE_FILE + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:

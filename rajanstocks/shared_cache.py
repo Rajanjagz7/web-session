@@ -80,11 +80,93 @@ def enabled():
 
 
 def _pipe(cmds, timeout=4.0):
-    url, tok = _creds()
-    req = urllib.request.Request(url.rstrip("/") + "/pipeline", data=json.dumps(cmds).encode(), method="POST",
-                                 headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
+    return kv(cmds, timeout)
+
+
+# ---- primary + backup Upstash databases (automatic failover) ----
+# BACKUP_UPSTASH_REDIS_REST_URL / _TOKEN = a second database. When the primary refuses (request limit, outage) the app
+# switches to the backup on its own, re-checks the primary every 10 minutes, and when it answers again merges the saved
+# state back into it and switches back. While the primary works, every save of the saved state is copied to the backup too,
+# so a switch never starts from an old copy.
+_FO = {"on": False, "until": 0.0, "since": None, "why": ""}
+_LIMIT = ("limit exceeded", "max requests", "max daily", "rate limit")
+
+
+def _backup_creds():
+    url, tok = os.environ.get("BACKUP_UPSTASH_REDIS_REST_URL"), os.environ.get("BACKUP_UPSTASH_REDIS_REST_TOKEN")
+    return (url, tok) if url and tok else None
+
+
+def _refused(res):
+    return any(isinstance(x, dict) and x.get("error") and any(m in str(x["error"]).lower() for m in _LIMIT) for x in res or [])
+
+
+def _mirror(b, cmds):
+    w = [c for c in cmds if c and c[0] in ("SET",) and len(c) > 1 and c[1] in STATE_KEYS]
+    if b and w:
+        try:
+            _pipe_to(b, w, 4.0)
+        except Exception:
+            pass
+
+
+def _resync(src, dst):
+    """Merge the saved state from src into dst (used when switching back to the primary)."""
+    try:
+        a, b2 = _pipe_to(src, [["GET", k] for k in STATE_KEYS]), _pipe_to(dst, [["GET", k] for k in STATE_KEYS])
+        cmds = []
+        for k, x, y in zip(STATE_KEYS, a, b2):
+            new, old = x.get("result"), y.get("result")
+            if new and old and not y.get("error"):
+                cmds.append(["SET", k, json.dumps(_merge_state(k, json.loads(old), json.loads(new)))])
+            elif new:
+                cmds.append(["SET", k, new])
+        if cmds:
+            _pipe_to(dst, cmds)
+        return True
+    except Exception:
+        return False
+
+
+def kv(cmds, timeout=6.0):
+    """Run Redis commands on the active database: the primary, or the backup while the primary is refusing."""
+    p, b = _creds(), _backup_creds()
+    if not p:
+        raise RuntimeError("no Redis configured")
+    now = time.time()
+    if _FO["on"] and b:
+        if now >= _FO["until"]:                                    # time to try the primary again
+            try:
+                r = _pipe_to(p, [["PING"]], 3.0)
+                if not _refused(r) and r and r[0].get("result") == "PONG" and _resync(b, p):
+                    _FO.update(on=False, since=None, why="")
+            except Exception:
+                pass
+            if _FO["on"]:
+                _FO["until"] = now + 600
+        if _FO["on"]:
+            return _pipe_to(b, cmds, timeout)
+    err = None
+    try:
+        r = _pipe_to(p, cmds, timeout)
+        if not _refused(r):
+            _mirror(b, cmds)
+            return r
+        err = next((x.get("error") for x in r if isinstance(x, dict) and x.get("error")), "refused")
+    except Exception as e:
+        if not b:
+            raise
+        err, r = str(e)[:160], None
+    if not b:
+        return r
+    _FO.update(on=True, until=now + 600, since=_FO["since"] or now, why=str(err)[:160])
+    print(f"[kv] primary refused ({err}) - using the backup database")
+    return _pipe_to(b, cmds, timeout)
+
+
+def kv_status():
+    return {"active": "backup" if _FO["on"] else "primary", "backupConfigured": bool(_backup_creds()),
+            "since": _FO["since"], "why": _FO["why"]}
 
 
 def _enc(v):
@@ -213,7 +295,15 @@ def diagnose():
     out = {"configured": True}
     t0 = _t.time()
     try:
-        r = _pipe([["PING"], ["DBSIZE"], ["EXISTS", "rajanone:auto:v1"], ["EXISTS", "rajanone:push:v1"], ["EXISTS", "rajanone:stockbot:v1"]])
+        out["failover"] = kv_status()
+        bk = _backup_creds()
+        if bk:
+            try:
+                rb = _pipe_to(bk, [["PING"], ["DBSIZE"]], 4.0)
+                out["backup"] = {"ping": rb[0].get("result"), "keys": rb[1].get("result"), "errors": [x.get("error") for x in rb if x.get("error")]}
+            except Exception as e:
+                out["backup"] = {"error": str(e)[:160]}
+        r = _pipe_to(_creds(), [["PING"], ["DBSIZE"], ["EXISTS", "rajanone:auto:v1"], ["EXISTS", "rajanone:push:v1"], ["EXISTS", "rajanone:stockbot:v1"]], 4.0)
         out.update(ok=True, ms=int((_t.time() - t0) * 1000), ping=r[0].get("result"), keys=r[1].get("result"),
                    autoState=r[2].get("result"), pushState=r[3].get("result"), stockState=r[4].get("result"),
                    errors=[x.get("error") for x in r if x.get("error")])
