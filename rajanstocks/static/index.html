@@ -2855,7 +2855,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
-  const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc((n.pubDate||'').slice(5,22))}</small></a>`).join(''):'';
+  const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc(newsTime(n.pubDate))}</small></a>`).join(''):'';
   el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed — showing last session'}${P&&P.asOf?' · screened '+new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    <div class="ixs">${idxHtml}</div>
    <div id="pkGodseye" class="pk-ge"></div>
@@ -4099,6 +4099,10 @@ async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}
   if(App.view==='picks')renderPicks()}
+/* feeds give their own time zone (GMT for CNBC / Yahoo / MarketWatch): always show IST + how long ago */
+function newsTime(p){const d=new Date(p||'');if(isNaN(d))return String(p||'').slice(5,22);const m=Math.round((Date.now()-d.getTime())/60000);
+  const t=d.toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
+  return t+' IST'+(m>=0&&m<60?` · ${m} min ago`:m>=60&&m<1440?` · ${Math.round(m/60)} h ago`:'')}
 async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks();else if(App.view==='vedic')vdPaint()}
 
 /* ======================= Events ======================= */
