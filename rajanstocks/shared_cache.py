@@ -9,6 +9,7 @@ Without Redis credentials the same calls fall back to small files on disk (".cac
 Vercel), so a local restart does not re-download every daily candle from Upstox either. Locks stay "always granted".
 """
 import base64
+import builtins
 import hashlib
 import json
 import os
@@ -240,6 +241,30 @@ def _pipe_to(creds, cmds, timeout=8.0):
         return json.load(r)
 
 
+def _merge_state(key, old, new):
+    """Old + new state in one: trades by id (the newer copy wins), push subscriptions and daily counters united, logs joined."""
+    m = dict(old)
+    m.update({k: v for k, v in new.items() if k not in ("trades", "log", "subs", "sent", "sentT", "seen")})
+    if "trades" in old or "trades" in new:
+        by = {t.get("id"): t for t in old.get("trades") or []}
+        by.update({t.get("id"): t for t in new.get("trades") or []})
+        m["trades"] = sorted(by.values(), key=lambda t: str(t.get("openedAt") or t.get("date") or ""))
+    if "log" in old or "log" in new:
+        m["log"] = sorted((old.get("log") or []) + (new.get("log") or []), key=lambda x: str(x.get("at") or ""))[-200:]
+    if "subs" in old or "subs" in new:
+        m["subs"] = {**(old.get("subs") or {}), **(new.get("subs") or {})}
+    for d in ("sent", "sentT"):
+        if d in old or d in new:
+            m[d] = {**(old.get(d) or {}), **(new.get(d) or {})}
+    if "seen" in old or "seen" in new:
+        S = builtins.set                            # this module defines its own set() (cache write)
+        days = S(old.get("seen") or {}) | S(new.get("seen") or {})
+        m["seen"] = {day: sorted(S((old.get("seen") or {}).get(day, [])) | S((new.get("seen") or {}).get(day, []))) for day in days}
+    if "seq" in old or "seq" in new:
+        m["seq"] = max(old.get("seq") or 0, new.get("seq") or 0)
+    return m
+
+
 def migrate_state(overwrite=False):
     """Copy the saved state keys from the OLD database (OLD_UPSTASH_REDIS_REST_URL / _TOKEN) into the current one.
     Never overwrites a key that already has data in the new database unless overwrite=True. Returns what happened per key
@@ -256,14 +281,19 @@ def migrate_state(overwrite=False):
     errs = [g.get("error") for g in got if g.get("error")]
     if errs:
         return {"ok": False, "reason": f"old database refused the read (still over its limit?): {errs[0][:160]}"}
-    have = _pipe_to(new, [["EXISTS", k] for k in STATE_KEYS])
+    have = _pipe_to(new, [["GET", k] for k in STATE_KEYS])
     out, cmds = {}, []
     for k, g, h in zip(STATE_KEYS, got, have):
-        raw = g.get("result")
+        raw, cur = g.get("result"), h.get("result")
         if not raw:
             out[k] = "nothing saved in the old database"
-        elif h.get("result") and not overwrite:
-            out[k] = "kept: the new database already has data for this (use ?overwrite=1 to replace)"
+        elif cur and not overwrite:
+            try:                                   # both have data: MERGE, so nothing from either database is lost
+                merged = _merge_state(k, json.loads(raw), json.loads(cur))
+                cmds.append(["SET", k, json.dumps(merged)])
+                out[k] = "merged old + new"
+            except Exception as e:
+                out[k] = f"kept new only (could not merge: {str(e)[:80]})"
         else:
             cmds.append(["SET", k, raw])
             out[k] = f"copied ({len(raw):,} bytes)"
