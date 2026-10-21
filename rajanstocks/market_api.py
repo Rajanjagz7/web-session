@@ -1267,6 +1267,7 @@ def _pick(sym, q, rows):
     risk = abs(entry - stop)
     t1, t2 = entry + sgn * 1.5 * risk, entry + sgn * 2.5 * risk
     plans = _horizon_plans(ltp, hi, lo, atr, rows, intra, short, long_, score, e20)
+    _horizon_fit(plans, ltp, prev, hi, lo, op, atr, closes, rows, volx, rsi, e20, e50, pos)
     return {
         "s": sym, "n": NAME.get(sym, sym), "sec": SECTOR.get(sym, ""),
         "ltp": round(ltp, 2), "chg": round(chg, 2), "prev": round(prev, 2),
@@ -1335,6 +1336,55 @@ def _horizon_plans(ltp, hi, lo, atr, rows, intra, short, long_, score, e20):
     trail = f" (now {e20:,.2f})" if e20 else ""
     p_p = mk(long_, r_p, 2.0, 3.0, "positional", f"Hold while the weekly close stays on the right side of the 20-day EMA{trail}; exit on a weekly close beyond the stop.", 0.5 * atr)
     return {"intraday": p_i, "swing": p_s, "positional": p_p}
+
+
+def _horizon_fit(plans, ltp, prev, hi, lo, op, atr, closes, rows, volx, rsi, e20, e50, pos):
+    """Each horizon has its own entry test, so the three lists are different stocks, ranked by their own score:
+      Intraday   - today's momentum: move >= 0.4x the normal daily range in the plan's direction, volume at least normal,
+                   trading in the top (bottom) 35% of today's range.  Score: move in ATRs, volume, closeness to the extreme.
+      Swing      - a pullback or a fresh breakout inside the 20-day trend, NOT a stock that has already run: price within
+                   1.5 ATR of the 20-day EMA on the trend side with RSI 40-65 (35-60 for sells), or a close beyond the last
+                   5 sessions' high (low) on 1.3x volume.  Score: room left to run + breakout bonus.
+      Positional - an established trend: 50-day EMA rising (falling) > 0.5% over 10 sessions, 3-month return > 5% in the same
+                   direction, 20-day EMA on the right side of the 50-day, and not more than 3 ATR stretched.
+                   Score: 3-month return + slope of the 50-day EMA."""
+    atr = atr or ltp * 0.015
+    chg = (ltp - prev) / prev * 100 if prev else 0.0
+    atr_pct = atr / ltp * 100 if ltp else 1.5
+    # intraday
+    p = plans.get("intraday") or {}
+    d = 1 if p.get("side") == "BUY" else -1 if p.get("side") == "SELL" else 0
+    mom = chg / atr_pct if atr_pct else 0.0
+    edge = pos if d > 0 else 100 - pos
+    ok = d != 0 and d * mom >= 0.4 and volx >= 1.0 and edge >= 65 and (op <= 0 or d * (ltp - op) > 0)
+    p.update(ok=bool(ok), fit=round(max(0.0, d * mom) * 40 + min(volx, 3) * 15 + max(0.0, edge - 65), 1),
+             why=f"Today {chg:+.2f}% = {abs(mom):.1f}x a normal day, volume {volx:.1f}x, {'top' if d >= 0 else 'bottom'} {100 - edge:.0f}% of the range")
+    # swing
+    p = plans.get("swing") or {}
+    d = 1 if p.get("side") == "BUY" else -1 if p.get("side") == "SELL" else 0
+    ext = (ltp - e20) / atr if e20 else 0.0
+    prev5 = rows[-6:-1] or rows[-5:]
+    brk = d > 0 and ltp > max(r["high"] for r in prev5) and volx >= 1.3 or d < 0 and ltp < min(r["low"] for r in prev5) and volx >= 1.3
+    rsi_ok = rsi is not None and ((40 <= rsi <= 65) if d > 0 else (35 <= rsi <= 60))
+    pull = d != 0 and 0 <= d * ext <= 1.5 and rsi_ok
+    ok = d != 0 and (pull or (brk and d * ext <= 2.5))
+    p.update(ok=bool(ok), fit=round(max(0.0, 1.5 - abs(ext)) * 30 + (25 if brk else 0) + (10 if rsi_ok else 0), 1),
+             why=("Fresh 5-session breakout on volume" if brk else f"Pullback: {abs(ext):.1f} ATR from the 20-day EMA, RSI {rsi:.0f}" if rsi is not None else "Pullback to the 20-day EMA")
+             if ok else (f"Already {abs(ext):.1f} ATR from the 20-day EMA - extended, wait for a pullback" if abs(ext) > 1.5 else "No pullback or breakout setup"))
+    # positional
+    p = plans.get("positional") or {}
+    d = 1 if p.get("side") == "BUY" else -1 if p.get("side") == "SELL" else 0
+    e50_old = _ema(closes[:-10], 50) if len(closes) >= 60 else None
+    slope = (e50 - e50_old) / e50_old * 100 if e50 and e50_old else 0.0
+    base = closes[-61] if len(closes) >= 61 else closes[0]
+    r60 = (ltp / base - 1) * 100 if base else 0.0
+    stack = e20 and e50 and d * (e20 - e50) > 0
+    ok = d != 0 and d * slope > 0.5 and d * r60 > 5 and bool(stack) and d * ext <= 3
+    p.update(ok=bool(ok), fit=round(max(0.0, d * r60) + max(0.0, d * slope) * 10, 1),
+             why=f"3-month {r60:+.1f}%, 50-day EMA {slope:+.1f}% in 10 sessions" + ("" if ok else (" - trend not established" if d * slope <= 0.5 or d * r60 <= 5 else " - too stretched")))
+    best = max(("intraday", "swing", "positional"), key=lambda k: (plans[k].get("ok", False), plans[k].get("fit", 0)))
+    for k in plans:
+        plans[k]["best"] = k == best and plans[k].get("ok", False)
 
 
 PICK_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
