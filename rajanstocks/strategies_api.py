@@ -633,7 +633,7 @@ def _hedge_params():
                 b = (_json.load(f) or {}).get("best")
             if b:
                 p = {"k": b["k"], "w": b["w"], "stop": float(str(b["stop"]).split("x")[0]) if "x" in str(b["stop"]) else None,
-                     "mode": b["mode"], "entry": b["entry"], "stats": {x: b.get(x) for x in ("n", "winRate", "pf", "worst")}}
+                     "mode": b["mode"], "entry": b["entry"], "minRatio": b.get("minRatio"), "stats": {x: b.get(x) for x in ("n", "winRate", "pf", "worst")}}
         except Exception:
             pass
         _HG.update(ts=time.time(), p=p)
@@ -666,7 +666,7 @@ def _hedge_rows(sym, c):
         cands = []
         for i, r in enumerate(live):
             dist = r["strike"] - spot if side == "CE" else spot - r["strike"]
-            if dist < 0.5 * em or dist > P["k"] * em:
+            if dist < 0.35 * em or dist > P["k"] * em:
                 continue
             for w in (1, 2, max(3, int(P["w"]))):
                 j = i + w if side == "CE" else i - w
@@ -676,7 +676,7 @@ def _hedge_rows(sym, c):
                 width = abs(live[j]["strike"] - r["strike"])
                 if credit > 0 and width > 0:
                     cands.append((dist, credit / width, i, j, credit, width))
-        good = [x for x in cands if x[1] >= 0.25]          # max loss <= 3x max profit
+        good = [x for x in cands if x[1] >= (P.get("minRatio") or 0.25)]   # max loss <= 3x max profit (25%)
         if not good:
             continue
         dist, ratio, i, j, credit, width = max(good, key=lambda x: (x[0], x[1]))

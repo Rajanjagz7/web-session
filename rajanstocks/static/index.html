@@ -3145,7 +3145,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-sigtr]');i
    iron condor). Parameters and the win rate come from the backtest on real expired option prices (static/hedge_backtest.json). ---- */
 const HG={bt:null},inrN=v=>Math.round(Math.abs(+v||0)).toLocaleString('en-IN');
 fetch('/static/hedge_backtest.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{HG.bt=j;if(OPT.chain&&typeof drawBuyList==='function')drawBuyList()}).catch(()=>{});
-function hgParams(){const b=HG.bt&&HG.bt.best;return b?{k:b.k,w:b.w,stop:parseFloat(b.stop)||null,mode:b.mode,entry:b.entry,st:b}:{k:1.5,w:2,stop:2,mode:'condor',entry:'T-1 09:30',st:null}}
+function hgParams(){const b=HG.bt&&HG.bt.best;return b?{k:b.k,w:b.w,stop:parseFloat(b.stop)||null,mode:b.mode,entry:b.entry,minRatio:b.minRatio||null,st:b}:{k:1.5,w:2,stop:2,mode:'condor',entry:'T-1 09:30',minRatio:0.25,st:null}}
 function hgSessions(exp){const n=new Date(Date.now()+330*60000),today=n.toISOString().slice(0,10),late=n.getUTCHours()*60+n.getUTCMinutes()>=15*60+30;let k=0;
   for(let d=new Date(today+'T00:00:00Z');d.toISOString().slice(0,10)<=exp;d.setUTCDate(d.getUTCDate()+1)){const w=d.getUTCDay(),iso=d.toISOString().slice(0,10);if(w===0||w===6)continue;if(iso===today&&late)continue;k++}return k}
 function hgVol(){const u=SYM(OPT.sym)||{};if(u.cls==='Indices'){const v=SYM('INDIAVIX');return v&&v.last>0?{v:v.last/100,src:'India VIX '+v.last.toFixed(2)}:null}
@@ -3155,11 +3155,11 @@ function hgVol(){const u=SYM(OPT.sym)||{};if(u.cls==='Indices'){const v=SYM('IND
 const HG_MIN_RATIO=0.25;
 const ncdf=x=>{const t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2),p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p};
 function hgSpread(sd,k,w,spot,em){const L=sd.toLowerCase(),rows=(OPT.chain.rows||[]).filter(r=>r[L]&&r[L].ltp>0).sort((a,b)=>a.strike-b.strike);if(!rows.length)return null;
-  const cands=[];rows.forEach((r,i)=>{const dist=sd==='CE'?r.strike-spot:spot-r.strike;if(dist<0.5*em||dist>k*em)return;
+  const cands=[];rows.forEach((r,i)=>{const dist=sd==='CE'?r.strike-spot:spot-r.strike;if(dist<0.35*em||dist>k*em)return;
     for(const ww of [1,2,Math.max(3,w)]){const j=sd==='CE'?i+ww:i-ww;if(j<0||j>=rows.length)continue;const h=rows[j],cr=+(r[L].ltp-h[L].ltp).toFixed(2),width=Math.abs(h.strike-r.strike);
       if(cr<=0)continue;cands.push({sd,short:r.strike,long:h.strike,sp:r[L].ltp,lp:h[L].ltp,credit:cr,width,ratio:cr/width,dist,pop:Math.round(ncdf(dist/em)*100)})}});
   if(!cands.length)return null;
-  const ok=cands.filter(c=>c.ratio>=HG_MIN_RATIO);
+  const mr=hgParams().minRatio||HG_MIN_RATIO,ok=cands.filter(c=>c.ratio>=mr);
   if(ok.length)return ok.sort((a,b)=>(b.dist-a.dist)||(b.ratio-a.ratio))[0];
   const best=cands.sort((a,b)=>b.ratio-a.ratio)[0];best.weak=true;return best}
 function hedgeHTML(){const c=OPT.chain;if(!c||!c.rows||!(c.spot>0))return'';const P=hgParams(),n=Math.max(1,hgSessions(c.expiry)),V=hgVol(),lot=c.lot||1;
@@ -3177,8 +3177,8 @@ function hedgeHTML(){const c=OPT.chain;if(!c||!c.rows||!(c.spot>0))return'';cons
   return head+`<div class="hg-k"><span>Spot <b>${fmtP(c.spot)}</b></span><span>Expected move (${n} session${n>1?'s':''}) <b>±${fmtP(em,0)}</b> <small class="muted">from ${esc(V.src)}</small></span><span>Rule <b>${P.k}× move · hedge ${P.w} strikes · ${P.mode==='trend'?'trend side only':'both sides'}</b></span>
     <span class="${okDay?'up':'muted'}">${okDay?'✔ Entry day: enter at/after 09:30':'Best entry: '+esc(P.entry)+(P.entry.startsWith('T-1')?' (the session before expiry)':'')}</span></div>
     ${legs.length?`<div class="tbl-wrap"><table class="bl-t hg-t"><thead><tr><th>Spread</th><th>Sell</th><th>Hedge (buy)</th><th class="num">Credit · max profit</th><th class="num">Loss at exit · worst</th><th class="num">Breakeven</th><th class="num">Exit if spread ≥</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="muted hg-n">No strikes in this chain far enough out yet - widen the strike filter.</div>'}
-    ${legs.some(x=>x.weak)?'<p class="hg-n warn">⚠ No strike pays 25% of the hedge width today - the row shown has the best ratio available; better to skip or wait for the entry day.</p>':''}
-    <p class="muted hg-n">Rule: farthest strike (0.5-${P.k}× the expected move) that pays at least 25% of the spread width, 1- or 2-strike hedge - max loss ≤ 3× max profit; with the exit at ${P.stop||2}× credit the planned loss ≈ the credit. "Worst" = a gap straight through both strikes.</p>
+    ${legs.some(x=>x.weak)?'<p class="hg-n warn">⚠ No strike pays ${Math.round((P.minRatio||0.25)*100)}% of the hedge width today - the row shown has the best ratio available; better to skip or wait for the entry day.</p>':''}
+    <p class="muted hg-n">Rule: farthest strike (0.35-${P.k}× the expected move) that pays at least ${Math.round((P.minRatio||0.25)*100)}% of the spread width, 1- or 2-strike hedge - max loss ≤ ${((1-(P.minRatio||0.25))/(P.minRatio||0.25)).toFixed(0)}× max profit; with the exit at ${P.stop||2}× credit the planned loss ≈ the credit. "Worst" = a gap straight through both strikes.</p>
     <p class="muted hg-n">${stat} ${(SYM(OPT.sym)||{}).cls!=='Indices'?'<b>Stock options were not part of the backtest</b> - treat as untested. ':''}High win rate comes with rare larger losses - the hedge caps them at the max loss shown. Paper trading only.</p></div>`}
 /* place both legs as paper trades: buy the hedge first, then sell the short leg; the pair exits together */
 function hgPlace(sd,shortK,longK,credit){if(!OPT.chain)return;const was=OPT.att,ot=OPT.otype,keep=OPT.sel?{s:OPT.sel.side,k:OPT.sel.strike}:null;const P=hgParams();
