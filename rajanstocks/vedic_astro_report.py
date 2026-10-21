@@ -155,8 +155,7 @@ def _market_context(symbol: str = "NIFTY"):
     out = {}
     try:
         import market_api
-        q = market_api.quotes(symbols=symbol)
-        row = next((r for r in q["quotes"] if r["s"] == symbol), None)
+        row = market_api.quote_map([symbol]).get(symbol)         # shared batch - no extra Upstox call
         if row:
             out["index_prev_close"] = _ok(row["prev"])
             out["index_today_ohlc"] = _ok({"open": row["open"], "high": row["high"], "low": row["low"]})

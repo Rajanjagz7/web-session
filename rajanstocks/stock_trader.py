@@ -114,16 +114,13 @@ def _cash(st):
 
 
 def _quotes(syms):
+    """From the shared all-symbols batch (no extra Upstox calls); only symbols outside it are fetched, in one call."""
     import market_api
-    out = {}
-    syms = sorted(set(syms))
-    for i in range(0, len(syms), 40):
-        try:
-            for q in (market_api.quotes(symbols=",".join(syms[i:i + 40])) or {}).get("quotes") or []:
-                out[q["s"]] = q
-        except Exception as e:
-            print(f"[stockbot] quotes failed: {e}")
-    return out
+    try:
+        return market_api.quote_map(syms)
+    except Exception as e:
+        print(f"[stockbot] quotes failed: {e}")
+        return {}
 
 
 def _close(st, t, px, why, now):

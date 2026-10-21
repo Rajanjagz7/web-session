@@ -442,6 +442,23 @@ def quotes(symbols: str = ""):
     return out
 
 
+def quote_map(extra=()):
+    """Quotes for internal callers (God's Eye, stock trader) WITHOUT extra Upstox calls: they read the same all-symbols batch
+    that every open screen already refreshes (shared cache). Only symbols that batch does not cover are asked for, together."""
+    out = {}
+    try:
+        out = {q["s"]: q for q in (quotes() or {}).get("quotes") or []}
+    except Exception:
+        pass
+    miss = sorted({s.upper() for s in extra} - set(out))
+    if miss:
+        try:
+            out.update({q["s"]: q for q in (quotes(symbols=",".join(miss[:60])) or {}).get("quotes") or []})
+        except Exception:
+            pass
+    return out
+
+
 # tf -> (kind, base interval minutes, history days, request window days, resample factor)
 # Upstox serves daily+ history for decades but intraday only back to Jan 2022, and
 # caps one request at ~1 month (<=15m) / ~85 days (60m).

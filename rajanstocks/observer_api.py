@@ -221,8 +221,7 @@ def _live_quote(key, sym):
         return None
     try:
         import market_api
-        r = market_api.quotes(symbols=key)
-        return next((x for x in ((r or {}).get("quotes") or []) if x.get("s") == key), None)
+        return market_api.quote_map([key]).get(key)            # shared batch - no extra Upstox call
     except Exception:
         return None
 
