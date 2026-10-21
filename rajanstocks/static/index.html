@@ -937,6 +937,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 @media(max-width:480px){.pk-lv{grid-template-columns:1fr 1fr !important}.pk-sig .bar{min-width:40px}}
 .view{min-width:0;max-width:100%}.view .card,.nws,.nw,.pk-ge{min-width:0;overflow-wrap:anywhere}
 @media(max-width:600px){.pk-tools .inp,.pk-tools #pkQ{min-width:0;flex:1 1 140px}}
+@media(max-width:600px){.sb-stat.sb-ohl{display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px;flex:1 1 auto;font-size:11.5px}.sb-stat.sb-ohl span{font-size:12px}}
 </style>
 </head>
 <body>
@@ -2284,8 +2285,8 @@ function renderSymbar(){const s=App.sym;const star=App.watch.has(s.s);
   <div class="sb-stat">${s.cls==='Crypto'?'24h volume':'Volume'}<span class="num">${s.dvol>0?fmtN(s.dvol):'—'}</span></div>
   ${s.cap?`<div class="sb-stat">Market cap<span>${fmtN(s.cap)}</span></div>`:''}${s.pe?`<div class="sb-stat">P/E<span>${s.pe}</span></div>`:''}
   <div class="sb-stat">Position<span>${(p=>p?`${p.q>0?'+':''}${qfmt(p.q,s)} @ ${fmtP(p.avg,s.dp)}`:'—')(posOf(s.s))}</span></div>
-  <div class="sb-stat">Open <span class="num" data-open="${esc(s.s)}"></span> · Prev Close <span class="num" data-prev="${esc(s.s)}"></span></div>
-  <div class="sb-stat">High <span class="num up" data-high="${esc(s.s)}"></span> · Low <span class="num down" data-low="${esc(s.s)}"></span></div>`}
+  <div class="sb-stat sb-ohl">Open <span class="num" data-open="${esc(s.s)}"></span> · Prev Close <span class="num" data-prev="${esc(s.s)}"></span></div>
+  <div class="sb-stat sb-ohl">High <span class="num up" data-high="${esc(s.s)}"></span> · Low <span class="num down" data-low="${esc(s.s)}"></span></div>`}
 const CTYPES=[['candles','Candles'],['hollow','Hollow candles'],['bars','Bars (OHLC)'],['line','Line'],['area','Area'],['ha','Heikin Ashi']];
 function renderToolbar(){const nInd=chart.ind.length;
   $('#toolbar').innerHTML=`<button class="tb-btn wl-toggle" data-act="wl" aria-label="Watchlist">${I('list',16)}</button>
@@ -3678,12 +3679,15 @@ const EXTRA={};                                   // chart-only pseudo symbols (
 const tvCount=(tf)=>{const bpd=tf.sec>=86400?86400/tf.sec:22500/tf.sec;return Math.min(5000,Math.max(300,Math.ceil((App.span||1830)*bpd)+50))};
 const candleURL=(sym,tf)=>sym.tv?'/api/m/gcandles?id='+encodeURIComponent(sym.tv)+'&tf='+tf.k+'&count='+tvCount(tf):'/api/m/candles?'+(sym.ikey?'ikey='+encodeURIComponent(sym.ikey):'symbol='+encodeURIComponent(sym.s))+'&tf='+tf.k+histQS(sym,tf);
 function openGlobal(id){const it=GL.items&&GL.items.find(i=>i.id===id);if(!it)return;
-  const e=EXTRA[it.name]||(EXTRA[it.name]={s:it.name,n:it.name+' · '+it.group,sec:'Global',cls:'Global',ex:it.group,tv:id,dp:it.price<100?3:2,qdp:0,vol:.01,vb:1e5,unit:'units',noTrade:true,dvol:0,turn:0,bid:0,ask:0});
+  const e=EXTRA[it.name]||(EXTRA[it.name]={s:it.name,n:it.name,sec:'Global',cls:'Global',ex:it.group,tv:id,dp:it.price<100?3:2,qdp:0,vol:.01,vb:1e5,unit:'units',noTrade:true,dvol:0,turn:0,bid:0,ask:0});
   Object.assign(e,{last:it.price,prev:it.price-it.chg,hi:it.high||it.price,lo:it.low||it.price,open:it.open||it.price});
   switchSym(it.name)}
 function syncGlobalSym(){const s=App.sym;if(!s||!s.tv||!GL.items)return;const it=GL.items.find(i=>i.id===s.tv);if(!it)return;
-  Object.assign(s,{last:it.price,prev:it.price-it.chg,hi:Math.max(s.hi||0,it.price),lo:Math.min(s.lo||it.price,it.price)});
-  const k=s.s+'|'+App.tf.k,c=CACHE[k];if(c&&c.length&&App.view==='trade'){const b=c[c.length-1];b.c=it.price;b.h=Math.max(b.h,it.price);b.l=Math.min(b.l,it.price);chart.setData(c,s,App.tf,true);renderSymbar();updatePlan()}}
+  const px=it.price;Object.assign(s,{last:px,prev:px-it.chg,open:it.open>0?it.open:(s.open||px),hi:it.high>0?Math.max(it.high,px):Math.max(s.hi||0,px),lo:it.low>0?Math.min(it.low,px):Math.min(s.lo||px,px)});   /* day OHLC from the feed */
+  const k=s.s+'|'+App.tf.k,c=CACHE[k];if(c&&c.length&&App.view==='trade'){const b=c[c.length-1],sec=(tfSecOf(App.tf.k)||60)*1000,now=Date.now();
+    if(now-b.t<sec){b.c=px;b.h=Math.max(b.h,px);b.l=Math.min(b.l,px)}          /* live price goes into the current bar only */
+    else c.push({t:b.t+Math.floor((now-b.t)/sec)*sec,o:px,h:px,l:px,c:px,v:0});   /* history ended earlier (thin contract): start a new bar, never stretch an old one */
+    chart.setData(c,s,App.tf,true);renderSymbar();updatePlan()}}
 let gRefreshTs=0;
 async function refreshGlobalChart(){const s=App.sym;if(!s.tv||Date.now()-gRefreshTs<20000)return;gRefreshTs=Date.now();loadGlobal(true);
   try{const r=await api(candleURL(s,App.tf));if(r.bars&&r.bars.length&&App.sym===s){const k=s.s+'|'+App.tf.k;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();chart.setData(r.bars,s,App.tf,true);updatePlan()}}catch(e){}}
