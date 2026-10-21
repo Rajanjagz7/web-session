@@ -213,7 +213,7 @@ def enter(st, now):
             stop = px - d * risk_u                                    # same distances as the plan, from the live price
             t1 = px + d * abs(pl["t1"] - pl["entry"])
             t2 = px + d * abs(pl["t2"] - pl["entry"])
-            if risk_u > 0.12 * px or t2 <= 0 or t1 <= 0:
+            if risk_u > 0.13 * px or t2 <= 0 or t1 <= 0:
                 continue                                              # an unrealistic plan is never traded
             per_unit = px * (1 if (d > 0 and hz != "intraday") else CFG["marginPct"] / 100)
             qty = int(min(risk_amt / max(risk_u, 0.01), max_val / px, max(0.0, cash) / per_unit))
