@@ -1,0 +1,34 @@
+name: Premium bounce backtest
+on:
+  workflow_dispatch:
+  push:
+    branches: [rajan-web-session]
+    paths:
+      - rajanstocks/bounce_backtest.py
+      - .github/workflows/bounce-backtest.yml
+permissions:
+  contents: write
+concurrency: { group: bounce-backtest, cancel-in-progress: true }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r rajanstocks/requirements.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: rajanstocks/.pcache
+          key: pcache-none
+          restore-keys: pcache-
+      - run: python rajanstocks/bounce_backtest.py
+      - name: Commit result
+        run: |
+          git config user.name "backtest-bot"
+          git config user.email "backtest-bot@users.noreply.github.com"
+          git add rajanstocks/static/bounce_backtest.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Premium bounce backtest $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase -q origin rajan-web-session && git push -q origin HEAD:rajan-web-session && break; sleep 5; done
