@@ -659,31 +659,38 @@ def _hedge_rows(sym, c):
     em = spot * vix / 100 * math.sqrt(n / 252)
     rows = sorted([r for r in c["rows"]], key=lambda r: r["strike"])
     out = []
+    lot = int(c.get("lot") or 1)
     for side in ("CE", "PE"):
         lg = side.lower()
         live = [r for r in rows if r.get(lg) and r[lg].get("ltp", 0) > 0]
-        if side == "CE":
-            idx = next((i for i, r in enumerate(live) if r["strike"] >= spot + P["k"] * em), None)
-            j = None if idx is None else idx + P["w"]
-        else:
-            cand = [i for i, r in enumerate(live) if r["strike"] <= spot - P["k"] * em]
-            idx = cand[-1] if cand else None
-            j = None if idx is None else idx - P["w"]
-        if idx is None or j is None or j < 0 or j >= len(live):
+        cands = []
+        for i, r in enumerate(live):
+            dist = r["strike"] - spot if side == "CE" else spot - r["strike"]
+            if dist < 0.5 * em or dist > P["k"] * em:
+                continue
+            for w in (1, 2, max(3, int(P["w"]))):
+                j = i + w if side == "CE" else i - w
+                if j < 0 or j >= len(live):
+                    continue
+                credit = round(r[lg]["ltp"] - live[j][lg]["ltp"], 2)
+                width = abs(live[j]["strike"] - r["strike"])
+                if credit > 0 and width > 0:
+                    cands.append((dist, credit / width, i, j, credit, width))
+        good = [x for x in cands if x[1] >= 0.25]          # max loss <= 3x max profit
+        if not good:
             continue
-        sh, hg = live[idx][lg], live[j][lg]
-        credit = round(sh["ltp"] - hg["ltp"], 2)
-        if credit <= 0.5:
-            continue
-        lot = int(c.get("lot") or 1)
-        width = abs(live[j]["strike"] - live[idx]["strike"])
-        stop = f" · exit if spread >= {P['stop'] * credit:,.2f}" if P.get("stop") else " · hold to expiry"
+        dist, ratio, i, j, credit, width = max(good, key=lambda x: (x[0], x[1]))
+        sh, hg = live[i][lg], live[j][lg]
+        pop = round(50 * (1 + math.erf(dist / em / math.sqrt(2))))
+        stopv = P["stop"] * credit if P.get("stop") else None
+        loss_exit = min((width - credit), (stopv - credit)) * lot if stopv else (width - credit) * lot
+        stop = f" · exit if spread >= {stopv:,.2f}" if stopv else " · hold to expiry"
         st = P.get("stats")
         bt = f" · backtest {st['winRate']}% won ({st['n']} trades)" if st else ""
-        tag = (f"SELL {live[idx]['strike']:g} {side} @ {sh['ltp']:,.2f} + BUY {live[j]['strike']:g} {side} @ {hg['ltp']:,.2f} hedge · "
-               f"credit {credit:,.2f} (Rs {credit * lot:,.0f}/lot) · max loss Rs {(width - credit) * lot:,.0f}/lot · "
-               f"{P['k']}x expected move ±{em:,.0f} ({n} session{'s' if n > 1 else ''}, VIX {vix:.1f}){stop}{bt}")
-        out.append({"symbol": sym, "expiry": c["expiry"], "strike": live[idx]["strike"], "side": side, "key": sh["key"], "ltp": sh["ltp"],
+        tag = (f"SELL {live[i]['strike']:g} {side} @ {sh['ltp']:,.2f} + BUY {live[j]['strike']:g} {side} @ {hg['ltp']:,.2f} hedge · "
+               f"credit {credit:,.2f} (Rs {credit * lot:,.0f}/lot) · loss at exit Rs {loss_exit:,.0f}, worst Rs {(width - credit) * lot:,.0f}/lot · "
+               f"~{pop}% chance it holds · expected move ±{em:,.0f} ({n} session{'s' if n > 1 else ''}, VIX {vix:.1f}){stop}{bt}")
+        out.append({"symbol": sym, "expiry": c["expiry"], "strike": live[i]["strike"], "side": side, "key": sh["key"], "ltp": sh["ltp"],
                     "open": sh.get("open"), "high": sh.get("high"), "low": sh.get("low"), "prev": sh.get("prev"), "oi": sh.get("oi"),
                     "oiChg": sh.get("oiChg"), "vol": sh.get("vol") or 0, "tag": tag})
     return out
