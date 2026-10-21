@@ -364,9 +364,16 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         hol = NSE_HOLIDAYS.get(now_ist.year, {}) | NSE_HOLIDAYS.get(now_ist.year + 1, {})
         sdate = vedic_timing.next_session(now_ist, hol)
         s_open = datetime(sdate.year, sdate.month, sdate.day, 9, 15, tzinfo=IST).astimezone(timezone.utc)
-        special_timing = vedic_timing.build(sdate, vedic_panchang.compute_panchang(s_open), hol)
+        s_pan = vedic_panchang.compute_panchang(s_open)
+        special_timing = vedic_timing.build(sdate, s_pan, hol)
     except Exception as e:
+        s_pan = None
         special_timing = {"available": False, "reason": f"Special timing unavailable: {str(e)[:160]}"}
+    try:                                                     # minute-level astro time slices for the same session
+        import astro_slices
+        astro_table = astro_slices.build(sdate, s_pan) if s_pan else {"available": False, "reason": "no panchang"}
+    except Exception as e:
+        astro_table = {"available": False, "reason": f"Astro timings unavailable: {str(e)[:160]}"}
 
     # The three network-bound parts run in parallel, each with a time budget, so one slow source can never
     # push the whole report past the serverless time limit - that part just says it is unavailable.
@@ -481,6 +488,7 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         },
         "watch_windows": windows,
         "special_timing": special_timing,
+        "astro_slices": astro_table,
         "day_power": day_power_block,
         "stocks_to_watch": _stw_result(f_stw, _left()),
         "risk_management": RISK_MANAGEMENT,

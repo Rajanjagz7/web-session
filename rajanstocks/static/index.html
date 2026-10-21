@@ -630,6 +630,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pnl-chip[hidden]{display:none}.pnl-chip small{color:var(--text-3);font-weight:600}.pnl-chip.up{border-color:var(--up);background:var(--up-bg)}.pnl-chip.down{border-color:var(--down);background:var(--down-bg)}
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
+.vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 </style>
 <script src="/static/journal.js?v=20261021l"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
@@ -2594,10 +2595,20 @@ function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&
        <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p>
        <details><summary>How it's worked out · score ${x.score>0?'+':''}${x.score}</summary><ul>${x.parts.map(p=>`<li class="${p.pts?'':'vx-dp0'}"><span class="${p.pts>0?'up':p.pts<0?'down':'muted'}">${p.pts>0?'+':''}${p.pts}</span> <b>${esc(p.group)} · ${esc(p.name)}</b> — ${esc(p.why)}${p.pts?'':' <small class="muted">· no effect today</small>'}</li>`).join('')}</ul><p class="muted vx-dpn">+ pushes up · − pushes down · 0 = this factor is neutral today (that is normal - it only counts on certain days)</p></details></article>`}).join('')}</div>
    <p class="vx-note">${esc(dp.caveat||'')}</p></section>`}
+let ASB=null;function asbLoad(){if(ASB!==null)return;ASB=0;fetch('/static/astro_slices_backtest.json?d='+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():null).then(j=>{ASB=j||0;const b=document.getElementById('vxAsAcc');if(b)b.innerHTML=asbHTML()}).catch(()=>{})}
+function asbHTML(){const j=ASB;if(!j||!j.byLabel)return'<span class="muted">Accuracy check runs after market close each weekday.</span>';
+  return`Tested on ${j.sessions} sessions (${esc(j.from)} → ${esc(j.to)}): direction right <b>${Math.round((j.directionalHitRate||0)*100)}%</b> of ${j.directionalSlices} up/down slices · Nifty rose in ${Math.round(j.baseRateUp*100)}% of all slices. <details><summary>By projection</summary><ul>${Object.entries(j.byLabel).map(([k,v])=>`<li><b>${esc(k)}</b> · ${v.slices} slices · ${v.rightDirection==null?'no direction':'right '+Math.round(v.rightDirection*100)+'%'} · avg ${v.avgPts>0?'+':''}${v.avgPts} pts · moves ${v.avgAbsPtsPerHour} pts/hr</li>`).join('')}</ul></details>`}
+function vxAstroSlices(t){if(!t||!t.available)return t&&t.reason?`<section class="vx-card"><h3>Astro intraday timings</h3><p class="vx-note">${esc(t.reason)}</p></section>`:'';asbLoad();
+  const now=vxNowMin(),today=new Date(Date.now()+330*60000).toISOString().slice(0,10)===t.date,d=new Date(t.date+'T00:00:00');
+  const ds=d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'2-digit'});
+  return`<section class="vx-card vx-as"><h3>Astro intraday timings · Nifty 50</h3><p class="muted">${esc(ds)} · ${t.count} time slices</p>
+   <div class="vx-astbl"><table><thead><tr><th>From</th><th>To</th><th>Projection</th></tr></thead><tbody>${t.slices.map(s=>{const on=today&&now>=s.a&&now<s.b;
+     return`<tr class="${on?'on':''}"><td>${s.from}</td><td>${s.to}</td><td><details><summary class="as-${s.tone}">${esc(s.projection)}${on?' <small>· now</small>':''}</summary><small class="muted">${s.why.map(esc).join(' · ')}</small></details></td></tr>`}).join('')}</tbody></table></div>
+   <p class="vx-note">${esc(t.note)} Tap a projection to see why.</p><p class="vx-note" id="vxAsAcc">${asbHTML()}</p></section>`}
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
-    ${vxDayPower(r.day_power)}
+    ${vxDayPower(r.day_power)}${vxAstroSlices(r.astro_slices)}
     <section class="vx-card"><h3>Session timeline (IST)</h3>${vxSpecial(r.special_timing)}${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
