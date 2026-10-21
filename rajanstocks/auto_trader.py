@@ -52,15 +52,21 @@ def _remote():
     return (url, tok) if url and tok else None
 
 
-def _load():
+_RC = {}
+
+
+def _load(cached=False):
     st = {"cfg": dict(DEFAULT_CFG), "trades": [], "log": []}
     try:
         r = _remote()
         if r:
-            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
-            if j.get("error"):                                      # store refused (e.g. request limit): never treat as "empty"
-                raise RuntimeError(f"state store error: {j['error']}")
-            raw = j.get("result")
+            raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 30 else None     # 30 s local copy: saves store requests
+            if raw is None:
+                j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
+                if j.get("error"):                                  # store refused (e.g. request limit): never treat as "empty"
+                    raise RuntimeError(f"state store error: {j['error']}")
+                raw = j.get("result")
+                _RC.update(t=time.time(), raw=raw)
             d = json.loads(raw) if raw else {}
         else:
             with open(FILE, encoding="utf-8") as f:
@@ -98,7 +104,12 @@ def _save(st):
     try:
         r = _remote()
         if r:
-            requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["SET", KEY, json.dumps(st)], timeout=8)
+            body = json.dumps(st)
+            if body == _RC.get("raw"):
+                return                                              # nothing changed: no store request
+            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["SET", KEY, body], timeout=8).json()
+            if not j.get("error"):
+                _RC.update(t=time.time(), raw=body)
         else:
             tmp = FILE + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
@@ -625,7 +636,7 @@ def run_cycle(force=False, dry=False):
 _MARK_AT = 0.0
 
 
-def mark_open_positions(min_gap=45):
+def mark_open_positions(min_gap=120):
     """Mark the open positions to market and run their exit checks (stop, target, trailing stop, expiry, time).
     Server-side scheduling is not available on Vercel (the 5-minute cycle only runs while a browser tab with notifications on is
     open), so positions used to keep their entry price - P&L frozen at 0, stops never checked - until that happened. The status
@@ -812,7 +823,7 @@ def status():
         mark_open_positions()
     except Exception as e:                                 # a failed mark must never break the status screen
         print(f"[auto] mark-to-market failed: {e}")
-    st = _load()
+    st = _load(cached=True)                                    # read-only screen: a 30 s old copy is fine
     if st.get("_dirty"):
         with _lock:
             _save(st)

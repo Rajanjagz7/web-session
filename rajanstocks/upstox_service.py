@@ -65,6 +65,11 @@ _LS_LOCK = _threading.Lock()
 
 
 def _redis_creds():
+    """Shared (cross-instance) Upstox rate limiting costs 9-12 Upstash commands per lease - it used up the free 500K/month.
+    Off by default: every instance keeps its own local limits (well under Upstox's real caps) and a real 429 still backs off.
+    Set SHARED_RATE_LIMIT=1 to turn the shared counters back on."""
+    if os.environ.get("SHARED_RATE_LIMIT") != "1":
+        return None
     url = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
     tok = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
     return (url, tok) if url and tok else None

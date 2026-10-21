@@ -94,18 +94,51 @@ def _dec(s):
     return json.loads(zlib.decompress(base64.b64decode(s)).decode())
 
 
+# Upstash budget (free plan: 500K commands a month). Only values that are expensive to rebuild AND worth sharing between
+# server copies go to Redis; everything else (prices, candles, quote copies, observer, research proxy) stays in this
+# instance's memory + /tmp disk. Durable state (auto trader, stock trader, push) uses its own keys, not this module.
+REMOTE_PREFIXES = ("picks|", "ipo:")
+REMOTE_LOCKS = ("auto-cycle", "stockbot-cycle")
+_MEM = {}
+
+
+def _remote_key(k):
+    return enabled() and k.startswith(REMOTE_PREFIXES)
+
+
+def _mem_get(k):
+    h = _MEM.get(k)
+    if h and h[0] > time.time():
+        return h[1]
+    if h:
+        _MEM.pop(k, None)
+    v = _disk_get(k)
+    return v
+
+
 def get_many(keys):
-    """{key: value} for the keys that exist. One Redis command however many keys."""
+    """{key: value} for the keys that exist. Shared keys: one Redis command however many keys; the rest: memory / disk."""
     keys = list(keys)
     if not keys:
         return {}
-    if not enabled():
-        return {k: v for k in keys if (v := _disk_get(k)) is not None}
-    try:
-        res = _pipe([["MGET", *["sc:" + k for k in keys]]])[0].get("result") or []
-        return {k: _dec(v) for k, v in zip(keys, res) if v}
-    except Exception:
-        return {}
+    out = {}
+    remote = []
+    for k in keys:
+        v = _mem_get(k)
+        if v is not None:
+            out[k] = v
+        elif _remote_key(k):
+            remote.append(k)
+    if remote:
+        try:
+            res = _pipe([["MGET", *["sc:" + k for k in remote]]])[0].get("result") or []
+            for k, v in zip(remote, res):
+                if v:
+                    out[k] = _dec(v)
+                    _MEM[k] = (time.time() + 20, out[k])          # 20 s local copy: repeat reads cost nothing
+        except Exception:
+            pass
+    return out
 
 
 def get(key):
@@ -116,14 +149,21 @@ def set_many(items, ttl):
     """items: {key: value}. Failures are ignored: the cache is an optimisation."""
     if not items:
         return
-    if not enabled():
-        for k, v in items.items():
+    remote = {}
+    for k, v in items.items():
+        _MEM[k] = (time.time() + min(int(ttl), 3600), v)
+        if _remote_key(k):
+            remote[k] = v
+        elif not enabled() or len(json.dumps(v, separators=(",", ":"))) > 2000:   # no Redis: disk is the shared layer
             _disk_set(k, v, ttl)
-        return
-    try:
-        _pipe([["SET", "sc:" + k, _enc(v), "EX", int(ttl)] for k, v in items.items()])
-    except Exception:
-        pass
+    if len(_MEM) > 4000:                                           # keep memory bounded
+        for k in sorted(_MEM, key=lambda x: _MEM[x][0])[:1000]:
+            _MEM.pop(k, None)
+    if remote:
+        try:
+            _pipe([["SET", "sc:" + k, _enc(v), "EX", int(ttl)] for k, v in remote.items()])
+        except Exception:
+            pass
 
 
 def set(key, value, ttl):
@@ -132,7 +172,11 @@ def set(key, value, ttl):
 
 def lock(name, ttl_s):
     """True if THIS caller now owns the lock (SET NX EX). Without Redis the lock is always granted."""
-    if not enabled():
+    if not enabled() or name not in REMOTE_LOCKS:
+        h = _MEM.get("lock:" + name)                                # local lock: enough for caches, free of Redis calls
+        if h and h[0] > time.time():
+            return False
+        _MEM["lock:" + name] = (time.time() + ttl_s, 1)
         return True
     try:
         return _pipe([["SET", "sl:" + name, str(time.time()), "NX", "EX", int(ttl_s)]])[0].get("result") == "OK"
@@ -141,7 +185,8 @@ def lock(name, ttl_s):
 
 
 def unlock(name):
-    if enabled():
+    _MEM.pop("lock:" + name, None)
+    if enabled() and name in REMOTE_LOCKS:
         try:
             _pipe([["DEL", "sl:" + name]])
         except Exception:

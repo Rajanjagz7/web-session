@@ -58,15 +58,21 @@ def _remote():
     return (url, tok) if url and tok else None
 
 
-def _load():
+_RC = {}
+
+
+def _load(cached=False):
     st = {"trades": [], "log": [], "seq": 0}
     try:
         r = _remote()
         if r:
-            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
-            if j.get("error"):
-                raise RuntimeError(f"state store error: {j['error']}")
-            raw = j.get("result")
+            raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 30 else None
+            if raw is None:
+                j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["GET", KEY], timeout=8).json()
+                if j.get("error"):
+                    raise RuntimeError(f"state store error: {j['error']}")
+                raw = j.get("result")
+                _RC.update(t=time.time(), raw=raw)
             d = json.loads(raw) if raw else {}
         else:
             with open(FILE, encoding="utf-8") as f:
@@ -88,7 +94,12 @@ def _save(st):
     try:
         r = _remote()
         if r:
-            requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["SET", KEY, json.dumps(st)], timeout=8)
+            body = json.dumps(st)
+            if body == _RC.get("raw"):
+                return
+            j = requests.post(r[0], headers={"Authorization": f"Bearer {r[1]}"}, json=["SET", KEY, body], timeout=8).json()
+            if not j.get("error"):
+                _RC.update(t=time.time(), raw=body)
         else:
             with open(FILE + ".tmp", "w", encoding="utf-8") as f:
                 json.dump(st, f)
@@ -275,12 +286,12 @@ def _stats(trades):
 def status():
     import nse_calendar
     now = _now()
-    st = _load()
+    st = _load(cached=True)
     last = st.get("lastRun")
     if nse_calendar.session_open(now) and (not last or (now - datetime.fromisoformat(last)).total_seconds() > 180):
         try:
             run_cycle()
-            st = _load()
+            st = _load(cached=True)
         except Exception as e:
             print(f"[stockbot] cycle failed: {e}")
     cash, used, booked = _cash(st)

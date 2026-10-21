@@ -116,6 +116,7 @@ def isolated_cache(tmp_path, monkeypatch):
     import shared_cache
     monkeypatch.setattr(shared_cache, "_DISK", str(tmp_path))
     monkeypatch.setattr(shared_cache, "_creds", lambda: None)
+    shared_cache._MEM.clear()                       # the in-memory layer belongs to the (simulated) instance
     import market_api
     market_api._cache.clear()
     return market_api
@@ -222,7 +223,7 @@ def test_fresh_instance_serves_shared_last_prices_when_upstox_is_busy(isolated_c
     import os
     import shared_cache
     os.remove(shared_cache._file("qs|" + hashlib.md5(b"AAA,BBB").hexdigest()))      # the 4-second shared answer has expired
-    ma._cache.clear(); ma._QSYM.clear(); ma._QLAST.clear()              # a brand-new instance: nothing in memory
+    ma._cache.clear(); ma._QSYM.clear(); ma._QLAST.clear(); shared_cache._MEM.clear()   # a brand-new instance: nothing in memory
     second = ma.quotes(symbols="AAA,BBB")
     assert second["stale"] is True and len(second["quotes"]) == 2
 
