@@ -21,3 +21,13 @@ Run locally: double-click `start.bat` (http://localhost:8000). Needs `UPSTOX_ACC
 ## Notes
 - `.env.local` holds a live token. Never commit it.
 - Backup of the retired app: `../_archive/rajantrading-backup-2026-10-14.zip`.
+
+## Accuracy of every indicator and of the Picks screen
+`python accuracy_report.py` replays every daily-bar indicator (24 + Volume Spurt) on 5 indices + 20 liquid stocks (about 4 years) and the Picks
+screen on every F&O stock + index, each trade with a stop-loss and a target (1R / 1.5R / 2R / 3R, picks: 1.5R / 2.5R), as shares/futures and as
+options (the Auto Trader's rule). Results: `docs/INDICATOR_ACCURACY.md`, `static/accuracy_report.json`, `GET /api/backtest/accuracy` (`?full=true`
+for every rule). Indicators that need minute bars or peek at the session are listed as not replayable.
+
+## Auto Trader
+No daily entry limit (it used to stop at 5: 3 index + 2 stock). Every qualifying signal is taken, one position per symbol, each risking the same
+fixed amount. `maxPerDay`, `indexSlots`, `stockSlots` in `POST /api/auto/config` accept a number to cap it again; 0 = no limit.

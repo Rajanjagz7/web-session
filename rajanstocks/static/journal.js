@@ -55,7 +55,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       if (type === 'T2') { t.hits = ['T1', 'T2']; t.hitOrder = ['T1', 'T2']; }
       t.reviewed = true;
       t.lesson = `Automated. Exit: ${a.exitReason}. Net ${a.net >= 0 ? '+' : ''}₹${Math.round(a.net)}${a.R != null ? ' (' + (a.R >= 0 ? '+' : '') + a.R + 'R)' : ''}. ` +
-                 (t.rule === 'Yes' ? 'Within the per-trade risk budget; stop set; max 5 a day.' : `Stop set and max 5 a day respected, but one lot risks about ₹${Math.round(a.initialRisk)} - above the ₹${Math.round(S.capital * S.riskPct / 100)} budget (1-lot minimum).`);
+                 (t.rule === 'Yes' ? 'Within the per-trade risk budget; stop set.' : `Stop set, but one lot risks about ₹${Math.round(a.initialRisk)} - above the ₹${Math.round(S.capital * S.riskPct / 100)} budget (1-lot minimum).`);
     } else { t.reviewed = false; t.lesson = ''; }
     return t;
   }
@@ -876,7 +876,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th>Exit style chosen on in-sample</th><th colspan="3">In-sample (to ${R.splitDate})</th><th colspan="3">Out-of-sample (after)</th><th>Verdict</th></tr>
       <tr><th></th><th></th><th>Trades</th><th>Avg R</th><th>PF</th><th>Trades</th><th>Avg R</th><th>PF</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="muted" style="padding:6px 14px 12px">Pass = in-sample avg ≥ +0.12R and PF ≥ 1.25, <u>and</u> out-of-sample avg ≥ +0.08R and PF ≥ 1.15. R = profit as a multiple of the initial risk.</p></div>
-      ${R.executor ? twoMonthCard(R.executor, 'What a 2-month run of the 5-a-day executor would have returned', 'Proven strategies only, replayed on the out-of-sample period.') : ''}
+      ${R.executor ? twoMonthCard(R.executor, 'What a 2-month run of the auto executor (no daily limit) would have returned', 'Proven strategies only, replayed on the out-of-sample period.') : ''}
       ${R.executorResearch ? twoMonthCard(R.executorResearch, proven ? 'Research basket (top in-sample strategies)' : 'If you forward-test the best in-sample strategies anyway', 'These strategies did <b>not</b> pass the out-of-sample test, so this is a research estimate, not evidence of an edge: ' + R.executorResearch.entries + ' trades is a small sample and the result is not statistically distinguishable from luck.') : ''}
       <div class="card"><div class="card-h"><h3>Read this before relying on any number</h3></div><ul class="jv-stops" style="padding:0 14px 12px 30px">${R.caveats.map(c => `<li>${E(c)}</li>`).join('')}</ul></div>`;
   }
@@ -896,7 +896,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const activityList = log => { if (!log.length) return '<p class="muted" style="padding:0 14px 12px">No activity yet. The first entries are made from 09:15 IST on the next trading day.</p>';
       const { part, bar } = pagerBar(log, 'activity');
       return `<ul class="jv-stops" style="padding:0 14px 12px 30px">${part.map(l => `<li>${new Date(l.at).toLocaleString('en-IN')} — ${E(l.msg)}</li>`).join('')}</ul>${bar}`; };
-    return `<div class="card"><div class="card-h"><h3>Automated paper trades — 3 index options + 2 stock options a day</h3></div>
+    return `<div class="card"><div class="card-h"><h3>Automated paper trades — every qualifying signal, no daily limit</h3></div>
       <div style="padding:0 14px 12px"><p>${unproven ? '<span class="badge b-down">UNPROVEN · forward test</span> ' : '<span class="badge b-up">Proven strategies</span> '}${E(A.mode)}.
         ${unproven ? 'No strategy passed the backtest, so these trades are a live, out-of-sample experiment: results here are the only evidence that can\'t be flattered by hindsight.' : ''}</p>
         <p class="muted">Simulated at live option prices — no broker is connected and no real order is ever sent. Entries start at the 09:15 open: strategy signals come from the previous session, the other slots from live screens. Exits follow the rule on the underlying. At most 5 entries a day.</p>
@@ -905,7 +905,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <button class="btn" data-jv="autorefresh">Refresh</button></div></div></div>
       <div class="jv-kpis">
         ${kpi('Status', c.enabled ? (A.marketOpen ? 'Running' : 'Waiting for market') : 'Paused')}
-        ${kpi('Entries today', A.todayCount + ' / ' + c.maxPerDay, 'index ' + nIdx + '/' + c.indexSlots + ' · stock ' + nStk + '/' + c.stockSlots)}
+        ${kpi('Entries today', A.todayCount + (c.maxPerDay ? ' / ' + c.maxPerDay : ''), 'index ' + nIdx + (c.indexSlots ? '/' + c.indexSlots : '') + ' · stock ' + nStk + (c.stockSlots ? '/' + c.stockSlots : '') + (c.maxPerDay ? '' : ' · no limit'))}
         ${kpi('Net P&L (closed)', sinr(s.net), s.trades + ' trades', cc(s.net))}
         ${kpi('Open P&L', sinr(s.openPnL), '', cc(s.openPnL))}
         ${kpi('Win rate', (s.winRate * 100).toFixed(0) + '%', 'avg ' + rr(s.avgR))}

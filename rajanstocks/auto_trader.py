@@ -1,4 +1,5 @@
-"""Automated PAPER executor: at most 5 new entries a day - 3 index options + 2 stock options.
+"""Automated PAPER executor: no daily entry limit (it used to stop at 5: 3 index + 2 stock options) - every qualifying signal is taken,
+one position per symbol at a time, each sized at the same fixed risk.
 
 No broker is involved and no real order is ever sent. Trades are simulated at live option prices.
 
@@ -30,7 +31,15 @@ _lock = threading.Lock()
 
 KEY = "rajanone:auto:v1"
 FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "auto_state.json")
-DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 5, "indexSlots": 3, "stockSlots": 2,
+NO_LIMIT = 10 ** 6                      # "maxPerDay", "indexSlots", "stockSlots": 0 (or empty) means no limit
+
+
+def _cap(cfg, key):
+    v = cfg.get(key)
+    return NO_LIMIT if not v else int(v)
+
+
+DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True}
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
@@ -53,7 +62,10 @@ def _load():
         else:
             with open(FILE, encoding="utf-8") as f:
                 d = json.load(f)
-        st["cfg"].update(d.get("cfg") or {})
+        saved = d.get("cfg") or {}
+        st["cfg"].update(saved)
+        if saved and not saved.get("limitRemoved"):          # settings saved in the 5-a-day days: lift the cap once
+            st["cfg"].update(maxPerDay=0, indexSlots=0, stockSlots=0, limitRemoved=True)
         st["trades"], st["log"] = d.get("trades") or [], d.get("log") or []
         import nse_calendar                               # trades "opened" on an exchange holiday used stale prices: void them
         bad = [t for t in st["trades"] if nse_calendar.holiday(t.get("date"))]
@@ -198,7 +210,7 @@ def candidates(today):
 
 
 def fill_slots(st, today, already):
-    """Strategy signals rarely fill all five slots, so the remaining ones come from the app's own screens:
+    """Entries beyond the strategy signals come from the app's own screens:
        index slots  <- index CALL / PUT where the daily chart and the live option flow agree
        stock slots  <- strongest BUY / SELL stock screens among 20 liquid F&O stocks (chosen automatically)
     Every trade is tagged with its source so strategy trades and screen trades can be judged separately."""
@@ -210,8 +222,8 @@ def fill_slots(st, today, already):
     have = {"index": 0, "stock": 0}
     for k in [t["kind"] for t in todays] + [c["kind"] for c in already]:
         have[k] += 1
-    need = {"index": max(0, cfg["indexSlots"] - have["index"]), "stock": max(0, cfg["stockSlots"] - have["stock"])}
-    room = cfg["maxPerDay"] - len(todays) - len(already)
+    need = {"index": max(0, _cap(cfg, "indexSlots") - have["index"]), "stock": max(0, _cap(cfg, "stockSlots") - have["stock"])}
+    room = _cap(cfg, "maxPerDay") - len(todays) - len(already)
     vercel = bool(os.environ.get("VERCEL"))
     out = []
     if room <= 0:
@@ -348,12 +360,12 @@ def choose(cands, st, today):
         p = screen.get(c["sym"])
         c["screenAgrees"] = bool(p and ((c["side"] == "BUY" and p["signal"] == "BUY") or (c["side"] == "SELL" and p["signal"] == "SELL")))
         c["rank"] = c["score"] + 0.5 * (c["agree"] - c.get("against", 0) - 1) + (0.3 if c["screenAgrees"] else 0)
-    idx = sorted([c for c in clean if c["kind"] == "index"], key=lambda c: -c["rank"])[:max(0, cfg["indexSlots"] - have_idx)]
+    idx = sorted([c for c in clean if c["kind"] == "index"], key=lambda c: -c["rank"])[:max(0, _cap(cfg, "indexSlots") - have_idx)]
     stk = sorted([c for c in clean if c["kind"] == "stock" and c["screenAgrees"]], key=lambda c: -c["rank"])
-    if len(stk) < max(0, cfg["stockSlots"] - have_stk):              # fall back to any proven stock signal
+    if len(stk) < max(0, _cap(cfg, "stockSlots") - have_stk):              # fall back to any proven stock signal
         stk += sorted([c for c in clean if c["kind"] == "stock" and not c["screenAgrees"]], key=lambda c: -c["rank"])
-    stk = stk[:max(0, cfg["stockSlots"] - have_stk)]
-    room = max(0, cfg["maxPerDay"] - len(taken_today))
+    stk = stk[:max(0, _cap(cfg, "stockSlots") - have_stk)]
+    room = max(0, _cap(cfg, "maxPerDay") - len(taken_today))
     return (idx + stk)[:room]
 
 
@@ -578,7 +590,7 @@ def _run_cycle(now, force, dry):
         today = now.date().isoformat()
         in_window = _hm(cfg["windowStart"]) <= _mins(now) <= _hm(cfg["lastEntry"])
         todays = [t for t in st["trades"] if t["date"] == today]
-        if (in_window or force) and len(todays) < cfg["maxPerDay"]:
+        if (in_window or force) and len(todays) < _cap(cfg, "maxPerDay"):
             cands, why = scan_all(st, today)
             rep["note"] = why
             chosen = choose(cands, st, today)
@@ -763,8 +775,10 @@ def config(c: Cfg):
             if not (0.05 <= c.riskPct <= 2):
                 raise HTTPException(400, "riskPct must be between 0.05 and 2")
             st["cfg"]["riskPct"] = c.riskPct
-        if c.maxPerDay is not None:
-            st["cfg"]["maxPerDay"] = max(1, min(5, c.maxPerDay))       # the 5-a-day ceiling is fixed
+        if c.maxPerDay is not None:                                     # 0 = no limit
+            if c.maxPerDay < 0:
+                raise HTTPException(400, "maxPerDay must be 0 (no limit) or a positive number")
+            st["cfg"]["maxPerDay"] = c.maxPerDay
         _save(st)
         return st["cfg"]
 

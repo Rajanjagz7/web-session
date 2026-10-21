@@ -9,7 +9,7 @@ What it does
      A candle that touches both stop and target is treated as a stop (conservative).
   3. Splits the history: the first 70% of trades is IN-SAMPLE (used to decide which strategies "work"),
      the last 30% is OUT-OF-SAMPLE (used only to judge them).
-  4. Replays the daily executor (max 5 entries a day: 3 index + 2 stock, best proven strategy first) over the
+  4. Replays the daily executor (no daily limit: every qualifying signal, best proven strategy first, one position per symbol) over the
      out-of-sample period and reports rolling 2-month results at the BRD risk budget (0.5% of Rs 10,00,000 = Rs 5,000/trade).
 
 Honest limits (also returned to the UI): it is run on the UNDERLYING's daily candles, not on option premiums
@@ -61,7 +61,7 @@ def norm_signal(v):
     return None
 
 
-def _runners():
+def _runners(include_hidden=False):
     import donchian
     import rajan_pavan_indicators as rp
     import trade_predictor
@@ -70,7 +70,7 @@ def _runners():
 
     out = {}
     for k, fn in rp.RAJAN_PAVAN_KEYS.items():
-        if k not in SKIP_KEYS and k not in strategies_api.HIDDEN:
+        if k not in SKIP_KEYS and (include_hidden or k not in strategies_api.HIDDEN):
             out[k] = (lambda sym, lb, fn=fn: fn(sym, lookback_days=lb))
     out["ut-bot"] = lambda sym, lb: ut_bot.ut_bot_scan(sym, lookback_days=lb)
     out["trade-predictor"] = lambda sym, lb: trade_predictor.trade_predictor_scan(sym, lookback_days=lb)
@@ -81,7 +81,7 @@ def _runners():
         out[k] = (lambda sym, lb, fn=fn: fn(sym, lookback_days=max(lb, 250)))
     # quantum-matrix, ha-dancing-trend, volume-spurt, orb-15m and vwap-rsi run on 1-minute bars: years of
     # 1-minute history are not available, so they cannot be replayed here.
-    return {k: v for k, v in out.items() if k not in strategies_api.HIDDEN}      # only the indicators kept on the site
+    return {k: v for k, v in out.items() if include_hidden or k not in strategies_api.HIDDEN}      # default: only the indicators kept on the site
 
 
 def _atr(bars, n=ATR_N):
@@ -146,15 +146,16 @@ FILTERS = ("none", "trend200")                 # optional: only trade with the 2
 TRAIL_HOLD = 10      # options cannot be held for 40 sessions
 
 
-def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_stop=None):
+def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_stop=None, target_r=None):
     """Signal on bar i's close -> enter bar i+1 open. Returns (R, exit_index, reason) or None while still open.
     Stop for every variant: plan_risk() (signal-candle stop, capped at 30% of the option premium).
-    fixed   : target 2R, max 10 sessions
+    fixed   : target 2R (or target_r), max 10 sessions
     trail   : the stop trails the best price by the same distance, no target, max 10 sessions
     reverse : exit at the open after the strategy's opposite signal, max 10 sessions
     Every session held costs the option's estimated time decay (theta_r)."""
     if i + 1 >= len(bars) or atr[i] is None or atr[i] <= 0:
         return None
+    tr_ = target_r or TARGET_R
     d = 1 if side == "BUY" else -1
     entry = bars[i + 1]["open"]
     if not entry or entry <= 0:
@@ -166,7 +167,7 @@ def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_
     if risk <= 0:
         return None
     if variant == "fixed":
-        stop, target, hold = entry - d * risk, entry + d * TARGET_R * risk, MAX_HOLD
+        stop, target, hold = entry - d * risk, entry + d * tr_ * risk, MAX_HOLD
     else:
         stop, target, hold = entry - d * risk, None, TRAIL_HOLD
     last = min(len(bars) - 1, i + hold)
@@ -188,7 +189,7 @@ def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_
         if hit_stop:
             return out(d * (stop - entry) / risk, j, "SL")
         if target is not None and (b["high"] >= target if d > 0 else b["low"] <= target):
-            return out(TARGET_R, j, "T")
+            return out(tr_, j, "T")
         if dte(j, 0.0) <= 1:                                                         # live rule: out one day before expiry
             return out(d * (b["close"] - entry) / risk, j, "EXP", "close")
         if variant == "trail":
@@ -223,26 +224,10 @@ def _stats(Rs):
             "pf": round(sum(w) / gl, 2) if gl > 0 else (99.0 if w else 0), "maxDD_R": round(dd, 2), "sumR": round(sum(Rs), 2)}
 
 
-def run_backtest(progress=None):
+def collect_signals(runners, syms, full, progress=None, orig_daily=None):
+    """Replay every runner "as of" several past dates and return ({(key, sym): {date: BUY/SELL}}, {(key, sym): {date: own stop}})."""
     import bar_source
-    import market_api
-    market_api.ensure_universe()
-    runners = _runners()
-    syms = INDEX_SYMS + [s for s in STOCK_SYMS if bar_source.supports(s)]
-    t0 = time.time()
-    orig_daily = bar_source.daily_bars
-    full = {}
-    for s in syms:
-        try:
-            b = orig_daily(s, 1700)
-            if len(b) > 260:
-                full[s] = b
-        except Exception:
-            pass
-    syms = [s for s in syms if s in full]
-    atr = {s: _atr(full[s]) for s in syms}
-    idx_of = {s: {b["date"]: i for i, b in enumerate(full[s])} for s in syms}
-
+    orig_daily = orig_daily or bar_source.daily_bars
     cur = {"asof": None}
 
     _tl.on = True
@@ -287,6 +272,30 @@ def run_backtest(progress=None):
     finally:
         _tl.on = False
         bar_source.daily_bars = orig_daily
+    return signals, istops
+
+
+def run_backtest(progress=None):
+    import bar_source
+    import market_api
+    market_api.ensure_universe()
+    runners = _runners()
+    syms = INDEX_SYMS + [s for s in STOCK_SYMS if bar_source.supports(s)]
+    t0 = time.time()
+    orig_daily = bar_source.daily_bars
+    full = {}
+    for s in syms:
+        try:
+            b = orig_daily(s, 1700)
+            if len(b) > 260:
+                full[s] = b
+        except Exception:
+            pass
+    syms = [s for s in syms if s in full]
+    atr = {s: _atr(full[s]) for s in syms}
+    idx_of = {s: {b["date"]: i for i, b in enumerate(full[s])} for s in syms}
+
+    signals, istops = collect_signals(runners, syms, full, progress, orig_daily)
 
     # ---- simulate every signal under every exit style / trend filter ----
     ema200 = {}
@@ -377,11 +386,9 @@ def run_backtest(progress=None):
         for d in sorted(by_day):
             open_pos = [p for p in open_pos if p["exit"] >= d]
             taken = {p["sym"] for p in open_pos}
-            slots = {"index": 3, "stock": 2}
             for t in sorted(by_day[d], key=lambda x: -score.get(x["key"], 0)):
-                if slots[t["kind"]] <= 0 or t["sym"] in taken or len(open_pos) >= 5:
+                if t["sym"] in taken:                            # no daily limit any more: one position per symbol is the only rule
                     continue
-                slots[t["kind"]] -= 1
                 taken.add(t["sym"])
                 open_pos.append(t)
                 picked.append(t)
@@ -494,7 +501,7 @@ def proven_scores():
 
 
 # ───────────────────────── API ─────────────────────────
-from fastapi import APIRouter  # noqa: E402
+from fastapi import APIRouter, HTTPException  # noqa: E402
 
 router = APIRouter(prefix="/api/backtest")
 
@@ -507,3 +514,27 @@ def api_get():
 @router.post("/run")
 def api_run(force: bool = True):
     return {"started": start(force=force), **{k: v for k, v in get().items() if k != "result"}}
+
+@router.get("/accuracy")
+def api_accuracy(full: bool = False):
+    """Accuracy of every indicator and of the Picks screen with stop-loss and target (see accuracy_report.py).
+    Default: a compact summary; ?full=true adds every exit rule, long/short, index/stock and per-year split."""
+    path = os.path.join(HERE, "static", "accuracy_report.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            rep = json.load(f)
+    except Exception:
+        raise HTTPException(404, "No accuracy report yet - run: python accuracy_report.py")
+    if full:
+        return rep
+    out = {k: rep[k] for k in ("generatedAt", "history", "splitDate", "notReplayable", "caveats") if k in rep}
+    out["symbols"] = len(rep.get("symbols") or [])
+    out["indicators"] = [{"key": e["key"], "name": e["name"], "group": e["group"], "visible": e["visible"], "signals": e["signals"],
+                          "directional": e["directional"],
+                          "models": {m: {k: v[k] for k in ("best", "verdict", "bestAll", "bestOOS")} for m, v in e["models"].items()}}
+                         for e in rep.get("indicators", [])]
+    p_ = rep.get("picks")
+    if p_:
+        out["picks"] = {k: p_[k] for k in ("symbols", "from", "to", "splitDate", "trades", "rules")}
+        out["picks"]["variants"] = [{k: v[k] for k in ("entryAt", "exit", "all", "outOfSample", "buy", "sell")} for v in p_["variants"]]
+    return out
