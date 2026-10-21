@@ -618,6 +618,10 @@ def _reversed(t, today):
 
 def run_cycle(force=False, dry=False):
     now = _now()
+    if not force and not dry:                       # closed market: no lock, no state read - zero Upstash commands
+        import nse_calendar
+        if not nse_calendar.session_open(now):
+            return {"ran": False, "reason": "market closed"}
     if not dry and not shared_cache.lock("auto-cycle", 45):
         return {"ran": False, "reason": "another cycle is already running"}
     try:

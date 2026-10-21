@@ -173,7 +173,9 @@ def kv(cmds, timeout=6.0):
 
 def kv_status():
     return {"active": "backup" if _FO["on"] else "primary", "backupConfigured": bool(_backup_creds()),
-            "since": _FO["since"], "why": _FO["why"], "backupSetup": _backup_setup()}
+            "since": _FO["since"], "why": _FO["why"], "backupSetup": _backup_setup(),
+            "commandsThisInstance": {"total": _CMDS["total"], "minutes": round((time.time() - _CMDS["since"]) / 60),
+                                     "top": dict(sorted(_CMDS["by"].items(), key=lambda x: -x[1])[:12])}}
 
 
 def _ping_backup():
@@ -378,7 +380,21 @@ def _old_creds():
     return (url, tok) if url and tok else None
 
 
+_CMDS = {"since": time.time(), "total": 0, "by": {}}       # Upstash commands sent by THIS server instance (diagnostics)
+
+
+def _count(cmds):
+    for c in cmds:
+        if not c:
+            continue
+        k = str(c[1]) if len(c) > 1 else ""
+        kind = c[0] + " " + (k.split(":")[0] + ":" if ":" in k else k.split("|")[0] + "|" if "|" in k else k)[:24]
+        _CMDS["by"][kind] = _CMDS["by"].get(kind, 0) + 1
+        _CMDS["total"] += 1
+
+
 def _pipe_to(creds, cmds, timeout=8.0):
+    _count(cmds)
     url, tok = creds
     req = urllib.request.Request(url.rstrip("/") + "/pipeline", data=json.dumps(cmds).encode(), method="POST",
                                  headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
