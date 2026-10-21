@@ -31,5 +31,6 @@
       "source": "/(.*)",
       "destination": "/api/index"
     }
-  ]
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)docs' ':(exclude)qa' ':(exclude)tests' ':(exclude)*.md' ':(exclude)*_backtest.py' ':(exclude)strategy_audit.py' ':(exclude)run_backtest_ci.py' ':(exclude)accuracy_report.py'"
 }

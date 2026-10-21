@@ -1,0 +1,16 @@
+# Not needed by the live app - kept out of every deployment so each one is smaller (Vercel Hobby: 10 GB deployment storage)
+docs/
+qa/
+tests/
+.pcache/
+__pycache__/
+*.md
+*.pdf
+*.docx
+*.xlsx
+premium_backtest.py
+strategy_audit.py
+run_backtest_ci.py
+day_power_backtest.py
+hedge_backtest.py
+accuracy_report.py
