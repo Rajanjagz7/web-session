@@ -53,9 +53,8 @@ def _mins(now):
 
 
 def _remote():
-    url = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
-    tok = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
-    return (url, tok) if url and tok else None
+    import shared_cache                                   # one place decides the URL+token pair (never mixed)
+    return shared_cache._creds()
 
 
 _RC = {}

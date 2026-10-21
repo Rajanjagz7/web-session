@@ -70,9 +70,8 @@ def _redis_creds():
     Set SHARED_RATE_LIMIT=1 to turn the shared counters back on."""
     if os.environ.get("SHARED_RATE_LIMIT") != "1":
         return None
-    url = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
-    tok = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
-    return (url, tok) if url and tok else None
+    import shared_cache                                   # one place decides the URL+token pair (never mixed)
+    return shared_cache._creds()
 
 
 def _redis_pipe(cmds, timeout=2.5):

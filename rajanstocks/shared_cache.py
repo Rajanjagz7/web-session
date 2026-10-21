@@ -70,9 +70,12 @@ def sweep(max_age_days=3):
 
 
 def _creds():
-    url = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
-    tok = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
-    return (url, tok) if url and tok else None
+    # URL and token always from the SAME pair - mixing UPSTASH_* with KV_* (two databases) gives WRONGPASS
+    e = os.environ.get
+    for u, t in (("UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"), ("KV_REST_API_URL", "KV_REST_API_TOKEN")):
+        if e(u) and e(t):
+            return (e(u), e(t))
+    return None
 
 
 def enabled():
