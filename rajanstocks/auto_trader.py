@@ -629,7 +629,7 @@ def run_cycle(force=False, dry=False):
         import nse_calendar
         if not nse_calendar.session_open(now):
             return {"ran": False, "reason": "market closed"}
-    if not dry and not shared_cache.lock("auto-cycle", 45):
+    if not dry and not shared_cache.lock("auto-cycle", 30):
         return {"ran": False, "reason": "another cycle is already running"}
     try:
         return _run_cycle(now, force, dry)
@@ -659,7 +659,7 @@ def mark_open_positions(min_gap=120):
     now = _now()
     if not nse_calendar.session_open(now):
         return False
-    if not shared_cache.lock("auto-cycle", max(10, min_gap)):
+    if not shared_cache.lock("auto-cycle", 20):
         return False
     try:
         with _lock:

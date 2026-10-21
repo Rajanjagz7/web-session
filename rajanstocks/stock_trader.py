@@ -267,7 +267,7 @@ def run_cycle(force=False):
     now = _now()
     if not force and not nse_calendar.session_open(now):
         return {"ran": False, "reason": "market closed"}
-    if not shared_cache.lock("stockbot-cycle", 50):
+    if not shared_cache.lock("stockbot-cycle", 30):
         return {"ran": False, "reason": "another cycle is running"}
     try:
         with _lock:

@@ -341,12 +341,9 @@ def lock(name, ttl_s):
 
 
 def unlock(name):
+    """Remote locks are NOT deleted: they expire by themselves within a minute and cycles run minutes apart,
+    so the DEL was a wasted Upstash command per cycle."""
     _MEM.pop("lock:" + name, None)
-    if enabled() and name in REMOTE_LOCKS:
-        try:
-            _pipe([["DEL", "sl:" + name]])
-        except Exception:
-            pass
 
 
 def fetch(key, ttl, fn):
