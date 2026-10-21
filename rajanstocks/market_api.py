@@ -1803,6 +1803,12 @@ def kv_health():
     return shared_cache.diagnose()
 
 
+@router.get("/kv-cleanup")
+def kv_cleanup():
+    """Removes leftover rl2:* rate-limit counters (junk) from Upstash. Never touches any other key."""
+    return shared_cache.cleanup_junk()
+
+
 @router.api_route("/kv-migrate", methods=["GET", "POST"])
 def kv_migrate(overwrite: int = 0):
     """One-time copy of the auto trader / stock trader / push state from the old Upstash database to the new one."""
