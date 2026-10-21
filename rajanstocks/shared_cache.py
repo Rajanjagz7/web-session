@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import time
+import urllib.error
 import urllib.request
 import zlib
 
@@ -156,3 +157,22 @@ def fetch(key, ttl, fn):
     if v:
         set(key, v, ttl)
     return v
+
+
+def diagnose():
+    """Read-only health check of the shared store (no keys or tokens are returned)."""
+    if not _creds():
+        return {"configured": False}
+    import time as _t
+    out = {"configured": True}
+    t0 = _t.time()
+    try:
+        r = _pipe([["PING"], ["DBSIZE"], ["EXISTS", "rajanone:auto:v1"], ["EXISTS", "rajanone:push:v1"], ["EXISTS", "rajanone:stockbot:v1"]])
+        out.update(ok=True, ms=int((_t.time() - t0) * 1000), ping=r[0].get("result"), keys=r[1].get("result"),
+                   autoState=r[2].get("result"), pushState=r[3].get("result"), stockState=r[4].get("result"),
+                   errors=[x.get("error") for x in r if x.get("error")])
+    except urllib.error.HTTPError as e:
+        out.update(ok=False, status=e.code, error=e.read().decode(errors="replace")[:300])
+    except Exception as e:
+        out.update(ok=False, error=str(e)[:300])
+    return out

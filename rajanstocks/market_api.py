@@ -1797,6 +1797,12 @@ def quick_index_calls(deadline_s=8):
     return out
 
 
+@router.get("/kv-health")
+def kv_health():
+    """Is the shared store (Upstash) answering? Used to explain 'Delayed' prices / missing auto-trader state."""
+    return shared_cache.diagnose()
+
+
 @router.get("/budget")
 def budget():
     """How much of the shared Upstox request budget is in use right now."""
