@@ -82,6 +82,8 @@ def _load(cached=False):
             st["log"].append({"at": _now().isoformat(), "msg": f"Voided {len(bad)} paper trade(s) opened on an NSE holiday ({nse_calendar.holiday(bad[0]['date'])}) - prices were stale"})
             st["_dirty"] = True
         st["fillNext"], st["fillBackoff"] = d.get("fillNext") or 0, d.get("fillBackoff") or 0
+        if d.get("resetAt"):
+            st["resetAt"] = d["resetAt"]
         if d.get("cand"):
             st["cand"] = d["cand"]
         if st["cfg"].get("windowStart") == "09:20":          # old default: entries may now start at the open
@@ -521,6 +523,9 @@ def manage(st, now):
     for t in opens:
         _replan(t)
     for t in opens:
+        if t.get("expiry") and t["expiry"] < today:          # contract already expired (missed while the store was down): no quote any more
+            _close(st, t, float(t.get("last") or t["entry"]), "EXPIRY (late)")
+            continue
         opt_q, und_q = q.get(t["key"]), q.get(market_api._key(t["sym"]))
         opt_px, und_px = _last(opt_q), _last(und_q)
         if opt_px > 0:
@@ -878,6 +883,7 @@ def config(c: Cfg):
             if c.maxPerDay < 0:
                 raise HTTPException(400, "maxPerDay must be 0 (no limit) or a positive number")
             st["cfg"]["maxPerDay"] = c.maxPerDay
+        st["cfg"]["cfgAt"] = time.time()                                # newest settings win if two databases are merged
         _save(st)
         return st["cfg"]
 
@@ -899,6 +905,7 @@ def reset_portfolio():
         st = _load()
         n = len(st["trades"])
         st["trades"], st["cand"] = [], {}
+        st["resetAt"] = _now().isoformat()                       # a later merge of two databases respects the reset
         st["log"] = [{"at": _now().isoformat(), "msg": f"Portfolio reset by the user ({n} paper trades cleared)"}]
         _save(st)
         return {"ok": True, "cleared": n}

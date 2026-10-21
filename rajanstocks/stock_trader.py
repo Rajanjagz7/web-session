@@ -76,7 +76,7 @@ def _load(cached=False):
         else:
             with open(FILE, encoding="utf-8") as f:
                 d = json.load(f)
-        st.update({k: d[k] for k in ("trades", "log", "seq", "lastRun") if k in d})
+        st.update({k: d[k] for k in ("trades", "log", "seq", "lastRun", "resetAt") if k in d})
     except FileNotFoundError:
         pass
     except Exception as e:
@@ -155,6 +155,9 @@ def manage(st, now):
     q = _quotes([t["sym"] for t in opens])
     today = now.date().isoformat()
     for t in opens:
+        if t["hz"] == "intraday" and t["date"] < today:          # missed its square-off (e.g. store outage): close at the last known price, not today's
+            _close(st, t, float(t.get("last") or t["entry"]), "SQUARE-OFF (late)", now)
+            continue
         x = q.get(t["sym"])
         px = float((x or {}).get("last") or 0)
         if px <= 0:
@@ -326,5 +329,6 @@ def reset():
     if _load().get("_readonly"):
         raise HTTPException(503, "The state store is not answering - reset refused so nothing is lost")
     with _lock:
-        _save({"trades": [], "log": [{"at": _now().isoformat(), "msg": "Reset to Rs 10,00,000"}], "seq": 0})
+        _save({"trades": [], "log": [{"at": _now().isoformat(), "msg": "Reset to Rs 10,00,000"}], "seq": 0,
+               "resetAt": _now().isoformat()})
     return {"ok": True}

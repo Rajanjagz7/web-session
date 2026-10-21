@@ -118,21 +118,52 @@ def _mirror(b, cmds):
 
 
 def _resync(src, dst):
-    """Merge the saved state from src into dst (used when switching back to the primary)."""
+    """Merge the saved state from src into dst (used when switching back to the primary). Any read error = do nothing."""
     try:
         a, b2 = _pipe_to(src, [["GET", k] for k in STATE_KEYS]), _pipe_to(dst, [["GET", k] for k in STATE_KEYS])
+        if any(x.get("error") for x in a) or any(y.get("error") for y in b2):
+            return False                             # never write over data we could not read
         cmds = []
         for k, x, y in zip(STATE_KEYS, a, b2):
             new, old = x.get("result"), y.get("result")
-            if new and old and not y.get("error"):
-                cmds.append(["SET", k, json.dumps(_merge_state(k, json.loads(old), json.loads(new)))])
+            if new and old:
+                if new != old:
+                    cmds.append(["SET", k, json.dumps(_merge_state(k, json.loads(old), json.loads(new)))])
             elif new:
                 cmds.append(["SET", k, new])
         if cmds:
-            _pipe_to(dst, cmds)
+            r = _pipe_to(dst, cmds)
+            if any(x.get("error") for x in r):
+                return False
         return True
     except Exception:
         return False
+
+
+FO_FLAG = "rajanone:fo:v1"      # kept in the BACKUP while it holds data the primary has not merged yet (survives restarts)
+_FO_CHECKED = {"done": False}
+
+
+def _flag_check(p, b):
+    """Once per server instance: if an earlier instance switched to the backup, finish the switch-back merge here."""
+    if _FO_CHECKED["done"]:
+        return
+    _FO_CHECKED["done"] = True
+    try:
+        f = _pipe_to(b, [["GET", FO_FLAG]], 3.0)[0].get("result")
+    except Exception:
+        return
+    if not f:
+        return
+    try:
+        r = _pipe_to(p, [["PING"]], 3.0)
+        if not _refused(r) and r and r[0].get("result") == "PONG" and _resync(b, p):
+            _pipe_to(b, [["DEL", FO_FLAG]], 3.0)
+            print("[kv] primary is back - merged the backup's saved state into it")
+            return
+    except Exception:
+        pass
+    _FO.update(on=True, until=time.time() + 600, since=_FO["since"] or time.time(), why="primary still refusing (flag)")
 
 
 def kv(cmds, timeout=6.0):
@@ -141,12 +172,18 @@ def kv(cmds, timeout=6.0):
     if not p:
         raise RuntimeError("no Redis configured")
     now = time.time()
+    if b:
+        _flag_check(p, b)
     if _FO["on"] and b:
         if now >= _FO["until"]:                                    # time to try the primary again
             try:
                 r = _pipe_to(p, [["PING"]], 3.0)
                 if not _refused(r) and r and r[0].get("result") == "PONG" and _resync(b, p):
                     _FO.update(on=False, since=None, why="")
+                    try:
+                        _pipe_to(b, [["DEL", FO_FLAG]], 3.0)
+                    except Exception:
+                        pass
             except Exception:
                 pass
             if _FO["on"]:
@@ -166,9 +203,12 @@ def kv(cmds, timeout=6.0):
         err, r = str(e)[:160], None
     if not b:
         return r
+    first = not _FO["on"]
     _FO.update(on=True, until=now + 600, since=_FO["since"] or now, why=str(err)[:160])
     print(f"[kv] primary refused ({err}) - using the backup database")
-    return _pipe_to(b, cmds, timeout)
+    cmds2 = ([["SET", FO_FLAG, str(int(now))]] if first else []) + list(cmds)   # remember the switch (survives restarts)
+    res = _pipe_to(b, cmds2, timeout)
+    return res[1:] if first else res
 
 
 def kv_status():
@@ -405,11 +445,26 @@ def _pipe_to(creds, cmds, timeout=8.0):
 def _merge_state(key, old, new):
     """Old + new state in one: trades by id (the newer copy wins), push subscriptions and daily counters united, logs joined."""
     m = dict(old)
-    m.update({k: v for k, v in new.items() if k not in ("trades", "log", "subs", "sent", "sentT", "seen")})
+    m.update({k: v for k, v in new.items() if k not in ("trades", "log", "subs", "sent", "sentT", "seen", "cfg", "resetAt")})
+    if "cfg" in old or "cfg" in new:                 # settings: the copy the user changed last (a fresh default never wins)
+        oc, nc = old.get("cfg") or {}, new.get("cfg") or {}
+        m["cfg"] = nc if (nc.get("cfgAt") or 0) > (oc.get("cfgAt") or 0) else (oc or nc)
+    reset_at = max(str(old.get("resetAt") or ""), str(new.get("resetAt") or ""))
+    if reset_at:
+        m["resetAt"] = reset_at
     if "trades" in old or "trades" in new:
+        def same(a, b):
+            return (a.get("sym"), a.get("openedAt") or a.get("date"), a.get("entry")) == (b.get("sym"), b.get("openedAt") or b.get("date"), b.get("entry"))
         by = {t.get("id"): t for t in old.get("trades") or []}
-        by.update({t.get("id"): t for t in new.get("trades") or []})
-        m["trades"] = sorted(by.values(), key=lambda t: str(t.get("openedAt") or t.get("date") or ""))
+        for t in new.get("trades") or []:
+            i = t.get("id")
+            if i in by and not same(by[i], t):       # two different trades got the same number in the two databases: keep both
+                t = dict(t, id=f"{i}-b")
+            by[t.get("id")] = t
+        trades = list(by.values())
+        if reset_at:                                 # a portfolio reset on either side clears what was opened before it
+            trades = [t for t in trades if str(t.get("openedAt") or t.get("date") or "") >= reset_at[:len(str(t.get("openedAt") or t.get("date") or ""))]]
+        m["trades"] = sorted(trades, key=lambda t: str(t.get("openedAt") or t.get("date") or ""))
     if "log" in old or "log" in new:
         m["log"] = sorted((old.get("log") or []) + (new.get("log") or []), key=lambda x: str(x.get("at") or ""))[-200:]
     if "subs" in old or "subs" in new:
