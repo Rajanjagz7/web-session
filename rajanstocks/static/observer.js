@@ -125,7 +125,7 @@
     if (!host) return;
     host.setAttribute('data-ob-host', '1'); paint(host);
     if (!O.data || Date.now() - O.ts > 60000) load(false);
-    clearInterval(O.timer); O.timer = setInterval(() => { if (hosts().length && !document.hidden && (!window.rjMkt || window.rjMkt())) load(false); }, 90000);
+    clearInterval(O.timer); O.timer = setInterval(() => { if (hosts().length && !document.hidden) load(false); }, 90000);
   };
 
   /* standalone God's Eye screen: the Observer on top, the older pre-market forecast ledger behind a button */
