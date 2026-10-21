@@ -1,6 +1,7 @@
 """Premium support-bounce indicator: three ways to draw the support (blue) / resistance (red) lines, tested on real
 1-minute prices of expired NIFTY / BANKNIFTY / SENSEX options (same contracts and cache as premium_backtest.py).
 
+Only ATM / OTM options (calls at or above the day's ATM strike, puts at or below it).
 Setup (option BUY - CE or PE premium):
   1. The premium trades down to the support line (low <= support + touch band).
   2. Then a 1-minute candle CLOSES above support + offset  -> buy at that close  ("BUY @ 190 ABOVE").
@@ -90,6 +91,9 @@ def run():
                 bars = days[d]
                 if len(bars) < 60 or bars[0][0] > 9 * 60 + 20:
                     prev = bars if bars else prev
+                    continue
+                if not PB.atm_otm(j, d):
+                    prev = bars
                     continue
                 tag = {"sym": j["sym"], "date": d, "type": j["type"], "lot": j["lot"], "expiryDay": d == j["expiry"]}
                 orb = [b for b in bars if b[0] < 9 * 60 + 30]

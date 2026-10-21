@@ -224,12 +224,27 @@ def opt_targets(px, sl, d):
 
 
 # ───────────────────────── data ─────────────────────────
+DAY_OPEN = {}          # (sym, date) -> index open that day, for per-day ATM
+
+
+def atm_otm(j, d):
+    """User: the premium indicators are for ATM and OTM options only (never in the money). ATM = strike nearest the day's open."""
+    o = DAY_OPEN.get((j["sym"], d))
+    if not o:
+        return True
+    step = INDEX[j["sym"]]["step"]
+    atm = round(o / step) * step
+    return j["strike"] >= atm if j["type"] == "CE" else j["strike"] <= atm
+
+
 def option_weeks(sym):
     ex = (get("/api/research/expired/expiries", {"symbol": sym}) or {}).get("data") or []
     ex = [e for e in ex if e >= "2024-10-01"]
     if sym == "BANKNIFTY":
         ex = [e for e in ex if e >= "2024-12-01"]          # monthly only from Dec 2024
     daily = {b["date"]: b for b in CI._yahoo(INDEX[sym]["yh"])}
+    for dd, b in daily.items():
+        DAY_OPEN[(sym, dd)] = b["open"]
     days = sorted(daily)
     jobs = []
     for e in ex:
@@ -291,6 +306,9 @@ def run_options():
                 bars = days[d]
                 if len(bars) < 60 or bars[0][0] > 9 * 60 + 20:
                     prev_close = bars[-1][4] if bars else prev_close
+                    continue
+                if not atm_otm(j, d):
+                    prev_close = bars[-1][4]
                     continue
                 tag = {"sym": j["sym"], "date": d, "expiry": j["expiry"], "strike": j["strike"], "type": j["type"], "lot": j["lot"]}
                 for zk, z in ZONES.items():

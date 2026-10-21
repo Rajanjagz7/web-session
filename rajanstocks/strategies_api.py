@@ -561,6 +561,7 @@ OPT_SCANS += [
      "is worth the stop multiple of the credit. k, w, stop, sides and entry day come from the backtest on real expired option "
      "prices (static/hedge_backtest.json) - the live win rate and worst loss are shown in Trade -> Signals."),
 ]
+ATM_OTM_ONLY = {"opt-strat1", "opt-premium", "rajan-premium-levels", "pd-expiry", "pd-daily", "pd-ohol10", "sensex-310", "prem-38-42", "meta-bounce"}
 OPT_SCANS += [
     ("sensex-310", "SENSEX Indicator", "Option scans",
      "SENSEX options only. Previous close Rs 310-340 and today's low inside Rs 52-58 -> buy in the 52-58 zone. Targets 88 / 92 / 105. "
@@ -817,7 +818,10 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
             legs = [(side.upper(), r["strike"], r[side]) for r in c["rows"] for side in ("ce", "pe") if r.get(side)]
             vols = sorted(l["vol"] for _, _, l in legs if l["vol"] > 0)
             med = vols[len(vols) // 2] if vols else 0
+            _atm = c.get("atm") or 0
             for side, strike, leg in legs:
+                if key in ATM_OTM_ONLY and _atm and ((side == "CE" and strike < _atm) or (side == "PE" and strike > _atm)):
+                    continue                    # user: premium indicators are for ATM / OTM options, never in-the-money
                 if key == "opt-spike":
                     ok = med > 0 and leg["vol"] > 2.0 * med and leg["ltp"] > leg["open"] > 0 and leg["oiChg"] > 0
                     tag = f"Volume {leg['vol'] / med:.1f}x the typical strike, OI +{leg['oiChg']:,.0f}" if ok else ""
