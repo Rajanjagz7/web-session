@@ -631,7 +631,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 </style>
-<script src="/static/journal.js?v=20261021d"></script>
+<script src="/static/journal.js?v=20261021e"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
 <script src="/static/observer.js?v=20261021a"></script>
@@ -2354,6 +2354,7 @@ function fill(o,price){const s=SYM(o.sym),sg=o.side==='buy'?1:-1;let p=posOf(o.s
   p.q=+nq.toFixed(8);if(o.tp)p.tp=o.tp;if(o.sl)p.sl=o.sl;
   if(o.tsl&&o.tsl.v>0&&p.q!==0){p.tsl={u:o.tsl.u,v:o.tsl.v};p.peak=price;const d=p.tsl.u==='abs'?p.tsl.v:price*p.tsl.v/100,st=+(p.q>0?price-d:price+d).toFixed((s&&s.dp)||2);if(!(p.sl>0)||(p.q>0?st>p.sl:st<p.sl))p.sl=st}if(Math.abs(p.q)<1e-9)App.positions=App.positions.filter(x=>x!==p);
   o.status='Filled';o.price=price;o.t=Date.now();App.orders=App.orders.filter(x=>x!==o);App.history.push(o);try{logTrade(o,price,pre)}catch(e){console.error(e)}
+  try{window.JV&&JV.cap&&JV.cap()}catch(e){}
   {const px=fmtP(price,s.dp),key='fill|'+o.id,link={sym:s.s};try{
     if(o.src==='TP')RN.emit('N-07',{sym:s.s,price:px},{key,link});
     else if(o.src==='SL')RN.emit('N-08',{sym:s.s,price:px},{key,link});

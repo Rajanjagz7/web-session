@@ -273,6 +273,34 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const autoToday = AUTO.list.concat(paperList()).reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
     return { booked, unr, autoToday, eq: S.capital + booked + unr };
   }
+  /* Capital in use: buys (premium / share value paid), margin blocked for sells (options: max(12% of the underlying, premium)
+     per unit - same rule as the order ticket; stocks: 20%), and the premium of open auto-trader trades. Today's peak is
+     remembered (per device) so you can see the most capital that was tied up at once today. */
+  function capUse() {
+    let buys = 0, sm = 0, auto = 0;
+    if (typeof App !== 'undefined') (App.positions || []).forEach(p => {
+      if (!p || !p.q) return;
+      const s = (typeof SYM === 'function' && SYM(p.sym)) || {}, m = (App.meta || {})[p.sym] || {}, q = Math.abs(p.q);
+      if (p.q > 0) buys += q * p.avg;
+      else sm += m.ikey ? q * Math.max(0.12 * (m.spot || s.last || 0), p.avg) : q * p.avg * 0.2;
+    });
+    AUTO.list.forEach(t => { if (entered(t) && statusOf(t) !== 'Closed') auto += (t.entry || 0) * (t.qty || 0) * (t.mult || 1); });
+    const cash = (typeof App !== 'undefined' && typeof App.cash === 'number') ? App.cash : S.capital;
+    const used = buys + sm + auto, avail = Math.max(0, cash - sm - auto);
+    const day = today(), key = 'rj-cap-peak', now = new Date();
+    let pk = load(key, null); if (!pk || pk.day !== day) pk = { day, peak: 0, at: '', left: avail };
+    if (used > pk.peak + 0.5) { pk.peak = used; pk.at = istTime(now); pk.left = avail; save(key, pk); }
+    return { buys, sm, auto, used, avail, pct: used + avail > 0 ? used / (used + avail) * 100 : 0, cap: S.capital, peak: pk.peak, peakAt: pk.at, peakLeft: pk.left, peakPct: pk.peak + pk.left > 0 ? pk.peak / (pk.peak + pk.left) * 100 : 0 };
+  }
+  function capCard() {
+    const c = capUse(), bar = (p, cl) => `<div class="jv-capbar"><i class="${cl}" style="width:${Math.min(100, p).toFixed(1)}%"></i></div>`;
+    return `<div class="card jv-cap" id="jvCap"><div class="card-h"><h3>Capital</h3><span class="muted" style="font-size:12px">paper · ${inr(c.cap, 0)} starting capital</span></div>
+      <div class="jv-capg">
+        <div><small>In use now</small><b>${inr(c.used, 0)}</b><span class="muted">${c.pct.toFixed(1)}% · buys ${inr(c.buys, 0)} · sell margin ${inr(c.sm, 0)}${c.auto ? ' · auto ' + inr(c.auto, 0) : ''}</span>${bar(c.pct, c.pct > 80 ? 'down' : c.pct > 50 ? 'warn' : 'up')}</div>
+        <div><small>Available now</small><b class="up">${inr(c.avail, 0)}</b><span class="muted">free to place new trades</span></div>
+        <div><small>Max used today</small><b>${inr(c.peak, 0)}</b><span class="muted">${c.peak > 0 ? `${c.peakPct.toFixed(1)}% at ${E(c.peakAt)} · ${inr(c.peakLeft, 0)} was left then` : 'nothing used yet today'}</span>${bar(c.peakPct, 'mute')}</div>
+      </div></div>`;
+  }
   function kpiBlock(m, ds, day) {
     const L = liveTotals(day), todayBooked = ds.pnl + L.autoToday, todayAll = todayBooked + L.unr;
     const openN = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length;
@@ -290,9 +318,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function refreshLive() {
     const host = document.getElementById('v-journal');
     if (!host || !host.offsetParent || document.querySelector('.modal-bg') || document.hidden) return;
-    if (ui.tab === 'positions') { if (!livePositions()) render(); return; }   // prices / P&L update in place; redraw only when positions change
+    if (ui.tab === 'positions') { liveCap(); if (!livePositions()) render(); return; }   // prices / P&L update in place; redraw only when positions change
     if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
+    liveCap();
     const day = today();
     patchKids(k, kpiBlock(metrics(filtered()), dayStats(day), day));      // only the numbers that changed are touched - no page redraw
     const o = document.getElementById('jvOpen');
@@ -316,6 +345,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     for (let i = 0; i < b.length; i++) if (a[i].innerHTML !== b[i].innerHTML) { a[i].innerHTML = b[i].innerHTML; a[i].className = b[i].className; a[i].title = b[i].title; }
   }
   function curPx(t) { return t.auto ? ((t.raw && t.raw.last) || t.entry) : (live(t.symbol || t.instrument) || t.entry); }
+  function liveCap() { const el = document.getElementById('jvCap'); if (!el) { capUse(); return; } const t = document.createElement('div'); t.innerHTML = capCard(); const n = t.firstElementChild; if (n && n.innerHTML !== el.innerHTML) el.innerHTML = n.innerHTML; }
   function livePositions() {
     const tb = document.getElementById('jvPosOpen'); if (!tb) return false;
     const open = posOpenPage().part;
@@ -328,6 +358,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return true;
   }
   function tslShow(t) { if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
+  setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
   setInterval(() => { refreshLive(); if (!document.hidden) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden) syncAuto(true).then(refreshLive); }, 15000);
 
@@ -343,6 +374,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
+     ${capCard()}
      <div class="card"><div class="card-h"><h3>Quick Stats</h3><div class="jv-actions"><button class="btn pri" data-jv="reset">Reset portfolio</button></div></div><div class="jv-list">
          <div><span>Total Equity</span><b class="${cc(eq - S.capital)}">${inr(eq, 0)}</b></div>
          <div><span>Closed P&amp;L</span><b class="${cc(booked)}">${sinr(booked)}</b></div>
@@ -1340,7 +1372,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(part.map(t => t.id).join(','))}">${open.length ? positionTable(part) : `<div class="empty">No open ${ui.side === 'buy' ? 'buy ' : ui.side === 'sell' ? 'sell ' : ''}positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div>`}</div>${bar}
        <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹1,500 open profit the stop moves to cost + charges; from ₹2,000 it trails, keeping 50% of the best profit.</p></div>`;
      const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
-     return sw + sigCard + openCard + closedCard;
+     return sw + capCard() + sigCard + openCard + closedCard;
    }
 
    /* accuracy of the Buy / Sell test trades placed from Trade -> Signals, per signal and side */
@@ -1512,6 +1544,9 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-pgb{display:flex;align-items:center;gap:6px}.jv-pgb button{width:28px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--text);cursor:pointer;font-size:14px}.jv-pgb button:disabled{opacity:.35;cursor:not-allowed}.jv-pgb b{font-variant-numeric:tabular-nums}
   .jv-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.jv-cv{height:120px}
   .jv-exit{height:24px;padding:0 10px;border-radius:6px;border:1px solid color-mix(in srgb,var(--down,#f7525f) 55%,transparent);background:color-mix(in srgb,var(--down,#f7525f) 12%,transparent);color:var(--down,#f7525f);font-size:11.5px;font-weight:700;cursor:pointer}
+  .jv-capg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:4px 14px 12px}.jv-capg>div{display:flex;flex-direction:column;gap:2px;min-width:0}.jv-capg small{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.jv-capg b{font-size:18px}.jv-capg span{font-size:11.5px}
+  .jv-capbar{height:6px;border-radius:3px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden;margin-top:4px}.jv-capbar i{display:block;height:100%;border-radius:3px;background:var(--up,#22ab94)}.jv-capbar i.warn{background:#f59e0b}.jv-capbar i.down{background:var(--down,#f7525f)}.jv-capbar i.mute{background:#8b5cf6}
+  @media(max-width:640px){.jv-capg{grid-template-columns:1fr}}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
@@ -1522,7 +1557,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) syncAuto(true); }, 60000);
-  window.JV = { render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate,
+  window.JV = { cap: () => capUse(), render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate,
     /* live portfolio for the header: capital + booked + open (marked to market) */
     totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday;
       return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayBooked + L.unr, todayBooked, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
