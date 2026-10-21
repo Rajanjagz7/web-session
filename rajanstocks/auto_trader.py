@@ -413,7 +413,7 @@ def _contract(sym, side, today, min_days):
     if ask > 0 and bid <= 0:
         raise RuntimeError("skipped: no bid in the market")
     return {"expiry": ch["expiry"], "strike": row["strike"], "key": leg["key"], "premium": px, "lot": int(ch.get("lot") or 1),
-            "spot": float(ch.get("spot") or 0)}
+            "spot": float(ch.get("spot") or 0), "bid": bid, "ltp": ltp}
 
 
 def _atr_for(sym):
@@ -434,7 +434,7 @@ def _premium_plan(entry, risk_u, delta=0.5):
 
 def _replan(t):
     """Trades opened under the old 1.5-2 ATR rule risked up to 90% of the premium; cap them at 30% (tighten only)."""
-    if t.get("plan") == "v2" or t["status"] != "OPEN":
+    if t.get("plan") == "v2" or t["status"] != "OPEN" or t.get("pos") == "short":
         return
     import backtest
     d = 1 if t["side"] == "BUY" else -1
@@ -485,12 +485,52 @@ def open_trade(st, c, today):
     }
     st["trades"].append(t)
     st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]"})
+    if WRITE_PAIR:
+        try:
+            _open_short(st, c, today, t)
+        except Exception as e:
+            st["log"].append({"at": _now().isoformat(), "msg": f"no paired sell for {c['sym']}: {str(e)[:80]}"})
+    return t
+
+
+WRITE_PAIR = True        # user: every entry also SELLS the opposite option (bullish: buy CE + sell PE, bearish: buy PE + sell CE)
+WRITE_SL_CAP = 0.35      # small premium stop on the sold option: at most +35% of the premium received
+WRITE_MARGIN_PCT = 0.12  # paper margin per unit sold: max(12% of spot, premium)
+
+
+def _open_short(st, c, today, main):
+    """Paired option SELL in the same direction as the signal, held to the same underlying stop / target."""
+    cfg = st["cfg"]
+    opp = "SELL" if c["side"] == "BUY" else "BUY"               # the leg on the other side of the chain
+    ct = _contract(c["sym"], opp, today, cfg["minDaysToExpiry"])
+    px = ct["bid"] if ct.get("bid", 0) > 0 else (ct.get("ltp") or ct["premium"])   # we sell at the bid
+    if px <= 0:
+        raise RuntimeError("no bid")
+    rp = round(min(0.5 * main["riskU"], WRITE_SL_CAP * px), 2)  # premium risk per unit (small SL)
+    if rp <= 0:
+        raise RuntimeError("no valid stop")
+    spot = ct["spot"] or main["entryU"]
+    margin_u = max(WRITE_MARGIN_PCT * spot, px)
+    lots = main["lots"]
+    while lots > 1 and lots * ct["lot"] * margin_u > _equity(st) * 0.2:
+        lots -= 1
+    qty = lots * ct["lot"]
+    t = dict(main)
+    t.update({"id": main["id"] + "-W", "pos": "short", "pairOf": main["id"], "opt": "PE" if c["side"] == "BUY" else "CE",
+              "strike": ct["strike"], "expiry": ct["expiry"], "key": ct["key"], "lot": ct["lot"], "lots": lots,
+              "entry": round(px, 2), "last": round(px, 2), "premRisk": rp, "premSL": round(px + rp, 2),
+              "premT": [round(max(0.05, px - k * rp), 2) for k in (1, 2, 3)], "initialRisk": round(qty * rp, 0),
+              "margin": round(qty * margin_u, 0), "openedAt": _now().isoformat(), "status": "OPEN"})
+    for k in ("lock", "bestPnl", "stopMoved", "tsl"):
+        t.pop(k, None)
+    st["trades"].append(t)
+    st["log"].append({"at": _now().isoformat(), "msg": f"SELL {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} (paired with {main['id']}, SL {t['premSL']})"})
     return t
 
 
 def _close(st, t, px, why):
     qty = t["lots"] * t["lot"]
-    gross = (px - t["entry"]) * qty
+    gross = (px - t["entry"]) * qty * (-1 if t.get("pos") == "short" else 1)      # a sold option gains when the premium falls
     cost = t.get("costPct", st["cfg"]["costPct"]) / 100 * (t["entry"] + px) * qty
     t.update(status="CLOSED", exit=round(px, 2), exitReason=why, closedAt=_now().isoformat(), gross=round(gross, 2),
              cost=round(cost, 2), net=round(gross - cost, 2),
@@ -533,7 +573,9 @@ def manage(st, now):
         if opt_px > 0:
             t["last"] = round(opt_px, 2)
         bid = float((((opt_q or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
-        exit_px = bid if bid > 0 else opt_px
+        ask = float((((opt_q or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
+        short = t.get("pos") == "short"
+        exit_px = (ask if ask > 0 else opt_px) if short else (bid if bid > 0 else opt_px)   # a short is bought back at the ask
         if exit_px <= 0 or und_px <= 0:
             continue
         d = 1 if t["side"] == "BUY" else -1
@@ -565,7 +607,7 @@ def manage(st, now):
                     t["stopMoved"] = _now().isoformat()
         _profit_lock(t, opt_px if opt_px > 0 else exit_px)
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
-        if t.get("premSL") and exit_px <= t["premSL"]:
+        if t.get("premSL") and (exit_px >= t["premSL"] if short else exit_px <= t["premSL"]):
             why = "TSL" if t.get("lock") else "STOP"   # option premium stop (30% cap) - catches time decay too
         elif d * (und_px - t["stopU"]) <= 0:
             why = "TSL" if (tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) else "STOP"
@@ -590,15 +632,17 @@ def _profit_lock(t, px):
     qty = (t.get("lots") or 0) * (t.get("lot") or 0)
     if not (px and px > 0 and qty > 0):
         return
-    pnl = (px - t["entry"]) * qty
+    sgn = -1 if t.get("pos") == "short" else 1
+    pnl = sgn * (px - t["entry"]) * qty
     best = max(float(t.get("bestPnl") or 0.0), pnl)
     t["bestPnl"] = round(best, 2)
     if best < LOCK_BE:
         return
     fee_u = 80.0 / qty                                  # ~ two option legs of brokerage + taxes per lot set
     keep = LOCK_KEEP * best if best >= LOCK_TRAIL else 0.0
-    stop = round(t["entry"] + fee_u + keep / qty, 2)
-    if stop > float(t.get("premSL") or 0):
+    stop = round(t["entry"] + sgn * (fee_u + keep / qty), 2)
+    cur = float(t.get("premSL") or 0)
+    if (stop > cur) if sgn > 0 else (cur <= 0 or stop < cur):     # only ever tightens (down for a sold option)
         first = not t.get("lock") or (keep and t["lock"].get("mode") != "trail")
         t["premSL"] = stop
         t["lock"] = {"mode": "trail" if keep else "breakeven", "keep": round(keep), "best": round(best), "at": _now().isoformat()}
@@ -851,7 +895,7 @@ def status():
     opens = [t for t in st["trades"] if t["status"] == "OPEN"]
     for t in opens:
         _replan(t)
-        t["unrealised"] = round((t["last"] - t["entry"]) * t["lots"] * t["lot"], 2)
+        t["unrealised"] = round((t["last"] - t["entry"]) * t["lots"] * t["lot"] * (-1 if t.get("pos") == "short" else 1), 2)
     import backtest
     bt = backtest.get()["result"]
     import backtest

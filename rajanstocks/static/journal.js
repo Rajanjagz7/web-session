@@ -33,16 +33,16 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     // premium at risk per unit: from the server plan (delta 0.5 x the indicator's stop, capped at 30% of the premium)
     const riskP = a.premRisk > 0 ? a.premRisk : Math.max(0.05, Math.min(0.5 * (a.riskU || 0), 0.3 * a.entry));
     const inds = (a.indicators && a.indicators.length ? a.indicators : [a.strategy]).filter(Boolean);
-    const closed = a.status === 'CLOSED';
+    const closed = a.status === 'CLOSED', sh = a.pos === 'short', k = sh ? -1 : 1;   // sold option: stop above, targets below the entry
     const t = {
       id: a.id, auto: true, date: a.date, time: istTime(d), at: d.toISOString(), market: 'Options', instrument: a.sym,
-      symbol: `${a.sym} ${Number(a.strike).toFixed(0)} ${a.opt} ${a.expiry}`, dir: 'Long',
+      symbol: `${a.sym} ${Number(a.strike).toFixed(0)} ${a.opt} ${a.expiry}`, dir: sh ? 'Short' : 'Long',
       setup: a.source || a.strategy, tf: '1D', ind: inds.join(', '), entry: a.entry,
-      sl: a.premSL > 0 ? +(+a.premSL).toFixed(2) : +(a.entry - riskP).toFixed(2), sl0: +(a.entry - riskP).toFixed(2),
-      t1: +(a.entry + riskP).toFixed(2), t2: +(a.entry + 2 * riskP).toFixed(2), t3: +(a.entry + 3 * riskP).toFixed(2),
+      sl: a.premSL > 0 ? +(+a.premSL).toFixed(2) : +(a.entry - k * riskP).toFixed(2), sl0: +(a.entry - k * riskP).toFixed(2),
+      t1: +Math.max(0.05, a.entry + k * riskP).toFixed(2), t2: +Math.max(0.05, a.entry + k * 2 * riskP).toFixed(2), t3: +Math.max(0.05, a.entry + k * 3 * riskP).toFixed(2),
       qty: a.lots, mult: a.lot, initRisk: a.initialRisk, raw: a,
       tsl: a.tsl ? ({ trail: 'Distance Trail', breakeven: 'Breakeven', step: 'Step Trail' }[a.tsl.mode] || 'Off / Fixed SL') : (a.variant === 'trail' ? 'Distance Trail' : 'Off / Fixed SL'),
-      why: `Auto-executed ${a.side === 'BUY' ? 'call' : 'put'} on ${a.sym}: ${inds.length} indicator(s) — ${inds.join(', ')}. ` +
+      why: `Auto-executed ${sh ? 'SELL of the ' + (a.opt === 'PE' ? 'put' : 'call') + ' (paired with ' + a.pairOf + ')' : (a.side === 'BUY' ? 'call' : 'put')} on ${a.sym}: ${inds.length} indicator(s) — ${inds.join(', ')}. ` +
            `Underlying entry ${a.entryU}, stop ${a.stopU}${a.targetU ? ', target ' + a.targetU : ', trailing exit'}.`,
       status: closed ? 'Closed' : 'Open', exits: [], hits: [], hitOrder: [], stops: [{ at: a.openedAt || d.toISOString(), from: null, to: a.stopU, note: 'underlying stop at entry' }],
       rule: (a.initialRisk || 0) > S.capital * S.riskPct / 100 + 1e-9 ? 'Partial' : 'Yes', emotion: 'Automated',
@@ -286,7 +286,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       if (p.q > 0) buys += q * p.avg;
       else sm += m.ikey ? q * Math.max(0.12 * (m.spot || s.last || 0), p.avg) : q * p.avg * 0.2;
     });
-    AUTO.list.forEach(t => { if (entered(t) && statusOf(t) !== 'Closed') auto += (t.entry || 0) * (t.qty || 0) * (t.mult || 1); });
+    AUTO.list.forEach(t => { if (entered(t) && statusOf(t) !== 'Closed') auto += (t.raw && t.raw.margin > 0) ? t.raw.margin : (t.entry || 0) * (t.qty || 0) * (t.mult || 1); });
     const cash = (typeof App !== 'undefined' && typeof App.cash === 'number') ? App.cash : S.capital;
     const used = buys + sm + auto, avail = Math.max(0, cash - sm - auto);
     const day = today(), key = 'rj-cap-peak', now = new Date();
