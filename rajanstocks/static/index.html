@@ -632,7 +632,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 </style>
-<script src="/static/journal.js?v=20261022f"></script>
+<script src="/static/journal.js?v=20261022g"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261020d"></script>
 <script src="/static/observer.js?v=20261022b"></script>
@@ -1834,10 +1834,17 @@ const TFS=[{k:'1m',sec:60},{k:'5m',sec:300},{k:'15m',sec:900},{k:'1H',sec:3600},
 const CACHE={},PEND={},SWAIT={};
 function stubSeries(sym,tf){const ms=tf.sec*1000,t0=Math.floor(Date.now()/ms)*ms,P=sym.last||1,o=[];for(let i=60;i>=0;i--)o.push({t:t0-i*ms,o:P,h:P,l:P,c:P,v:0});return o}
 function syncSeries(s,sym,tf){const ms=tf.sec*1000,now=Date.now();let lb=s[s.length-1];if(!MKT.open||!sym.last)return s;
-  if(now-lb.t>ms*3){if(Date.now()-(s._ts||0)>20000){s._ts=Date.now();fetchSeries(sym,tf).then(()=>{if(sym===App.sym&&tf===App.tf)loadChart(true)})}}
-  else{if(tf.sec<86400)while(now>=lb.t+ms){const nb={t:lb.t+ms,o:lb.c,h:lb.c,l:lb.c,c:lb.c,v:0};s.push(nb);if(s.length>20000)s.shift();lb=nb}
-    lb.c=sym.last;lb.h=Math.max(lb.h,lb.c);lb.l=Math.min(lb.l,lb.c)}
+  // history from the server can lag (cached for minutes): refresh it in the background, but never stop the live price meanwhile
+  if(now-lb.t>ms*3&&Date.now()-(s._ts||0)>20000){s._ts=Date.now();fetchSeries(sym,tf).then(()=>onSeries(sym,tf))}
+  if(tf.sec<86400){const slot=lb.t+Math.floor((now-lb.t)/ms)*ms;
+    if(slot-lb.t>ms*3){const nb={t:slot,o:sym.last,h:sym.last,l:sym.last,c:sym.last,v:0};s.push(nb);lb=nb}   // long gap: start a fresh bar, don't fill flat ones
+    else while(now>=lb.t+ms){const nb={t:lb.t+ms,o:lb.c,h:lb.c,l:lb.c,c:lb.c,v:0};s.push(nb);lb=nb}
+    if(s.length>20000)s.splice(0,s.length-20000)}
+  lb.c=sym.last;lb.h=Math.max(lb.h,lb.c);lb.l=Math.min(lb.l,lb.c);
   return s}
+/* a history reload must not wipe newer live bars: keep the live tail that the (cached) server copy doesn't have yet */
+function keepTail(old,fresh){if(!old||!old.length||!fresh||!fresh.length)return fresh;const lt=fresh[fresh.length-1].t;const tail=old.filter(b=>b.t>lt);if(!tail.length)return fresh;
+  const out=fresh.concat(tail);out._ts=fresh._ts;out._note=fresh._note;out._span=fresh._span;out._partial=fresh._partial;return out}
 function series(sym,tf){const k=sym.s+'|'+tf.k;if(!CACHE[k]||!CACHE[k].length){if(!CACHE[k]&&!SWAIT[k]&&!(FAILS[k]&&Date.now()-FAILS[k]<8000)){SWAIT[k]=1;fetchSeries(sym,tf).then(()=>{delete SWAIT[k];onSeries(sym,tf)})}return stubSeries(sym,tf)}return syncSeries(CACHE[k],sym,tf)}
 function onSeries(sym,tf){if(App.view==='picks'&&typeof OV!=='undefined'&&sym===SYM(OV.sym)&&tf===TFS[OVR[OV.rng][1]])mountOverview();if(typeof OPT!=='undefined'&&OPT.osym&&sym===OPT.osym){optLoad(true);return}if(sym===App.sym&&tf===App.tf&&App.view==='trade')loadChart(true);if(App.view==='indicators')renderIndicators();if(App.view==='mobile')renderMobile()}
 
@@ -2010,6 +2017,9 @@ class Chart{
   P(y){const s=this.ys;return s.fi(s.a+(s.bot-y)/(s.bot-s.top)*(s.b-s.a))}
   zoom(f,cx){this._dflt=false;const pw=this.L.plotW;cx=cx??pw*0.75;const i0=this.idxAt(cx);this.bw=Math.max(0.04,Math.min(48,this.bw*f));this.end=this.clampEnd(i0+(pw-this.bw/2-cx)/this.bw);this.req()}
   pan(bars){this.end=this.clampEnd(this.end+bars);this.req()}
+  focusToday(minBars=30){const n=this.data.length;if(!n||!this.tf||this.tf.sec>=86400)return;this._dflt=false;   // intraday: open on the latest session so its prices set the scale
+    const day=t=>new Date(t+19800000).toISOString().slice(0,10),last=day(this.data[n-1].t);let i0=n-1;while(i0>0&&day(this.data[i0-1].t)===last)i0--;
+    const cnt=Math.max(minBars,n-i0+4),pw=this.L.plotW||Math.max(200,(this.host.clientWidth||600)-70);this.bw=Math.max(0.04,Math.min(48,pw/(cnt+3)));this.end=this.clampEnd(n-1+3);this.req()}
   showRange(days){this._dflt=false;const n=this.data.length;if(!n)return;const cut=days==null?this.data[0].t:Date.now()-days*864e5;let i0=0;while(i0<n-1&&this.data[i0].t<cut)i0++;
     const cnt=Math.max(8,n-i0),pw=this.L.plotW||600;this.bw=Math.max(0.04,Math.min(48,pw/(cnt+5)));this.end=n-1+3;this.end=this.clampEnd(this.end);this.req()}
   fmt(p){return fmtP(p,this.sym?.dp??2)}
@@ -3440,7 +3450,7 @@ function optLoad(keep){if(!OPT.osym||!OPT.ochart)return;const o=OPT.osym,tf=OPT.
     return}
   host&&host.classList.remove('loading');const bars=CACHE[k];
   if(!bars.length){OPT.ochart.setData(stubSeries(o,tf),o,tf,false);optReadings(true);return}
-  OPT.ochart.setData(series(o,tf),o,tf,keep);optReadings(false)}
+  OPT.ochart.setData(series(o,tf),o,tf,keep);if(!keep)OPT.ochart.focusToday();optReadings(false)}
 function optStats(){const o=OPT.osym;if(!o)return;const ch=o.prev>0?o.last/o.prev-1:0,pos=o.hi>o.lo?(o.last-o.lo)/(o.hi-o.lo)*100:50;
   const L=$('#opLast'),C=$('#opChg');if(L)L.textContent=fmtP(o.last);if(C){C.textContent=`${o.last>=o.prev?'+':'−'}${fmtP(Math.abs(o.last-o.prev))} (${pct(ch)})`;C.className='num '+cls(ch)}
   const v=x=>x>0?fmtP(x):'—';
@@ -3690,16 +3700,16 @@ function histQS(sym,tf){let q='';
 /* Intraday charts paint from the last few days first (one small request, ~0.3 s) and the full history is fetched right
    behind it and swapped in without moving the view - instead of waiting 1-9 s for every window of history up front. */
 const quickDays=tf=>{const m=/^(\d+)([mH])$/.exec(tf.k);if(!m)return 0;const mins=+m[1]*(m[2]==='H'?60:1);return Math.max(3,Math.min(30,Math.ceil(320/(375/Math.max(1,mins)))+2))};
-function swapFull(sym,tf,k){return api(candleURL(sym,tf)).then(r=>{if(!(r.bars&&r.bars.length))return;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();CACHE[k]._note=r.note||null;CACHE[k]._span=App.span||0;
+function swapFull(sym,tf,k){return api(candleURL(sym,tf)).then(r=>{if(!(r.bars&&r.bars.length))return;CACHE[k]=keepTail(CACHE[k],r.bars);CACHE[k]._ts=Date.now();CACHE[k]._note=r.note||null;CACHE[k]._span=App.span||0;
   if(sym===App.sym&&tf===App.tf&&chart){chart.setData(series(sym,tf),sym,tf,true);chart.lgDirty=true;try{setChartLines()}catch(e){}}
   if(typeof OPT!=='undefined'&&OPT.osym===sym&&OPT.tf===tf&&OPT.ochart){OPT.ochart.setData(series(sym,tf),sym,tf,true);try{optReadings(false)}catch(e){}}}).catch(()=>{})}
 async function fetchSeries(sym,tf){const k=sym.s+'|'+tf.k;if(PEND[k])return PEND[k];if(FAILS[k]&&Date.now()-FAILS[k]<8000)return;
   return PEND[k]=(async()=>{try{
     const qd=!CACHE[k]&&!sym.tv&&!histQS(sym,tf)?quickDays(tf):0;
     if(qd){try{const q=await api(candleURL(sym,tf)+'&recent='+qd);
-      if(q.bars&&q.bars.length>=40){CACHE[k]=q.bars;CACHE[k]._ts=Date.now();CACHE[k]._partial=true;delete FAILS[k];swapFull(sym,tf,k);return}}catch(e){}}
+      if(q.bars&&q.bars.length>=40){CACHE[k]=keepTail(CACHE[k],q.bars);CACHE[k]._ts=Date.now();CACHE[k]._partial=true;delete FAILS[k];swapFull(sym,tf,k);return}}catch(e){}}
     const r=await api(candleURL(sym,tf));
-    if(r.bars&&r.bars.length){CACHE[k]=r.bars;CACHE[k]._ts=Date.now();CACHE[k]._note=r.note||null;CACHE[k]._span=App.span||0;delete FAILS[k]}else{FAILS[k]=Date.now()}}
+    if(r.bars&&r.bars.length){CACHE[k]=keepTail(CACHE[k],r.bars);CACHE[k]._ts=Date.now();CACHE[k]._note=r.note||null;CACHE[k]._span=App.span||0;delete FAILS[k]}else{FAILS[k]=Date.now()}}
     catch(e){FAILS[k]=Date.now();console.warn('candles',e)}finally{delete PEND[k]}})()}
 let chartErrTimer=0,chartErrTries=0;
 function chartErr(show,retry,msg){const host=$('#chart');if(!host)return;let el=host.querySelector('.chart-err');clearTimeout(chartErrTimer);
