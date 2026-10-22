@@ -9,7 +9,6 @@ import json
 import os
 import sys
 import time
-import statistics
 import concurrent.futures as cf
 from datetime import datetime
 
@@ -126,13 +125,36 @@ def trades(bars, sig):
     return out
 
 
+SPLIT = "2026-04-01"      # older = before, recent = from this date (about the last 30% of the data)
+
+
+def _acc():
+    return {"n": 0, "w": 0, "pts": 0.0, "gw": 0.0, "gl": 0.0, "r": 0.0}
+
+
+def _add(a, pts, risk):
+    a["n"] += 1; a["pts"] += pts; a["r"] += pts / risk
+    if pts > 0:
+        a["w"] += 1; a["gw"] += pts
+    else:
+        a["gl"] -= pts
+
+
+def _fin(a):
+    if not a["n"]:
+        return {"n": 0}
+    return {"n": a["n"], "win": round(a["w"] / a["n"], 3), "avgPts": round(a["pts"] / a["n"], 2),
+            "pf": round(a["gw"] / a["gl"], 2) if a["gl"] else 99.0, "avgR": round(a["r"] / a["n"], 2)}
+
+
 def run():
+    """Running totals only (storing every trade of 36 setting combinations ran the GitHub runner out of memory)."""
     jobs = []
     for sym in PB.INDEX:
         w = PB.option_weeks(sym)
         print(f"{sym}: {len(w)} contracts", flush=True)
         jobs += w
-    R = {g: [] for g in GRID}
+    A = {g: {k: _acc() for k in ["all", "older", "recent"] + list(PB.INDEX)} for g in GRID}
     done = 0
     with cf.ThreadPoolExecutor(max_workers=8) as ex:
         for j, days in ex.map(PB.fetch_contract, jobs):
@@ -143,39 +165,30 @@ def run():
                 bars = days[d]
                 if len(bars) < 60 or not PB.atm_otm(j, d):
                     continue
+                per = "older" if d < SPLIT else "recent"
                 for tf in (1, 3, 5):
                     bb = resample(bars, tf)
                     for g in GRID:
                         if g[0] != tf:
                             continue
                         for t in trades(bb, signals(bb, g[1], g[2], g[3])):
-                            R[g].append({**t, "sym": j["sym"], "date": d, "lot": j["lot"]})
-    return R
-
-
-def stat(ts):
-    if not ts:
-        return {"n": 0}
-    p = [t["pts"] for t in ts]
-    w, l = sum(x for x in p if x > 0), -sum(x for x in p if x < 0)
-    return {"n": len(p), "win": round(sum(1 for x in p if x > 0) / len(p), 3), "avgPts": round(statistics.mean(p), 2),
-            "pf": round(w / l, 2) if l else 99.0, "avgR": round(statistics.mean(t["pts"] / t["risk"] for t in ts), 2)}
+                            for k in ("all", per, j["sym"]):
+                                _add(A[g][k], t["pts"], t["risk"])
+    return A
 
 
 if __name__ == "__main__":
     t0 = time.time()
-    R = run()
+    A = run()
     rows = []
-    for (tf, ln, mu, fl), ts in R.items():
-        if not ts:
+    for (tf, ln, mu, fl), acc in A.items():
+        if not acc["all"]["n"]:
             continue
-        split = sorted(t["date"] for t in ts)[int(len(ts) * 0.7)]
-        rows.append({"tf": f"{tf}m", "atrLen": ln, "mult": mu, "filter": bool(fl), "all": stat(ts),
-                     "older": stat([t for t in ts if t["date"] < split]), "recent": stat([t for t in ts if t["date"] >= split]),
-                     "bySym": {s: stat([t for t in ts if t["sym"] == s]) for s in PB.INDEX}})
+        rows.append({"tf": f"{tf}m", "atrLen": ln, "mult": mu, "filter": bool(fl), "all": _fin(acc["all"]),
+                     "older": _fin(acc["older"]), "recent": _fin(acc["recent"]), "bySym": {s: _fin(acc[s]) for s in PB.INDEX}})
     rows.sort(key=lambda r: -min(r["older"].get("pf", 0), r["recent"].get("pf", 0)))
-    res = {"generatedAt": datetime.now(PB.IST).isoformat(), "method": __doc__, "rows": rows, "best": rows[0] if rows else None,
-           "runtimeSec": round(time.time() - t0)}
+    res = {"generatedAt": datetime.now(PB.IST).isoformat(), "method": __doc__, "split": SPLIT, "rows": rows,
+           "best": rows[0] if rows else None, "runtimeSec": round(time.time() - t0)}
     with open(os.path.join(HERE, "static", "rzt_backtest.json"), "w") as f:
         json.dump(res, f)
     for r in rows[:10]:
