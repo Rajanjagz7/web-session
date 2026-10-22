@@ -1462,16 +1462,19 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
      const day = today(), L = liveTotals(day), c = capUse(), ds = dayStats(day), oToday = ds.pnl + L.autoToday + L.unr;
      const sCap = d ? d.capital : 1000000;
-     // compact: name, equity (+change), then just Open and Booked - two cards per row on phones
-     const tile = (cls, title, eq, cap, open, booked) => `<div class="jv-book ${cls}"><b class="jv-bt">${title}</b>
+     // compact: name, equity (+change), then Open, Booked, In use, Free - two cards per row on phones
+     const v = (k, x, cl, fmt) => `<div><small>${k}</small><b class="${x == null ? '' : cl === 'pl' ? cc(x) : cl || ''}">${x == null ? '…' : fmt(x)}</b></div>`;
+     const amt = x => inr(x, 0);
+     const tile = (cls, title, eq, cap, open, booked, used, free) => `<div class="jv-book ${cls}"><b class="jv-bt">${title}</b>
        <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div>
-       <div class="jv-bl"><div><small>Open</small><b class="${open == null ? '' : cc(open)}">${open == null ? '…' : sinr(open)}</b></div><div><small>Booked</small><b class="${booked == null ? '' : cc(booked)}">${booked == null ? '…' : sinr(booked)}</b></div></div></div>`;
+       <div class="jv-bl">${v('Open', open, 'pl', sinr)}${v('Booked', booked, 'pl', sinr)}${v('In use', used, '', amt)}${v('Free', free, 'up', amt)}</div></div>`;
      const B = c.buy, Sx = c.sell;
-     const ob = tile('', 'Options Buy', B.eq, B.cap, B.unr, B.booked);
-     const os = tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked);
-     const st = tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null);
+     const ob = tile('', 'Options Buy', B.eq, B.cap, B.unr, B.booked, B.used, B.free);
+     const os = tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked, Sx.used, Sx.free);
+     const st = tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null, d ? d.used : null, d ? d.cash : null);
      const tot = tile('jv-btot', 'Total', d ? B.eq + Sx.eq + d.equity : null, B.cap + Sx.cap + sCap,
-       d ? B.unr + Sx.unr + d.unrealised : null, d ? B.booked + Sx.booked + d.booked : null);
+       d ? B.unr + Sx.unr + d.unrealised : null, d ? B.booked + Sx.booked + d.booked : null,
+       d ? B.used + Sx.used + d.used : null, d ? B.free + Sx.free + d.cash : null);
      return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the options book to ₹10 L">Reset options book</button></div></div>
        <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
