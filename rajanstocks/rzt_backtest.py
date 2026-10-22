@@ -68,7 +68,7 @@ def mb(bars):
 def signals(bars, ln, mu, fl):
     n = len(bars)
     if n < ln + 3:
-        return []
+        return [0] * n                   # too few candles (short day on 3m / 5m): no signals
     tr, a, prev = [], [], None
     for i, (m, o, h, l, c) in enumerate(bars):
         t = h - l if i == 0 else max(h - l, abs(h - bars[i - 1][4]), abs(l - bars[i - 1][4]))
