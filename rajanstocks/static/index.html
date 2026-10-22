@@ -3132,7 +3132,7 @@ async function checkTokenHealth(){try{const r=await api('/api/m/health');let b=$
 /* ======================= Options: pick from the chain -> live chart + indicator readings ======================= */
 const OPT={sym:'NIFTY',expiry:'',chain:null,chainTs:0,sel:null,osym:null,tf:null,ochart:null,span:10,busy:false,ticking:false,err:null};
 const OPT_TFS=['1m','5m','15m','1H','1D'];
-const OPT_INDS=[['vol','Vol'],['sma','SMA'],['ema','EMA'],['vwap','VWAP'],['bb','BB'],['rsi','RSI'],['macd','MACD'],['atr','ATR']];
+const OPT_INDS=[['vol','Vol'],['sma','SMA'],['ema','EMA'],['vwap','VWAP'],['bb','BB'],['rsi','RSI'],['macd','MACD'],['atr','ATR'],['gtc','Time cycle'],['rzt','Zone Trend'],['rztmb','MB']];
 const fmtExp=iso=>{try{const d=new Date(iso+'T00:00:00');return d.getDate()+' '+MON[d.getMonth()]}catch(e){return iso||''}};
 function optUnderlyings(){return SYMS.filter(s=>s.cls==='Indices'&&!s.nofo&&s.s!=='INDIAVIX').concat(SYMS.filter(s=>s.cls==='Stocks'))}
 /* The last chain per underlying is kept in the browser and drawn at once (stale-while-revalidate), then replaced
