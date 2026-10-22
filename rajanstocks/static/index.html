@@ -744,6 +744,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .tdock{display:none}
 @media (max-width:900px){#v-trade.on .tdock{display:flex;position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));z-index:55;gap:10px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.25)}.tdock button{flex:1;height:46px;border:0;border-radius:11px;font:inherit;font-weight:800;font-size:15px;color:#fff;cursor:pointer}.tdock .buy{background:var(--up)}.tdock .sell{background:var(--down)}
 .tdock.gone{display:none !important}
+.vx-tabs button{white-space:nowrap}.tc-f{display:flex;flex-wrap:wrap;gap:8px}.tc-f .inp{flex:1 1 140px;min-width:0}.tc-strong{color:#f5b942;font-weight:700}.tc-medium{color:#22c55e;font-weight:600}.tc-minor{color:#94a3b8}.vx-astbl tr.tc-past td{opacity:.45}
 .pk-div{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--text-2);padding:6px 2px;border-top:1px dashed var(--line);margin-top:4px}#v-trade.on{padding-bottom:70px}}
 @media (max-width:1180px){.opx-grid{grid-template-columns:fit-content(58%) minmax(400px,1fr)}}
 @media (max-width:899px){
@@ -2687,7 +2688,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
   const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
   const last=mc.index_last.available?mc.index_last.value:null,prev=mc.index_prev_close.available?mc.index_prev_close.value:null,ch=last&&prev?last/prev-1:null;
   const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};
-  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];
+  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['cycle','Time cycle'],['watch','Watchlist']];
   el.innerHTML=`<div class="page vx">
    <div class="vx-hero">
     <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · ${esc(h.symbol_name)}</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
@@ -2699,9 +2700,27 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
    </div>
    ${h.is_weekend||h.session_phase==='Market closed'?`<div class="vx-closed">${esc(h.weekend_message||'Market closed today.')} Panchang, planets and Gann levels below are live calculations, ready for the next session.</div>`:''}
    <div class="vx-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" class="${VD.tab===k?'on':''}" data-vxtab="${k}">${l}</button>`).join('')}</div>
-   ${({plan:vxTabPlan,vedic:vxTabVedic,gann:vxTabGann,watch:vxTabWatch}[VD.tab]||vxTabPlan)(r)}
+   ${({plan:vxTabPlan,vedic:vxTabVedic,gann:vxTabGann,cycle:vxTabCycle,watch:vxTabWatch}[VD.tab]||vxTabPlan)(r)}
    <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
   </div>`}
+const TC={sym:'NIFTY',mode:'underlying',strike:'',d:null,err:'',busy:false};
+async function tcLoad(){TC.busy=true;TC.err='';vdPaint();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q)}catch(e){TC.d=null;TC.err=(e&&e.message)||'Time cycle unavailable'}TC.busy=false;if(VD.tab==='cycle')vdPaint()}
+function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setTimeout(tcLoad,0);
+  const form=`<section class="vx-card"><h3>Time cycle</h3><p class="muted" style="margin:0 0 8px">Gann time cycles and price vibration zones for any index or F&amp;O stock, or its option premium.</p>
+   <div class="tc-f"><input class="inp" id="tcSym" value="${esc(TC.sym)}" placeholder="NIFTY, BANKNIFTY, SENSEX, RELIANCE…" aria-label="Index or stock"><select class="inp" id="tcMode" aria-label="Series">${[['underlying','Index / stock price'],['ce','Call premium (CE)'],['pe','Put premium (PE)']].map(([k,l])=>`<option value="${k}" ${TC.mode===k?'selected':''}>${l}</option>`).join('')}</select>
+   <input class="inp" id="tcStrike" value="${esc(TC.strike)}" placeholder="Strike (blank = ATM)" inputmode="decimal" ${TC.mode==='underlying'?'disabled':''} aria-label="Strike"><button class="btn-xs pri" data-tc="go">${TC.busy?'Loading…':'Show'}</button></div></section>`;
+  if(TC.err)return form+`<section class="vx-card"><p class="vx-note">${esc(TC.err)}</p></section>`;if(!d)return form;
+  const nxt=d.cycles.find(c=>!c.passed);
+  const cyc=`<section class="vx-card"><h3>Time cycles · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span></p>`:''}
+   <div class="vx-astbl"><table><thead><tr><th>Time</th><th>Strength</th><th>Counted from</th></tr></thead><tbody>${d.cycles.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td><span class="tc-${c.strength}">${c.strength}</span></td><td><small>${c.sources.map(esc).join(' · ')}</small></td></tr>`).join('')}</tbody></table></div></section>`;
+  const ch=d.chain?`<p style="margin:0 0 6px">Option chain (${esc(d.chain.expiry||'')}): max pain <b>${fmtP(d.chain.maxPain)}</b> · highest call OI <b class="down">${fmtP(d.chain.maxCallOI)}</b> (resistance) · highest put OI <b class="up">${fmtP(d.chain.maxPutOI)}</b> (support)</p>`:'';
+  const zn=`<section class="vx-card"><h3>Price zones</h3>${ch}<p style="margin:0 0 6px">Last ${fmtP(d.last)} · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</p>
+   ${d.vibration?`<p style="margin:0 0 6px">Vibration zone (support): <b class="up">${fmtP(d.vibration.level)}</b> <small class="muted">${esc(d.vibration.angle)}</small>${d.nextResistance?` · next resistance <b class="down">${fmtP(d.nextResistance.level)}</b>`:''}</p>`:''}
+   <div class="vx-astbl"><table><tbody>${d.zones.map(z=>`<tr class="${d.vibration&&z.level===d.vibration.level?'on':''}"><td class="num">${fmtP(z.level)}</td><td><small class="muted">${esc(z.angle)}</small></td></tr>`).join('')}</tbody></table></div>
+   <p class="vx-note">${esc(d.how)} Traditional Gann technique - a timing guide, not a forecast.</p></section>`;
+  return form+`<div class="vx-grid2">${cyc}${zn}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-tc]');if(!b)return;const g=id=>document.getElementById(id);TC.sym=(g('tcSym').value||'NIFTY').toUpperCase().trim();TC.mode=g('tcMode').value;TC.strike=g('tcStrike').value.trim();tcLoad()});
+document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
 document.addEventListener('click',async e=>{const t=e.target.closest('[data-vxsym]');if(!t||VD.busy)return;const sym=t.dataset.vxsym;if(sym===VD.symbol)return;
   VD.symbol=sym;try{localStorage.setItem('vx-symbol',sym)}catch(x){}VD.data=null;VD.err=null;vdPaint();

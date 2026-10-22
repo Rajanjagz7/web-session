@@ -37,3 +37,27 @@ def report(refresh: bool = False, symbol: str = "NIFTY"):
         except Exception as e:
             raise HTTPException(502, f"Could not generate the Vedic Astro report: {e}")
     return _cache[symbol][2]
+
+
+_tc: dict = {}
+
+
+@router.get("/timecycle")
+def timecycle(symbol: str = "NIFTY", mode: str = "underlying", strike: float = 0):
+    """Gann intraday time cycles + vibration zones for an index / F&O stock or its ATM option premium."""
+    import time_cycle
+    mode = mode.lower() if mode.lower() in ("underlying", "ce", "pe") else "underlying"
+    k = (symbol.upper(), mode, strike)
+    hit = _tc.get(k)
+    if hit and time.time() - hit[0] < 120:
+        return hit[1]
+    try:
+        r = time_cycle.build(symbol, mode, strike or None)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"Time cycle unavailable: {str(e)[:160]}")
+    if len(_tc) > 300:
+        _tc.clear()
+    _tc[k] = (time.time(), r)
+    return r
