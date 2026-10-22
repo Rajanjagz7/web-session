@@ -278,6 +278,14 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   /* Capital in use: buys (premium / share value paid), margin blocked for sells (options: max(12% of the underlying, premium)
      per unit - same rule as the order ticket; stocks: 20%), and the premium of open auto-trader trades. Today's peak is
      remembered (per device) so you can see the most capital that was tied up at once today. */
+  /* Separate paper books: option BUYS (long premium) and option SELLS (short premium / written options) each get Rs 10 L */
+  const SELL_CAP = 1000000;
+  function sideTotals(sign) {
+    let booked = 0, unr = 0;
+    allTrades().forEach(t => { if (!entered(t) || dirOf(t) !== sign) return; const c = calc(t).net || 0;
+      if (statusOf(t) === 'Closed') booked += c; else { booked += t.auto ? 0 : c; unr += unrealised(t) || 0; } });   // manual trades can be partly booked
+    return { booked, unr };
+  }
   function capUse() {
     let buys = 0, sm = 0, auto = 0;
     if (typeof App !== 'undefined') (App.positions || []).forEach(p => {
@@ -286,13 +294,17 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       if (p.q > 0) buys += q * p.avg;
       else sm += m.ikey ? q * Math.max(0.12 * (m.spot || s.last || 0), p.avg) : q * p.avg * 0.2;
     });
-    AUTO.list.forEach(t => { if (entered(t) && statusOf(t) !== 'Closed') auto += (t.raw && t.raw.margin > 0) ? t.raw.margin : (t.entry || 0) * (t.qty || 0) * (t.mult || 1); });
+    let autoL = 0, autoS = 0;
+    AUTO.list.forEach(t => { if (!entered(t) || statusOf(t) === 'Closed') return; const v = (t.raw && t.raw.margin > 0) ? t.raw.margin : (t.entry || 0) * (t.qty || 0) * (t.mult || 1); auto += v; if (dirOf(t) < 0) autoS += v; else autoL += v; });
     const cash = (typeof App !== 'undefined' && typeof App.cash === 'number') ? App.cash : S.capital;
     const used = buys + sm + auto, avail = Math.max(0, cash - sm - auto);
     const day = today(), key = 'rj-cap-peak', now = new Date();
     let pk = load(key, null); if (!pk || pk.day !== day) pk = { day, peak: 0, at: '', left: avail };
     if (used > pk.peak + 0.5) { pk.peak = used; pk.at = istTime(now); pk.left = avail; save(key, pk); }
-    return { buys, sm, auto, used, avail, pct: used + avail > 0 ? used / (used + avail) * 100 : 0, cap: S.capital, peak: pk.peak, peakAt: pk.at, peakLeft: pk.left, peakPct: pk.peak + pk.left > 0 ? pk.peak / (pk.peak + pk.left) * 100 : 0 };
+    const sb = sideTotals(1), ss = sideTotals(-1), buyUsed = buys + autoL, sellUsed = sm + autoS;
+    const buy = { cap: S.capital, used: buyUsed, free: Math.max(0, S.capital + sb.booked - buyUsed), eq: S.capital + sb.booked + sb.unr, booked: sb.booked, unr: sb.unr };
+    const sell = { cap: SELL_CAP, used: sellUsed, free: Math.max(0, SELL_CAP + ss.booked - sellUsed), eq: SELL_CAP + ss.booked + ss.unr, booked: ss.booked, unr: ss.unr };
+    return { buy, sell, buys, sm, auto, used, avail, pct: used + avail > 0 ? used / (used + avail) * 100 : 0, cap: S.capital, peak: pk.peak, peakAt: pk.at, peakLeft: pk.left, peakPct: pk.peak + pk.left > 0 ? pk.peak / (pk.peak + pk.left) * 100 : 0 };
   }
   function capCard() {
     const c = capUse(), bar = (p, cl) => `<div class="jv-capbar"><i class="${cl}" style="width:${Math.min(100, p).toFixed(1)}%"></i></div>`;
@@ -1452,14 +1464,18 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const oCap = S.capital, sCap = d ? d.capital : 1000000, tile = (cls, title, sub, eq, cap, lines) => `<div class="jv-book ${cls}"><div class="jv-bt"><b>${title}</b><small class="muted">${sub}</small></div>
        <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div><div class="jv-bl">${lines}</div></div>`;
      const kv = (k, v, cl) => `<div><small>${k}</small><b class="${cl || ''}">${v}</b></div>`;
-     const o = tile('', 'Options book', 'option auto trader + your Trade-screen trades · ₹10 L', L.eq, oCap,
-       kv('Today', sinr(oToday), cc(oToday)) + kv('In use', inr(c.used, 0)) + kv('Free', inr(c.avail, 0), 'up') + kv('Max used today', c.peak > 0 ? `${inr(c.peak, 0)} <small class="muted">${E(c.peakAt)}</small>` : '—'));
+     const B = c.buy, Sx = c.sell;
+     const ob = tile('', 'Options · Buy book', 'bought options (CE / PE buys) · ₹10 L', B.eq, B.cap,
+       kv('Booked', sinr(B.booked), cc(B.booked)) + kv('Open P&L', sinr(B.unr), cc(B.unr)) + kv('In use', inr(B.used, 0)) + kv('Free', inr(B.free, 0), 'up'));
+     const os = tile('', 'Options · Sell book', 'sold / written options (premium + margin) · ₹10 L', Sx.eq, Sx.cap,
+       kv('Booked', sinr(Sx.booked), cc(Sx.booked)) + kv('Open P&L', sinr(Sx.unr), cc(Sx.unr)) + kv('Margin in use', inr(Sx.used, 0)) + kv('Free', inr(Sx.free, 0), 'up'));
      const st = tile('', 'Stock trader', 'intraday · swing · positional · ₹10 L', d ? d.equity : null, sCap,
        d ? kv('Open P&L', sinr(d.unrealised), cc(d.unrealised)) + kv('In use', inr(d.used, 0)) + kv('Free', inr(d.cash, 0), 'up') + kv('Closed', `${d.all.closed}${d.all.winRate == null ? '' : ' · ' + d.all.winRate + '% won'}`) : kv('', 'loading…'));
-     const tEq = d ? L.eq + d.equity : null;
-     const tot = tile('jv-btot', 'Total', '₹20 L paper capital', tEq, oCap + sCap, d ? kv('In use', inr(c.used + d.used, 0)) + kv('Free', inr(c.avail + d.cash, 0), 'up') : '');
+     const tEq = d ? B.eq + Sx.eq + d.equity : null;
+     const tot = tile('jv-btot', 'Total', '₹30 L paper capital', tEq, B.cap + Sx.cap + sCap,
+       kv('Today (options)', sinr(oToday), cc(oToday)) + (d ? kv('In use', inr(B.used + Sx.used + d.used, 0)) + kv('Free', inr(B.free + Sx.free + d.cash, 0), 'up') : '') + kv('Max used today', c.peak > 0 ? `${inr(c.peak, 0)} <small class="muted">${E(c.peakAt)}</small>` : '—'));
      return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the options book to ₹10 L">Reset options book</button></div></div>
-       <div class="jv-books">${o}${st}${tot}</div></div>`;
+       <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
 
    function viewAlgo() {
@@ -1594,11 +1610,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-capbar{height:6px;border-radius:3px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden;margin-top:4px}.jv-capbar i{display:block;height:100%;border-radius:3px;background:var(--up,#22ab94)}.jv-capbar i.warn{background:#f59e0b}.jv-capbar i.down{background:var(--down,#f7525f)}.jv-capbar i.mute{background:#8b5cf6}
   @media(max-width:640px){.jv-capg{grid-template-columns:1fr}}
   .jv-sec{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin:14px 2px 6px}
-  .jv-books{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:4px 12px 12px}.jv-book{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+  .jv-books{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:4px 12px 12px}.jv-book{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
   .jv-book.jv-btot{background:var(--panel-2,rgba(255,255,255,.04))}.jv-bt{display:flex;flex-direction:column;gap:1px}.jv-bt small{font-size:11px}
   .jv-beq{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0}.jv-beq span{font-size:20px;font-weight:800}.jv-beq em{font-style:normal;font-weight:700;font-size:13px}
   .jv-bl{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}.jv-bl small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}.jv-bl b{font-size:13px}
-  @media(max-width:760px){.jv-books{grid-template-columns:1fr}}
+  @media(max-width:1100px){.jv-books{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.jv-books{grid-template-columns:1fr}}
   .jv-tot td{border-top:2px solid var(--line)}.jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
