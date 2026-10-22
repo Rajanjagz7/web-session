@@ -2719,7 +2719,8 @@ function vxNowMin(){const d=new Date(Date.now()+330*60000);return d.getUTCHours(
 function vxLean(r){const c=r.confluence||{factors:[]},mc=r.market_context||{},g=r.gann||{},sym=r.header&&r.header.symbol||'NIFTY';
   const spot=g.available?vxSpot(g,sym):(mc.index_last&&mc.index_last.available?mc.index_last.value:null),f=[],fp=v=>fmtP(v,2);
   (c.factors||[]).forEach(x=>{if(!/^Price vs Gann/.test(x.name))f.push(x)});
-  if(g.available&&spot){const b=g.base.price;f.push({name:'Price vs Gann base',vote:spot>b?1:spot<b?-1:0,detail:`${fp(spot)} is ${spot>b?'above':spot<b?'below':'at'} the 0° base ${fp(b)}`})}
+  const liveNow=typeof MKT!=='undefined'&&MKT.open;
+  if(g.available&&spot&&liveNow){const b=g.base.price;f.push({name:'Price vs Gann base',vote:spot>b?1:spot<b?-1:0,detail:`${fp(spot)} is ${spot>b?'above':spot<b?'below':'at'} the 0° base ${fp(b)}`})}
   const vw=mc.live_vwap&&mc.live_vwap.available&&mc.live_vwap.value,live=typeof MKT!=='undefined'&&MKT.open;
   if(vw&&vw.value&&spot&&live)f.push({name:'Price vs VWAP',vote:spot>vw.value?1:spot<vw.value?-1:0,detail:`${fp(spot)} vs VWAP ${fp(vw.value)}`});
   const orr=mc.opening_range&&mc.opening_range.available&&mc.opening_range.value;
@@ -2731,13 +2732,13 @@ function vxLean(r){const c=r.confluence||{factors:[]},mc=r.market_context||{},g=
       if(win)f.push({name:`${win.side} window`,vote:win.side==='Buyers'?1:-1,detail:`${win.start}–${win.end} · ${(win.reasons||[]).join(', ')} — act only if price action confirms`});
       else if(sl&&Math.abs(sl.score)>=2)f.push({name:'Time (hora/choghadiya)',vote:sl.score>0?1:-1,detail:`${sl.hora} hora · ${sl.chog} choghadiya`})}
     else nxt=(st.windows||[])[0]||null}
-  const score=f.reduce((a,x)=>a+x.vote,0),max=Math.max(1,f.length);
-  const lean=score>=2?'BULLISH LEAN':score<=-2?'BEARISH LEAN':'MIXED / WAIT';
+  const score=f.reduce((a,x)=>a+x.vote,0),max=Math.max(1,f.reduce((a,x)=>a+(x.name==="God's Eye"?2:1),0));   /* God's Eye counts double */
+  const lean=score>=3?'BULLISH LEAN':score===2?'MILD BULLISH':score<=-3?'BEARISH LEAN':score===-2?'MILD BEARISH':'MIXED / WAIT';
   return{lean,score,max,factors:f,win,nxt,spot,live}}
-function vxLeanHTML(r){const L=vxLean(r),cls=L.lean.startsWith('BULL')?'up':L.lean.startsWith('BEAR')?'down':'mute';
+function vxLeanHTML(r){const L=vxLean(r),cls=/BULL/.test(L.lean)?'up':/BEAR/.test(L.lean)?'down':'mute';
   const t=new Date(Date.now()+330*60000).toISOString().slice(11,19);
   const nowTxt=L.win?`<span class="vx-chip ${L.win.side==='Buyers'?'up':'down'}">Now: ${esc(L.win.side)} ${esc(L.win.start)}–${esc(L.win.end)}</span>`:L.nxt?`<span class="vx-chip mute">Next: ${esc(L.nxt.side)} ${esc(L.nxt.start)}–${esc(L.nxt.end)}</span>`:'';
-  return `<div class="vx-lean ${cls}" title="Recomputed live from the price, VWAP, opening range, Gann base and the current time window. Not a signal - act only on price action and volume."><small>Today's lean · ${L.live?'live '+t:'last session'}</small><b>${esc(L.lean)}</b><div class="vx-meter"><i style="left:${50+(L.score/L.max)*50}%"></i></div>
+  return `<div class="vx-lean ${cls}" title="God's Eye (counts double), Day Power, lunar bias, Gann trend, and live price vs Gann base / VWAP / opening range and the current time window. Not a signal - act only on price action and volume."><small>Today's lean · ${L.live?'live '+t:'last session'}</small><b>${esc(L.lean)}</b> <small class="muted">score ${L.score>0?'+':''}${L.score} of ±${L.max}</small><div class="vx-meter"><i style="left:${Math.max(2,Math.min(98,50+(L.score/L.max)*50))}%"></i></div>
     <div class="vx-factors">${nowTxt}${L.factors.map(x=>`<span class="vx-chip ${x.vote>0?'up':x.vote<0?'down':'mute'}" title="${esc(x.detail)}">${x.vote>0?'▲':x.vote<0?'▼':'•'} ${esc(x.name)}</span>`).join('')}</div></div>`}
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic + Gann','')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}

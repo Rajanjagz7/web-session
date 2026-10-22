@@ -436,15 +436,39 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         day_power_block = {"available": False, "reason": f"Day power unavailable: {str(e)[:160]}"}
     bias = _day_bias(panchang["paksha"], panchang["tithi_number"])
     votes = []
+    # God's Eye (live trend / momentum read of this index) - the strongest cue, so it counts double
+    try:
+        import observer_api
+        from concurrent.futures import ThreadPoolExecutor
+        _ex = ThreadPoolExecutor(max_workers=1)
+        ge = _ex.submit(observer_api.observer_one, symbol).result(timeout=max(1.0, min(6.0, _left() - 2)))
+        _ex.shutdown(wait=False)
+        if ge and "error" not in ge and ge.get("label"):
+            gv = {"BULLISH": 2, "BEARISH": -2}.get(ge["label"], 0)
+            play = (ge.get("action") or {}).get("label") or ""
+            votes.append(("God's Eye", gv, f"{ge['label'].title()} (score {ge.get('score')})" + (f" · {play}" if play else "")))
+    except Exception:
+        pass
+    # Day Power for the session this report is for
+    try:
+        sd = special_timing.get("session_date") if isinstance(special_timing, dict) else None
+        days = day_power_block.get("days") or [] if isinstance(day_power_block, dict) else []
+        dp = next((x for x in days if x.get("date") == sd), days[0] if days else None)
+        if dp:
+            votes.append(("Day Power", {"bull": 1, "bear": -1}.get(dp.get("side"), 0), f"{dp.get('label', '').title()} ({dp.get('score', 0):+g}) for {dp.get('weekday', '')}"))
+    except Exception:
+        pass
     votes.append(("Vedic lunar bias", {"bullish": 1, "bearish": -1}.get(bias["tone"], 0), bias["label"]))
     if gann.get("available"):
         base = gann["base"]["price"]
-        votes.append(("Price vs Gann base (0°)", 1 if spot > base else -1 if spot < base else 0, f"{'above' if spot > base else 'below'} {base:,.2f}"))
+        if in_session:                               # outside the session the base IS the last close, so this vote means nothing
+            votes.append(("Price vs Gann base (0°)", 1 if spot > base else -1 if spot < base else 0, f"{'above' if spot > base else 'below'} {base:,.2f}"))
         if gann.get("hilo_trend"):
             votes.append(("Gann HiLo trend (daily)", {"up": 1, "down": -1}.get(gann["hilo_trend"], 0), gann["hilo_trend"]))
     score = sum(v for _, v, _ in votes)
-    lean = "BULLISH LEAN" if score >= 2 else "BEARISH LEAN" if score <= -2 else "MIXED / WAIT"
-    confluence = {"lean": lean, "score": score, "max": len(votes),
+    lean = ("BULLISH LEAN" if score >= 3 else "MILD BULLISH" if score == 2 else
+            "BEARISH LEAN" if score <= -3 else "MILD BEARISH" if score == -2 else "MIXED / WAIT")
+    confluence = {"lean": lean, "score": score, "max": sum(2 if n == "God's Eye" else 1 for n, _, _ in votes),
                   "factors": [{"name": n, "vote": v, "detail": d} for n, v, d in votes],
                   "note": "Counts traditional and technical cues only. Not a signal - act only on live price action, VWAP and volume."}
 
