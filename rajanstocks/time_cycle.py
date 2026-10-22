@@ -28,7 +28,7 @@ def _hm(m):
 
 
 def _bars(symbol="", ikey=""):
-    r = market_api.candles(symbol=symbol, ikey=ikey, tf="5m", recent=5) or {}
+    r = market_api.candles(symbol=symbol, ikey=ikey, tf="5m", frm="", to="", recent=5) or {}
     out = {}
     for b in r.get("bars") or []:
         t = datetime.fromtimestamp(b["t"] / 1000, IST)

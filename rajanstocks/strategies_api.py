@@ -638,7 +638,7 @@ def _orb(ikey):
     if k not in _ORB:
         lo = hi = None
         try:
-            bars = (market_api.candles(ikey=ikey, tf="5m", recent=1) or {}).get("bars") or []
+            bars = (market_api.candles(symbol="", ikey=ikey, tf="5m", frm="", to="", recent=1) or {}).get("bars") or []
             for b in bars:
                 t = datetime.fromtimestamp(b["t"] / 1000, market_api.IST)
                 if t.date().isoformat() == today and (t.hour, t.minute) < (9, 30):
