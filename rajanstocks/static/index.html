@@ -1909,7 +1909,61 @@ const DEFS={
    desc:'Running total of volume, added on up bars and subtracted on down bars.',read:'OBV making new highs before price suggests accumulation.'},
  roc:{name:'Rate of Change',short:'ROC',cat:'Momentum',pane:'sub',params:[{k:'len',l:'Length',v:12,min:1,max:200}],lines:[{k:'v',c:1}],zero:true,calc:(d,p)=>{const c=C(d);return{v:c.map((v,i)=>i>=p.len?(v/c[i-p.len]-1)*100:NaN)}},
    desc:'Percentage change versus N bars ago.',read:'Crossing zero marks a momentum shift. Extreme readings often revert.'},
+ rzt:{name:'Rajan Zone Trend',short:'RZT',cat:'Rajan',pane:'main',params:[{k:'len',l:'ATR length',v:10,min:2,max:100},{k:'mult',l:'ATR multiplier',v:2,min:.5,max:6,step:.1},{k:'sw',l:'Swing bars',v:5,min:2,max:30},{k:'flt',l:'Momentum filter (1 on, 0 off)',v:0,min:0,max:1}],lines:[],
+   calc:(d,p)=>rztCalc(d,p),draw:function(ctx,ind,g){rztDraw.call(this,ctx,ind,g)},drawTop:function(ctx,ind,g){rztLabels.call(this,ctx,ind,g)},
+   desc:'B / S on an ATR trend flip confirmed by momentum, a stop line at the signal candle, and Zone-1 / Zone-2 support and resistance from the last swing high and low.',
+   read:'B = trend turned up (line under the B candle is the stop), S = turned down. Zone-1 is the nearer band, Zone-2 the one beyond. Works on index, stock and option premium charts. Add "Momentum bar" for the colour strip.'},
+ gtc:{name:'Gann Time Cycle',short:'Time cycle',cat:'Rajan',pane:'main',params:[],lines:[],calc:(d,p,x)=>gtcCalc(d,x.tf),draw:function(ctx,ind,g){gtcDraw.call(this,ctx,ind,g)},
+   desc:'Gann intraday time cycles: 15-360 minute counts from the 09:15 open, the previous day\'s high / low candle and today\'s high / low, plus Square-of-9 vibration levels around the previous close.',
+   read:'Dashed vertical lines are cycle times - gold = strong (several counts meet), green = medium, grey = minor. Watch for price reaching a vibration level AT a cycle time. Intraday charts only (1m-30m).'},
+ rztmb:{name:'Momentum bar (Rajan)',short:'MB',cat:'Rajan',pane:'sub',params:[],lines:[],range:[0,1],calc:d=>({mb:rztMB(d)}),drawPane:function(ctx,ind,g){rztPane.call(this,ctx,ind,g)},
+   desc:'Colour strip of trend + momentum: EMA 9/21, RSI 14 and ADX 14.',read:'Bright green = strong up, light green = mild up, grey = sideways, pink = mild down, red = strong down.'},
 };
+const GTC_N=[15,30,45,60,90,120,135,180,225,270,315,360],GTC_MAJ=new Set([90,180,360]);
+function gtcCalc(d,tf){const n=d.length,o={marks:[],lv:[],today:null};if(!n||tf>1800)return o;const md=b=>{const t=new Date(b.t+330*60000);return t.getUTCHours()*60+t.getUTCMinutes()};
+  const days=[];let cur=null;d.forEach((b,i)=>{const k=istDay(b.t);if(!cur||cur.k!==k){cur={k,a:i,b:i};days.push(cur)}cur.b=i});if(days.length<2)return o;
+  const T0=days[days.length-1],P=days[days.length-2],OPEN=555,CLOSE=930;const hits=[];
+  GTC_N.forEach(n0=>{if(OPEN+n0<CLOSE)hits.push([OPEN+n0,'open 09:15',n0])});
+  let hi=P.a,lo=P.a;for(let i=P.a;i<=P.b;i++){if(d[i].h>d[hi].h)hi=i;if(d[i].l<d[lo].l)lo=i}
+  [[hi,'prev-day high'],[lo,'prev-day low']].forEach(([i,nm])=>{const m0=md(d[i]);GTC_N.forEach(n0=>{const left=CLOSE-m0;if(n0>left&&n0-left<CLOSE-OPEN)hits.push([OPEN+n0-left,nm+' '+gtcHm(m0),n0])})});
+  if(T0.b>T0.a){let th=T0.a,tl=T0.a;for(let i=T0.a;i<=T0.b;i++){if(d[i].h>d[th].h)th=i;if(d[i].l<d[tl].l)tl=i}[[th,"today's high"],[tl,"today's low"]].forEach(([i,nm])=>{const m0=md(d[i]);GTC_N.forEach(n0=>{if(m0+n0<CLOSE)hits.push([m0+n0,nm+' '+gtcHm(m0),n0])})})}
+  hits.sort((a,b)=>a[0]-b[0]);const gs=[];hits.forEach(h=>{const g=gs[gs.length-1];if(g&&h[0]-g.m0<=5)g.it.push(h);else gs.push({m0:h[0],it:[h]})});
+  o.marks=gs.map(g=>{const m=Math.round(g.it.reduce((s,x)=>s+x[0],0)/g.it.length),src=new Set(g.it.map(x=>x[1])),maj=g.it.some(x=>GTC_MAJ.has(x[2])),sc=src.size+(maj?1:0);return{m,sc,why:g.it.map(x=>x[2]+'m from '+x[1]).join(' · ')}});
+  const pc=d[P.b].c;for(let k=-8;k<=8;k++){if(!k)continue;const r=Math.sqrt(pc)+k*.25;if(r>0)o.lv.push({v:r*r,k})}o.today=T0.k;o.t0=d[T0.a].t;return o}
+function gtcHm(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
+function gtcDraw(ctx,ind,g){const o=ind.out;if(!o||!o.marks.length)return;const {X,Y,i0,i1,plotW,mainH}=g,d=this.data,n=d.length;
+  const dayStart=d.findIndex(b=>istDay(b.t)===o.today);if(dayStart<0)return;const bs=n>1?(d[n-1].t-d[n-2].t):60000;
+  const xOf=m=>{const t=o.t0+(m-555)*60000;let i=dayStart;while(i<n-1&&d[i+1].t<=t)i++;return d[i].t<=t&&i<n-1?X(i+(t-d[i].t)/bs):X(n-1+(t-d[n-1].t)/bs)};
+  ctx.save();ctx.setLineDash([4,4]);ctx.font='600 10px Inter, sans-serif';ctx.textAlign='center';
+  for(const k of o.marks){const x=xOf(k.m);if(x<0||x>plotW)continue;const col=k.sc>=3?'#f5b942':k.sc===2?'#22c55e':'rgba(148,163,184,.55)';ctx.strokeStyle=col;ctx.lineWidth=k.sc>=3?1.6:1;ctx.beginPath();ctx.moveTo(x,24);ctx.lineTo(x,mainH-4);ctx.stroke();
+    if(k.sc>=2){ctx.fillStyle=col;ctx.fillText(gtcHm(k.m),x,18)}}
+  ctx.setLineDash([2,4]);ctx.lineWidth=1;ctx.textAlign='left';const lastC=d[n-1].c;
+  for(const l of o.lv){const y=Y(l.v);if(y<20||y>mainH-4)continue;ctx.strokeStyle=l.v<lastC?'rgba(34,197,94,.45)':'rgba(239,68,68,.45)';ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(plotW,y);ctx.stroke();ctx.fillStyle=ctx.strokeStyle;ctx.fillText(Math.abs(l.k)*45+'°',4,y-6)}
+  ctx.restore()}
+function rztMB(d){const c=C(d),n=d.length,e9=ema(c,9),e21=ema(c,21),r=rsi(c,14),ax=adx(d,14).adx,out=new Array(n).fill(0);
+  for(let i=0;i<n;i++){let s=0;if(isFinite(e9[i])&&isFinite(e21[i]))s+=e9[i]>e21[i]?1:-1;if(isFinite(r[i]))s+=r[i]>55?1:r[i]<45?-1:0;const st=isFinite(ax[i])&&ax[i]>20;out[i]=s>=2?(st?2:1):s<=-2?(st?-2:-1):s===1?1:s===-1?-1:0}return out}
+function rztCalc(d,p){const n=d.length,c=C(d),a=atr(d,p.len),mb=rztMB(d),tr=NA(n),sig=new Array(n).fill(0),lvl=NA(n),dir=new Array(n).fill(0);
+  for(let i=1;i<n;i++){const L=p.mult*(a[i]||0),pt=isFinite(tr[i-1])?tr[i-1]:c[i]-L;
+    tr[i]=c[i]>pt&&c[i-1]>pt?Math.max(pt,c[i]-L):c[i]<pt&&c[i-1]<pt?Math.min(pt,c[i]+L):c[i]>pt?c[i]-L:c[i]+L;
+    let dd=dir[i-1];if(c[i-1]<=pt&&c[i]>tr[i])dd=1;else if(c[i-1]>=pt&&c[i]<tr[i])dd=-1;dir[i]=dd;
+    if(dd!==dir[i-1]&&i>p.len){const ok=!p.flt||(dd>0?mb[i]>-2:mb[i]<2);   /* skip a flip only when momentum is STRONGLY the other way */if(ok)sig[i]=dd}
+    lvl[i]=sig[i]>0?d[i].l:sig[i]<0?d[i].h:lvl[i-1]}
+  // zones from the last confirmed swing high / low
+  const k=p.sw;let ph=-1,pl=-1;for(let j=n-1-k;j>=k&&(ph<0||pl<0);j--){let H=true,Lw=true;for(let x=j-k;x<=j+k;x++){if(d[x].h>d[j].h)H=false;if(d[x].l<d[j].l)Lw=false}if(H&&ph<0)ph=j;if(Lw&&pl<0)pl=j}
+  const z={};if(ph>=0){const A=a[ph]||a[n-1]||0,H=d[ph].h;z.r1=[H-.6*A,H,ph];z.r2=[H,H+1.2*A,ph]}if(pl>=0){const A=a[pl]||a[n-1]||0,Lw=d[pl].l;z.s1=[Lw,Lw+.6*A,pl];z.s2=[Lw-1.2*A,Lw,pl]}
+  const sd=[];for(let i=0;i<n;i++)sd.push(sig[i]>0?1:sig[i]<0?-1:dir[i]>0?.5:dir[i]<0?-.5:0);
+  return{sig,lvl,z,trend:sd}}
+function rztDraw(ctx,ind,g){const o=ind.out,{X,Y,i0,i1,plotW}=g;
+  const box=(zz,col,lab)=>{if(!zz)return;const[lo,hi,from]=zz;const x0=Math.max(0,X(Math.max(from,i0))),y0=Y(hi),y1=Y(lo);if(!isFinite(y0)||!isFinite(y1))return;ctx.fillStyle=col;ctx.fillRect(x0,y0,plotW-x0,Math.max(2,y1-y0));
+    ctx.fillStyle=T.text2;ctx.font='600 10px Inter, sans-serif';ctx.textAlign='left';ctx.fillText(lab,x0+4,lab.includes('ZONE-2')?(lab.includes('RESIST')?y0+7:y1-7):(lab.includes('RESIST')?y1-7:y0+7));ctx.font=FONT};
+  box(o.z.r2,'rgba(239,68,68,.16)','ZONE-2 RESISTANCE');box(o.z.r1,'rgba(34,197,94,.22)','ZONE-1 RESISTANCE');box(o.z.s1,'rgba(34,197,94,.22)','ZONE-1 SUPPORT');box(o.z.s2,'rgba(239,68,68,.16)','ZONE-2 SUPPORT');
+  ctx.lineWidth=2;for(let i=Math.max(1,i0);i<=i1;i++){const v=o.lvl[i];if(!isFinite(v))continue;let s=i;while(s>0&&o.sig[s]===0)s--;const col=o.sig[s]>0?T.up:T.down;
+    const pv=o.lvl[i-1];ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(X(i-1),Y(o.sig[i]!==0?v:(isFinite(pv)?pv:v)));ctx.lineTo(X(i),Y(v));ctx.stroke()}ctx.lineWidth=1}
+function rztLabels(ctx,ind,g){const o=ind.out,{X,Y,i0,i1}=g;ctx.font='700 11px Inter, sans-serif';ctx.textAlign='center';
+  for(let i=i0;i<=i1;i++){const s=o.sig[i];if(!s)continue;const b=this.data[i],x=X(i),up=s>0,y=up?Y(b.l)+16:Y(b.h)-16;
+    ctx.fillStyle=up?T.up:T.down;roundRect(ctx,x-9,y-9,18,18,4);ctx.fill();ctx.fillStyle='#fff';ctx.fillText(up?'B':'S',x,y+.5)}ctx.font=FONT}
+function rztPane(ctx,ind,g){const m=ind.out.mb,{X,i0,i1,bw,top,h}=g,w=Math.max(1,Math.ceil(bw));
+  const col={2:'#16a34a',1:'#86efac','0':'#6b7280','-1':'#fca5a5','-2':'#dc2626'};for(let i=i0;i<=i1;i++){ctx.fillStyle=col[m[i]]||'#6b7280';ctx.fillRect(Math.round(X(i)-w/2),top+18,w,h-22)}}
 const CATS=['Trend','Momentum','Volatility','Volume','Rajan'];
 const TEMPLATES=[
  {n:'Trend following',d:'EMA 9 · EMA 21 · MACD',ind:[['vol'],['ema',{len:9}],['ema',{len:21}],['macd']]},
@@ -2052,9 +2106,11 @@ class Chart{
     for(const ind of this.ind){const d=DEFS[ind.key];if(d.pane!=='main'||ind.hidden||!ind.out)continue;
       if(d.fill)this.fillBand(ind.out[d.fill[0]],ind.out[d.fill[1]],i0,i1,Y,alpha(this.color(ind,0),.07));
       d.lines.forEach((ln,j)=>{const col=this.color(ind,j);if(ln.style==='dots'){ctx.fillStyle=col;const r=Math.max(1.3,Math.min(2.6,bw*.18));for(let i=i0;i<=i1;i++){const v=ind.out[ln.k][i];if(isFinite(v)){ctx.beginPath();ctx.arc(X(i),Y(v),r,0,7);ctx.fill()}}}
-        else this.path(ind.out[ln.k],i0,i1,Y,col,d.fill&&ln.k==='mid'?1:1.5,d.fill&&ln.k==='mid'?[4,3]:null)})}
+        else this.path(ind.out[ln.k],i0,i1,Y,col,d.fill&&ln.k==='mid'?1:1.5,d.fill&&ln.k==='mid'?[4,3]:null)});
+      if(d.draw)try{d.draw.call(this,ctx,ind,{X,Y,i0,i1,bw,plotW,mainH,after:false})}catch(e){}}
     // price
     this.drawPrice(bars,i0,i1,Y);
+    for(const ind of this.ind){const d=DEFS[ind.key];if(d.pane==='main'&&!ind.hidden&&ind.out&&d.drawTop)try{d.drawTop.call(this,ctx,ind,{X,Y,i0,i1,bw,plotW,mainH})}catch(e){}}   /* labels above the candles */
     // drawings
     if(!this.hideDraw)[...this.drawings,...(this.pending?[this.pending]:[])].forEach((d,k)=>this.drawShape(d,k===this.sel,Y,plotW));
     // order/alert lines
@@ -2069,6 +2125,7 @@ class Chart{
       ctx.save();ctx.beginPath();ctx.rect(0,p.y+1,plotW,p.h-1);ctx.clip();
       if(d.bands?.length===2){const y1=p.Y(d.bands[1]),y2=p.Y(d.bands[0]);ctx.fillStyle=alpha(T.brand,.06);ctx.fillRect(0,y1,plotW,y2-y1)}
       ctx.strokeStyle=T.text3;ctx.setLineDash([3,3]);ctx.beginPath();for(const v of [...(d.bands||[]),...(d.zero?[0]:[])]){const y=Math.round(p.Y(v))+.5;ctx.moveTo(0,y);ctx.lineTo(plotW,y)}ctx.stroke();ctx.setLineDash([]);
+      if(!p.ind.hidden&&p.ind.out&&d.drawPane)try{d.drawPane.call(this,ctx,p.ind,{X,i0,i1,bw,plotW,top:p.y+1,h:p.h-1})}catch(e){}
       if(!p.ind.hidden&&p.ind.out)d.lines.forEach((ln,j)=>{const arr=p.ind.out[ln.k];
         if(ln.style==='hist'){const bwb=Math.max(1,Math.floor(bw*0.65)),y0=p.Y(0);for(let i=i0;i<=i1;i++){const v=arr[i];if(!isFinite(v))continue;const pv=arr[i-1],rising=v>pv;ctx.fillStyle=alpha(v>=0?T.up:T.down,(v>=0)===rising?.75:.35);const y=p.Y(v);ctx.fillRect(Math.round(X(i))-Math.floor(bwb/2),Math.min(y,y0),bwb,Math.max(1,Math.abs(y-y0)))}}
         else this.path(arr,i0,i1,p.Y,this.color(p.ind,j),1.5)});
@@ -2688,7 +2745,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
   const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
   const last=mc.index_last.available?mc.index_last.value:null,prev=mc.index_prev_close.available?mc.index_prev_close.value:null,ch=last&&prev?last/prev-1:null;
   const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};
-  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['cycle','Time cycle'],['watch','Watchlist']];
+  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];
   el.innerHTML=`<div class="page vx">
    <div class="vx-hero">
     <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · ${esc(h.symbol_name)}</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
