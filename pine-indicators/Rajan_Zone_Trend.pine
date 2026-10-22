@@ -1,0 +1,86 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Rajan — Rajan Zone Trend
+// B / S on an ATR trailing-stop flip, a stop line at the signal candle, Zone-1 / Zone-2 support & resistance from the last
+// swing high / low, and a momentum colour strip (EMA 9/21 + RSI 14 + ADX 14). Same logic as the website's "Rajan Zone Trend".
+//@version=6
+indicator("Rajan Zone Trend", shorttitle="RAJAN Zone Trend", overlay=true, max_labels_count=500, max_boxes_count=50, max_lines_count=100)
+
+// ═════════════════ Settings ═════════════════
+grpS   = "① Signal"
+atrLen = input.int(10, "ATR length", minval=2, group=grpS)
+mult   = input.float(2.0, "ATR multiplier", minval=0.5, step=0.1, group=grpS, tooltip="Higher = fewer, slower flips.")
+useFlt = input.bool(false, "Skip flips against STRONG momentum", group=grpS)
+grpZ   = "② Zones"
+swing  = input.int(5, "Swing bars each side", minval=2, group=grpZ)
+z1Mul  = input.float(0.6, "Zone-1 width × ATR", minval=0.1, step=0.1, group=grpZ)
+z2Mul  = input.float(1.2, "Zone-2 width × ATR", minval=0.1, step=0.1, group=grpZ)
+grpD   = "③ Display"
+showMB = input.bool(true, "Momentum strip at the bottom", group=grpD)
+showLn = input.bool(true, "Signal stop line", group=grpD)
+
+cBull  = #26a69a
+cBear  = #ef5350
+cMuted = #8b98a9
+
+// ═════════════════ Momentum bar (MB) ═════════════════
+e9    = ta.ema(close, 9)
+e21   = ta.ema(close, 21)
+r14   = ta.rsi(close, 14)
+[dp, dm, adx] = ta.dmi(14, 14)
+mbS   = (e9 > e21 ? 1 : -1) + (r14 > 55 ? 1 : r14 < 45 ? -1 : 0)
+mb    = mbS >= 2 ? (adx > 20 ? 2 : 1) : mbS <= -2 ? (adx > 20 ? -2 : -1) : mbS
+mbCol = mb == 2 ? #16a34a : mb == 1 ? #86efac : mb == -1 ? #fca5a5 : mb == -2 ? #dc2626 : #6b7280
+plotshape(showMB, "Momentum", shape.square, location.bottom, mbCol, size=size.tiny)
+
+// ═════════════════ ATR trailing stop → B / S ═════════════════
+a     = ta.atr(atrLen)
+loss  = mult * a
+var float trail = na
+prevT = nz(trail[1], close - loss)
+trail := close > prevT and close[1] > prevT ? math.max(prevT, close - loss) : close < prevT and close[1] < prevT ? math.min(prevT, close + loss) : close > prevT ? close - loss : close + loss
+var int dir = 0
+newDir = close[1] <= prevT and close > trail ? 1 : close[1] >= prevT and close < trail ? -1 : dir
+flip   = newDir != dir and bar_index > atrLen
+okB    = not useFlt or mb > -2
+okS    = not useFlt or mb < 2
+buy    = flip and newDir == 1 and okB and barstate.isconfirmed
+sell   = flip and newDir == -1 and okS and barstate.isconfirmed
+dir   := newDir
+
+var float lvl = na
+if buy
+    lvl := low
+if sell
+    lvl := high
+var int side = 0
+side := buy ? 1 : sell ? -1 : side
+plot(showLn ? lvl : na, "Signal stop line", side == 1 ? cBull : cBear, 2, plot.style_stepline)
+plotshape(buy, "B", shape.labelup, location.belowbar, cBull, text="B", textcolor=color.white, size=size.small)
+plotshape(sell, "S", shape.labeldown, location.abovebar, cBear, text="S", textcolor=color.white, size=size.small)
+
+// ═════════════════ Zone-1 / Zone-2 from the last swing high / low ═════════════════
+ph = ta.pivothigh(high, swing, swing)
+pl = ta.pivotlow(low, swing, swing)
+var box r1 = na
+var box r2 = na
+var box s1 = na
+var box s2 = na
+mk(box b, int x0, float top, float bot, color c, string t) =>
+    box.delete(b)
+    box.new(x0, top, bar_index + 20, bot, border_color=color.new(c, 60), bgcolor=color.new(c, 82), text=t, text_size=size.tiny, text_color=cMuted, text_halign=text.align_left, extend=extend.right)
+if not na(ph)
+    aa = a[swing]
+    r1 := mk(r1, bar_index - swing, ph, ph - z1Mul * aa, cBull, "ZONE-1 RESISTANCE")
+    r2 := mk(r2, bar_index - swing, ph + z2Mul * aa, ph, cBear, "ZONE-2 RESISTANCE")
+if not na(pl)
+    aa = a[swing]
+    s1 := mk(s1, bar_index - swing, pl + z1Mul * aa, pl, cBull, "ZONE-1 SUPPORT")
+    s2 := mk(s2, bar_index - swing, pl, pl - z2Mul * aa, cBear, "ZONE-2 SUPPORT")
+
+// ═════════════════ Alerts ═════════════════
+alertcondition(buy, "B - trend up", "RAJAN Zone Trend B on {{ticker}} at {{close}}")
+alertcondition(sell, "S - trend down", "RAJAN Zone Trend S on {{ticker}} at {{close}}")
+if buy
+    alert("RAJAN Zone Trend ▲ B " + syminfo.ticker + " @ " + str.tostring(close, format.mintick) + " | stop line " + str.tostring(low, format.mintick), alert.freq_once_per_bar_close)
+if sell
+    alert("RAJAN Zone Trend ▼ S " + syminfo.ticker + " @ " + str.tostring(close, format.mintick) + " | stop line " + str.tostring(high, format.mintick), alert.freq_once_per_bar_close)
