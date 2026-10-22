@@ -63,19 +63,23 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   async function syncAuto(force) {
     if (AUTO.busy || (!force && Date.now() - AUTO.ts < 60000)) return;
     AUTO.busy = true;
+    const stBefore = JSON.stringify([AUTO.srv || null, !!AUTO.err]);
     try {
       const r = await fetch('/api/auto/status', { cache: 'no-store' });
       if (r.ok) {
         const a = await r.json();
         const before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType]));
         AUTO.list = (a.open || []).concat(a.closed || []).map(mapAuto);
+        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0 }; AUTO.err = false;
         AUTO.ts = Date.now();
         if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
             ['portfolio', 'positions', 'algo'].includes(effTab())) render();          // a new / closed trade: redraw; prices alone update in place
       }
-    } catch (e) { /* offline: keep what we have */ }
+      else AUTO.err = true;
+    } catch (e) { AUTO.err = true; /* offline: keep what we have */ }
     AUTO.ts = Date.now();                   // also after a failure: the next try waits its turn
     AUTO.busy = false;
+    if (JSON.stringify([AUTO.srv || null, !!AUTO.err]) !== stBefore && effTab() === 'algo' && document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render();   // Algo status changed
   }
   /* Trade-screen paper positions (buys AND sells / option writing) and their closed fills, mirrored read-only */
   const EXIT_SRC = { TP: 'T2', SL: 'SL', TSL: 'TSL', manual: 'Manual Exit' };
@@ -1124,9 +1128,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'csvsum') exportSummary();
     else if (a === 'runlab') runLab();
     else if (a === 'btrun') { fetch('/api/backtest/run', { method: 'POST' }).then(() => { SV.btBusy = true; SV.bt = null; render(); }); }
-    else if (a === 'autotoggle') { const on = !(SV.auto && SV.auto.cfg.enabled); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: on }) }).then(() => loadSrv('auto')); }
+    else if (a === 'autotoggle') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.enabled : (AUTO.srv ? AUTO.srv.enabled : null); if (cur == null) return;
+      fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
-    else if (a === 'autorefresh') { loadSrv('auto'); }
+    else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
     else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
     else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
     else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
@@ -1486,17 +1491,23 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      
      // Backtest data
      const bt = typeof SV !== 'undefined' && SV.bt ? SV.bt : null;
+     // status comes from the server (switched on? market open?), not from whether this phone has loaded the list yet
+     const srv = AUTO.srv;
+     if (!srv && !AUTO.busy) setTimeout(() => syncAuto(true), 0);
+     const stTxt = !srv ? (AUTO.err ? 'Server not reachable · retrying' : 'Loading…')
+       : !srv.enabled ? 'Paused' : srv.marketOpen ? `Running · ${srv.todayCount} trades today` : 'On · market closed';
+     const stCls = !srv ? '' : !srv.enabled ? 'down' : srv.marketOpen ? 'up' : '';
      
      return `<div class="jv-grid">
        <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
          <div class="jv-list">
-           <div><span>Status</span><b>${auto.length ? 'Active' : 'Idle'}</b></div>
+           <div><span>Status</span><b class="${stCls}">${stTxt}</b></div>
            <div><span>Open Auto Trades</span><b>${openAuto.length}</b></div>
            <div><span>Closed Today</span><b>${closedAuto.filter(t => t.date === today()).length}</b></div>
            <div><span>Total Auto P&L</span><b class="${cc(auto.reduce((s, t) => s + (calc(t).net || 0), 0))}">${sinr(auto.reduce((s, t) => s + (calc(t).net || 0), 0))}</b></div>
          </div>
          <div class="jv-actions">
-           <button class="btn pri" data-jv="autotoggle">${auto.length ? 'Stop Auto' : 'Start Auto'}</button>
+           ${srv ? `<button class="btn ${srv.enabled ? '' : 'pri'}" data-jv="autotoggle">${srv.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>` : ''}
            <button class="btn" data-jv="autorefresh">Refresh</button>
          </div>
        </div>
