@@ -11,7 +11,7 @@ Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
     or when the plan's stop is more than 12% away.
 Exits:
   * stop, or Target 2; when Target 1 is reached the stop moves to the entry (breakeven).
-  * intraday: square off at 15:15. swing: after 15 sessions. positional: after 40 sessions.
+  * intraday: at 15:15 a BUY still far from its stop (>= 0.5R, no SL/target hit) is carried as swing; the rest square off. swing: after 15 sessions. positional: after 40 sessions.
   * costs 0.1% of the turnover (both legs).
 State is kept in Upstash (same store as the option auto trader). It runs after every option auto-trader cycle and whenever its
 status is read in market hours, so no separate scheduler is needed.
@@ -118,6 +118,21 @@ def _sessions_between(a, b):
     return n
 
 
+CARRY_MIN_R = 0.5      # 15:15: an intraday BUY at least half its original risk away from the stop is carried as a swing trade
+
+
+def _carry_ok(st, t, px, d):
+    """Carry at 15:15 only a BUY (cash shorts cannot be held overnight) that is still far from its stop (>= 0.5 of the original
+    risk), has not reached its target, and whose full delivery value fits in the free cash."""
+    if d < 0 or t.get("carried"):
+        return False
+    r0 = abs(t["entry"] - t.get("stop0", t["stop"]))
+    if r0 <= 0 or d * (px - t["stop"]) < CARRY_MIN_R * r0:
+        return False
+    extra = t["entry"] * t["qty"] * (1 - CFG["marginPct"] / 100)          # intraday margin -> full delivery value
+    return _cash(st)[0] >= extra
+
+
 def _blocked(t):
     full = t["side"] == "BUY" and t["hz"] != "intraday"
     return t["entry"] * t["qty"] * (1 if full else CFG["marginPct"] / 100)
@@ -185,7 +200,12 @@ def manage(st, now):
         elif d * (px - t["t2"]) >= 0:
             why = "TARGET"
         elif t["hz"] == "intraday" and (t["date"] < today or _mins(now) >= _hm(CFG["squareOff"])):
-            why = "SQUARE-OFF"
+            if _carry_ok(st, t, px, d):
+                t.update(hz="swing", carried=today, carriedFrom="intraday")    # held overnight; swing time limit counts from the entry date
+                st["log"].append({"at": now.isoformat(), "msg": f"CARRY {t['sym']} intraday -> swing at {px:.2f} "
+                                                               f"(stop {t['stop']}, T2 {t['t2']} not hit, far from stop)"})
+            else:
+                why = "SQUARE-OFF"
         elif t["hz"] in CFG["maxSessions"] and _sessions_between(t["date"], today) >= CFG["maxSessions"][t["hz"]]:
             why = "TIME"
         if why:
