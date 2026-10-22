@@ -122,6 +122,7 @@ def _resync(src, dst):
     try:
         a, b2 = _pipe_to(src, [["GET", k] for k in STATE_KEYS]), _pipe_to(dst, [["GET", k] for k in STATE_KEYS])
         if any(x.get("error") for x in a) or any(y.get("error") for y in b2):
+            _FO["resyncErr"] = "read: " + str([x.get("error") for x in a + b2 if x.get("error")])[:200]
             return False                             # never write over data we could not read
         cmds = []
         for k, x, y in zip(STATE_KEYS, a, b2):
@@ -134,9 +135,13 @@ def _resync(src, dst):
         if cmds:
             r = _pipe_to(dst, cmds)
             if any(x.get("error") for x in r):
+                _FO["resyncErr"] = "write: " + str([x.get("error") for x in r if x.get("error")])[:200] + \
+                    " sizes " + str({c[1]: len(c[2]) for c in cmds})
                 return False
+        _FO["resyncErr"] = None
         return True
-    except Exception:
+    except Exception as e:
+        _FO["resyncErr"] = "exception: " + str(e)[:200]
         return False
 
 
@@ -157,12 +162,13 @@ def _flag_check(p, b):
         return
     try:
         r = _pipe_to(p, [["PING"]], 3.0)
+        _FO["primaryPing"] = str(r[0].get("result") or r[0].get("error"))[:160] if r else None
         if not _refused(r) and r and r[0].get("result") == "PONG" and _resync(b, p):
             _pipe_to(b, [["DEL", FO_FLAG]], 3.0)
             print("[kv] primary is back - merged the backup's saved state into it")
             return
-    except Exception:
-        pass
+    except Exception as e:
+        _FO["primaryPing"] = "exception: " + str(e)[:160]
     _FO.update(on=True, until=time.time() + 600, since=_FO["since"] or time.time(), why="primary still refusing (flag)")
 
 
@@ -213,6 +219,7 @@ def kv(cmds, timeout=6.0):
 
 def kv_status():
     return {"active": "backup" if _FO["on"] else "primary", "backupConfigured": bool(_backup_creds()),
+            "switchBackError": _FO.get("resyncErr"), "primaryPing": _FO.get("primaryPing"),
             "since": _FO["since"], "why": _FO["why"], "backupSetup": _backup_setup(),
             "commandsThisInstance": {"total": _CMDS["total"], "minutes": round((time.time() - _CMDS["since"]) / 60),
                                      "top": dict(sorted(_CMDS["by"].items(), key=lambda x: -x[1])[:12])}}
