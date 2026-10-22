@@ -1461,19 +1461,17 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
    function booksCard() {
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
      const day = today(), L = liveTotals(day), c = capUse(), ds = dayStats(day), oToday = ds.pnl + L.autoToday + L.unr;
-     const oCap = S.capital, sCap = d ? d.capital : 1000000, tile = (cls, title, sub, eq, cap, lines) => `<div class="jv-book ${cls}"><div class="jv-bt"><b>${title}</b><small class="muted">${sub}</small></div>
-       <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div><div class="jv-bl">${lines}</div></div>`;
-     const kv = (k, v, cl) => `<div><small>${k}</small><b class="${cl || ''}">${v}</b></div>`;
+     const sCap = d ? d.capital : 1000000;
+     // compact: name, equity (+change), then just Open and Booked - two cards per row on phones
+     const tile = (cls, title, eq, cap, open, booked) => `<div class="jv-book ${cls}"><b class="jv-bt">${title}</b>
+       <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div>
+       <div class="jv-bl"><div><small>Open</small><b class="${open == null ? '' : cc(open)}">${open == null ? '…' : sinr(open)}</b></div><div><small>Booked</small><b class="${booked == null ? '' : cc(booked)}">${booked == null ? '…' : sinr(booked)}</b></div></div></div>`;
      const B = c.buy, Sx = c.sell;
-     const ob = tile('', 'Options · Buy book', 'bought options (CE / PE buys) · ₹10 L', B.eq, B.cap,
-       kv('Booked', sinr(B.booked), cc(B.booked)) + kv('Open P&L', sinr(B.unr), cc(B.unr)) + kv('In use', inr(B.used, 0)) + kv('Free', inr(B.free, 0), 'up'));
-     const os = tile('', 'Options · Sell book', 'sold / written options (premium + margin) · ₹10 L', Sx.eq, Sx.cap,
-       kv('Booked', sinr(Sx.booked), cc(Sx.booked)) + kv('Open P&L', sinr(Sx.unr), cc(Sx.unr)) + kv('Margin in use', inr(Sx.used, 0)) + kv('Free', inr(Sx.free, 0), 'up'));
-     const st = tile('', 'Stock trader', 'intraday · swing · positional · ₹10 L', d ? d.equity : null, sCap,
-       d ? kv('Open P&L', sinr(d.unrealised), cc(d.unrealised)) + kv('In use', inr(d.used, 0)) + kv('Free', inr(d.cash, 0), 'up') + kv('Closed', `${d.all.closed}${d.all.winRate == null ? '' : ' · ' + d.all.winRate + '% won'}`) : kv('', 'loading…'));
-     const tEq = d ? B.eq + Sx.eq + d.equity : null;
-     const tot = tile('jv-btot', 'Total', '₹30 L paper capital', tEq, B.cap + Sx.cap + sCap,
-       kv('Today (options)', sinr(oToday), cc(oToday)) + (d ? kv('In use', inr(B.used + Sx.used + d.used, 0)) + kv('Free', inr(B.free + Sx.free + d.cash, 0), 'up') : '') + kv('Max used today', c.peak > 0 ? `${inr(c.peak, 0)} <small class="muted">${E(c.peakAt)}</small>` : '—'));
+     const ob = tile('', 'Options Buy', B.eq, B.cap, B.unr, B.booked);
+     const os = tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked);
+     const st = tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null);
+     const tot = tile('jv-btot', 'Total', d ? B.eq + Sx.eq + d.equity : null, B.cap + Sx.cap + sCap,
+       d ? B.unr + Sx.unr + d.unrealised : null, d ? B.booked + Sx.booked + d.booked : null);
      return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the options book to ₹10 L">Reset options book</button></div></div>
        <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
@@ -1610,11 +1608,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-capbar{height:6px;border-radius:3px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden;margin-top:4px}.jv-capbar i{display:block;height:100%;border-radius:3px;background:var(--up,#22ab94)}.jv-capbar i.warn{background:#f59e0b}.jv-capbar i.down{background:var(--down,#f7525f)}.jv-capbar i.mute{background:#8b5cf6}
   @media(max-width:640px){.jv-capg{grid-template-columns:1fr}}
   .jv-sec{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin:14px 2px 6px}
-  .jv-books{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:4px 12px 12px}.jv-book{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
-  .jv-book.jv-btot{background:var(--panel-2,rgba(255,255,255,.04))}.jv-bt{display:flex;flex-direction:column;gap:1px}.jv-bt small{font-size:11px}
-  .jv-beq{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0}.jv-beq span{font-size:20px;font-weight:800}.jv-beq em{font-style:normal;font-weight:700;font-size:13px}
-  .jv-bl{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}.jv-bl small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}.jv-bl b{font-size:13px}
-  @media(max-width:1100px){.jv-books{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.jv-books{grid-template-columns:1fr}}
+  .jv-books{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:2px 12px 12px}.jv-book{border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+  .jv-book.jv-btot{background:var(--panel-2,rgba(255,255,255,.04))}.jv-bt{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .jv-beq{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:3px 0 5px}.jv-beq span{font-size:15px;font-weight:800}.jv-beq em{font-style:normal;font-weight:700;font-size:11.5px}
+  .jv-bl{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}.jv-bl small{display:block;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}.jv-bl b{font-size:12px;white-space:nowrap}
+  @media(max-width:1100px){.jv-books{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .jv-tot td{border-top:2px solid var(--line)}.jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
