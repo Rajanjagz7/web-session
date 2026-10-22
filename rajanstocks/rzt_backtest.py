@@ -177,7 +177,7 @@ def run():
     return A
 
 
-if __name__ == "__main__":
+def _main():
     t0 = time.time()
     A = run()
     rows = []
@@ -194,3 +194,13 @@ if __name__ == "__main__":
     for r in rows[:10]:
         print(r["tf"], r["atrLen"], r["mult"], r["filter"], r["all"], "| older", r["older"].get("pf"), "| recent", r["recent"].get("pf"))
     print(f"{time.time() - t0:.0f}s")
+
+
+if __name__ == "__main__":
+    try:
+        _main()
+    except Exception:
+        import traceback
+        for ln in traceback.format_exc().splitlines()[-12:]:
+            print("::error::" + ln.replace("%", "%25"), flush=True)
+        raise
