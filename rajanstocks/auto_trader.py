@@ -357,7 +357,7 @@ def choose(cands, st, today):
     taken_today = [t for t in st["trades"] if t["date"] == today]
     have_idx = sum(1 for t in taken_today if t["kind"] == "index")
     have_stk = sum(1 for t in taken_today if t["kind"] == "stock")
-    open_syms = {t["sym"] for t in st["trades"] if t["status"] == "OPEN"}
+    open_syms = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t["date"] == today}   # one entry per symbol a day: no re-entry after a stop
     by_sym = {}
     for c in cands:
         by_sym.setdefault(c["sym"], []).append(c)
@@ -465,6 +465,8 @@ def open_trade(st, c, today):
     stop_u = entry_u - d * risk_u
     target_u = entry_u + d * backtest.TARGET_R * risk_u if variant == "fixed" else None
     budget = _equity(st) * cfg["riskPct"] / 100
+    if WRITE_PAIR:
+        budget /= 2                                          # the paired sell takes the other half of the risk budget
     per_lot = ct["lot"] * 0.5 * risk_u
     lots = max(1, int(budget // per_lot)) if per_lot > 0 else 1
     max_out = _equity(st) * 0.2
@@ -514,6 +516,11 @@ def _open_short(st, c, today, main):
     lots = main["lots"]
     while lots > 1 and lots * ct["lot"] * margin_u > _equity(st) * 0.2:
         lots -= 1
+    half = _equity(st) * cfg["riskPct"] / 100 / 2              # this leg's half of the per-trade risk budget
+    while lots > 1 and lots * ct["lot"] * rp > half:
+        lots -= 1
+    if lots * ct["lot"] * rp > half:                            # even 1 lot risks more: tighten the premium stop to fit
+        rp = round(max(0.05, half / (lots * ct["lot"])), 2)
     qty = lots * ct["lot"]
     t = dict(main)
     t.update({"id": main["id"] + "-W", "pos": "short", "pairOf": main["id"], "opt": "PE" if c["side"] == "BUY" else "CE",
@@ -609,6 +616,7 @@ def manage(st, now):
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if t.get("premSL") and (exit_px >= t["premSL"] if short else exit_px <= t["premSL"]):
             why = "TSL" if t.get("lock") else "STOP"   # option premium stop (30% cap) - catches time decay too
+            exit_px = float(t["premSL"])               # filled at the stop (a stop order), not at the price seen minutes later
         elif d * (und_px - t["stopU"]) <= 0:
             why = "TSL" if (tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) else "STOP"
         elif t.get("targetU") is not None and d * (und_px - t["targetU"]) >= 0:
@@ -628,7 +636,8 @@ LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 1500.0, 2000.0, 0.5
 
 def _profit_lock(t, px):
     """Auto profit lock on the option premium: at Rs 1,500 open profit the premium stop moves to entry + charges
-    (breakeven); from Rs 2,000 it trails, keeping 50% of the best profit seen. Only ever tightens."""
+    (breakeven); from Rs 2,000 it trails, keeping 50% of the best profit seen (60% from Rs 4,000, 70% from Rs 6,000).
+    Only ever tightens."""
     qty = (t.get("lots") or 0) * (t.get("lot") or 0)
     if not (px and px > 0 and qty > 0):
         return
@@ -639,7 +648,7 @@ def _profit_lock(t, px):
     if best < LOCK_BE:
         return
     fee_u = 80.0 / qty                                  # ~ two option legs of brokerage + taxes per lot set
-    keep = LOCK_KEEP * best if best >= LOCK_TRAIL else 0.0
+    keep = (0.7 if best >= 6000 else 0.6 if best >= 4000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0   # keep 50% from 2k, 60% from 4k, 70% from 6k
     stop = round(t["entry"] + sgn * (fee_u + keep / qty), 2)
     cur = float(t.get("premSL") or 0)
     if (stop > cur) if sgn > 0 else (cur <= 0 or stop < cur):     # only ever tightens (down for a sold option)
