@@ -961,9 +961,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   async function loadSrv(which) {
     try {
       if (which === 'auto') SV.auto = await jget('/api/auto/status');
+      else if (which === 'btc') { SV.btc = await jget('/api/backtest/custom'); SV.btcBusy = !!SV.btc.running; if (SV.btcBusy) setTimeout(() => { if (effTab() === 'algo' && !document.hidden) loadSrv('btc'); }, 5000); }
       else { const b = await jget('/api/backtest'); SV.bt = b; SV.btBusy = !!b.running; }
-    } catch (e) { if (which === 'auto') SV.auto = { error: String(e.message || e) }; else SV.bt = { error: String(e.message || e) }; }
-    const eff = effTab(); if (eff === which || (which === 'bt' && (eff === 'backtest' || eff === 'algo' || eff === 'portfolio'))) render();
+    } catch (e) { if (which === 'auto') SV.auto = { error: String(e.message || e) }; else if (which === 'btc') SV.btc = { error: String(e.message || e) }; else SV.bt = { error: String(e.message || e) }; }
+    const eff = effTab(); if (eff === which || (which === 'bt' && (eff === 'backtest' || eff === 'algo' || eff === 'portfolio')) || (which === 'btc' && eff === 'algo')) render();
   }
   const cfgName = r => r.variant === 'fixed' ? '1.5 ATR stop · 2R target' : r.variant === 'trail' ? '2 ATR trailing stop' : '2 ATR stop · exit on opposite signal';
   const KEYNAME = k => { try { const m = (typeof ST !== 'undefined' && ST.meta) ? ST.meta.strategies.find(x => x.key === k) : null; return m ? m.name : k; } catch (e) { return k; } };
@@ -1157,6 +1158,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
     else if (a === 'vedrefresh') { syncVedic(true); }
     else if (a === 'exitf') { AUTO.exitFilter = b.dataset.k || ''; render(); }
+    else if (a === 'btreset') { SV.bt = null; fetch('/api/backtest/reset', { method: 'POST' }).then(() => loadSrv('bt')); }
+    else if (a === 'btcsel') { SV.btcSel = SV.btcSel || new Set(); const k = b.dataset.k; if (SV.btcSel.has(k)) SV.btcSel.delete(k); else SV.btcSel.add(k); render(); }
+    else if (a === 'btcnone') { SV.btcSel = new Set(); render(); }
+    else if (a === 'btrunf') { SV.btc = null; SV.btcBusy = true; fetch('/api/backtest/run?only=' + encodeURIComponent([...(SV.btcSel || [])].join(',')), { method: 'POST' }).then(() => loadSrv('btc')); }
     else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
     else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
     else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
@@ -1481,7 +1486,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th class="num">Open</th><th class="num">Closed</th><th class="num">Win %</th><th class="num">PF</th><th class="num">Booked</th><th class="num">Open P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>
        ${d.open.length ? `<h4 class="jv-sbh">Open (${d.open.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">LTP</th><th class="num">SL</th><th class="num">T1 · T2</th><th class="num">P&amp;L</th><th></th></tr></thead><tbody>${open}</tbody></table></div>${po.bar}` : '<div class="empty">No open stock trades. New ones are taken 09:20-14:30 (intraday until 13:30) from the Picks plans.</div>'}
        ${closed ? `<h4 class="jv-sbh">Closed (${d.closed.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">Exit</th><th>Why</th><th class="num">Net</th><th>Date</th></tr></thead><tbody>${closed}</tbody></table></div>${pc.bar}` : ''}
-       <details class="jv-sbr"><summary>Rules</summary><pre>${E(d.rules || '')}</pre></details></div>`;
+       </div>`;
    }
    document.addEventListener('click', e => { const b = e.target.closest('[data-sb]'); if (!b || !e.target.closest('#v-journal')) return; e.preventDefault(); e.stopPropagation();
      if (b.dataset.sb === 'reload') { SB.d = null; sbLoad(true); return; }
@@ -1520,6 +1525,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const srv = AUTO.srv;
      if (!srv && !AUTO.busy) setTimeout(() => syncAuto(true), 0);
      if (!SV.bt && !SV.btBusy) setTimeout(() => loadSrv('bt'), 0);
+     if (!SV.btc && !SV.btcBusy) setTimeout(() => loadSrv('btc'), 0);
      const stTxt = !srv ? (AUTO.err ? 'Server not reachable · retrying' : 'Loading…')
        : !srv.enabled ? 'Paused' : srv.marketOpen ? `Running · ${srv.todayCount} trades today` : 'On · market closed';
      const stCls = !srv ? '' : !srv.enabled ? 'down' : srv.marketOpen ? 'up' : '';
@@ -1529,7 +1535,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        if (!B) return '<div class="empty">Loading backtest…</div>';
        if (B.error) return `<div class="empty">Backtest unavailable (${E(B.error)}).</div>`;
        const R = B.result;
-       if (!R) return `<div class="empty">${B.running ? 'Backtest running — ' + E(B.progress || '') : 'No backtest has been run yet.'}</div><div class="jv-actions"><button class="btn pri" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running…' : 'Run backtest'}</button></div>`;
+       if (!R) return `<div class="empty">${B.running ? 'Backtest running — ' + E(B.progress || '') : 'No backtest has been run yet.'}</div><div class="jv-actions"><button class="btn pri" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running…' : 'Run full backtest'}</button></div>`;
        const proven = (R.provenKeys || []).length;
        const verdict = proven
          ? `<span>Verdict</span><b class="up">${proven} of ${R.strategiesTested} passed</b>`
@@ -1540,6 +1546,22 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        }).join('');
        const ex = R.executorResearch || R.executor;
        const exLine = ex && ex.twoMonth ? `<div><span>2-month replay</span><b class="${cc(ex.twoMonth.median)}">${sinr(ex.twoMonth.median)} median · ${ex.entries} trades · win ${(ex.stats.winRate * 100).toFixed(0)}%</b></div>` : '';
+       // filtered run: pick strategies, re-test just them (stored separately - never replaces the full result)
+       if (!SV.meta && !SV.metaBusy) { SV.metaBusy = true; jget('/api/m/strategies').then(m => { SV.meta = m; SV.metaBusy = false; if (effTab() === 'algo') render(); }).catch(() => { SV.metaBusy = false; }); }
+       const stratList = (SV.meta && SV.meta.strategies || []).filter(m => m.kind !== 'optscan');
+       if (!SV.btcSel) SV.btcSel = new Set();
+       const chips = stratList.map(m => `<button type="button" class="${SV.btcSel.has(m.key) ? 'on' : ''}" data-jv="btcsel" data-k="${E(m.key)}" title="${E(m.name)}">${E(m.name)}</button>`).join('');
+       const C = SV.btc;
+       const customRows = C && C.result ? (C.result.ranking || []).slice(0, 6).map(r => {
+         const i = r.inSample, o = r.outOfSample;
+         return `<tr><td><b>${E(KEYNAME(r.key))}</b></td><td class="num">${i.n}</td><td class="num ${cc(i.avgR)}">${rr(i.avgR)}</td><td class="num">${o.n}</td><td class="num ${cc(o.avgR)}">${rr(o.avgR)}</td><td>${r.proven ? '<span class="badge b-up">Proven</span>' : '<span class="badge b-mute">Fwd test</span>'}</td></tr>`;
+       }).join('') : '';
+       const customBlock = C ? (C.running
+         ? `<p class="muted" style="padding:4px 14px 8px">Filtered backtest running — ${E(C.progress || '')}</p>`
+         : C.error ? `<p class="muted" style="padding:4px 14px 8px">Filtered run failed: ${E(C.error)}</p>`
+           : C.result ? `<details class="jv-more" open><summary>Filtered run · ${(C.result.filteredKeys || []).length} strategies · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
+               <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${customRows}</tbody></table></div>
+               <p class="muted" style="padding:4px 14px 8px;font-size:11.5px">This run is kept separately — the full result above still drives the auto trader.</p></details>` : '') : '';
        return `<div class="jv-list">
            ${verdict}
            <div><span>Simulated</span><b>${(R.tradesSimulated || 0).toLocaleString('en-IN')} trades · ${E(R.historyFrom || '')} → ${E(R.historyTo || '')}</b></div>
@@ -1547,7 +1569,13 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
            <div><span>Generated</span><b>${E((R.generatedAt || B.generatedAt || '').replace('T', ' ').slice(0, 16))}</b></div>
          </div>
          ${top ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${top}</tbody></table></div>` : ''}
-         <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running… ' + E(B.progress || '') : 'Re-run backtest'}</button></div>`;
+         <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running… ' + E(B.progress || '') : 'Re-run full backtest'}</button><button class="btn" data-jv="btreset" ${B.running ? 'disabled' : ''} title="Clear the stored result until the next run">Reset</button></div>
+         <details class="jv-more"><summary>Backtest by filter · pick indicators / strategies</summary>
+           <div class="jv-pos-bar jv-btcsel">${chips || '<span class="muted">Strategy list unavailable.</span>'}</div>
+           <div class="jv-actions"><button class="btn pri" data-jv="btrunf" ${(B.running || (C && C.running)) ? 'disabled' : ''}>${C && C.running ? 'Running…' : `Run ${SV.btcSel.size ? `(${SV.btcSel.size} selected)` : 'full'} backtest`}</button>
+             <button class="btn" data-jv="btcnone">Clear selection</button></div>
+           <p class="muted" style="font-size:11.5px;padding:2px 14px 8px">No selection = every strategy. A filtered run is faster and is shown below without touching the full result the auto trader uses.</p>
+         </details>${customBlock}`;
      })();
 
      // exit-reason breakdown + filter for the auto trades (raw server exit reasons: STOP / TSL / TARGET / TIME / EXPIRY / MANUAL)
@@ -1566,7 +1594,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const exitRows = Object.entries(byExit).sort((a, b) => b[1].n - a[1].n).map(([k, v]) =>
        `<tr class="${exitFilter === k ? 'sel' : ''}"><td>${E(k)}</td><td class="num">${v.n}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num">${v.n ? Math.round(v.w / v.n * 100) : 0}%</td></tr>`).join('');
      const exFiltered = exitFilter ? closedAutoAll.filter(t => exKey(t) === exitFilter) : closedAutoAll;
-     const exFilteredPaged = exFiltered.slice(0, 10);
+     const exPg = pagerBar(exFiltered, 'algoexP');
 
      return `<div class="jv-grid">
        <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
@@ -1593,7 +1621,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">how every auto trade ended, and what it returned</span></div>
        <div class="jv-pos-bar">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}<span class="muted" style="font-size:12px">${closedAutoAll.length} closed auto trades</span></div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Exit</th><th class="num">Trades</th><th class="num">Net P&L</th><th class="num">Win %</th></tr></thead><tbody>${exitRows || '<tr><td colspan="4" class="muted">No closed auto trades yet.</td></tr>'}</tbody></table></div>
-       ${exFilteredPaged.length ? tradeTable(exFilteredPaged, true, 'algoex') : ''}
+       ${exPg.part.length ? tradeTable(exPg.part, true, 'algoex') : ''}
+       ${exFiltered.length ? exPg.bar : ''}
      </div>`;
    }
 
@@ -1727,6 +1756,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   @media(max-width:1100px){.jv-books{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .jv-tot td{border-top:2px solid var(--line)}.jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
+  .jv-btcsel{gap:6px}.jv-btcsel button{height:26px;padding:0 10px;border:1px solid var(--line,#223052);border-radius:8px;background:none;color:var(--text-2,#93a4bf);font:inherit;font-size:11.5px;cursor:pointer}
+  .jv-btcsel button.on{background:var(--brand,#2f81f7);border-color:var(--brand,#2f81f7);color:#fff}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
   .jv-hr{display:flex;align-items:center;gap:10px;margin-left:auto}

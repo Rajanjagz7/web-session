@@ -277,11 +277,16 @@ def collect_signals(runners, syms, full, progress=None, orig_daily=None):
     return signals, istops
 
 
-def run_backtest(progress=None):
+def run_backtest(progress=None, only=None):
     import bar_source
     import market_api
     market_api.ensure_universe()
     runners = _runners()
+    if only:
+        keep = {k for k in only if k in runners}
+        if not keep:
+            raise ValueError("no matching strategy in the filter")
+        runners = {k: v for k, v in runners.items() if k in keep}
     syms = INDEX_SYMS + [s for s in STOCK_SYMS if bar_source.supports(s)]
     t0 = time.time()
     orig_daily = bar_source.daily_bars
@@ -442,6 +447,7 @@ def run_backtest(progress=None):
             "Past performance does not guarantee future results. Paper trading only.",
         ],
         "tookSeconds": round(time.time() - t0, 1),
+        "filteredKeys": sorted(only) if only else [],
     }
 
 
@@ -464,6 +470,60 @@ def _worker():
     finally:
         _state["running"] = False
         _state["progress"] = ""
+
+
+# filtered runs ("only these strategies") live in their own state + store so a custom run can
+# never replace the FULL result that drives the auto trader's proven / research selection
+CACHE_KEY_CUSTOM = "backtest_result_custom_v1"
+OUT_FILE_CUSTOM = os.path.join(HERE, "static", "backtest_custom.json")
+_custom = {"running": False, "progress": "", "result": None, "error": None, "started": 0.0}
+
+
+def _worker_custom(only):
+    try:
+        r = run_backtest(progress=lambda m: _custom.__setitem__("progress", m), only=only)
+        r["filteredKeys"] = sorted(only)
+        _custom["result"], _custom["error"] = r, None
+        try:
+            shared_cache.set(CACHE_KEY_CUSTOM, r, CACHE_TTL)
+        except Exception:
+            pass
+        try:
+            with open(OUT_FILE_CUSTOM, "w", encoding="utf-8") as f:
+                json.dump(r, f)
+        except Exception:
+            pass
+    except Exception as e:
+        _custom["error"] = str(e)[:300]
+    finally:
+        _custom["running"] = False
+        _custom["progress"] = ""
+
+
+def start_custom(only):
+    with _lock:
+        if _custom["running"]:
+            return False
+        _custom.update(running=True, started=time.time(), error=None, progress="starting", result=None)
+    threading.Thread(target=_worker_custom, args=(sorted(set(only)),), daemon=True, name="backtest-custom").start()
+    return True
+
+
+def custom_get():
+    if _custom["result"] is None:
+        try:
+            _custom["result"] = shared_cache.get(CACHE_KEY_CUSTOM)
+        except Exception:
+            pass
+    if _custom["result"] is None:
+        try:
+            with open(OUT_FILE_CUSTOM, encoding="utf-8") as f:
+                _custom["result"] = json.load(f)
+        except Exception:
+            pass
+    return {"running": _custom["running"], "progress": _custom["progress"], "error": _custom["error"],
+            "elapsed": round(time.time() - _custom["started"], 0) if _custom["running"] else 0,
+            "result": _custom["result"]}
 
 
 def start(force=False):
@@ -514,8 +574,33 @@ def api_get():
 
 
 @router.post("/run")
-def api_run(force: bool = True):
+def api_run(force: bool = True, only: str = ""):
+    keys = [k.strip() for k in only.split(",") if k.strip()] if only else None
+    if keys:
+        return {"started": start_custom(keys), **{k: v for k, v in custom_get().items() if k != "result"}}
     return {"started": start(force=force), **{k: v for k, v in get().items() if k != "result"}}
+
+
+@router.post("/reset")
+def api_reset():
+    """Journal 'Reset': drop the stored full result (shared store + local file) so nothing is shown until a fresh run."""
+    with _lock:
+        _state["result"] = None
+    try:
+        shared_cache.set(CACHE_KEY, None, 1)
+    except Exception:
+        pass
+    try:
+        if os.path.exists(OUT_FILE):
+            os.remove(OUT_FILE)
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+@router.get("/custom")
+def api_custom():
+    return custom_get()
 
 @router.get("/accuracy")
 def api_accuracy(full: bool = False):

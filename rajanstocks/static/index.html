@@ -1006,7 +1006,6 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
   <div class="brand"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
   <div class="here" id="here" aria-live="polite"></div>
   <nav class="nav" id="nav"></nav>
-  <div class="hx" id="hdrIdx" aria-label="Market indices"></div>
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
   <div class="hdr-r">
     <span class="live" id="liveBox"><i id="liveDot"></i><span id="liveTxt">…</span></span>
@@ -2333,12 +2332,6 @@ const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
 const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'),['godseye']);
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
 /* Header index strip: Nifty, Bank Nifty, Sensex, VIX with live change; click opens the chart. */
-const HX=[['NIFTY','Nifty'],['SENSEX','Sensex'],['BANKNIFTY','Bank Nifty'],['INDIAVIX','VIX']];
-function renderHdrIdx(){const el=$('#hdrIdx');if(!el)return;
-  el.innerHTML=HX.map(([k,l])=>{const s=SYM(k);if(!s||!(s.last>0))return'';const ch=s.prev>0?(s.last/s.prev-1)*100:0,c=ch>0.004?'up':ch<-0.004?'down':'';
-    return`<button class="hx-i" data-hx="${k}" title="${esc(s.n)} ${s.last.toLocaleString('en-IN',{maximumFractionDigits:2})} (${ch>=0?'+':''}${ch.toFixed(2)}%) — open chart"><small>${l}</small><b>${s.last.toLocaleString('en-IN',{maximumFractionDigits:k==='INDIAVIX'?2:1})}</b><span class="${c}">${ch>=0?'+':'−'}${Math.abs(ch).toFixed(2)}%</span></button>`}).join('')}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-hx]');if(!b)return;const k=b.dataset.hx;if(k!=='INDIAVIX'&&optUnderlyings().some(x=>x.s===k)){OPT.sym=k;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;go('options')}else{switchSym(k);go('trade')}});
-setInterval(()=>{if(!document.hidden)renderHdrIdx()},3000);setTimeout(()=>renderHdrIdx(),600);
 /* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
 setInterval(()=>{if(!document.hidden)renderPfChip()},4000);setTimeout(()=>renderPfChip(),800);
 function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
