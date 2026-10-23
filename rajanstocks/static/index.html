@@ -719,7 +719,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .wi-note{font-size:11.5px;padding:8px 14px 4px;margin:0}
 .opx-wtabs button,.opx-mtabs button{height:42px;padding:0 14px;border:0;background:none;color:var(--text-3);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
 .opx-wtabs button.on,.opx-mtabs button.on{color:var(--text);border-bottom-color:var(--brand)}
-.opx-pane{padding:14px;min-width:0;overflow-x:auto}.opx-pane[hidden]{display:none}#opStrat.opx-pane,#opRead.opx-pane{padding:0}
+.opx-pane{padding:14px;min-width:0;overflow-x:auto}.opx-pane[hidden]{display:none}#opStrat.opx-pane,#opRead.opx-pane,#opTc.opx-pane{padding:0}
 .opx-empty{min-height:420px;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:24px;color:var(--text-2)}
 .opx-empty svg{width:40px;height:40px;color:var(--brand)}.opx-empty b{font-size:16px;color:var(--text)}.opx-empty p{max-width:360px;margin:0;font-size:13px}
 .opx-skel{display:grid;gap:10px;padding:16px}.opx-skel i{height:22px;border-radius:6px;background:linear-gradient(90deg,var(--panel-2),var(--line),var(--panel-2));background-size:200% 100%;animation:opxsk 1.2s linear infinite}
@@ -3402,18 +3402,17 @@ setInterval(()=>{try{if(App.view==='options'&&!document.hidden)drawWhatIf()}catc
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
   if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
 function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
-  const map={order:['#opTrade'],read:['#opRead'],signals:['#opBuyList','#opStrat']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}))}
+  const map={order:['#opTrade'],read:['#opRead'],signals:['#opTc','#opBuyList','#opStrat']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}))}
 function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
-  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-tc" id="opxTc"></div><div class="opx-card opx-sig"><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
+  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div id="opTc"></div><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
   if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opx-sw" id="opSw"></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
      <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div><div class="opx-lv" id="opLv"></div></div>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
-     <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div>
-     <div class="opx-tc" id="opxTc"></div></div>
+     <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
-       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opBuyList" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>
+       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opTc" class="opx-pane"></div><div id="opBuyList" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>
      <div class="opx-card opx-wi" id="opxWhatIf"></div>
      <div class="opx-card opx-pos" id="opxPos"></div>`;
     OPT.shell=true;
@@ -3476,7 +3475,7 @@ const lastv=a=>{for(let i=a.length-1;i>=0;i--)if(isFinite(a[i]))return a[i];retu
 function calcDef(k,d,tf){const df=DEFS[k],p={};df.params.forEach(x=>p[x.k]=x.v);return df.calc(d,p,{tf:tf.sec})}
 const OPX_TC={cache:{},busy:false};
 async function drawOptTc(){
-  const box=$('#opxTc');if(!box)return;
+  const box=$('#opTc');if(!box)return;
   const sym=OPT.sym||'NIFTY',mode=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',strike=OPT.sel?OPT.sel.strike:'';
   const key=`${sym}:${mode}:${strike}`;
   const now=Date.now();
