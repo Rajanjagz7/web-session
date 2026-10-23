@@ -745,20 +745,11 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 @media (max-width:900px){#v-trade.on .tdock{display:flex;position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));z-index:55;gap:10px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.25)}.tdock button{flex:1;height:46px;border:0;border-radius:11px;font:inherit;font-weight:800;font-size:15px;color:#fff;cursor:pointer}.tdock .buy{background:var(--up)}.tdock .sell{background:var(--down)}
 .tdock.gone{display:none !important}
 .vx-tabs button{white-space:nowrap}.tc-f{display:flex;flex-wrap:wrap;gap:8px}.tc-f .inp{flex:1 1 140px;min-width:0}.tc-strong{color:#f5b942;font-weight:700}.tc-medium{color:#22c55e;font-weight:600}.tc-minor{color:#94a3b8}.vx-astbl tr.tc-past td{opacity:.45}
-.opx-tc{margin-top:8px;padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px}
-.opx-tc-h{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding-bottom:5px;border-bottom:1px solid var(--line)}
-.opx-tc-h b{font-size:12px;display:flex;align-items:center;gap:5px}
-.opx-tc-nxt{font-size:11.5px;display:flex;align-items:center;gap:5px}
-.opx-tc-pill{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase}
-.opx-tc-pill.strong{background:rgba(245,185,66,.2);color:#f5b942}
-.opx-tc-pill.medium{background:rgba(34,197,94,.2);color:#22c55e}
-.opx-tc-pill.minor{background:rgba(148,163,184,.2);color:#94a3b8}
-.opx-tc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-@media (max-width:600px){.opx-tc-grid{grid-template-columns:1fr}}
-.opx-tc-sub{font-size:10.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:3px}
-.opx-tc-tags{display:flex;flex-wrap:wrap;gap:4px}
-.opx-tc-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:var(--water);font-size:11px;border:1px solid var(--line)}
-.opx-tc-zn{display:flex;flex-direction:column;gap:2px;font-size:11px}
+#opTc{padding:10px 12px;border-bottom:1px solid var(--line)}
+#opTc .vx-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;margin-bottom:8px;padding:10px 12px}
+#opTc .vx-card:last-child{margin-bottom:0}
+#opTc .vx-grid2{margin-bottom:0}
+#opTc h3{color:var(--text);font-size:12px;font-weight:700}
 .pk-div{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--text-2);padding:6px 2px;border-top:1px dashed var(--line);margin-top:4px}#v-trade.on{padding-bottom:70px}}
 @media (max-width:1180px){.opx-grid{grid-template-columns:fit-content(58%) minmax(400px,1fr)}}
 @media (max-width:899px){
@@ -2607,7 +2598,7 @@ const VX_PCOL={'Su':'#f5b942','Mo':'#cfd8e3','Ma':'#ef5350','Me':'#26a69a','Ju':
 function vdNewsPanel(n){const items=((App.news&&App.news.items)||[]).filter(x=>x.category==='india').slice(0,n||5);
   if(!items.length)return'';
   return `<section class="vx-card"><h3>Indian market news</h3>${items.map(x=>`<a class="vx-news" href="${esc(x.link)}" target="_blank" rel="noopener">${x.source?`<span>${esc(x.source)}</span>`:''}<b>${esc(x.title)}</b></a>`).join('')}</section>`}
-VD.tab=(()=>{try{const t=localStorage.getItem('vx-tab');return ['plan','vedic','gann','watch'].includes(t)?t:'plan'}catch(e){return 'plan'}})();
+VD.tab=(()=>{try{const t=localStorage.getItem('vx-tab');return ['plan','vedic','gann','cycle','watch'].includes(t)?t:'plan'}catch(e){return 'plan'}})();
 const vxDeg=d=>{const s=Math.floor(d/30)%12,ins=d-s*30;return `${Math.floor(ins)}°${String(Math.round((ins%1)*60)).padStart(2,'0')}′`};
 const vxBar=(f,c)=>`<span class="vx-prog" title="${Math.round(f*100)}% remaining"><i style="width:${Math.max(2,Math.round(f*100))}%;background:${c}"></i></span>`;
 function vxWheel(planets){const S=280,c=S/2,R=128,r1=100,r2=76;let s=`<svg class="vx-wheel" viewBox="0 0 ${S} ${S}" role="img" aria-label="Sidereal zodiac wheel with planet positions">`;
@@ -2763,7 +2754,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
   const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
   const last=mc.index_last.available?mc.index_last.value:null,prev=mc.index_prev_close.available?mc.index_prev_close.value:null,ch=last&&prev?last/prev-1:null;
   const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};
-  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];
+  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['cycle','Time cycle'],['watch','Watchlist']];
   el.innerHTML=`<div class="page vx">
    <div class="vx-hero">
     <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · ${esc(h.symbol_name)}</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
@@ -2775,9 +2766,28 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
    </div>
    ${h.is_weekend||h.session_phase==='Market closed'?`<div class="vx-closed">${esc(h.weekend_message||'Market closed today.')} Panchang, planets and Gann levels below are live calculations, ready for the next session.</div>`:''}
    <div class="vx-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" class="${VD.tab===k?'on':''}" data-vxtab="${k}">${l}</button>`).join('')}</div>
-   ${({plan:vxTabPlan,vedic:vxTabVedic,gann:vxTabGann,watch:vxTabWatch}[VD.tab]||vxTabPlan)(r)}
+   ${({plan:vxTabPlan,vedic:vxTabVedic,gann:vxTabGann,cycle:vxTabCycle,watch:vxTabWatch}[VD.tab]||vxTabPlan)(r)}
    <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
   </div>`}
+const TC={sym:'NIFTY',mode:'underlying',strike:'',d:null,err:'',busy:false,_userEdited:false};
+async function tcLoad(){TC.busy=true;TC.err='';if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q)}catch(e){TC.d=null;TC.err=(e&&e.message)||'Time cycle unavailable'}TC.busy=false;if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc()}
+function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setTimeout(tcLoad,0);
+  const form=`<section class="vx-card"><h3>Time cycle</h3><p class="muted" style="margin:0 0 8px">Gann time cycles and price vibration zones for any index or F&amp;O stock, or its option premium.</p>
+   <div class="tc-f"><input class="inp" id="tcSym" value="${esc(TC.sym)}" placeholder="NIFTY, BANKNIFTY, SENSEX, RELIANCE…" aria-label="Index or stock"><select class="inp" id="tcMode" aria-label="Series">${[['underlying','Index / stock price'],['ce','Call premium (CE)'],['pe','Put premium (PE)']].map(([k,l])=>`<option value="${k}" ${TC.mode===k?'selected':''}>${l}</option>`).join('')}</select>
+   <input class="inp" id="tcStrike" value="${esc(TC.strike)}" placeholder="Strike (blank = ATM)" inputmode="decimal" ${TC.mode==='underlying'?'disabled':''} aria-label="Strike"><button class="btn-xs pri" data-tc="go">${TC.busy?'Loading…':'Show'}</button></div></section>`;
+  if(TC.err)return form+`<section class="vx-card"><p class="vx-note">${esc(TC.err)}</p></section>`;if(!d)return form;
+  const nxt=d.cycles.find(c=>!c.passed);
+  const cyc=`<section class="vx-card"><h3>Time cycles · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span></p>`:''}
+   <div class="vx-astbl"><table><thead><tr><th>Time</th><th>Strength</th><th>Counted from</th></tr></thead><tbody>${d.cycles.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td><span class="tc-${c.strength}">${c.strength}</span></td><td><small>${c.sources.map(esc).join(' · ')}</small></td></tr>`).join('')}</tbody></table></div></section>`;
+  const ch=d.chain?`<p style="margin:0 0 6px">Option chain (${esc(d.chain.expiry||'')}): max pain <b>${fmtP(d.chain.maxPain)}</b> · highest call OI <b class="down">${fmtP(d.chain.maxCallOI)}</b> (resistance) · highest put OI <b class="up">${fmtP(d.chain.maxPutOI)}</b> (support)</p>`:'';
+  const zn=`<section class="vx-card"><h3>Price zones</h3>${ch}<p style="margin:0 0 6px">Last ${fmtP(d.last)} · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</p>
+   ${d.vibration?`<p style="margin:0 0 6px">Vibration zone (support): <b class="up">${fmtP(d.vibration.level)}</b> <small class="muted">${esc(d.vibration.angle)}</small>${d.nextResistance?` · next resistance <b class="down">${fmtP(d.nextResistance.level)}</b>`:''}</p>`:''}
+   <div class="vx-astbl"><table><tbody>${d.zones.map(z=>`<tr class="${d.vibration&&z.level===d.vibration.level?'on':''}"><td class="num">${fmtP(z.level)}</td><td><small class="muted">${esc(z.angle)}</small></td></tr>`).join('')}</tbody></table></div>
+   <p class="vx-note">${esc(d.how)} Traditional Gann technique - a timing guide, not a forecast.</p></section>`;
+  return form+`<div class="vx-grid2">${cyc}${zn}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-tc]');if(!b)return;const root=b.closest('.tc-f')||b.closest('section')||document;const sInp=root.querySelector('#tcSym')||document.getElementById('tcSym'),mSel=root.querySelector('#tcMode')||document.getElementById('tcMode'),stInp=root.querySelector('#tcStrike')||document.getElementById('tcStrike');if(!sInp||!mSel)return;TC._userEdited=true;TC.sym=(sInp.value||'NIFTY').toUpperCase().trim();TC.mode=mSel.value;TC.strike=stInp?stInp.value.trim():'';tcLoad()});
+document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
+
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
 document.addEventListener('click',async e=>{const t=e.target.closest('[data-vxsym]');if(!t||VD.busy)return;const sym=t.dataset.vxsym;if(sym===VD.symbol)return;
   VD.symbol=sym;try{localStorage.setItem('vx-symbol',sym)}catch(x){}VD.data=null;VD.err=null;vdPaint();
@@ -3399,7 +3409,7 @@ setInterval(()=>{try{if(App.view==='options'&&!document.hidden)drawWhatIf()}catc
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
   if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
 function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
-  const map={order:['#opTrade'],read:['#opRead'],signals:['#opTc','#opBuyList','#opStrat']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}))}
+  const map={order:['#opTrade'],read:['#opRead'],signals:['#opTc','#opBuyList','#opStrat']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));if(t==='signals')drawOptTc()}
 function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
@@ -3470,50 +3480,15 @@ function optStats(){const o=OPT.osym;if(!o)return;const ch=o.prev>0?o.last/o.pre
   const R=$('#opRng');if(R)R.innerHTML=o.hi>o.lo?`<small class="num">L ${fmtP(o.lo)}</small><div class="opx-rbar"><i style="left:${Math.max(0,Math.min(100,pos)).toFixed(1)}%"></i></div><small class="num">H ${fmtP(o.hi)}</small>`:''}
 const lastv=a=>{for(let i=a.length-1;i>=0;i--)if(isFinite(a[i]))return a[i];return NaN};
 function calcDef(k,d,tf){const df=DEFS[k],p={};df.params.forEach(x=>p[x.k]=x.v);return df.calc(d,p,{tf:tf.sec})}
-const OPX_TC={cache:{},busy:false};
-async function drawOptTc(){
+function drawOptTc(){
   const box=$('#opTc');if(!box)return;
-  const sym=OPT.sym||'NIFTY',mode=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',strike=OPT.sel?OPT.sel.strike:'';
-  const key=`${sym}:${mode}:${strike}`;
-  const now=Date.now();
-  if(OPX_TC.cache[key]&&now-OPX_TC.cache[key].ts<60000){
-    renderOptTcHtml(box,OPX_TC.cache[key].d);return;
+  if(!TC._userEdited && typeof OPT!=='undefined'){
+    const s=OPT.sym||'NIFTY',m=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',st=OPT.sel?String(OPT.sel.strike):'';
+    if(TC.sym!==s||TC.mode!==m||TC.strike!==st){
+      TC.sym=s;TC.mode=m;TC.strike=st;TC.d=null;TC.err='';
+    }
   }
-  box.innerHTML=`<div class="opx-tc-h"><b><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Gann Time Cycles · ${esc(OPT.sel?OPT.sel.label:sym)}</b><span class="muted" style="font-size:11px">Loading…</span></div>`;
-  try{
-    const q=new URLSearchParams({symbol:sym,mode});
-    if(strike)q.set('strike',strike);
-    const d=await api('/api/vedic/timecycle?'+q);
-    OPX_TC.cache[key]={d,ts:Date.now()};
-    renderOptTcHtml(box,d);
-  }catch(e){
-    box.innerHTML=`<div class="opx-tc-h"><b><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Gann Time Cycles · ${esc(OPT.sel?OPT.sel.label:sym)}</b><span class="muted" style="font-size:11px">${esc(e.message||'Unavailable')}</span></div>`;
-  }
-}
-function renderOptTcHtml(box,d){
-  if(!d)return;
-  const nxt=(d.cycles||[]).find(c=>!c.passed);
-  const upcoming=(d.cycles||[]).filter(c=>!c.passed).slice(0,6);
-  box.innerHTML=`<div class="opx-tc-wrap">
-    <div class="opx-tc-h">
-      <b><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Gann Time Cycles · ${esc(d.series)}</b>
-      <div class="opx-tc-nxt">${nxt?`Next: <b class="tc-${nxt.strength}">${nxt.time}</b> <span class="opx-tc-pill ${nxt.strength}">${nxt.strength}</span>`:'<span class="muted">Today\'s cycles passed</span>'}</div>
-    </div>
-    <div class="opx-tc-grid">
-      <div>
-        <div class="opx-tc-sub">Upcoming Cycle Times</div>
-        <div class="opx-tc-tags">${upcoming.length?upcoming.map(c=>`<span class="opx-tc-chip tc-${c.strength}" title="${(c.sources||[]).map(esc).join(' · ')}"><b>${c.time}</b><small>${c.strength}</small></span>`).join(''):'<span class="muted" style="font-size:11px">All intraday cycles passed for today</span>'}</div>
-      </div>
-      <div>
-        <div class="opx-tc-sub">Price Vibration (Square of 9)</div>
-        <div class="opx-tc-zn">
-          ${d.vibration?`<div class="up">Support: <b>${fmtP(d.vibration.level)}</b> <small class="muted">(${esc(d.vibration.angle)})</small></div>`:''}
-          ${d.nextResistance?`<div class="down">Resistance: <b>${fmtP(d.nextResistance.level)}</b> <small class="muted">(${esc(d.nextResistance.angle)})</small></div>`:''}
-          ${d.prevHigh?`<div class="muted" style="font-size:11px">Prev H: ${fmtP(d.prevHigh.price)} (${d.prevHigh.time}) · Prev L: ${fmtP(d.prevLow.price)} (${d.prevLow.time})</div>`:''}
-        </div>
-      </div>
-    </div>
-  </div>`;
+  box.innerHTML=vxTabCycle();
 }
 async function optTick(){if(OPT.ticking)return;OPT.ticking=true;
   try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?15000:180000))await loadChain(true);
@@ -3526,7 +3501,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opt]');if(
   const c=e.target.closest('[data-oind]');if(c&&OPT.ochart){const k=c.dataset.oind,i=OPT.ochart.ind.findIndex(x=>x.key===k);if(i>=0)OPT.ochart.ind.splice(i,1);else{if(DEFS[k].pane==='sub'&&OPT.ochart.ind.filter(x=>DEFS[x.key].pane==='sub').length>=3){toast('Up to 3 indicator panes. Remove one first.','warn');return}optAddInd(k,true)}OPT.ochart.indChanged();drawOptChips();saveOptInds();optReadings(false);return}
   if(e.target.id==='optRef'){OPT.chain=null;drawChain();loadChain(true)}});
 document.addEventListener('change',e=>{const id=e.target.id;
-  if(id==='optSym'){OPT.sym=e.target.value;OPT.expiry='';OPT.sel=null;OPT.osym=null;OPT.chain=null;OPT.shell=false;drawChain();drawDetail();loadChain(true)}
+  if(id==='optSym'){OPT.sym=e.target.value;OPT.expiry='';OPT.sel=null;OPT.osym=null;OPT.chain=null;OPT.shell=false;TC._userEdited=false;drawChain();drawDetail();loadChain(true)}
   else if(id==='optExp'){OPT.expiry=e.target.value;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
   else if(id==='optSpan'){OPT.span=parseInt(e.target.value);drawChain()}});
 
