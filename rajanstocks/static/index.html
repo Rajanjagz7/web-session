@@ -745,6 +745,20 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 @media (max-width:900px){#v-trade.on .tdock{display:flex;position:fixed;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom));z-index:55;gap:10px;padding:8px 12px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.25)}.tdock button{flex:1;height:46px;border:0;border-radius:11px;font:inherit;font-weight:800;font-size:15px;color:#fff;cursor:pointer}.tdock .buy{background:var(--up)}.tdock .sell{background:var(--down)}
 .tdock.gone{display:none !important}
 .vx-tabs button{white-space:nowrap}.tc-f{display:flex;flex-wrap:wrap;gap:8px}.tc-f .inp{flex:1 1 140px;min-width:0}.tc-strong{color:#f5b942;font-weight:700}.tc-medium{color:#22c55e;font-weight:600}.tc-minor{color:#94a3b8}.vx-astbl tr.tc-past td{opacity:.45}
+.opx-tc{margin-top:8px;padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px}
+.opx-tc-h{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.opx-tc-h b{font-size:12px;display:flex;align-items:center;gap:5px}
+.opx-tc-nxt{font-size:11.5px;display:flex;align-items:center;gap:5px}
+.opx-tc-pill{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase}
+.opx-tc-pill.strong{background:rgba(245,185,66,.2);color:#f5b942}
+.opx-tc-pill.medium{background:rgba(34,197,94,.2);color:#22c55e}
+.opx-tc-pill.minor{background:rgba(148,163,184,.2);color:#94a3b8}
+.opx-tc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+@media (max-width:600px){.opx-tc-grid{grid-template-columns:1fr}}
+.opx-tc-sub{font-size:10.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;margin-bottom:3px}
+.opx-tc-tags{display:flex;flex-wrap:wrap;gap:4px}
+.opx-tc-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:var(--water);font-size:11px;border:1px solid var(--line)}
+.opx-tc-zn{display:flex;flex-direction:column;gap:2px;font-size:11px}
 .pk-div{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--text-2);padding:6px 2px;border-top:1px dashed var(--line);margin-top:4px}#v-trade.on{padding-bottom:70px}}
 @media (max-width:1180px){.opx-grid{grid-template-columns:fit-content(58%) minmax(400px,1fr)}}
 @media (max-width:899px){
@@ -3392,11 +3406,12 @@ function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]'
 function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
-  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
+  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-tc" id="opxTc"></div><div class="opx-card opx-sig"><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
   if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opx-sw" id="opSw"></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
      <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div><div class="opx-lv" id="opLv"></div></div>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
-     <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
+     <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div>
+     <div class="opx-tc" id="opxTc"></div></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
        <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opBuyList" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>
      <div class="opx-card opx-wi" id="opxWhatIf"></div>
@@ -3408,7 +3423,7 @@ function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
   const sw=$('#opSw');if(sw)sw.innerHTML=`<div class="seg" role="group" aria-label="Call or put">${['CE','PE'].map(sd=>`<button class="${OPT.sel.side===sd?'on':''} ${sd==='CE'?'opx-ce':'opx-pe'}" data-opx="side:${sd}" title="${sd==='CE'?'Call':'Put'} at ${fmtP(OPT.sel.strike,0)}">${sd}</button>`).join('')}</div>
     <div class="opx-step"><button class="opx-ib" data-opx="step:-1" title="Lower strike" aria-label="Lower strike">‹</button><b class="num">${fmtP(OPT.sel.strike,OPT.sel.strike%1?2:0)}</b><button class="opx-ib" data-opx="step:1" title="Higher strike" aria-label="Higher strike">›</button></div>`;
   drawOptTf();drawOptTrade();drawOptPos();
-  optStats();optLoad(false)}
+  optStats();optLoad(false);drawOptTc()}
 setTimeout(()=>{if(typeof optOrder==='function'){const _oo=optOrder;optOrder=function(){const r=_oo.apply(this,arguments);setTimeout(drawOptPos,80);return r}}},0);
 /* Open positions on the Options screen with editable stop-loss / target / trailing stop (same rules as the Journal). */
 function drawOptPos(){const box=$('#opxPos');if(!box)return;const ps=App.positions.slice().sort((a,b)=>(SYM(b.sym)?.cls==='Options')-(SYM(a.sym)?.cls==='Options'));
@@ -3459,6 +3474,51 @@ function optStats(){const o=OPT.osym;if(!o)return;const ch=o.prev>0?o.last/o.pre
   const R=$('#opRng');if(R)R.innerHTML=o.hi>o.lo?`<small class="num">L ${fmtP(o.lo)}</small><div class="opx-rbar"><i style="left:${Math.max(0,Math.min(100,pos)).toFixed(1)}%"></i></div><small class="num">H ${fmtP(o.hi)}</small>`:''}
 const lastv=a=>{for(let i=a.length-1;i>=0;i--)if(isFinite(a[i]))return a[i];return NaN};
 function calcDef(k,d,tf){const df=DEFS[k],p={};df.params.forEach(x=>p[x.k]=x.v);return df.calc(d,p,{tf:tf.sec})}
+const OPX_TC={cache:{},busy:false};
+async function drawOptTc(){
+  const box=$('#opxTc');if(!box)return;
+  const sym=OPT.sym||'NIFTY',mode=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',strike=OPT.sel?OPT.sel.strike:'';
+  const key=`${sym}:${mode}:${strike}`;
+  const now=Date.now();
+  if(OPX_TC.cache[key]&&now-OPX_TC.cache[key].ts<60000){
+    renderOptTcHtml(box,OPX_TC.cache[key].d);return;
+  }
+  box.innerHTML=`<div class="opx-tc-h"><b><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Gann Time Cycles · ${esc(OPT.sel?OPT.sel.label:sym)}</b><span class="muted" style="font-size:11px">Loading…</span></div>`;
+  try{
+    const q=new URLSearchParams({symbol:sym,mode});
+    if(strike)q.set('strike',strike);
+    const d=await api('/api/vedic/timecycle?'+q);
+    OPX_TC.cache[key]={d,ts:Date.now()};
+    renderOptTcHtml(box,d);
+  }catch(e){
+    box.innerHTML=`<div class="opx-tc-h"><b><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Gann Time Cycles · ${esc(OPT.sel?OPT.sel.label:sym)}</b><span class="muted" style="font-size:11px">${esc(e.message||'Unavailable')}</span></div>`;
+  }
+}
+function renderOptTcHtml(box,d){
+  if(!d)return;
+  const nxt=(d.cycles||[]).find(c=>!c.passed);
+  const upcoming=(d.cycles||[]).filter(c=>!c.passed).slice(0,6);
+  box.innerHTML=`<div class="opx-tc-wrap">
+    <div class="opx-tc-h">
+      <b><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Gann Time Cycles · ${esc(d.series)}</b>
+      <div class="opx-tc-nxt">${nxt?`Next: <b class="tc-${nxt.strength}">${nxt.time}</b> <span class="opx-tc-pill ${nxt.strength}">${nxt.strength}</span>`:'<span class="muted">Today\'s cycles passed</span>'}</div>
+    </div>
+    <div class="opx-tc-grid">
+      <div>
+        <div class="opx-tc-sub">Upcoming Cycle Times</div>
+        <div class="opx-tc-tags">${upcoming.length?upcoming.map(c=>`<span class="opx-tc-chip tc-${c.strength}" title="${(c.sources||[]).map(esc).join(' · ')}"><b>${c.time}</b><small>${c.strength}</small></span>`).join(''):'<span class="muted" style="font-size:11px">All intraday cycles passed for today</span>'}</div>
+      </div>
+      <div>
+        <div class="opx-tc-sub">Price Vibration (Square of 9)</div>
+        <div class="opx-tc-zn">
+          ${d.vibration?`<div class="up">Support: <b>${fmtP(d.vibration.level)}</b> <small class="muted">(${esc(d.vibration.angle)})</small></div>`:''}
+          ${d.nextResistance?`<div class="down">Resistance: <b>${fmtP(d.nextResistance.level)}</b> <small class="muted">(${esc(d.nextResistance.angle)})</small></div>`:''}
+          ${d.prevHigh?`<div class="muted" style="font-size:11px">Prev H: ${fmtP(d.prevHigh.price)} (${d.prevHigh.time}) · Prev L: ${fmtP(d.prevLow.price)} (${d.prevLow.time})</div>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
 async function optTick(){if(OPT.ticking)return;OPT.ticking=true;
   try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?15000:180000))await loadChain(true);
     if(OPT.sel&&OPT.osym){const r=await api('/api/m/oquote?keys='+encodeURIComponent(OPT.sel.key)),q=r.quotes&&r.quotes[0],o=OPT.osym;
