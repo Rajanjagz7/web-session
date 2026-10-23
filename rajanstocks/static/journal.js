@@ -956,7 +956,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
 
   /* ---------- Backtest + Auto Trader (server side; paper only) ---------- */
-  const SV = { auto: null, bt: null, btBusy: false, loading: false };
+  const SV = { auto: null, bt: null, btBusy: false, loading: false, openDet: { btcResult: true } };
+  /* a re-render rebuilds the DOM and would close every <details>; remember the open state of the
+     ones marked with data-jvopen so the backtest filter / result / upcoming blocks stay as the user left them */
+  document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('[data-jvopen]')) { SV.openDet[d.dataset.jvopen] = d.open; } }, true);
+  const detOpen = k => SV.openDet[k] ? ' open' : '';
   async function jget(url, opt) { const r = await fetch(url, Object.assign({ cache: 'no-store' }, opt || {})); if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); }
   async function loadSrv(which) {
     try {
@@ -1559,7 +1563,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        const customBlock = C ? (C.running
          ? `<p class="muted" style="padding:4px 14px 8px">Filtered backtest running — ${E(C.progress || '')}</p>`
          : C.error ? `<p class="muted" style="padding:4px 14px 8px">Filtered run failed: ${E(C.error)}</p>`
-           : C.result ? `<details class="jv-more" open><summary>Filtered run · ${(C.result.filteredKeys || []).length} strategies · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
+           : C.result ? `<details class="jv-more" data-jvopen="btcResult"${detOpen('btcResult')}><summary>Filtered run · ${(C.result.filteredKeys || []).length} strategies · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
                <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${customRows}</tbody></table></div>
                <p class="muted" style="padding:4px 14px 8px;font-size:11.5px">This run is kept separately — the full result above still drives the auto trader.</p></details>` : '') : '';
        // upcoming trades: the same entry logic as the live trader, run as a dry preview - what it WOULD take right now
@@ -1571,7 +1575,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        const upSummary = Object.entries(byStrat).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `${E(k)}: ${v.n} (${v.buys} buy)`).join(' · ');
        const upRows = allUp.slice().sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 10).map(e =>
          `<tr><td><b>${E(e.sym)}</b></td><td><span class="jv-side ${e.side === 'SELL' ? 's' : 'l'}">${E(e.side)}</span></td><td>${E(e.source || KEYNAME(e.strategy) || e.strategy)}</td><td class="num">${e.rank != null ? Number(e.rank).toFixed(2) : '—'}</td></tr>`).join('');
-       const upBlock = `<details class="jv-more"><summary>Upcoming trades · what this logic would take now${allUp.length ? ` · ${allUp.length} candidate${allUp.length > 1 ? 's' : ''}` : ''}${SV.upBusy ? ' · checking…' : ''}</summary>
+       const upBlock = `<details class="jv-more" data-jvopen="upcoming"${detOpen('upcoming')}><summary>Upcoming trades · what this logic would take now${allUp.length ? ` · ${allUp.length} candidate${allUp.length > 1 ? 's' : ''}` : ''}${SV.upBusy ? ' · checking…' : ''}</summary>
            ${up && up.dayGuard ? `<p class="muted" style="padding:2px 14px 0">${E(up.dayGuard)}</p>` : ''}
            ${up && up.note ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">${E(up.note)}</p>` : ''}
            ${upSummary ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">By source: ${upSummary}</p>` : ''}
@@ -1587,7 +1591,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          </div>
          ${top ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${top}</tbody></table></div>` : ''}
          <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running… ' + E(B.progress || '') : 'Re-run full backtest'}</button><button class="btn" data-jv="btreset" ${B.running ? 'disabled' : ''} title="Clear the stored result until the next run">Reset</button></div>
-         <details class="jv-more"><summary>Backtest by filter · pick indicators / strategies</summary>
+         <details class="jv-more" data-jvopen="btcFilter"${detOpen('btcFilter')}><summary>Backtest by filter · pick indicators / strategies</summary>
            <div class="jv-pos-bar jv-btcsel">${chips || '<span class="muted">Strategy list unavailable.</span>'}</div>
            <div class="jv-actions"><button class="btn pri" data-jv="btrunf" ${(B.running || (C && C.running)) ? 'disabled' : ''}>${C && C.running ? 'Running…' : `Run ${SV.btcSel.size ? `(${SV.btcSel.size} selected)` : 'full'} backtest`}</button>
              <button class="btn" data-jv="btcnone">Clear selection</button></div>
