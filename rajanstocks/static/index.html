@@ -801,6 +801,13 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .opx-sigf{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px}.opx-sigf .opx-chip{height:28px;padding:0 10px;font-size:12px}.opx-sigf .opx-chip span{opacity:.7;margin-left:3px}
 /* ---- Signals tab: God's Eye | Time cycle | Z Trend | Hedge side by side ---- */
 .opx-siggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;padding:10px 12px}
+/* price zones as compact chips inside the Time cycle card (no second panel to scroll to) */
+.tc-zones{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tc-z{display:flex;flex-direction:column;gap:1px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:4px 9px;min-width:92px}
+.tc-z small{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);white-space:nowrap}
+.tc-z b{font-size:12.5px}
+.vx-ladder{margin-top:10px}.vx-ladder summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--text-2);padding:4px 0}
+.vx-ladder[open] summary{color:var(--text)}
 .opx-siggrid>div{min-width:0}
 .opx-siggrid .vx-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
 .opx-siggrid h3{color:var(--text);font-size:12px;font-weight:700;margin:0 0 8px}
@@ -2812,15 +2819,21 @@ function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setT
    <input class="inp" id="tcStrike" value="${esc(TC.strike)}" placeholder="Strike (blank = ATM)" inputmode="decimal" ${TC.mode==='underlying'?'disabled':''} aria-label="Strike"><button class="btn-xs pri" data-tc="go">${TC.busy?'Loading…':'Show'}</button></div></section>`;
   if(TC.err)return form+`<section class="vx-card"><p class="vx-note">${esc(TC.err)}</p></section>`;if(!d)return form;
   const nxt=d.cycles.find(c=>!c.passed);
-  const cyc=`<section class="vx-card"><h3>Time cycles · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span></p>`:''}
+  /* price zones as compact chips so cycles + zones fit one screen; the full square-of-9 ladder stays collapsed below */
+  const zc=[['Vibration (sup)',d.vibration?d.vibration.level:null,'up',d.vibration?d.vibration.angle:''],
+            ['Next resistance',d.nextResistance?d.nextResistance.level:null,'down',''],
+            ['Max pain',d.chain?d.chain.maxPain:null,'','Where option buyers lose the most at expiry.'],
+            ['Call wall',d.chain?d.chain.maxCallOI:null,'down','Highest call OI: likely resistance.'],
+            ['Put wall',d.chain?d.chain.maxPutOI:null,'up','Highest put OI: likely support.']];
+  const zones=`<div class="tc-zones">${zc.filter(z=>z[1]!=null).map(([k,v,c,tip])=>`<span class="tc-z" ${tip?`title="${esc(tip)}"`:''}><small>${k}</small><b class="num ${c}">${fmtP(v)}</b></span>`).join('')}</div>`;
+  const cyc=`<section class="vx-card"><h3>Time cycle · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span> · last <b class="num">${fmtP(d.last)}</b></p>`:`<p style="margin:0 0 8px">Last <b class="num">${fmtP(d.last)}</b> · prev close <b class="num">${fmtP(d.prevClose)}</b></p>`}
    <div class="vx-astbl"><table><thead><tr><th>Time</th><th class="num">Price</th><th>Strength</th></tr></thead><tbody>${d.cycles.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td class="num">${c.price!=null?fmtP(c.price):'—'}</td><td title="${esc(c.sources.join(' · '))}"><span class="tc-${c.strength}">${c.strength}</span></td></tr>`).join('')}</tbody></table></div>
-   <p class="vx-note">Price is the 5-minute close at each cycle time — did price confirm the cycle? Hover a strength for what it was counted from.</p></section>`;
-  const ch=d.chain?`<p style="margin:0 0 6px">Option chain (${esc(d.chain.expiry||'')}): max pain <b>${fmtP(d.chain.maxPain)}</b> · highest call OI <b class="down">${fmtP(d.chain.maxCallOI)}</b> (resistance) · highest put OI <b class="up">${fmtP(d.chain.maxPutOI)}</b> (support)</p>`:'';
-  const zn=`<section class="vx-card"><h3>Price zones</h3>${ch}<p style="margin:0 0 6px">Last ${fmtP(d.last)} · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</p>
-   ${d.vibration?`<p style="margin:0 0 6px">Vibration zone (support): <b class="up">${fmtP(d.vibration.level)}</b> <small class="muted">${esc(d.vibration.angle)}</small>${d.nextResistance?` · next resistance <b class="down">${fmtP(d.nextResistance.level)}</b>`:''}</p>`:''}
-   <div class="vx-astbl"><table><tbody>${d.zones.map(z=>`<tr class="${d.vibration&&z.level===d.vibration.level?'on':''}"><td class="num">${fmtP(z.level)}</td><td><small class="muted">${esc(z.angle)}</small></td></tr>`).join('')}</tbody></table></div>
-   <p class="vx-note">${esc(d.how)} Traditional Gann technique - a timing guide, not a forecast.</p></section>`;
-  return form+`<div class="vx-grid2">${cyc}${zn}</div>`}
+   ${zones}
+   <details class="vx-ladder"><summary>Square-of-9 ladder · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</summary>
+    <div class="vx-astbl" style="margin-top:8px"><table><tbody>${d.zones.map(z=>`<tr class="${d.vibration&&z.level===d.vibration.level?'on':''}"><td class="num">${fmtP(z.level)}</td><td><small class="muted">${esc(z.angle)}</small></td></tr>`).join('')}</tbody></table></div>
+    <p class="vx-note">${esc(d.how)}</p></details>
+   <p class="vx-note">Price is the 5-minute close at each cycle time — did price confirm the cycle? Hover a strength for what it was counted from. Traditional Gann technique - a timing guide, not a forecast.</p></section>`;
+  return form+cyc}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-tc]');if(!b)return;const root=b.closest('.tc-f')||b.closest('section')||document;const sInp=root.querySelector('#tcSym')||document.getElementById('tcSym'),mSel=root.querySelector('#tcMode')||document.getElementById('tcMode'),stInp=root.querySelector('#tcStrike')||document.getElementById('tcStrike');if(!sInp||!mSel)return;TC._userEdited=true;TC.sym=(sInp.value||'NIFTY').toUpperCase().trim();TC.mode=mSel.value;TC.strike=stInp?stInp.value.trim():'';tcLoad()});
 document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
 
