@@ -54,6 +54,7 @@ CATALOG = [
     ("volume-spurt", "Volume Spurt", "Volume", "Volume more than 2x its 20-bar average on a bullish candle - an abnormal institutional spurt.", "core"),
     ("orb-15m", "15-Min Opening Range Breakout", "Intraday", "High and low of the 09:15-09:30 candle range with breakout status and 0.5x / 1.0x extension targets.", "core"),
     ("vwap-rsi", "VWAP + RSI Mean Reversion", "Intraday", "VWAP with 1.5 standard-deviation bands on 5-minute bars; buys a bounce off the lower band with RSI < 40, sells a rejection at the upper band with RSI > 60.", "core"),
+    ("time-cycle", "Gann Time Cycle", "Timing", "Gann intraday time cycles and Square-of-9 vibration support/resistance zones.", "tc"),
 ]
 import rajan_extra_indicators as _extra
 CATALOG.extend(_extra.CATALOG)
@@ -77,7 +78,7 @@ CHART_LINES = {
 }
 CHART_LINES.update(_extra.CHART_LINES)
 CHART_LINES.update(newind.NEW_CHART_LINES)
-NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "orb-15m", "vwap-rsi"} | newind.NO_CHART_NEW
+NO_CHART = {"quantum-matrix", "heikin-ashi-channel", "ha-dancing-trend", "orb-15m", "vwap-rsi", "time-cycle"} | newind.NO_CHART_NEW
 META = {k: {"key": k, "name": n, "group": g, "desc": d, "indexOnly": src == "oh",
             "chart": k not in NO_CHART, "lines": [{"k": f, "label": l} for f, l in CHART_LINES.get(k, [])],
             "gen": "new" if k in newind.NEW_KEYS_SET else "old"}
@@ -279,6 +280,9 @@ def _raw_vwap_rsi(symbol):
 
 def _run_raw(key, symbol):
     symbol = symbol.upper()
+    if key == "time-cycle":
+        import time_cycle
+        return time_cycle.build(symbol)
     if key == "ut-bot":
         return ut_bot.ut_bot_scan(symbol)
     if key == "donchian":
@@ -324,6 +328,47 @@ def summarize(key, symbol, raw):
            "stale": False, "details": [], "events": [], "lines": [], "bars": []}
     bars = raw.get("bars") or []
     has_date = bool(bars) and "date" in bars[-1]
+
+    if key == "time-cycle":
+        nxt = next((c for c in raw.get("cycles", []) if not c.get("passed")), None)
+        vib = raw.get("vibration")
+        res = raw.get("nextResistance")
+        last = raw.get("last", 0)
+        out["close"] = last
+        out["date"] = datetime.now().strftime("%Y-%m-%d")
+        bias = "neutral"
+        sig = "NEUTRAL"
+        headline = ""
+        if vib and last:
+            diff_supp = (last - vib["level"]) / last if last else 1.0
+            diff_res = ((res["level"] - last) / last) if (res and last) else 1.0
+            if diff_supp <= 0.003:
+                bias, sig = "bull", "BUY"
+                headline = f"Price at vibration support {vib['level']:,.2f} ({vib['angle']})"
+            elif diff_res <= 0.003:
+                bias, sig = "bear", "SELL"
+                headline = f"Price at vibration resistance {res['level']:,.2f} ({res['angle']})"
+            else:
+                bias = "bull" if diff_supp < diff_res else "bear"
+                sig = "CYCLE"
+                headline = f"Support {vib['level']:,.2f} · Resistance {res['level']:,.2f}" if res else f"Support {vib['level']:,.2f}"
+        if nxt:
+            headline += f" · Next cycle {nxt['time']} ({nxt['strength']})"
+        out["signal"] = sig
+        out["bias"] = bias
+        out["headline"] = headline
+        levels = {}
+        if vib: levels["support"] = vib["level"]
+        if res: levels["resistance"] = res["level"]
+        out["levels"] = levels
+        out["details"] = [
+            {"label": "Next Cycle", "value": f"{nxt['time']} ({nxt['strength']})" if nxt else "Passed"},
+            {"label": "Vibration Support", "value": f"{vib['level']:,.2f} ({vib['angle']})" if vib else "—"},
+            {"label": "Next Resistance", "value": f"{res['level']:,.2f} ({res['angle']})" if res else "—"}
+        ]
+        out["events"] = [{"date": c["time"], "text": f"Cycle {c['time']} ({c['strength']})"} for c in raw.get("cycles", [])][-12:]
+        return out
+
 
     if key in rp.RAJAN_PAVAN_KEYS or key in newind.NEW_KEYS:
         cur = raw.get("current") or {}

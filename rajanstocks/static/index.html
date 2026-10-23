@@ -1934,9 +1934,6 @@ const DEFS={
    calc:(d,p)=>rztCalc(d,p),draw:function(ctx,ind,g){rztDraw.call(this,ctx,ind,g)},drawTop:function(ctx,ind,g){rztLabels.call(this,ctx,ind,g)},
    desc:'B / S on an ATR trend flip confirmed by momentum, a stop line at the signal candle, and Zone-1 / Zone-2 support and resistance from the last swing high and low.',
    read:'Best on a 5-minute chart (backtest on 2 years of ATM/OTM option premiums: ATR 14 × 2 with the momentum filter - profit factor 1.34 in both halves, ~27% wins, +4.9 pts a trade; SENSEX 1.42, NIFTY 1.20, BANKNIFTY about break-even; 1-minute only 1.09). B = trend turned up (line under the B candle is the stop), S = turned down. Zone-1 is the nearer band, Zone-2 the one beyond. Works on index, stock and option premium charts. Add "Momentum bar" for the colour strip.'},
- gtc:{name:'Gann Time Cycle',short:'Time cycle',cat:'Rajan',pane:'main',params:[],lines:[],calc:(d,p,x)=>gtcCalc(d,x.tf),draw:function(ctx,ind,g){gtcDraw.call(this,ctx,ind,g)},
-   desc:'Gann intraday time cycles: 15-360 minute counts from the 09:15 open, the previous day\'s high / low candle and today\'s high / low, plus Square-of-9 vibration levels around the previous close.',
-   read:'Dashed vertical lines are cycle times - gold = strong (several counts meet), green = medium, grey = minor. Watch for price reaching a vibration level AT a cycle time. Intraday charts only (1m-30m).'},
  rztmb:{name:'Momentum bar (Rajan)',short:'MB',cat:'Rajan',pane:'sub',params:[],lines:[],range:[0,1],calc:d=>({mb:rztMB(d)}),drawPane:function(ctx,ind,g){rztPane.call(this,ctx,ind,g)},
    desc:'Colour strip of trend + momentum: EMA 9/21, RSI 14 and ADX 14.',read:'Bright green = strong up, light green = mild up, grey = sideways, pink = mild down, red = strong down.'},
 };
@@ -3135,7 +3132,7 @@ async function checkTokenHealth(){try{const r=await api('/api/m/health');let b=$
 /* ======================= Options: pick from the chain -> live chart + indicator readings ======================= */
 const OPT={sym:'NIFTY',expiry:'',chain:null,chainTs:0,sel:null,osym:null,tf:null,ochart:null,span:10,busy:false,ticking:false,err:null};
 const OPT_TFS=['1m','5m','15m','1H','1D'];
-const OPT_INDS=[['vol','Vol'],['sma','SMA'],['ema','EMA'],['vwap','VWAP'],['bb','BB'],['rsi','RSI'],['macd','MACD'],['atr','ATR'],['gtc','Time cycle'],['rzt','Zone Trend'],['rztmb','MB']];
+const OPT_INDS=[['vol','Vol'],['sma','SMA'],['ema','EMA'],['vwap','VWAP'],['bb','BB'],['rsi','RSI'],['macd','MACD'],['atr','ATR'],['rzt','Zone Trend'],['rztmb','MB']];
 const fmtExp=iso=>{try{const d=new Date(iso+'T00:00:00');return d.getDate()+' '+MON[d.getMonth()]}catch(e){return iso||''}};
 function optUnderlyings(){return SYMS.filter(s=>s.cls==='Indices'&&!s.nofo&&s.s!=='INDIAVIX').concat(SYMS.filter(s=>s.cls==='Stocks'))}
 /* The last chain per underlying is kept in the browser and drawn at once (stale-while-revalidate), then replaced
