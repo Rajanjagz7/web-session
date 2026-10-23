@@ -808,6 +808,9 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .tc-z b{font-size:12.5px}
 .vx-ladder{margin-top:10px}.vx-ladder summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--text-2);padding:4px 0}
 .vx-ladder[open] summary{color:var(--text)}
+.tc-pg{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--text-3)}
+.tc-pg .btn-xs{min-width:28px}
+.tc-about summary{color:var(--text-3);font-weight:400}
 .opx-siggrid>div{min-width:0}
 .opx-siggrid .vx-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
 .opx-siggrid h3{color:var(--text);font-size:12px;font-weight:700;margin:0 0 8px}
@@ -2812,13 +2815,19 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
    <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
   </div>`}
 const TC={sym:'NIFTY',mode:'underlying',strike:'',d:null,err:'',busy:false,_userEdited:false};
-async function tcLoad(){TC.busy=true;TC.err='';if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q)}catch(e){TC.d=null;TC.err=(e&&e.message)||'Time cycle unavailable'}TC.busy=false;if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc()}
+async function tcLoad(){TC.busy=true;TC.err='';if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q);TC.pg=null}catch(e){TC.d=null;TC.err=(e&&e.message)||'Time cycle unavailable'}TC.busy=false;if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc()}
 function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setTimeout(tcLoad,0);
   const form=`<section class="vx-card"><h3>Time cycle</h3><p class="muted" style="margin:0 0 8px">Gann time cycles and price vibration zones for any index or F&amp;O stock, or its option premium.</p>
    <div class="tc-f"><input class="inp" id="tcSym" value="${esc(TC.sym)}" placeholder="NIFTY, BANKNIFTY, SENSEX, RELIANCE…" aria-label="Index or stock"><select class="inp" id="tcMode" aria-label="Series">${[['underlying','Index / stock price'],['ce','Call premium (CE)'],['pe','Put premium (PE)']].map(([k,l])=>`<option value="${k}" ${TC.mode===k?'selected':''}>${l}</option>`).join('')}</select>
    <input class="inp" id="tcStrike" value="${esc(TC.strike)}" placeholder="Strike (blank = ATM)" inputmode="decimal" ${TC.mode==='underlying'?'disabled':''} aria-label="Strike"><button class="btn-xs pri" data-tc="go">${TC.busy?'Loading…':'Show'}</button></div></section>`;
   if(TC.err)return form+`<section class="vx-card"><p class="vx-note">${esc(TC.err)}</p></section>`;if(!d)return form;
   const nxt=d.cycles.find(c=>!c.passed);
+  /* paginated cycle table: opens on the page with the next cycle, ‹ › to move */
+  const all=d.cycles,ps=TC.ps||8,pages=Math.max(1,Math.ceil(all.length/ps));
+  if(TC.pg==null){const ni=all.findIndex(c=>!c.passed);TC.pg=ni<0?0:Math.floor(ni/ps)}
+  TC.pg=Math.min(TC.pg,pages-1);
+  const part=all.slice(TC.pg*ps,TC.pg*ps+ps);
+  const pager=all.length>ps?`<div class="tc-pg"><button class="btn-xs" data-tcpg="${TC.pg-1}" ${TC.pg<=0?'disabled':''} aria-label="Previous">‹</button><span>${TC.pg*ps+1}–${TC.pg*ps+part.length} of ${all.length}</span><button class="btn-xs" data-tcpg="${TC.pg+1}" ${TC.pg>=pages-1?'disabled':''} aria-label="Next">›</button></div>`:'';
   /* price zones as compact chips so cycles + zones fit one screen; the full square-of-9 ladder stays collapsed below */
   const zc=[['Vibration (sup)',d.vibration?d.vibration.level:null,'up',d.vibration?d.vibration.angle:''],
             ['Next resistance',d.nextResistance?d.nextResistance.level:null,'down',''],
@@ -2827,14 +2836,19 @@ function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setT
             ['Put wall',d.chain?d.chain.maxPutOI:null,'up','Highest put OI: likely support.']];
   const zones=`<div class="tc-zones">${zc.filter(z=>z[1]!=null).map(([k,v,c,tip])=>`<span class="tc-z" ${tip?`title="${esc(tip)}"`:''}><small>${k}</small><b class="num ${c}">${fmtP(v)}</b></span>`).join('')}</div>`;
   const cyc=`<section class="vx-card"><h3>Time cycle · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span> · last <b class="num">${fmtP(d.last)}</b></p>`:`<p style="margin:0 0 8px">Last <b class="num">${fmtP(d.last)}</b> · prev close <b class="num">${fmtP(d.prevClose)}</b></p>`}
-   <div class="vx-astbl"><table><thead><tr><th>Time</th><th class="num">Price</th><th>Strength</th></tr></thead><tbody>${d.cycles.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td class="num">${c.price!=null?fmtP(c.price):'—'}</td><td title="${esc(c.sources.join(' · '))}"><span class="tc-${c.strength}">${c.strength}</span></td></tr>`).join('')}</tbody></table></div>
-   ${zones}
+   <div class="vx-astbl"><table><thead><tr><th>Time</th><th class="num">Price</th><th>Strength</th></tr></thead><tbody>${part.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td class="num">${c.price!=null?fmtP(c.price):'—'}</td><td title="${esc(c.sources.join(' · '))}"><span class="tc-${c.strength}">${c.strength}</span></td></tr>`).join('')}</tbody></table></div>
+   ${pager}${zones}
    <details class="vx-ladder"><summary>Square-of-9 ladder · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</summary>
     <div class="vx-astbl" style="margin-top:8px"><table><tbody>${d.zones.map(z=>`<tr class="${d.vibration&&z.level===d.vibration.level?'on':''}"><td class="num">${fmtP(z.level)}</td><td><small class="muted">${esc(z.angle)}</small></td></tr>`).join('')}</tbody></table></div>
     <p class="vx-note">${esc(d.how)}</p></details>
-   <p class="vx-note">Price is the 5-minute close at each cycle time — did price confirm the cycle? Hover a strength for what it was counted from. Traditional Gann technique - a timing guide, not a forecast.</p></section>`;
+   <details class="vx-ladder tc-about"><summary>How to read · disclaimer</summary>
+    <p class="vx-note" style="margin-top:6px">Price is the 5-minute close at each cycle time — did price confirm the cycle? Hover a strength for what it was counted from.</p>
+    <p class="vx-note">Traditional Gann technique - a timing guide, not a forecast.</p></details></section>`;
   return form+cyc}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-tc]');if(!b)return;const root=b.closest('.tc-f')||b.closest('section')||document;const sInp=root.querySelector('#tcSym')||document.getElementById('tcSym'),mSel=root.querySelector('#tcMode')||document.getElementById('tcMode'),stInp=root.querySelector('#tcStrike')||document.getElementById('tcStrike');if(!sInp||!mSel)return;TC._userEdited=true;TC.sym=(sInp.value||'NIFTY').toUpperCase().trim();TC.mode=mSel.value;TC.strike=stInp?stInp.value.trim():'';tcLoad()});
+document.addEventListener('click',e=>{const pg=e.target.closest('[data-tcpg]');if(!pg||pg.disabled)return;TC.pg=Math.max(0,+pg.dataset.tcpg);
+  const b=$('#opTc');if(b)b.innerHTML=vxTabCycle();
+  if(typeof vdPaint==='function'&&typeof VD!=='undefined'&&VD.tab==='cycle')vdPaint()});
 document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
 
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
@@ -3568,8 +3582,7 @@ function vxRztCard(){const d=RZT.d;
   const tbl=flips.length?`<div class="vx-astbl"><table><thead><tr><th>Time</th><th>Sig</th><th class="num">Entry</th><th class="num">Exit</th><th class="num">Pts</th><th>End</th></tr></thead><tbody>${flips.map(f=>`<tr><td>${esc(f.time)}</td><td><b class="${f.signal==='B'?'up':'down'}">${f.signal}</b></td><td class="num">${fmtP(f.entry)}</td><td class="num">${fmtP(f.exit)}</td><td class="num ${f.pts>=0?'up':'down'}">${f.pts>=0?'+':''}${f.pts.toFixed(1)}</td><td><small class="${f.result==='STOP'?'down':'muted'}">${f.result}</small></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No flips in this window yet.</p>';
   return head+`<p class="rz-state" style="margin:0 0 8px"><span class="badge ${stc}">${d.state}</span> <span class="muted">momentum ${esc(d.momentumLabel)}</span></p>
    <div class="rz-chips">${chip('Price',fmtP(d.price))}${chip('Stop (line)',d.sl!=null?fmtP(d.sl):'—','down')}${chip('Resistance',d.resistance!=null?fmtP(d.resistance):'—','down')}${chip('Support',d.support!=null?fmtP(d.support):'—','up')}</div>
-   ${lf}${tbl}
-   <p class="vx-note">B = the ATR trend line flipped under price (that line is the stop); S = flipped above. Recent flips show entry → exit with the points they gave — the same rule the backtest and the auto trader use.</p></section>`}
+   ${lf}${tbl}</section>`}
 setInterval(()=>{try{if(App.view==='options'&&!document.hidden&&$('#opRzt')&&!$('#opRzt').hidden&&!RZT.busy){RZT.d=null;rztLoad()}}catch(e){}},180000);
 /* ---- Old expiry review: what did an expired contract actually do? The expiry diary (expiry_book.py) recorded every
    contract key while it traded; pick an old expiry + strike + CE/PE and its daily candles load from that key. ---- */
