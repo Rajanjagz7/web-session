@@ -814,8 +814,14 @@ def chain(symbol: str = "NIFTY", expiry: str = ""):
                 lot = int((nse_service.upstox.fo_universe().get("lots") or {}).get(sym) or 1)
             except Exception:
                 lot = 1
-        return {"symbol": sym, "lot": lot, "spot": spot, "expiry": data.get("targetExpiry"), "expiries": data.get("expiryDates") or [],
-                "atm": atm, "rows": rows, "provider": "Upstox", "asOf": datetime.now(IST).isoformat()}
+        out = {"symbol": sym, "lot": lot, "spot": spot, "expiry": data.get("targetExpiry"), "expiries": data.get("expiryDates") or [],
+               "atm": atm, "rows": rows, "provider": "Upstox", "asOf": datetime.now(IST).isoformat()}
+        try:                                     # expiry diary: remember the contract keys while they still trade
+            import expiry_book
+            expiry_book.record_chain_book(out)
+        except Exception:
+            pass
+        return out
 
     def shared_build():
         # second tier shared by every serverless instance: a cold instance answers from Upstash instead of

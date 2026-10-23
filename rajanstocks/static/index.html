@@ -799,6 +799,41 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 }
 @media (max-width:899px){.opx[data-mtab="chain"] .opx-work{display:none}.opx:not([data-mtab="chain"]) .opx-work .opx-sig{display:none}.opx[data-mtab="signals"] .opx-work .opx-sig{display:block}}
 .opx-sigf{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px}.opx-sigf .opx-chip{height:28px;padding:0 10px;font-size:12px}.opx-sigf .opx-chip span{opacity:.7;margin-left:3px}
+/* ---- Signals tab: God's Eye | Time cycle | Z Trend | Hedge side by side ---- */
+.opx-siggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;padding:10px 12px}
+.opx-siggrid>div{min-width:0}
+.opx-siggrid .vx-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
+.opx-siggrid h3{color:var(--text);font-size:12px;font-weight:700;margin:0 0 8px}
+.opx-siggrid .vx-note{font-size:11px;margin:6px 0 0}
+.rz-state{display:flex;align-items:center;gap:8px}
+.rz-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.rz-k{display:flex;flex-direction:column;gap:1px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:4px 9px;min-width:78px}
+.rz-k small{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3)}
+.rz-k b{font-size:12.5px}
+#opHedge .hg{background:transparent;border:0;padding:0;margin:0}
+#opGe .ob-one{margin:0}
+@media (max-width:640px){.opx-siggrid{grid-template-columns:1fr;padding:8px}}
+/* ---- Trade screen tidy-up: nothing hidden behind an invisible scroll ---- */
+@media (max-width:899px){
+  .opx-sum{flex-wrap:wrap;overflow:visible}
+  .opx-sum .opx-kpi{flex:1 1 30%}
+  #opRead table.rd td,#opRead table.rd th{white-space:normal}
+  .opx-oc td.ltp{min-width:64px}
+  .opx-oc td.k{min-width:64px}
+}
+/* ---- Old expiry review panel ---- */
+.opx-xp{border-top:1px solid var(--line);background:var(--panel);padding:10px 14px 14px}
+.opx-xp[hidden]{display:none}
+.xp-h{font-weight:700;font-size:13.5px;margin-bottom:8px}
+.xp-f{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.xp-f .inp{max-width:220px}
+.xp-stats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--text-2);margin-bottom:8px}
+.xp-stats b{color:var(--text);margin-left:4px}
+.xp-t{max-height:320px;overflow:auto}
+.xp-t table{width:100%;border-collapse:collapse;font-size:12.5px}
+.xp-t th,.xp-t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right}
+.xp-t th:first-child,.xp-t td:first-child{text-align:left}
+.xp-note{font-size:11.5px;margin:8px 0 0}
 .opx-sigpg{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid var(--line);font-size:12.5px}
 .opx-seg-s{display:inline-flex}.opx-seg-s button{flex:none;min-width:38px;height:26px;font-size:12px}
 .opx-pgb{display:flex;align-items:center;gap:8px}.opx-pgb b{font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -2778,7 +2813,8 @@ function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setT
   if(TC.err)return form+`<section class="vx-card"><p class="vx-note">${esc(TC.err)}</p></section>`;if(!d)return form;
   const nxt=d.cycles.find(c=>!c.passed);
   const cyc=`<section class="vx-card"><h3>Time cycles · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span></p>`:''}
-   <div class="vx-astbl"><table><thead><tr><th>Time</th><th>Strength</th><th>Counted from</th></tr></thead><tbody>${d.cycles.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td><span class="tc-${c.strength}">${c.strength}</span></td><td><small>${c.sources.map(esc).join(' · ')}</small></td></tr>`).join('')}</tbody></table></div></section>`;
+   <div class="vx-astbl"><table><thead><tr><th>Time</th><th class="num">Price</th><th>Strength</th></tr></thead><tbody>${d.cycles.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td class="num">${c.price!=null?fmtP(c.price):'—'}</td><td title="${esc(c.sources.join(' · '))}"><span class="tc-${c.strength}">${c.strength}</span></td></tr>`).join('')}</tbody></table></div>
+   <p class="vx-note">Price is the 5-minute close at each cycle time — did price confirm the cycle? Hover a strength for what it was counted from.</p></section>`;
   const ch=d.chain?`<p style="margin:0 0 6px">Option chain (${esc(d.chain.expiry||'')}): max pain <b>${fmtP(d.chain.maxPain)}</b> · highest call OI <b class="down">${fmtP(d.chain.maxCallOI)}</b> (resistance) · highest put OI <b class="up">${fmtP(d.chain.maxPutOI)}</b> (support)</p>`:'';
   const zn=`<section class="vx-card"><h3>Price zones</h3>${ch}<p style="margin:0 0 6px">Last ${fmtP(d.last)} · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</p>
    ${d.vibration?`<p style="margin:0 0 6px">Vibration zone (support): <b class="up">${fmtP(d.vibration.level)}</b> <small class="muted">${esc(d.vibration.angle)}</small>${d.nextResistance?` · next resistance <b class="down">${fmtP(d.nextResistance.level)}</b>`:''}</p>`:''}
@@ -3183,10 +3219,11 @@ function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.t
       <div class="opx-und"><select class="opx-sel" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
         <div class="opx-spot" id="opxSpot"></div></div>
       <div class="opx-exp"><span class="opx-lbl">Expiry</span><div class="opx-expc" id="opxExp"></div><select class="opx-sel opx-expsel" id="optExp" aria-label="All expiries"></select></div>
-      <div class="opx-act"><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
+      <div class="opx-act"><button class="opx-fbtn" id="opxXp" data-opx="oldexp" title="Review an old (expired) expiry: what did each contract do afterwards?" aria-pressed="${OPT.xpOn?'true':'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Old expiry</span></button><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
         <button class="opx-ib" id="optRef" title="Refresh chain" aria-label="Refresh chain">↻</button></div>
     </div>
     <div class="opx-sum" id="opxSum"></div>
+    <div class="opx-xp" id="optExpired" hidden></div>
     <div class="opx-mtabs" role="tablist">${[['chain','Chain'],['chart','Chart'],['order','Order'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="mtab:${k}" class="${OPT.mtab===k?'on':''}">${l}</button>`).join('')}</div>
     <div class="opx-scrim" id="opxScrim" data-opx="filters" hidden></div>
     <div class="opx-fp" id="opxFp" role="dialog" aria-label="Chain filters" hidden></div>
@@ -3246,9 +3283,12 @@ function drawBuyList(){const box=$('#opBuyList');if(!box)return;const hits=OPT.h
     return`<div class="bl-col"><div class="bl-h ${sd==='CE'?'ce':'pe'}">${sd==='CE'?'CALLS':'PUTS'} <span>${allRows.filter(h=>h.t.st==='hit').length} buy · ${allRows.filter(h=>h.t.st==='near').length} near</span></div>
       ${rows.length?`<table class="bl-t"><thead><tr><th>Strike</th><th>Signal</th><th class="num">Buy at</th><th class="num bl-ltp">LTP</th><th class="num">SL</th><th class="num">Target</th><th class="bl-act">Test</th></tr></thead><tbody>${rows.map(h=>{const tg=h.t.zone?h.t.zone.t[0]:h.t.entry*1.5,sel=OPT.sel&&OPT.sel.side===sd&&OPT.sel.strike===h.k;
         return`<tr class="${h.t.st} ${sel?'sel':''}" data-opt="${sd}:${h.k}" title="${esc(h.t.ind)} · entry ${fmtP(h.t.entry)} · SL ${fmtP(h.t.sl)} · targets ${esc(pdTg(h.t.entry,h.t))}"><td><b>${fmtP(h.k,h.k%1?2:0)}</b>${h.k===c0atm()?'<em>ATM</em>':''}</td><td><span class="bl-tag ${h.t.st}">${h.t.st==='hit'?'BUY':'near'} ${esc(h.t.name)}</span><span class="bl-act-m"><button type="button" class="bl-b" data-sigtr="buy:${sd}:${h.k}" aria-label="Test buy">B</button><button type="button" class="bl-s" data-sigtr="sell:${sd}:${h.k}" aria-label="Test sell">S</button></span></td><td class="num"><b>${fmtP(h.t.entry)}</b></td><td class="num bl-ltp">${fmtP(h.ltp)}</td><td class="num down">${fmtP(h.t.sl)}</td><td class="num up">${fmtP(tg)}</td><td class="bl-act"><button type="button" class="bl-b" data-sigtr="buy:${sd}:${h.k}" title="Paper BUY at the signal: SL ${fmtP(h.t.sl)} · target ${fmtP(tg)}">B</button><button type="button" class="bl-s" data-sigtr="sell:${sd}:${h.k}" title="Paper SELL (opposite of the signal) with a small stop - tests whether fading this signal works">S</button></td></tr>`}).join('')}</tbody></table>`:`<div class="bl-none">No ${sd==='CE'?'call':'put'} at a buy level</div>`}${pager}</div>`};
-  box.innerHTML=`<div data-ob-one="${esc(String(OPT.sym||'').toUpperCase())}"></div>${hedgeHTML()}<div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
+  box.innerHTML=`<div class="bl"><div class="bl-top"><b>Buy signals · ${esc(OPT.sym)} ${OPT.chain?fmtExp(OPT.chain.expiry):''}</b>
     <div class="bl-ctl"><label class="muted">Rows <select class="inp bl-ps" data-blps>${PS.map(n=>`<option ${n===ps?'selected':''}>${n}</option>`).join('')}</select></label><div class="seg" role="group"><button type="button" class="${all?'':'on'}" data-buyall="0" title="Expiry/Daily divisor levels, Open = Low clean buy, SENSEX and 38-42 zones">Levels</button><button type="button" class="${all?'on':''}" data-buyall="1" title="Also Open = Low within 10 points (many contracts qualify)">+ O=L ±10</button></div></div></div>
-    <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Buy at = your entry premium for that signal; SL = its stop (indicator points, capped at 35% for small premiums). Green = premium is at your buy value now · amber = getting close. Target shows the first target (all targets in the tooltip and on the chart strip).</p></div>`;{const h=box.querySelector('[data-ob-one]');if(h&&window.obsOne)obsOne(OPT.sym,h)}}
+    <div class="bl-grid">${col('CE')}${col('PE')}</div><p class="muted bl-note">Tap a row to open it. Buy at = your entry premium for that signal; SL = its stop (indicator points, capped at 35% for small premiums). Green = premium is at your buy value now · amber = getting close. Target shows the first target (all targets in the tooltip and on the chart strip).</p></div>`}
+/* God's Eye + Hedged Seller live in their own Signals-tab cards (drawOptTc fills them together with the Time cycle) */
+function drawOptHedge(){const box=$('#opHedge');if(!box)return;const h=hedgeHTML();box.innerHTML=h||`<div class="hg"><div class="hg-h"><b>🛡 Hedged Seller</b><span class="muted">sell OTM + buy a further hedge · loss is capped</span></div><p class="muted hg-n">Pick an underlying with an option chain to see today's credit spreads.</p></div>`}
+function drawOptGe(){const box=$('#opGe');if(!box)return;const s=String(OPT.sym||'').toUpperCase();box.innerHTML=`<div data-ob-one="${esc(s)}"></div>`;if(window.obsOne&&s)obsOne(s,box.firstChild)}
 const c0atm=()=>OPT.chain&&OPT.chain.atm;
 /* Signal test trades: BUY at the signal (its SL / first target) or SELL the same option - the opposite trade - with a small stop.
    The stop for the sell mirrors the signal's risk: the same distance above the entry, but never more than 10 points or 25% of the
@@ -3409,17 +3449,17 @@ setInterval(()=>{try{if(App.view==='options'&&!document.hidden)drawWhatIf()}catc
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
   if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
 function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
-  const map={order:['#opTrade'],read:['#opRead'],signals:['#opTc','#opBuyList','#opStrat']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));if(t==='signals')drawOptTc()}
+  const map={order:['#opTrade'],read:['#opRead'],signals:['#opSig']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));if(t==='signals')drawOptTc()}
 function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
-  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div id="opTc"></div><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
+  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div class="opx-siggrid"><div id="opGe"></div><div id="opTc"></div><div id="opRzt"></div><div id="opHedge"></div></div><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
   if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opx-sw" id="opSw"></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
      <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div><div class="opx-lv" id="opLv"></div></div>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
-       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div id="opTc" class="opx-pane"></div><div id="opBuyList" class="opx-pane"></div><div id="opStrat" class="opx-pane"></div></div>
+       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div class="opx-pane" id="opSig"><div class="opx-siggrid"><div id="opGe"></div><div id="opTc"></div><div id="opRzt"></div><div id="opHedge"></div></div><div id="opBuyList"></div><div id="opStrat"></div></div></div>
      <div class="opx-card opx-wi" id="opxWhatIf"></div>
      <div class="opx-card opx-pos" id="opxPos"></div>`;
     OPT.shell=true;
@@ -3452,6 +3492,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(
   else if(k==='exp'){if(OPT.chain&&a===OPT.chain.expiry)return;OPT.expiry=a;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
   else if(k==='mtab')opxTab(a);
   else if(k==='wtab')opxWtab(a);
+  else if(k==='oldexp'){OPT.xpOn=!OPT.xpOn;const p=$('#optExpired');if(p)p.hidden=!OPT.xpOn;if(OPT.xpOn){XPB.exps=null;XPB.book=null;XPB.daily=null;xpLoad()}}
   else if(k==='dock'){const b=$(a==='buy'?'#opBuy':'#opSell');if(b)b.click()}});
 document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.opxf;if(!k)return;OPT.f[k]=e.target.checked;opxSave();opxBadge();drawChain()});
 document.addEventListener('click',e=>{const t=e.target.closest('[data-ossig]');if(!t)return;const [k,a]=t.dataset.ossig.split(':');
@@ -3489,7 +3530,86 @@ function drawOptTc(){
     }
   }
   box.innerHTML=vxTabCycle();
+  drawOptRzt();drawOptGe();drawOptHedge();
 }
+/* Z Trend (Rajan Zone Trend) signal card - the same engine the chart draws and the auto trader trades, as a readout:
+   state, the trail line (= stop), zone resistance / support, the last flip and how each recent flip ended. */
+let RZT={sym:'',mode:'',strike:'',d:null,busy:false,err:''};
+function drawOptRzt(){const box=$('#opRzt');if(!box)return;
+  if(!RZT._userEdited&&typeof OPT!=='undefined'){const s=OPT.sym||'NIFTY',m=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',st=OPT.sel?String(OPT.sel.strike):'';
+    if(RZT.sym!==s||RZT.mode!==m||RZT.strike!==st){RZT.sym=s;RZT.mode=m;RZT.strike=st;RZT.d=null;RZT.err=''}}
+  if(!RZT.d&&!RZT.busy&&!RZT.err)setTimeout(rztLoad,0);
+  box.innerHTML=vxRztCard()}
+async function rztLoad(){RZT.busy=true;RZT.err='';const b=$('#opRzt');if(b)b.innerHTML=vxRztCard();
+  try{const q=new URLSearchParams({symbol:RZT.sym,mode:RZT.mode});if(RZT.mode!=='underlying'&&RZT.strike)q.set('strike',RZT.strike);q.set('tf','5m');
+    RZT.d=await api('/api/m/rzt?'+q)}catch(e){RZT.d=null;RZT.err=(e&&e.message)||'Z Trend unavailable'}
+  RZT.busy=false;const b2=$('#opRzt');if(b2)b2.innerHTML=vxRztCard()}
+function vxRztCard(){const d=RZT.d;
+  const head=`<section class="vx-card"><h3>Z Trend <span class="muted" style="font-weight:400">· ${esc((d&&d.series)||RZT.sym)} 5m${d&&d.session?` · ${esc(d.session)}`:''}</span></h3>`;
+  if(RZT.err)return head+`<p class="vx-note">${esc(RZT.err)}</p></section>`;
+  if(!d)return head+`<p class="vx-note">${RZT.busy?'Loading…':'Waiting for data'}</p></section>`;
+  const up=d.state==='BUY',stc=up?'b-up':d.state==='SELL'?'b-down':'b-mute';
+  const chip=(k,v,cls)=>`<span class="rz-k"><small>${k}</small><b class="num ${cls||''}">${v}</b></span>`;
+  const lf=d.lastFlip?`<p style="margin:0 0 6px">Last flip: <b class="${d.lastFlip.signal==='B'?'up':'down'}">${d.lastFlip.signal}</b> at <b>${esc(d.lastFlip.time)}</b> @ ${fmtP(d.lastFlip.price)} · stop ${fmtP(d.lastFlip.stop)} <small class="muted">(${d.lastFlip.barsAgo} bars ago)</small></p>`:'';
+  const flips=(d.flips||[]).slice().reverse();
+  const tbl=flips.length?`<div class="vx-astbl"><table><thead><tr><th>Time</th><th>Sig</th><th class="num">Entry</th><th class="num">Exit</th><th class="num">Pts</th><th>End</th></tr></thead><tbody>${flips.map(f=>`<tr><td>${esc(f.time)}</td><td><b class="${f.signal==='B'?'up':'down'}">${f.signal}</b></td><td class="num">${fmtP(f.entry)}</td><td class="num">${fmtP(f.exit)}</td><td class="num ${f.pts>=0?'up':'down'}">${f.pts>=0?'+':''}${f.pts.toFixed(1)}</td><td><small class="${f.result==='STOP'?'down':'muted'}">${f.result}</small></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No flips in this window yet.</p>';
+  return head+`<p class="rz-state" style="margin:0 0 8px"><span class="badge ${stc}">${d.state}</span> <span class="muted">momentum ${esc(d.momentumLabel)}</span></p>
+   <div class="rz-chips">${chip('Price',fmtP(d.price))}${chip('Stop (line)',d.sl!=null?fmtP(d.sl):'—','down')}${chip('Resistance',d.resistance!=null?fmtP(d.resistance):'—','down')}${chip('Support',d.support!=null?fmtP(d.support):'—','up')}</div>
+   ${lf}${tbl}
+   <p class="vx-note">B = the ATR trend line flipped under price (that line is the stop); S = flipped above. Recent flips show entry → exit with the points they gave — the same rule the backtest and the auto trader use.</p></section>`}
+setInterval(()=>{try{if(App.view==='options'&&!document.hidden&&$('#opRzt')&&!$('#opRzt').hidden&&!RZT.busy){RZT.d=null;rztLoad()}}catch(e){}},180000);
+/* ---- Old expiry review: what did an expired contract actually do? The expiry diary (expiry_book.py) recorded every
+   contract key while it traded; pick an old expiry + strike + CE/PE and its daily candles load from that key. ---- */
+let XPB={sym:'',exps:null,exp:'',book:null,strike:'',leg:'CE',daily:null,busy:false,err:''};
+async function xpLoad(){if(XPB.busy)return;const box=$('#optExpired');if(!box)return;
+  const sym=OPT.sym||'NIFTY';
+  if(XPB.sym!==sym){XPB.sym=sym;XPB.exps=null;XPB.exp='';XPB.book=null;XPB.daily=null;XPB.err=''}
+  if(!XPB.exps){XPB.busy=true;box.innerHTML='<div class="xp-h">Old expiry review</div><p class="muted" style="padding:0 14px 10px">Loading recorded expiries…</p>';
+    try{const r=await api('/api/m/expiries?symbol='+encodeURIComponent(sym));XPB.exps=r.expiries||[];const passed=XPB.exps.filter(e=>e.passed);XPB.exp=passed.length?passed[passed.length-1].expiry:'';}
+    catch(e){XPB.err=(e&&e.message)||'Expiry diary unavailable'}XPB.busy=false}
+  xpPaint();if(XPB.exp&&!XPB.book)xpLoadBook()}
+async function xpLoadBook(){const box=$('#optExpired');XPB.busy=true;XPB.daily=null;xpPaint();
+  try{XPB.book=await api('/api/m/expired?symbol='+encodeURIComponent(XPB.sym)+'&expiry='+encodeURIComponent(XPB.exp));XPB.err='';
+    const near=XPB.book.rows&&XPB.book.rows.length?XPB.book.rows.reduce((a,b)=>Math.abs(b.strike-(XPB.book.spotAt||0))<Math.abs(a.strike-(XPB.book.spotAt||0))?b:a):null;
+    XPB.strike=near?String(near.strike):'';XPB.leg=(near&&near.ce)?'CE':'PE'}
+  catch(e){XPB.book=null;XPB.err=(e&&e.message)||'No diary entry for this expiry'}
+  XPB.busy=false;xpPaint();if(XPB.strike)xpLoadDaily()}
+async function xpLoadDaily(){XPB.busy=true;XPB.daily=null;xpPaint();
+  try{const rows=XPB.book&&XPB.book.rows||[],st=rows.find(r=>String(r.strike)===XPB.strike),leg=st&&st[XPB.leg.toLowerCase()];
+    if(!leg||!leg.key)throw new Error('No recorded contract for this strike / side');
+    XPB.key=leg.key;
+    XPB.daily=(await api('/api/m/candles?ikey='+encodeURIComponent(leg.key)+'&tf=1D')).bars||[];XPB.err=''}
+  catch(e){XPB.daily=[];XPB.err=(e&&e.message)||'Candles unavailable for this contract'}
+  XPB.busy=false;xpPaint()}
+function xpPaint(){const box=$('#optExpired');if(!box)return;
+  const exps=(XPB.exps||[]),passed=exps.filter(e=>e.passed),live=exps.filter(e=>!e.passed);
+  const opt=(e,sel)=>`<option value="${esc(e.expiry)}" ${e.expiry===sel?'selected':''}>${esc(fmtExp(e.expiry))}${e.passed?' · past':' · live'} · ${e.strikes} strikes</option>`;
+  let html=`<div class="xp-h">⏳ Old expiry review · ${esc(XPB.sym)}</div><div class="xp-f">
+    <select class="inp" id="xpExp" aria-label="Expiry">${passed.map(e=>opt(e,XPB.exp)).join('')}${live.map(e=>opt(e,XPB.exp)).join('')}</select>
+    <select class="inp" id="xpLeg" aria-label="CE or PE">${['CE','PE'].map(s=>`<option ${XPB.leg===s?'selected':''}>${s}</option>`).join('')}</select>
+    <select class="inp" id="xpStrike" aria-label="Strike">${(XPB.book&&XPB.book.rows||[]).map(r=>`<option value="${r.strike}" ${String(r.strike)===XPB.strike?'selected':''}>${fmtP(r.strike,r.strike%1?2:0)}</option>`).join('')}</select>
+    <button class="btn-xs pri" data-xp="go">${XPB.busy?'Loading…':'Show'}</button></div>`;
+  if(XPB.err&&XPB.book==null){html+=`<p class="muted" style="padding:0 14px 12px">${esc(XPB.err)}</p>`;box.innerHTML=html;return}
+  const d=(XPB.daily||[]);
+  if(XPB.book&&!d.length&&!XPB.busy)html+=`<p class="muted" style="padding:0 14px 12px">${esc(XPB.err||'No candle history for this contract (it may be older than the data the broker keeps).')}</p>`;
+  if(d.length){
+    const first=d[0],lastD=d[d.length-1];
+    const hi=Math.max(...d.map(b=>b.h)),lo=Math.min(...d.map(b=>b.l));
+    const chg=first.o?((lastD.c-first.o)/first.o*100):0;
+    html+=`<div class="xp-stats">
+      <span>Recorded spot <b class="num">${fmtP(XPB.book.spotAt||0)}</b></span>
+      <span>First open <b class="num">${fmtP(first.o)}</b></span>
+      <span>Last close <b class="num">${fmtP(lastD.c)}</b></span>
+      <span>Overall <b class="num ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(1)}%</b></span>
+      <span>High / Low <b class="num">${fmtP(hi)} / ${fmtP(lo)}</b></span></div>
+      <div class="tbl-wrap xp-t"><table><thead><tr><th>Date</th><th class="num">Open</th><th class="num">High</th><th class="num">Low</th><th class="num">Close</th><th class="num">Day</th></tr></thead><tbody>${d.map(b=>{const dc=b.c-b.o;return`<tr><td>${new Date(b.t).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</td><td class="num">${fmtP(b.o)}</td><td class="num up">${fmtP(b.h)}</td><td class="num down">${fmtP(b.l)}</td><td class="num"><b>${fmtP(b.c)}</b></td><td class="num ${dc>=0?'up':'down'}">${dc>=0?'+':''}${dc.toFixed(2)}</td></tr>`}).join('')}</tbody></table></div>`;
+  } else if(XPB.book) html+=`<p class="muted" style="padding:0 14px 12px">Pick a strike and CE/PE, then Show.</p>`;
+  html+=`<p class="muted xp-note">The expiry diary records every contract key while the chain is live - so a past expiry can be reviewed days or weeks later: pick the expiry, strike and CE/PE to see that contract's daily candles (entry-to-expiry). Expiries start appearing once the app has fetched their chain at least once.</p>`;
+  box.innerHTML=html}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-xp]');if(!b)return;const sEl=document.getElementById('xpExp'),lEl=document.getElementById('xpLeg'),kEl=document.getElementById('xpStrike');
+  if(sEl)XPB.exp=sEl.value;if(lEl)XPB.leg=lEl.value;if(kEl)XPB.strike=kEl.value;
+  if(b.dataset.xp==='go'&&XPB.book&&XPB.strike)xpLoadDaily();else{XPB.book=null;xpLoadBook()}});
+document.addEventListener('change',e=>{if(e.target.id==='xpExp'){XPB.exp=e.target.value;XPB.book=null;xpLoadBook()}else if(e.target.id==='xpLeg'||e.target.id==='xpStrike'){if(e.target.id==='xpLeg')XPB.leg=e.target.value;else XPB.strike=e.target.value;XPB.daily=null;xpLoadDaily()}});
 async function optTick(){if(OPT.ticking)return;OPT.ticking=true;
   try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?15000:180000))await loadChain(true);
     if(OPT.sel&&OPT.osym){const r=await api('/api/m/oquote?keys='+encodeURIComponent(OPT.sel.key)),q=r.quotes&&r.quotes[0],o=OPT.osym;
@@ -4353,7 +4473,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'vedic');
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
-  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}})})();
+  loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}});
+  let _rszT;window.addEventListener('resize',()=>{clearTimeout(_rszT);_rszT=setTimeout(()=>{try{if(App.view==='options'&&OPT.chain)drawChain()}catch(e){}},250)})})();
 </script>
 </body>
 </html>

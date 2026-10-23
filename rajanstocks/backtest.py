@@ -79,6 +79,8 @@ def _runners(include_hidden=False):
     import rajan_new_indicators as newind
     for k, fn in newind.NEW_KEYS.items():                # daily-bar Rajan strategies (they give their own stop)
         out[k] = (lambda sym, lb, fn=fn: fn(sym, lookback_days=max(lb, 250)))
+    import rzt as rzt_mod
+    out["rzt"] = lambda sym, lb: rzt_mod.rzt_scan(sym, lookback_days=lb)   # Rajan Zone Trend (Z Trend): flip + line stop
     # quantum-matrix, ha-dancing-trend, volume-spurt, orb-15m and vwap-rsi run on 1-minute bars: years of
     # 1-minute history are not available, so they cannot be replayed here.
     return {k: v for k, v in out.items() if include_hidden or k not in strategies_api.HIDDEN}      # default: only the indicators kept on the site

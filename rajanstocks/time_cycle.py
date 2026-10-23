@@ -117,6 +117,17 @@ def build(symbol, mode="underlying", strike=None):
             groups.append(g)
         g["items"].append((m, src, n))
     now_m = now.hour * 60 + now.minute if today == now.date().isoformat() else 0
+    # price at each cycle time: the close of the 5-minute bar covering it (None while the cycle is still ahead)
+    px_at = {}
+    for b in cur:
+        px_at[b["m"]] = b["c"]
+    def _price_at(m):
+        if m > now_m:
+            return None
+        for back in range(6):                          # the bar that covers the cycle time (bars are 5 min)
+            if m - back in px_at:
+                return px_at[m - back]
+        return None
     cycles = []
     for g in groups:
         ms = [x[0] for x in g["items"]]
@@ -124,9 +135,11 @@ def build(symbol, mode="underlying", strike=None):
         srcs = sorted({f"{n} min from {src}" for _, src, n in g["items"]})
         major = any(n in MAJOR for _, _, n in g["items"])
         score = len({src for _, src, _ in g["items"]}) + (1 if major else 0)
+        p = _price_at(mid)
         cycles.append({"time": _hm(mid), "m": mid, "sources": srcs, "score": score,
                        "strength": "strong" if score >= 3 else "medium" if score == 2 else "minor",
-                       "passed": bool(cur) and mid < now_m})
+                       "passed": bool(cur) and mid < now_m,
+                       "price": round(p, 2) if p else None})
     pc = prev[-1]["c"]
     last = (cur[-1]["c"] if cur else pc)
     zones = []

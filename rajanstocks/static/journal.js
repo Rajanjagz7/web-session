@@ -70,7 +70,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         const a = await r.json();
         const before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType]));
         AUTO.list = (a.open || []).concat(a.closed || []).map(mapAuto);
-        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0 }; AUTO.err = false;
+        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null }; AUTO.err = false;
         AUTO.ts = Date.now();
         if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
             ['portfolio', 'positions', 'algo'].includes(effTab())) render();          // a new / closed trade: redraw; prices alone update in place
@@ -385,28 +385,16 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
      let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
      const openAll = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), open = openAll.filter(sideOk);
-     const noSL = T.filter(t => entered(t) && !(t.sl0 > 0)).length, overrides = T.filter(t => t.override).length;
-     const missing = closedTrades().filter(t => !t.reviewed).length;
+     const dayPnl = (daily[day] || 0) + openAll.filter(t => t.date === day).reduce((a, t) => a + (unrealised(t) || 0), 0);
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
      ${booksCard()}
      <div class="jv-sec">Options book · performance</div>
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
      <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>
-     <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
-     <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>
-     <div class="jv-grid">
-       <div class="card"><div class="card-h"><h3>Equity curve</h3></div><canvas class="jv-cv" id="jvEq"></canvas></div>
-       <div class="card"><div class="card-h"><h3>Drawdown</h3></div><canvas class="jv-cv" id="jvDd"></canvas></div>
-       <div class="card"><div class="card-h"><h3>Daily P&amp;L</h3></div><canvas class="jv-cv" id="jvDay"></canvas></div>
-       <div class="card"><div class="card-h"><h3>Rule compliance</h3></div><div class="jv-list">
-         <div><span>Entries without a stop-loss</span><b class="${noSL ? 'down' : 'up'}">${noSL}</b></div>
-         <div><span>Rule overrides (limit / budget / R:R)</span><b class="${overrides ? 'down' : 'up'}">${overrides}</b></div>
-         <div><span>Closed trades missing a review</span><b class="${missing ? 'down' : 'up'}">${missing}</b></div>
-         </div></div>
-     </div>
-     <script type="application/json" id="jvChartData">${JSON.stringify({ curve, dd, daily: Object.keys(daily).sort().map(k => daily[k]) })}</script>`;
-   }
+     <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><b class="num ${dayPnl > 0 ? 'up' : dayPnl < 0 ? 'down' : ''}" title="Today's booked P&L + open P&L of today's trades" style="font-size:13px">Day ${sinr(dayPnl)}</b><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
+     <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>`;
+  }
 
   function viewOrders() {
     if (typeof App === 'undefined' || typeof ordTable === 'undefined') return '<div class="empty">Orders are not available right now.</div>';
@@ -464,6 +452,39 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       <span class="jv-pgb"><button data-jvpg="${key}:${pg.p - 1}" ${pg.p <= 0 ? 'disabled' : ''} aria-label="Previous page">‹</button><b>${pg.p + 1}/${pages}</b><button data-jvpg="${key}:${pg.p + 1}" ${pg.p >= pages - 1 ? 'disabled' : ''} aria-label="Next page">›</button></span></div>` : '';
     return { part, bar };
   }
+  /* ---------- trade timestamps: when it was taken, when it exited, how long it was held ---------- */
+  function tStart(t) {
+    if (t.openedAt || t.created) { const d = new Date(t.openedAt || t.created); if (isFinite(d)) return d; }
+    if (t.date && t.time) { const d = new Date(t.date + 'T' + t.time + ':00+05:30'); if (isFinite(d)) return d; }
+    return t.date ? new Date(t.date + 'T09:20:00+05:30') : null;
+  }
+  function entryTime(t) {
+    if (t.time) return t.time;
+    const d = tStart(t);
+    return d && isFinite(d) ? istTime(d) : '';
+  }
+  function exitTime(t) {
+    if (t.closedAt) { const d = new Date(t.closedAt); if (isFinite(d)) return istTime(d); }
+    const ex = (t.exits || []).filter(x => x && (x.time || x.at || x.date));
+    if (ex.length) { const l = ex[ex.length - 1]; return l.time || (l.at ? istTime(new Date(l.at)) : ''); }
+    return '';
+  }
+  function heldTxt(t) {
+    const s = tStart(t);
+    if (!s || !isFinite(s)) return '—';
+    const closed = statusOf(t) === 'Closed';
+    const e = closed && t.closedAt ? new Date(t.closedAt) : new Date();
+    if (!e || !isFinite(e)) return '—';
+    let m = Math.max(0, Math.round((e - s) / 60000));
+    const d = Math.floor(m / 1440); m -= d * 1440;
+    const h = Math.floor(m / 60); m -= h * 60;
+    const parts = [];
+    if (d) parts.push(d + 'd');
+    if (h) parts.push(h + 'h');
+    if (m || !parts.length) parts.push(m + 'm');
+    return parts.join(' ');
+  }
+
   function tradeTable(list, withUnr, key) {
     key = key || 'tbl'; ui.tbl = ui.tbl || {}; ui.pg = ui.pg || {}; ui.tbl[key] = { list, withUnr };
     if (!list.length) return `<div class="jv-tw" data-jvt="${key}"><div class="empty">No trades match.</div></div>`;
@@ -476,7 +497,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       const tips = [`Setup: ${t.setup || '—'}`, t.tf ? `TF ${t.tf}` : '', t.ind ? `Indicators: ${t.ind}` : ''].filter(Boolean).join(' · ');
       return `<tr data-jv="open" data-id="${t.id}" tabindex="0" title="Click for full details">
         <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : t.paper ? '<span class="jv-tag m" title="Placed from the Trade screen">T</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${String(t.id).replace(/^A-\d{4}/, 'A-')}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
-        <td title="${t.date} ${t.time || ''}">${String(t.date).slice(5)}</td>
+        <td title="Taken: ${t.date} ${entryTime(t) || ''} (IST)">${String(t.date).slice(5)}${entryTime(t) ? ` <small class="num">${entryTime(t)}</small>` : ''}</td>
         <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small title="${E(tips)}">${E(t.setup || '')}</small></td>
         <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'SELL' : 'BUY'}</span></td>
         <td class="num">${px(t.entry)}</td>
@@ -486,10 +507,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td class="num ${cc(v)}" data-c="pnl" title="${closedish ? 'Booked P&L after costs' : 'Open P&L at live price'}"><b>${pnl}</b></td>
         <td class="num ${cc(c.R)}">${rr(c.R)}</td>
         <td><span class="badge ${stCls}">${st}</span></td>
-        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span title="${E(t.exitType || '')}">${E(t.exitType || '—')}</span>`}</td>
+        <td class="num" title="${closedish ? 'Held from ' + entryTime(t) + ' to ' + (exitTime(t) || 'exit') : 'Held so far (live)'}">${heldTxt(t)}</td>
+        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span title="${E(t.exitType || '')}${exitTime(t) ? ' · exited ' + exitTime(t) + ' IST' : ''}">${E(t.exitType || '—')}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}</td>
         <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
     }).join('');
-    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date (MM-DD)')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Exit', 'Exit an open position now, or how a closed trade ended')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
+    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time (IST) · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
   }
 
   function viewNew() {
@@ -940,7 +962,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       if (which === 'auto') SV.auto = await jget('/api/auto/status');
       else { const b = await jget('/api/backtest'); SV.bt = b; SV.btBusy = !!b.running; }
     } catch (e) { if (which === 'auto') SV.auto = { error: String(e.message || e) }; else SV.bt = { error: String(e.message || e) }; }
-    const eff = effTab(); if (eff === which || (which === 'bt' && eff === 'backtest')) render();
+    const eff = effTab(); if (eff === which || (which === 'bt' && (eff === 'backtest' || eff === 'algo' || eff === 'portfolio'))) render();
   }
   const cfgName = r => r.variant === 'fixed' ? '1.5 ATR stop · 2R target' : r.variant === 'trail' ? '2 ATR trailing stop' : '2 ATR stop · exit on opposite signal';
   const KEYNAME = k => { try { const m = (typeof ST !== 'undefined' && ST.meta) ? ST.meta.strategies.find(x => x.key === k) : null; return m ? m.name : k; } catch (e) { return k; } };
@@ -1132,6 +1154,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
+    else if (a === 'vedrefresh') { syncVedic(true); }
+    else if (a === 'exitf') { AUTO.exitFilter = b.dataset.k || ''; render(); }
     else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
     else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
     else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
@@ -1400,7 +1424,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
    function positionTable(trades) {
      if (!trades.length) return '<div class="empty">No positions</div>';
-     const headers = ['Symbol', 'Side', 'Entry', 'SL', 'TSL', 'Target', 'R:R', 'Current', 'P&L', 'Exit'];
+     const headers = ['Symbol', 'Side', 'Entry · in', 'SL', 'TSL', 'Target', 'R:R', 'Current', 'P&L', 'Held', 'Exit'];
      const rows = trades.map(t => {
        const c = calc(t);
        const status = statusOf(t);
@@ -1413,13 +1437,14 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        return `<tr data-pid="${E(t.id)}"${t.auto ? ' class="auto-row"' : ''}>
          <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small>${E(t.setup || '')}</small></span></td>
          <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'BUY' : 'SELL'}</span></td>
-         <td class="num">${px(t.entry)}</td>
+         <td class="num" title="Taken ${entryTime(t) ? entryTime(t) + ' IST' : ''}">${px(t.entry)}${entryTime(t) ? ` <small class="muted">${entryTime(t)}</small>` : ''}</td>
          <td class="num" data-c="sl">${px(t.sl)}</td>
          <td class="num" data-c="tsl">${E(open ? tslShow(t) : '—')}</td>
          <td class="num">${px(t.t2)}</td>
          <td class="num">${rrv != null ? '1:' + rrv.toFixed(1) : '—'}</td>
          <td class="num" data-c="cur"><b>${px(currentPrice)}</b></td>
          <td class="num ${pnlClass}" data-c="pnl">${sinr(pnl)}</td>
+         <td class="num" title="How long the trade was held (live while open)">${heldTxt(t)}</td>
          <td>${exitBtn}</td>
        </tr>`;
      }).join('');
@@ -1445,14 +1470,15 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      if (!d) { sbLoad(false); return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L</h3></div><div class="empty">Loading…</div></div>`; }
      const HZL = { intraday: 'Intraday', swing: 'Swing', positional: 'Positional' };
      const rows = Object.entries(d.byHorizon).map(([k, v]) => `<tr><td><b>${HZL[k]}</b></td><td class="num">${v.open}</td><td class="num">${v.closed}</td><td class="num ${v.winRate == null ? '' : v.winRate >= 50 ? 'up' : 'down'}">${v.winRate == null ? '—' : v.winRate + '%'}</td><td class="num">${v.pf == null ? '—' : v.pf}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num ${cc(v.unrealised)}">${sinr(v.unrealised)}</td></tr>`).join('');
-     const open = d.open.map(t => { const up = t.side === 'BUY'; return `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${up ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b><small class="muted" style="display:block">${E(t.why || '')}</small></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.last)}</td><td class="num down">${px(t.stop)}${t.t1Hit ? ' <small class="up">BE</small>' : ''}</td><td class="num">${px(t.t1)} · ${px(t.t2)}</td><td class="num ${cc(t.unrealised)}">${sinr(t.unrealised || 0)}</td><td><button class="btn jv-exit" data-sb="exit" data-id="${E(t.id)}">Exit</button></td></tr>`; }).join('');
      const pc = pagerBar(d.closed, 'sbc');
+     const po = pagerBar(d.open, 'sbo');
      const closed = pc.part.map(t => `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${t.side === 'BUY' ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.exit)}</td><td>${E(t.exitReason)}</td><td class="num ${cc(t.net)}">${sinr(t.net)}</td><td class="muted">${E(String(t.date).slice(5))}</td></tr>`).join('');
+     const open = po.part.map(t => { const up = t.side === 'BUY'; return `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${up ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b><small class="muted" style="display:block">${E(t.why || '')}</small></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.last)}</td><td class="num down">${px(t.stop)}${t.t1Hit ? ' <small class="up">BE</small>' : ''}</td><td class="num">${px(t.t1)} · ${px(t.t2)}</td><td class="num ${cc(t.unrealised)}">${sinr(t.unrealised || 0)}</td><td><button class="btn jv-exit" data-sb="exit" data-id="${E(t.id)}">Exit</button></td></tr>`; }).join('');
      return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L (paper)</h3><span class="jv-hr"><span class="muted" style="font-size:12px">${d.lastRun ? 'last run ' + new Date(d.lastRun).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'waits for market hours'}</span><button class="btn" data-sb="reset">Reset</button></span></div>
        <div class="jv-capg"><div><small>Equity</small><b class="${cc(d.equity - d.capital)}">${inr(d.equity, 0)}</b><span class="muted">booked ${sinr(d.booked)} · open ${sinr(d.unrealised)}</span></div>
          <div><small>In use</small><b>${inr(d.used, 0)}</b><span class="muted">${(d.used / d.capital * 100).toFixed(1)}% of ₹10 L</span></div><div><small>Free cash</small><b class="up">${inr(d.cash, 0)}</b><span class="muted">${d.all.closed} closed · ${d.all.winRate == null ? '—' : d.all.winRate + '% won'}</span></div></div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th class="num">Open</th><th class="num">Closed</th><th class="num">Win %</th><th class="num">PF</th><th class="num">Booked</th><th class="num">Open P&amp;L</th></tr></thead><tbody>${rows}</tbody></table></div>
-       ${open ? `<h4 class="jv-sbh">Open (${d.open.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">LTP</th><th class="num">SL</th><th class="num">T1 · T2</th><th class="num">P&amp;L</th><th></th></tr></thead><tbody>${open}</tbody></table></div>` : '<div class="empty">No open stock trades. New ones are taken 09:20-14:30 (intraday until 13:30) from the Picks plans.</div>'}
+       ${d.open.length ? `<h4 class="jv-sbh">Open (${d.open.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">LTP</th><th class="num">SL</th><th class="num">T1 · T2</th><th class="num">P&amp;L</th><th></th></tr></thead><tbody>${open}</tbody></table></div>${po.bar}` : '<div class="empty">No open stock trades. New ones are taken 09:20-14:30 (intraday until 13:30) from the Picks plans.</div>'}
        ${closed ? `<h4 class="jv-sbh">Closed (${d.closed.length})</h4><div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Horizon</th><th>Side</th><th>Stock</th><th class="num">Qty</th><th class="num">Entry</th><th class="num">Exit</th><th>Why</th><th class="num">Net</th><th>Date</th></tr></thead><tbody>${closed}</tbody></table></div>${pc.bar}` : ''}
        <details class="jv-sbr"><summary>Rules</summary><pre>${E(d.rules || '')}</pre></details></div>`;
    }
@@ -1489,15 +1515,58 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const openAuto = auto.filter(t => entered(t) && statusOf(t) !== 'Closed');
      const closedAuto = auto.filter(t => statusOf(t) === 'Closed');
      
-     // Backtest data
-     const bt = typeof SV !== 'undefined' && SV.bt ? SV.bt : null;
-     // status comes from the server (switched on? market open?), not from whether this phone has loaded the list yet
+     // Backtest data: the real /api/backtest result (same one the backtest screen used)
      const srv = AUTO.srv;
      if (!srv && !AUTO.busy) setTimeout(() => syncAuto(true), 0);
+     if (!SV.bt && !SV.btBusy) setTimeout(() => loadSrv('bt'), 0);
      const stTxt = !srv ? (AUTO.err ? 'Server not reachable · retrying' : 'Loading…')
        : !srv.enabled ? 'Paused' : srv.marketOpen ? `Running · ${srv.todayCount} trades today` : 'On · market closed';
      const stCls = !srv ? '' : !srv.enabled ? 'down' : srv.marketOpen ? 'up' : '';
-     
+
+     const btCard = (() => {
+       const B = SV.bt;
+       if (!B) return '<div class="empty">Loading backtest…</div>';
+       if (B.error) return `<div class="empty">Backtest unavailable (${E(B.error)}).</div>`;
+       const R = B.result;
+       if (!R) return `<div class="empty">${B.running ? 'Backtest running — ' + E(B.progress || '') : 'No backtest has been run yet.'}</div><div class="jv-actions"><button class="btn pri" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running…' : 'Run backtest'}</button></div>`;
+       const proven = (R.provenKeys || []).length;
+       const verdict = proven
+         ? `<span>Verdict</span><b class="up">${proven} of ${R.strategiesTested} passed</b>`
+         : `<span>Verdict</span><b class="down">0 of ${R.strategiesTested} passed · forward-testing top settings</b>`;
+       const top = (R.ranking || []).slice(0, 4).map(r => {
+         const i = r.inSample, o = r.outOfSample;
+         return `<tr><td><b>${E(KEYNAME(r.key))}</b></td><td class="num">${i.n}</td><td class="num ${cc(i.avgR)}">${rr(i.avgR)}</td><td class="num">${o.n}</td><td class="num ${cc(o.avgR)}">${rr(o.avgR)}</td><td>${r.proven ? '<span class="badge b-up">Proven</span>' : '<span class="badge b-mute">Fwd test</span>'}</td></tr>`;
+       }).join('');
+       const ex = R.executorResearch || R.executor;
+       const exLine = ex && ex.twoMonth ? `<div><span>2-month replay</span><b class="${cc(ex.twoMonth.median)}">${sinr(ex.twoMonth.median)} median · ${ex.entries} trades · win ${(ex.stats.winRate * 100).toFixed(0)}%</b></div>` : '';
+       return `<div class="jv-list">
+           ${verdict}
+           <div><span>Simulated</span><b>${(R.tradesSimulated || 0).toLocaleString('en-IN')} trades · ${E(R.historyFrom || '')} → ${E(R.historyTo || '')}</b></div>
+           ${exLine}
+           <div><span>Generated</span><b>${E((R.generatedAt || B.generatedAt || '').replace('T', ' ').slice(0, 16))}</b></div>
+         </div>
+         ${top ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${top}</tbody></table></div>` : ''}
+         <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running… ' + E(B.progress || '') : 'Re-run backtest'}</button></div>`;
+     })();
+
+     // exit-reason breakdown + filter for the auto trades (raw server exit reasons: STOP / TSL / TARGET / TIME / EXPIRY / MANUAL)
+     const autoAll = allTrades().filter(t => t.auto && entered(t));
+     const closedAutoAll = autoAll.filter(t => statusOf(t) === 'Closed');
+     const exKey = t => (t.raw && t.raw.exitReason) || t.exitType || '—';
+     const EXF = [['', 'All'], ['STOP', 'SL'], ['TSL', 'TSL'], ['TARGET', 'Target'], ['TIME', 'Time'], ['EXPIRY', 'Expiry'], ['MANUAL', 'Manual']];
+     const exitFilter = AUTO.exitFilter || '';
+     const byExit = {};
+     closedAutoAll.forEach(t => {
+       const k = exKey(t);
+       const row = byExit[k] || (byExit[k] = { n: 0, net: 0, w: 0 });
+       const net = calc(t).net || 0;
+       row.n++; row.net += net; if (net > 0) row.w++;
+     });
+     const exitRows = Object.entries(byExit).sort((a, b) => b[1].n - a[1].n).map(([k, v]) =>
+       `<tr class="${exitFilter === k ? 'sel' : ''}"><td>${E(k)}</td><td class="num">${v.n}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num">${v.n ? Math.round(v.w / v.n * 100) : 0}%</td></tr>`).join('');
+     const exFiltered = exitFilter ? closedAutoAll.filter(t => exKey(t) === exitFilter) : closedAutoAll;
+     const exFilteredPaged = exFiltered.slice(0, 10);
+
      return `<div class="jv-grid">
        <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
          <div class="jv-list">
@@ -1505,36 +1574,64 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
            <div><span>Open Auto Trades</span><b>${openAuto.length}</b></div>
            <div><span>Closed Today</span><b>${closedAuto.filter(t => t.date === today()).length}</b></div>
            <div><span>Total Auto P&L</span><b class="${cc(auto.reduce((s, t) => s + (calc(t).net || 0), 0))}">${sinr(auto.reduce((s, t) => s + (calc(t).net || 0), 0))}</b></div>
+           ${srv && srv.dayPnl && srv.dayPnl.limit ? `<div><span>Day P&L guard</span><b class="${srv.dayPnl.mode === 'blocked' ? 'down' : srv.dayPnl.mode === 'soft' ? '' : 'up'}" title="${E(srv.dayPnl.note || '')}">${sinr(srv.dayPnl.value)} · ±${inr(srv.dayPnl.limit, 0)}${srv.dayPnl.mode === 'blocked' ? ' · blocked' : srv.dayPnl.mode === 'soft' ? ' · soft zone' : ''}</b></div>` : ''}
          </div>
          <div class="jv-actions">
            ${srv ? `<button class="btn ${srv.enabled ? '' : 'pri'}" data-jv="autotoggle">${srv.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>` : ''}
            <button class="btn" data-jv="autorefresh">Refresh</button>
          </div>
        </div>
-       
-       <div class="card"><div class="card-h"><h3>📊 Backtest Results</h3></div>
-         ${bt ? `
-           <div class="jv-list">
-             <div><span>Strategy</span><b>${bt.strategy || 'N/A'}</b></div>
-             <div><span>Total Trades</span><b>${bt.totalTrades || 0}</b></div>
-             <div><span>Win Rate</span><b>${bt.winRate ? (bt.winRate * 100).toFixed(1) + '%' : 'N/A'}</b></div>
-             <div><span>Net P&L</span><b class="${cc(bt.netPnl || 0)}">${sinr(bt.netPnl || 0)}</b></div>
-             <div><span>Max DD</span><b>${inr(bt.maxDD || 0, 0)}</b></div>
-             <div><span>Profit Factor</span><b>${bt.profitFactor ? bt.profitFactor.toFixed(2) : 'N/A'}</b></div>
-           </div>
-         ` : '<div class="empty">No backtest data. Run a backtest from Analysis tab.</div>'}
+
+       <div class="card"><div class="card-h"><h3>📊 Backtest Results</h3></div>${btCard}</div>
+
+       <div class="card"><div class="card-h"><h3>🕉️ Vedic Gann Report</h3><span class="muted" style="font-size:11px" id="jvVedTs">${VED.ts ? 'updated ' + VED.ts + ' IST' : 'loading…'}</span></div>
+         <div class="jv-list" id="jvVed">${vedHTML()}</div>
+         <div class="jv-actions"><button class="btn" data-jv="vedrefresh">Refresh now</button></div>
        </div>
-       
-       <div class="card"><div class="card-h"><h3>🕉️ Vedic Gann Report</h3></div>
-         <div class="jv-list">
-           <div><span>Gann Signal</span><b>${getGannSignal().text}</b></div>
-           <div><span>Action</span><b>${getGannSignal().action}</b></div>
-           <div><span>Key Level</span><b>${getGannSignal().level}</b></div>
-           <div><span>Morning Bias</span><b>${getMorningBias()}</b></div>
-         </div>
-       </div>
+     </div>
+     <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">how every auto trade ended, and what it returned</span></div>
+       <div class="jv-pos-bar">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}<span class="muted" style="font-size:12px">${closedAutoAll.length} closed auto trades</span></div>
+       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Exit</th><th class="num">Trades</th><th class="num">Net P&L</th><th class="num">Win %</th></tr></thead><tbody>${exitRows || '<tr><td colspan="4" class="muted">No closed auto trades yet.</td></tr>'}</tbody></table></div>
+       ${exFilteredPaged.length ? tradeTable(exFilteredPaged, true, 'algoex') : ''}
      </div>`;
    }
+
+  /* ---------- live Vedic Gann report (Journal → Algo): real /api/vedic/report data, refreshed every 2 minutes ---------- */
+  const VED = { data: null, ts: '', busy: false };
+  function vedHTML() {
+    const r = VED.data;
+    if (!r || !r.confluence) return `<div class="empty">${VED.busy ? 'Loading the live Vedic report…' : 'Vedic report unavailable right now - tap Refresh now.'}</div>`;
+    const c = r.confluence, g = r.gann || {}, p = r.panchang || {}, st = r.special_timing || {};
+    const bull = /BULL/.test(c.lean || ''), bear = /BEAR/.test(c.lean || ''), tone = bull ? 'up' : bear ? 'down' : '';
+    const act = bull ? 'Bias up - buy above the Gann base, avoid fresh entries inside Rahu Kaal'
+      : bear ? 'Bias down - sell below the Gann base, avoid fresh entries inside Rahu Kaal'
+        : 'Votes disagree - wait for price to confirm at a Gann level';
+    const lvl = g.available && g.base ? `${px(g.base.price)} <small class="muted">${E(g.base.kind || '')}</small>` : '—';
+    const dp = r.day_power && Array.isArray(r.day_power.days) && r.day_power.days[0] ? r.day_power.days[0] : null;
+    const bias = [dp ? `${E(dp.label || dp.side || '')} day (${E(dp.weekday || '')})` : '', st && st.available && st.windows ? E(st.session_note || '') : '', p.mumbai_rahu_kaal_ist ? `Rahu Kaal ${E(p.mumbai_rahu_kaal_ist)}` : ''].filter(Boolean).join(' · ');
+    const top = (c.factors || []).slice(0, 3).map(f => `${E(f.name)}: ${f.vote > 0 ? '<span class="up">+</span>' : f.vote < 0 ? '<span class="down">−</span>' : '0'}`).join(' · ');
+    return `<div><span>Gann Signal</span><b class="${tone}">${E(c.lean || '—')} · ${c.score >= 0 ? '+' : ''}${c.score}/${c.max}</b></div>
+      <div><span>Action</span><b>${E(act)}</b></div>
+      <div><span>Key Level</span><b>${lvl}</b></div>
+      <div><span>Morning Bias</span><b>${bias ? E(bias) : '—'}</b></div>
+      <div><span>Top votes</span><b>${top || '—'}</b></div>`;
+  }
+  async function syncVedic(force) {
+    if (VED.busy) return;
+    VED.busy = true;
+    try {
+      const r = await fetch('/api/vedic/report' + (force ? '?refresh=true' : ''), { cache: 'no-store' });
+      VED.data = r.ok ? await r.json() : null;
+      VED.ts = istTime(new Date());
+    } catch (e) { if (!VED.data) VED.data = null; }
+    VED.busy = false;
+    const host = document.getElementById('jvVed');
+    if (host) host.innerHTML = vedHTML();
+    const ts = document.getElementById('jvVedTs');
+    if (ts) ts.textContent = VED.ts ? 'updated ' + VED.ts + ' IST' : '';
+  }
+  setInterval(() => { const h = document.getElementById('jvVed'); if (h && h.offsetParent && !document.hidden) syncVedic(false); }, 120000);
+  if (!VED.data && !VED.busy) setTimeout(() => syncVedic(false), 1500);
 
    function getMorningBias() {
      try {

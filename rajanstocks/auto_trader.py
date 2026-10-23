@@ -41,7 +41,9 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True}
+               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 30000.0}
+SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
+SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
 
 
@@ -135,6 +137,36 @@ def _mins(now):
 
 def _equity(st):
     return st["cfg"]["capital"] + sum(t.get("net", 0.0) for t in st["trades"] if t["status"] == "CLOSED")
+
+
+def _open_pnl(t):
+    sgn = -1 if t.get("pos") == "short" else 1
+    last = float(t.get("last") or t["entry"] or 0)
+    return (last - t["entry"]) * t["lots"] * t["lot"] * sgn
+
+
+def _day_pnl(st, today):
+    """Realised (today's closed trades) + unrealised (every open position marked to market)."""
+    closed = sum(t.get("net", 0.0) for t in st["trades"] if t["date"] == today and t["status"] == "CLOSED")
+    open_u = sum(_open_pnl(t) for t in st["trades"] if t["status"] == "OPEN")
+    return closed + open_u
+
+
+def _day_guard(st, today):
+    """The ±dayPnlLimit guard: past the limit no new trades at all (profit locks and trailing keep running);
+    inside the 75% soft zone only high-conviction entries (3+ indicators agreeing, or a Z Trend flip) are taken.
+    Returns (mode, note): mode is 'off' | 'soft' | 'blocked'."""
+    limit = float(st["cfg"].get("dayPnlLimit") or 0)
+    if limit <= 0:
+        return "off", None
+    day = _day_pnl(st, today)
+    if day >= limit or day <= -limit:
+        return "blocked", (f"Day P&L {'+' if day >= 0 else '−'}₹{abs(day):,.0f} crossed the ±₹{limit:,.0f} guard - "
+                           f"no new trades today, existing positions keep their profit lock and trailing stop")
+    if day >= limit * SOFT_ZONE or day <= -limit * SOFT_ZONE:
+        return "soft", (f"Day P&L {'+' if day >= 0 else '−'}₹{abs(day):,.0f} is inside the soft zone "
+                        f"(±₹{limit:,.0f} limit) - only 3-indicator confluence and Z Trend entries are taken")
+    return "off", None
 
 
 # ───────────────────────── market helpers ─────────────────────────
@@ -272,7 +304,9 @@ def fill_slots(st, today, already):
             st["log"].append({"at": _now().isoformat(), "msg": f"index screen failed: {str(e)[:80]}"})
     if need["stock"] > 0:
         try:
-            picks = market_api.quick_screen([s for s in backtest.STOCK_SYMS], 8 if vercel else 20)
+            # every F&O stock with listed options (~218), same engine + cache as the Picks page - not just the 20
+            # backtest symbols. Open = High / Open = Low screens on any of them can now fill a stock slot.
+            picks = [p for p in market_api.picks().get("picks", []) if p.get("s") not in INDEX_SYMS]
             ranked = sorted([p for p in picks if p["signal"] in ("BUY", "SELL") and p["s"] not in used and p.get("strength", 0) >= 50],
                             key=lambda p: (-(p.get("strength") or 0), -(p.get("volx") or 0)))
             for p in ranked[:need["stock"]]:
@@ -289,11 +323,13 @@ def x_stop(rows):
 
 
 def scan_all(st, today):
-    """Fresh BUY/SELL events from EVERY indicator on the last completed daily bar, for 5 indices + 20 liquid stocks.
+    """Fresh BUY/SELL events from EVERY indicator on the last completed daily bar, for 5 indices + every F&O stock
+    with listed options (~218, not just the curated 20 - a stock is only skipped when it has no daily history).
     Completed bars only change once a day, so this is scanned ONCE per day, symbol by symbol (it resumes in the next
     cycle if it runs out of time) instead of being recomputed every 5 minutes - that was a big part of the Upstox load."""
     import backtest
     import bar_source
+    import market_api
     cache = st.setdefault("cand", {})
     if cache.get("date") != today:
         cache.clear()
@@ -302,7 +338,15 @@ def scan_all(st, today):
     score = {x["key"]: x["inSample"]["avgR"] for x in (r["ranking"] if r else [])}
     chosen = {k: tuple(v) for k, v in ((r["chosen"] if r else {}) or {}).items()}
     runners = backtest._runners()
-    syms = INDEX_SYMS + [x for x in backtest.STOCK_SYMS if bar_source.supports(x)]
+    try:
+        uni = [s for s, _n, _sec in market_api.STOCKS] or backtest.STOCK_SYMS
+        ensure = getattr(market_api, "ensure_universe", None)
+        if ensure and len(uni) <= len(backtest.STOCK_SYMS):
+            ensure()
+            uni = [s for s, _n, _sec in market_api.STOCKS] or uni
+    except Exception:
+        uni = backtest.STOCK_SYMS
+    syms = INDEX_SYMS + [x for x in uni if x not in INDEX_SYMS and bar_source.supports(x)]
     todo = [x for x in syms if x not in cache["done"]]
     deadline = time.time() + (8 if os.environ.get("VERCEL") else 120)
 
@@ -488,10 +532,14 @@ def open_trade(st, c, today):
     st["trades"].append(t)
     st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]"})
     if WRITE_PAIR:
-        try:
-            _open_short(st, c, today, t)
-        except Exception as e:
-            st["log"].append({"at": _now().isoformat(), "msg": f"no paired sell for {c['sym']}: {str(e)[:80]}"})
+        if _mins(_now()) < SELL_FROM:
+            t["writePending"] = True          # option SELL legs wait until 09:20 (user rule); buys go at 09:15
+            st["log"].append({"at": _now().isoformat(), "msg": f"paired sell for {t['id']} deferred - option selling starts at 09:20"})
+        else:
+            try:
+                _open_short(st, c, today, t)
+            except Exception as e:
+                st["log"].append({"at": _now().isoformat(), "msg": f"no paired sell for {c['sym']}: {str(e)[:80]}"})
     return t
 
 
@@ -502,6 +550,8 @@ WRITE_MARGIN_PCT = 0.12  # paper margin per unit sold: max(12% of spot, premium)
 
 def _open_short(st, c, today, main):
     """Paired option SELL in the same direction as the signal, held to the same underlying stop / target."""
+    if _mins(_now()) < SELL_FROM:
+        raise RuntimeError("option selling starts at 09:20")
     cfg = st["cfg"]
     opp = "SELL" if c["side"] == "BUY" else "BUY"               # the leg on the other side of the chain
     ct = _contract(c["sym"], opp, today, cfg["minDaysToExpiry"])
@@ -562,6 +612,17 @@ def manage(st, now):
     opens = [t for t in st["trades"] if t["status"] == "OPEN"]
     if not opens:
         return
+    # paired option SELL legs that were deferred before 09:20 go on now (user rule: selling starts at 09:20)
+    if _mins(now) >= SELL_FROM:
+        for t in [x for x in opens if x.get("writePending") and not x.get("pairOf")]:
+            try:
+                _open_short(st, {"sym": t["sym"], "side": t["side"]}, now.date().isoformat(), t)
+                t.pop("writePending", None)
+            except Exception as e:
+                if "09:20" in str(e):
+                    break                                     # not yet 09:20 by the exchange clock - keep waiting
+                st["log"].append({"at": now.isoformat(), "msg": f"no paired sell for {t['sym']}: {str(e)[:80]}"})
+                t.pop("writePending", None)                   # one honest try per cycle - do not retry forever
     keys = {t["key"] for t in opens} | {market_api._key(t["sym"]) for t in opens}
     try:
         q = _quotes(keys)
@@ -745,10 +806,33 @@ def _run_cycle(now, force, dry):
         today = now.date().isoformat()
         in_window = _hm(cfg["windowStart"]) <= _mins(now) <= _hm(cfg["lastEntry"])
         todays = [t for t in st["trades"] if t["date"] == today]
-        if (in_window or force) and len(todays) < _cap(cfg, "maxPerDay"):
+        guard, note = _day_guard(st, today)
+        if note and st.get("dayGuardMode") != guard:
+            st["log"].append({"at": now.isoformat(), "msg": note})
+        st["dayGuardMode"] = guard
+        if (in_window or force) and guard != "blocked" and len(todays) < _cap(cfg, "maxPerDay"):
             cands, why = scan_all(st, today)
             rep["note"] = why
             chosen = choose(cands, st, today)
+            if guard == "soft":                       # fewer, better trades near the day P&L limit
+                strong = [c for c in chosen if c.get("agree", 1) >= 3]
+                if strong:
+                    chosen = strong
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"soft zone: {len(strong)} high-conviction signal(s) only"
+                else:
+                    chosen = []
+            try:                                      # Z Trend (intraday) flips join the daily-bar signals
+                import rzt as rzt_mod
+                seen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN"}
+                room = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
+                extra = [c for c in rzt_mod.intraday_cands() if c["sym"] not in seen]
+                if guard == "soft":
+                    extra = extra[:1]
+                chosen = chosen + extra[:room]
+                if extra:
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(extra)} Z Trend intraday flip(s)"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"rzt intraday failed: {str(e)[:80]}"})
             filled = []
             if cfg.get("fillSlots", True) and time.time() >= max(st.get("fillBackoff", 0), st.get("fillNext", 0)):
                 st["fillNext"] = time.time() + 600                 # live screens at most every 10 minutes (each costs ~40 Upstox calls)
@@ -793,6 +877,7 @@ class Cfg(BaseModel):
     researchMode: bool | None = None
     riskPct: float | None = None
     maxPerDay: int | None = None
+    dayPnlLimit: float | None = None
 
 
 class TslBody(BaseModel):
@@ -913,10 +998,12 @@ def status():
     keys = list(chosen) or []
     proven = bool(r0 and r0["provenKeys"])
     label = ("proven indicators" if proven else "all indicators, ranked by how many agree · unproven (forward test)")
+    guard, guard_note = _day_guard(st, today)
     return {
         "activeStrategies": [{"key": k, "variant": chosen.get(k, ("fixed", "none"))[0], "filter": chosen.get(k, ("fixed", "none"))[1]} for k in keys],
         "mode": label,
         "cfg": st["cfg"], "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
+        "dayPnl": {"value": round(_day_pnl(st, today), 0), "limit": st["cfg"].get("dayPnlLimit", 0), "mode": guard, "note": guard_note},
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
         "open": opens, "closed": closed[-120:][::-1], "log": st["log"][-120:][::-1],
         "summary": {"trades": len(closed), "net": round(sum(t["net"] for t in closed), 0),
@@ -945,6 +1032,10 @@ def config(c: Cfg):
             if c.maxPerDay < 0:
                 raise HTTPException(400, "maxPerDay must be 0 (no limit) or a positive number")
             st["cfg"]["maxPerDay"] = c.maxPerDay
+        if c.dayPnlLimit is not None:                                   # 0 = guard off; default ±30,000
+            if c.dayPnlLimit < 0:
+                raise HTTPException(400, "dayPnlLimit must be 0 (guard off) or a positive rupee amount")
+            st["cfg"]["dayPnlLimit"] = float(c.dayPnlLimit)
         st["cfg"]["cfgAt"] = time.time()                                # newest settings win if two databases are merged
         _save(st)
         return st["cfg"]
