@@ -41,7 +41,7 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 30000.0}
+               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 30000.0, "zTrendHedge": True}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
@@ -269,7 +269,8 @@ def fill_slots(st, today, already):
     import market_api
     cfg = st["cfg"]
     todays = [t for t in st["trades"] if t["date"] == today]
-    used = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN"} | {c["sym"] for c in already}
+    # same guard as choose(): a symbol stopped out today (even from a swing opened earlier) must not re-enter
+    used = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today} | {c["sym"] for c in already}
     have = {"index": 0, "stock": 0}
     for k in [t["kind"] for t in todays] + [c["kind"] for c in already]:
         have[k] += 1
@@ -396,12 +397,61 @@ def _screen_score():
         return {}
 
 
+TC_TRIGGER_TOL = 0.0015          # price within 0.15% of the zone at the cycle time
+TC_MIN_RR = 1.2                  # only take a cycle trigger when the zone-to-zone reward is worth the risk
+
+
+def _timecycle_cands(now):
+    """Gann time cycle trigger (indices only): at a strong / medium cycle time, price sitting at the
+    vibration zone (support) or the next resistance is the traditional 'price confirms time' entry.
+    Stop = a whisker beyond the zone, target = the next zone; skipped unless reward/risk >= TC_MIN_RR."""
+    try:
+        import vedic_api
+    except Exception:
+        return []
+    now_m = _mins(now)
+    out = []
+    for s in ("NIFTY", "BANKNIFTY"):
+        try:
+            d = vedic_api.timecycle(symbol=s, mode="underlying", strike=0)
+        except Exception:
+            continue
+        cyc = next((c for c in d.get("cycles") or [] if abs(c.get("m", 10 ** 6) - now_m) <= 3 and c.get("strength") in ("strong", "medium")), None)
+        if not cyc:
+            continue
+        last = float(d.get("last") or 0)
+        vib = (d.get("vibration") or {}).get("level")
+        res = (d.get("nextResistance") or {}).get("level")
+        if not (last > 0 and vib and res):
+            continue
+        tol = last * TC_TRIGGER_TOL
+        if abs(last - vib) <= tol:
+            stop = round(vib - last * 0.001, 2)
+            risk, reward = last - stop, res - last
+            if risk > 0 and reward / risk >= TC_MIN_RR:
+                out.append({"key": "timecycle", "sym": s, "side": "BUY", "asOf": now.date().isoformat(), "score": 0.6,
+                            "indStop": stop, "variant": "fixed", "filter": "none", "kind": "index",
+                            "source": f"Gann cycle {cyc['time']} ({cyc['strength']}) · price at vibration zone {vib:,.2f} · target {res:,.2f} · R:R 1:{reward / risk:.1f}",
+                            "label": "time cycle"})
+        elif abs(last - res) <= tol:
+            stop = round(res + last * 0.001, 2)
+            risk, reward = stop - last, last - vib
+            if risk > 0 and reward / risk >= TC_MIN_RR:
+                out.append({"key": "timecycle", "sym": s, "side": "SELL", "asOf": now.date().isoformat(), "score": 0.6,
+                            "indStop": stop, "variant": "fixed", "filter": "none", "kind": "index",
+                            "source": f"Gann cycle {cyc['time']} ({cyc['strength']}) · price at resistance {res:,.2f} · target {vib:,.2f} · R:R 1:{reward / risk:.1f}",
+                            "label": "time cycle"})
+    return out[:1]                   # at most one cycle trade per cycle - it is a timing cherry-pick, not a machine gun
+
+
 def choose(cands, st, today):
     cfg = st["cfg"]
     taken_today = [t for t in st["trades"] if t["date"] == today]
     have_idx = sum(1 for t in taken_today if t["kind"] == "index")
     have_stk = sum(1 for t in taken_today if t["kind"] == "stock")
-    open_syms = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t["date"] == today}   # one entry per symbol a day: no re-entry after a stop
+    # one entry per symbol a day - a swing trade that hit its stop TODAY counts too (it closed today, opened earlier),
+    # which is exactly the re-entry-after-stop bug this set exists to prevent
+    open_syms = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t["date"] == today or (t.get("closedAt") or "") >= today}
     by_sym = {}
     for c in cands:
         by_sym.setdefault(c["sym"], []).append(c)
@@ -547,6 +597,90 @@ WRITE_PAIR = True        # user: every entry also SELLS the opposite option (bul
 WRITE_SL_CAP = 0.35      # small premium stop on the sold option: at most +35% of the premium received
 WRITE_MARGIN_PCT = 0.12  # paper margin per unit sold: max(12% of spot, premium)
 
+# Z Trend taken as a HEDGED credit spread (so its accuracy can be judged separately from the naked premium buys):
+# sell the OTM strike ~1.5 expected moves away on the trend's side, buy the hedge 2 strikes further out.
+HEDGE_K, HEDGE_W, HEDGE_MIN_RATIO = 1.5, 2, 0.25
+SPREAD_STOP_X, SPREAD_T1_KEEP = 2.0, 0.5     # exit when the spread is worth 2x the credit, or at 50% of the credit banked
+
+
+def _expected_move(sym, sessions, spot):
+    """Daily expected move from India VIX (same math as the Hedged Seller card)."""
+    try:
+        k = market_api._key("INDIAVIX")
+        vix = _last(_quotes({k}).get(k)) or 15.0
+    except Exception:
+        vix = 15.0
+    return spot * (vix / 100) * (max(1, sessions) / 252) ** 0.5
+
+
+def _open_rzt_hedge(st, c, today):
+    """A Z Trend flip opened as a credit spread: two linked paper trades (short leg + hedge leg) that
+    are managed as ONE position - the spread's value decides the exit, not each leg on its own."""
+    import market_api
+    if _mins(_now()) < SELL_FROM:                        # selling is a 09:20+ activity, same rule as the paired shorts
+        raise RuntimeError("option selling starts at 09:20")
+    ch = market_api.chain(c["sym"], "")
+    rows = [r for r in ch.get("rows") or [] if (r.get("ce") or {}).get("key") and (r.get("pe") or {}).get("key")]
+    spot = float(ch.get("spot") or 0)
+    if len(rows) < 4 or spot <= 0:
+        raise RuntimeError("no chain")
+    exp_days = max(1, (date.fromisoformat(ch["expiry"]) - date.fromisoformat(today)).days)
+    em = _expected_move(c["sym"], exp_days, spot) * HEDGE_K
+    side = c["side"]                                     # SELL trend -> bear call spread; BUY trend -> bull put spread
+    opt = "CE" if side == "SELL" else "PE"
+    strikes = [r["strike"] for r in rows]
+    step = min((b - a for a, b in zip(strikes, strikes[1:]) if b > a), default=50.0)
+    if side == "SELL":
+        pool = sorted([r for r in rows if r["strike"] >= spot], key=lambda r: r["strike"])
+    else:
+        pool = sorted([r for r in rows if r["strike"] <= spot], key=lambda r: -r["strike"])
+    short_r = next((r for r in pool if 0.35 * em <= abs(r["strike"] - spot) <= em), None)
+    if short_r is None:
+        raise RuntimeError("no strike near the expected move")
+    si = strikes.index(short_r["strike"])
+    hi = min(si + HEDGE_W, len(rows) - 1)
+    if hi - si < 1:
+        raise RuntimeError("no room for the hedge")
+    hedge_r = rows[hi]
+    sl_, hl_ = short_r.get("ce" if side == "SELL" else "pe") or {}, hedge_r.get("ce" if side == "SELL" else "pe") or {}
+    sell_px = float(sl_.get("bid") or 0) or float(sl_.get("ltp") or 0)
+    buy_px = float(hl_.get("ask") or 0) or float(hl_.get("ltp") or 0)
+    width = (hedge_r["strike"] - short_r["strike"]) if side == "SELL" else (short_r["strike"] - hedge_r["strike"])
+    credit = round(sell_px - buy_px, 2)
+    if credit <= 0 or width <= 0:
+        raise RuntimeError(f"no credit (sell {sell_px:.2f} / hedge {buy_px:.2f})")
+    if sell_px < HEDGE_MIN_RATIO * width:
+        raise RuntimeError(f"strike pays {sell_px:.1f} of the {width:.0f} width (< {int(HEDGE_MIN_RATIO * 100)}%) - skip")
+    max_loss_u = round(width - credit, 2)
+    budget = _equity(st) * st["cfg"]["riskPct"] / 100
+    lot = int(ch.get("lot") or 1)
+    lots = max(1, int(budget // max(1.0, lot * max_loss_u))) if max_loss_u > 0 else 1
+    while lots > 1 and lots * lot * (sell_px + buy_px) > _equity(st) * 0.2:
+        lots -= 1
+    qty = lots * lot
+    now = _now().isoformat()
+    n_today = len([x for x in st["trades"] if x["date"] == today])
+    base = {"date": today, "sym": c["sym"], "kind": "index", "side": side, "opt": opt, "lot": lot, "lots": lots,
+            "expiry": ch["expiry"], "variant": "spread", "plan": "v2", "filter": "none", "strategy": "rzt-hedge",
+            "indicators": ["Z Trend", "Hedged Seller"], "status": "OPEN", "mode": "Z Trend hedge",
+            "source": c.get("source") or "Z Trend hedged credit spread"}
+    t1 = dict(base, id=f"A-{today.replace('-', '')}-{n_today + 1}-H", pos="short", strike=short_r["strike"], key=sl_.get("key"),
+              entry=round(sell_px, 2), last=round(sell_px, 2), creditU=credit,
+              spreadStop=round(SPREAD_STOP_X * credit, 2), spreadT1=round(SPREAD_T1_KEEP * credit, 2),
+              spreadW=round(width, 2), maxLossU=max_loss_u, openedAt=now,
+              initialRisk=round(qty * max_loss_u / 2, 0), riskBudget=round(budget, 0))
+    t2 = dict(base, id=t1["id"] + "-X", pos="long", pairOf=t1["id"], strike=hedge_r["strike"], key=hl_.get("key"),
+              entry=round(buy_px, 2), last=round(buy_px, 2), openedAt=now, initialRisk=round(qty * max_loss_u / 2, 0))
+    t1["hedgeId"] = t2["id"]
+    st["trades"].append(t1)
+    st["trades"].append(t2)
+    st["log"].append({"at": now, "msg": f"SELL SPREAD {c['sym']} {t1['strike']:.0f}{opt} / +{t2['strike']:.0f}{opt} x{lots} · "
+                                        f"credit {credit:.2f} · max loss {max_loss_u:.2f}/unit [Z Trend {side} → hedge]"})
+    _push(f"auto|{t1['id']}", f"PAPER SELL SPREAD · {c['sym']} {t1['strike']:.0f}/{t2['strike']:.0f} {opt}",
+          f"Z Trend {side} → hedged credit spread · {lots} lot(s) · credit ₹{credit:.2f} · max loss ₹{max_loss_u:.2f}/unit · "
+          f"exit at {SPREAD_STOP_X:.0f}x credit or banking {int(SPREAD_T1_KEEP * 100)}% of it")
+    return t1
+
 
 def _open_short(st, c, today, main):
     """Paired option SELL in the same direction as the signal, held to the same underlying stop / target."""
@@ -649,6 +783,8 @@ def manage(st, now):
         d = 1 if t["side"] == "BUY" else -1
         why = None
         variant = t.get("variant", "fixed")
+        if variant == "spread":
+            continue                             # a hedged credit spread is ONE position - the pair is managed below on the spread's value
         if variant == "trail":                       # the stop trails the best underlying price since entry by the same distance
             t["bestU"] = max(t.get("bestU", t["entryU"]), und_px) if d > 0 else min(t.get("bestU", t["entryU"]), und_px)
             t["stopU"] = round(max(t["stopU"], t["bestU"] - t["riskU"]) if d > 0 else min(t["stopU"], t["bestU"] + t["riskU"]), 2)
@@ -690,6 +826,23 @@ def manage(st, now):
             why = "REVERSE"
         if why:
             _close(st, t, exit_px, why)
+    # hedged credit spreads (variant "spread"): the PAIR is the position - exit when the spread's value
+    # hits its stop (2x credit), banks the target share of the credit, or the expiry is a day away.
+    for main in [t for t in st["trades"] if t["status"] == "OPEN" and t.get("variant") == "spread" and not t.get("pairOf")]:
+        hedge = next((x for x in st["trades"] if x["id"] == main.get("hedgeId") and x["status"] == "OPEN"), None)
+        if not hedge:
+            continue
+        s1, s2 = float(main.get("last") or 0), float(hedge.get("last") or 0)
+        credit = float(main.get("creditU") or 0)
+        if s1 <= 0 or s2 <= 0 or credit <= 0:
+            continue
+        spread = s1 - s2
+        if (date.fromisoformat(main["expiry"]) - date.fromisoformat(today)).days <= 1:
+            _close(st, main, s1, "SPREAD-EXPIRY"); _close(st, hedge, s2, "SPREAD-EXPIRY")
+        elif spread >= float(main.get("spreadStop") or 10 ** 9):
+            _close(st, main, s1, "SPREAD-STOP"); _close(st, hedge, s2, "SPREAD-STOP")
+        elif spread <= float(main.get("spreadT1") or -1):
+            _close(st, main, s1, "SPREAD-T1"); _close(st, hedge, s2, "SPREAD-T1")
 
 
 LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 1500.0, 2000.0, 0.5
@@ -823,16 +976,27 @@ def _run_cycle(now, force, dry):
                     chosen = []
             try:                                      # Z Trend (intraday) flips join the daily-bar signals
                 import rzt as rzt_mod
-                seen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN"}
+                seen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
                 room = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
                 extra = [c for c in rzt_mod.intraday_cands() if c["sym"] not in seen]
                 if guard == "soft":
                     extra = extra[:1]
+                if cfg.get("zTrendHedge", True):
+                    extra = [dict(c, key="rzt-hedge", source=(c.get("source") or "") + " · hedged credit spread") for c in extra]
                 chosen = chosen + extra[:room]
                 if extra:
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(extra)} Z Trend intraday flip(s)"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"rzt intraday failed: {str(e)[:80]}"})
+            try:                                      # Gann time cycle: price AT a zone AT a cycle time, with the zone as stop
+                tc_extra = _timecycle_cands(now)
+                tseen = {c["sym"] for c in chosen}
+                troom = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
+                chosen = chosen + [c for c in tc_extra if c["sym"] not in tseen][:troom]
+                if tc_extra:
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(tc_extra)} time-cycle trigger(s)"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"timecycle trigger failed: {str(e)[:80]}"})
             filled = []
             if cfg.get("fillSlots", True) and time.time() >= max(st.get("fillBackoff", 0), st.get("fillNext", 0)):
                 st["fillNext"] = time.time() + 600                 # live screens at most every 10 minutes (each costs ~40 Upstox calls)
@@ -844,9 +1008,12 @@ def _run_cycle(now, force, dry):
                     rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"], "rank": round(c["rank"], 2)})
                     continue
                 try:
-                    t = open_trade(st, c, today)
+                    if c.get("key") == "rzt-hedge":
+                        t = _open_rzt_hedge(st, c, today)      # Z Trend flip as a hedged credit spread (its own notify)
+                    else:
+                        t = open_trade(st, c, today)
+                        _notify(t)
                     rep["entered"].append(t["id"])
-                    _notify(t)
                 except Exception as e:
                     st["log"].append({"at": now.isoformat(), "msg": f"skip {c['sym']}: {str(e)[:80]}"})
         if not dry:
@@ -878,6 +1045,7 @@ class Cfg(BaseModel):
     riskPct: float | None = None
     maxPerDay: int | None = None
     dayPnlLimit: float | None = None
+    zTrendHedge: bool | None = None
 
 
 class TslBody(BaseModel):
@@ -1036,6 +1204,8 @@ def config(c: Cfg):
             if c.dayPnlLimit < 0:
                 raise HTTPException(400, "dayPnlLimit must be 0 (guard off) or a positive rupee amount")
             st["cfg"]["dayPnlLimit"] = float(c.dayPnlLimit)
+        if c.zTrendHedge is not None:                                   # true: Z Trend flips open hedged credit spreads
+            st["cfg"]["zTrendHedge"] = c.zTrendHedge
         st["cfg"]["cfgAt"] = time.time()                                # newest settings win if two databases are merged
         _save(st)
         return st["cfg"]

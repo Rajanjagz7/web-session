@@ -11,6 +11,8 @@ Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
     or when the plan's stop is more than 12% away.
 Exits:
   * stop, or Target 2; when Target 1 is reached the stop moves to the entry (breakeven).
+  * auto profit lock on every trade (same as the option book): at Rs 1,500 open profit the stop moves to entry +
+    charges; from Rs 2,000 it trails, keeping 50% of the best profit seen (60% from Rs 4,000, 70% from Rs 6,000).
   * intraday: at 15:15 a BUY still far from its stop (>= 0.5R, no SL/target hit) is carried as swing; the rest square off. swing: after 15 sessions. positional: after 40 sessions.
   * costs 0.1% of the turnover (both legs).
 State is kept in Upstash (same store as the option auto trader). It runs after every option auto-trader cycle and whenever its
@@ -172,6 +174,32 @@ def _close(st, t, px, why, now):
             print(f"[stockbot] notify failed: {e}")
 
 
+LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 1500.0, 2000.0, 0.5
+
+
+def _profit_lock(st, t, now):
+    """Auto stop lock on stock trades, same rule as the option book: at Rs 1,500 open profit the stop moves to
+    entry + charges (breakeven); from Rs 2,000 it trails, keeping 50% of the best profit seen (60% from Rs 4,000,
+    70% from Rs 6,000). Only ever tightens."""
+    pnl = float(t.get("unrealised") or 0)
+    qty = t.get("qty") or 0
+    if not (pnl and qty > 0):
+        return
+    d = 1 if t["side"] == "BUY" else -1
+    best = max(float(t.get("bestPnl") or 0.0), pnl)
+    t["bestPnl"] = round(best, 2)
+    if best < LOCK_BE:
+        return
+    fee_u = CFG["costPct"] / 100 * 2 * t["entry"]           # round-trip charges per share
+    keep = (0.7 if best >= 6000 else 0.6 if best >= 4000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0
+    stop = round(t["entry"] + d * (fee_u + keep / qty), 2)
+    if d * (stop - t["stop"]) > 0:                          # only ever tightens
+        t["stop"] = stop
+        t["lockMoved"] = now.isoformat()
+        st["log"].append({"at": now.isoformat(), "msg": f"LOCK {t['hz']} {t['sym']} · best ₹{best:,.0f} → stop {stop} "
+                                                        f"({'keeps ₹' + format(round(keep), ',') if keep else 'breakeven'})"})
+
+
 def manage(st, now):
     opens = [t for t in st["trades"] if t["status"] == "OPEN"]
     if not opens:
@@ -190,13 +218,14 @@ def manage(st, now):
         d = 1 if t["side"] == "BUY" else -1
         t["unrealised"] = round(d * (px - t["entry"]) * t["qty"], 2)
         hi, lo = float(x.get("high") or px), float(x.get("low") or px)
+        _profit_lock(st, t, now)
         if not t.get("t1Hit") and d * ((hi if d > 0 else lo) - t["t1"]) >= 0:
             t["t1Hit"] = True
             t["stop"] = t["entry"]                                    # Target 1 reached: stop to breakeven
             st["log"].append({"at": now.isoformat(), "msg": f"T1 {t['hz']} {t['sym']} - stop moved to entry {t['entry']}"})
         why = None
         if d * (px - t["stop"]) <= 0:
-            why = "BREAKEVEN" if t.get("t1Hit") else "STOP"
+            why = "TSL" if t.get("lockMoved") else "BREAKEVEN" if t.get("t1Hit") else "STOP"
         elif d * (px - t["t2"]) >= 0:
             why = "TARGET"
         elif t["hz"] == "intraday" and (t["date"] < today or _mins(now) >= _hm(CFG["squareOff"])):
