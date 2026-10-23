@@ -1156,7 +1156,6 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
-    else if (a === 'vedrefresh') { syncVedic(true); }
     else if (a === 'exitf') { AUTO.exitFilter = b.dataset.k || ''; render(); }
     else if (a === 'btreset') { SV.bt = null; fetch('/api/backtest/reset', { method: 'POST' }).then(() => loadSrv('bt')); }
     else if (a === 'btcsel') { SV.btcSel = SV.btcSel || new Set(); const k = b.dataset.k; if (SV.btcSel.has(k)) SV.btcSel.delete(k); else SV.btcSel.add(k); render(); }
@@ -1612,11 +1611,6 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        </div>
 
        <div class="card"><div class="card-h"><h3>📊 Backtest Results</h3></div>${btCard}</div>
-
-       <div class="card"><div class="card-h"><h3>🕉️ Vedic Gann Report</h3><span class="muted" style="font-size:11px" id="jvVedTs">${VED.ts ? 'updated ' + VED.ts + ' IST' : 'loading…'}</span></div>
-         <div class="jv-list" id="jvVed">${vedHTML()}</div>
-         <div class="jv-actions"><button class="btn" data-jv="vedrefresh">Refresh now</button></div>
-       </div>
      </div>
      <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">how every auto trade ended, and what it returned</span></div>
        <div class="jv-pos-bar">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}<span class="muted" style="font-size:12px">${closedAutoAll.length} closed auto trades</span></div>
@@ -1624,58 +1618,6 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        ${exPg.part.length ? tradeTable(exPg.part, true, 'algoex') : ''}
        ${exFiltered.length ? exPg.bar : ''}
      </div>`;
-   }
-
-  /* ---------- live Vedic Gann report (Journal → Algo): real /api/vedic/report data, refreshed every 2 minutes ---------- */
-  const VED = { data: null, ts: '', busy: false };
-  function vedHTML() {
-    const r = VED.data;
-    if (!r || !r.confluence) return `<div class="empty">${VED.busy ? 'Loading the live Vedic report…' : 'Vedic report unavailable right now - tap Refresh now.'}</div>`;
-    const c = r.confluence, g = r.gann || {}, p = r.panchang || {}, st = r.special_timing || {};
-    const bull = /BULL/.test(c.lean || ''), bear = /BEAR/.test(c.lean || ''), tone = bull ? 'up' : bear ? 'down' : '';
-    const act = bull ? 'Bias up - buy above the Gann base, avoid fresh entries inside Rahu Kaal'
-      : bear ? 'Bias down - sell below the Gann base, avoid fresh entries inside Rahu Kaal'
-        : 'Votes disagree - wait for price to confirm at a Gann level';
-    const lvl = g.available && g.base ? `${px(g.base.price)} <small class="muted">${E(g.base.kind || '')}</small>` : '—';
-    const dp = r.day_power && Array.isArray(r.day_power.days) && r.day_power.days[0] ? r.day_power.days[0] : null;
-    const bias = [dp ? `${E(dp.label || dp.side || '')} day (${E(dp.weekday || '')})` : '', st && st.available && st.windows ? E(st.session_note || '') : '', p.mumbai_rahu_kaal_ist ? `Rahu Kaal ${E(p.mumbai_rahu_kaal_ist)}` : ''].filter(Boolean).join(' · ');
-    const top = (c.factors || []).slice(0, 3).map(f => `${E(f.name)}: ${f.vote > 0 ? '<span class="up">+</span>' : f.vote < 0 ? '<span class="down">−</span>' : '0'}`).join(' · ');
-    return `<div><span>Gann Signal</span><b class="${tone}">${E(c.lean || '—')} · ${c.score >= 0 ? '+' : ''}${c.score}/${c.max}</b></div>
-      <div><span>Action</span><b>${E(act)}</b></div>
-      <div><span>Key Level</span><b>${lvl}</b></div>
-      <div><span>Morning Bias</span><b>${bias ? E(bias) : '—'}</b></div>
-      <div><span>Top votes</span><b>${top || '—'}</b></div>`;
-  }
-  async function syncVedic(force) {
-    if (VED.busy) return;
-    VED.busy = true;
-    try {
-      const r = await fetch('/api/vedic/report' + (force ? '?refresh=true' : ''), { cache: 'no-store' });
-      VED.data = r.ok ? await r.json() : null;
-      VED.ts = istTime(new Date());
-    } catch (e) { if (!VED.data) VED.data = null; }
-    VED.busy = false;
-    const host = document.getElementById('jvVed');
-    if (host) host.innerHTML = vedHTML();
-    const ts = document.getElementById('jvVedTs');
-    if (ts) ts.textContent = VED.ts ? 'updated ' + VED.ts + ' IST' : '';
-  }
-  setInterval(() => { const h = document.getElementById('jvVed'); if (h && h.offsetParent && !document.hidden) syncVedic(false); }, 120000);
-  if (!VED.data && !VED.busy) setTimeout(() => syncVedic(false), 1500);
-
-   function getMorningBias() {
-     try {
-       const now = new Date();
-       const hour = now.getHours();
-       if (hour < 10) return '🌅 Pre-market - Analyzing...';
-       if (hour === 9 && now.getMinutes() < 30) return '🌅 Market opening - Watch for signals';
-       if (hour === 9) return '📈 Morning session - Trend forming';
-       if (hour < 12) return '☀️ Mid-morning - Trend developing';
-       if (hour < 15) return '🌤️ Afternoon - Range bound';
-       return '🌙 End of day - Position management';
-     } catch (e) {
-       return '—';
-     }
    }
 
   /* ---------- styles ---------- */
