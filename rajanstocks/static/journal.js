@@ -1161,6 +1161,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'btcsel') { SV.btcSel = SV.btcSel || new Set(); const k = b.dataset.k; if (SV.btcSel.has(k)) SV.btcSel.delete(k); else SV.btcSel.add(k); render(); }
     else if (a === 'btcnone') { SV.btcSel = new Set(); render(); }
     else if (a === 'btrunf') { SV.btc = null; SV.btcBusy = true; fetch('/api/backtest/run?only=' + encodeURIComponent([...(SV.btcSel || [])].join(',')), { method: 'POST' }).then(() => loadSrv('btc')); }
+    else if (a === 'uprefresh') { SV.up = null; SV.upBusy = true; render(); jget('/api/auto/preview').then(r => { SV.up = r; SV.upBusy = false; if (effTab() === 'algo') render(); }).catch(() => { SV.upBusy = false; SV.up = { error: true }; if (effTab() === 'algo') render(); }); }
     else if (a === 'clearlog') { if (confirm('Clear the auto trader activity log? This cannot be undone.')) jpost('/api/auto/log/clear').then(() => loadSrv('auto')); }
     else if (a === 'defaults') { S = Object.assign({}, DEFAULTS); persistS(); render(); }
     else if (a === 'wipe') { if (confirm('Delete ALL journal records on this device? Export first if you need them.')) { T = []; persist(); render(); } }
@@ -1561,6 +1562,23 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
            : C.result ? `<details class="jv-more" open><summary>Filtered run · ${(C.result.filteredKeys || []).length} strategies · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
                <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${customRows}</tbody></table></div>
                <p class="muted" style="padding:4px 14px 8px;font-size:11.5px">This run is kept separately — the full result above still drives the auto trader.</p></details>` : '') : '';
+       // upcoming trades: the same entry logic as the live trader, run as a dry preview - what it WOULD take right now
+       if (!SV.up && !SV.upBusy) { SV.upBusy = true; jget('/api/auto/preview').then(r => { SV.up = r; SV.upBusy = false; if (effTab() === 'algo') render(); }).catch(() => { SV.upBusy = false; SV.up = { error: true }; }); }
+       const up = SV.up;
+       const allUp = (up && up.entered) || [];
+       const byStrat = {};
+       allUp.forEach(e => { const k = e.source || KEYNAME(e.strategy) || e.strategy; const row = byStrat[k] || (byStrat[k] = { n: 0, buys: 0 }); row.n++; if (e.side === 'BUY') row.buys++; });
+       const upSummary = Object.entries(byStrat).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `${E(k)}: ${v.n} (${v.buys} buy)`).join(' · ');
+       const upRows = allUp.slice().sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 10).map(e =>
+         `<tr><td><b>${E(e.sym)}</b></td><td><span class="jv-side ${e.side === 'SELL' ? 's' : 'l'}">${E(e.side)}</span></td><td>${E(e.source || KEYNAME(e.strategy) || e.strategy)}</td><td class="num">${e.rank != null ? Number(e.rank).toFixed(2) : '—'}</td></tr>`).join('');
+       const upBlock = `<details class="jv-more"><summary>Upcoming trades · what this logic would take now${allUp.length ? ` · ${allUp.length} candidate${allUp.length > 1 ? 's' : ''}` : ''}${SV.upBusy ? ' · checking…' : ''}</summary>
+           ${up && up.dayGuard ? `<p class="muted" style="padding:2px 14px 0">${E(up.dayGuard)}</p>` : ''}
+           ${up && up.note ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">${E(up.note)}</p>` : ''}
+           ${upSummary ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">By source: ${upSummary}</p>` : ''}
+           ${upRows ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th colspan="4">Top 10 by conviction</th></tr><tr><th>Symbol</th><th>Side</th><th>Signal / strategy</th><th class="num">Rank</th></tr></thead><tbody>${upRows}</tbody></table></div>` : `<p class="muted" style="padding:2px 14px 4px">${SV.upBusy ? 'Running the same scan the live trader uses…' : up && up.error ? 'Preview unavailable right now — try Re-check.' : 'No entry would be taken right now (entry window, per-day limits, the day P&L guard, or no fresh signals).'}</p>`}
+           ${allUp.length > 10 ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">…and ${allUp.length - 10} more lower-ranked candidates. The live trader takes them all unless you cap it (maxPerDay / slots in the config API) — the day P&L guard and one-trade-per-symbol rules still apply.</p>` : ''}
+           <div class="jv-actions"><button class="btn" data-jv="uprefresh" ${SV.upBusy ? 'disabled' : ''}>${SV.upBusy ? 'Checking…' : 'Re-check now'}</button></div>
+           <p class="muted" style="padding:2px 14px 8px;font-size:11.5px">A dry run of the real entry engine — the same scan, ranking, slots and guards, nothing is placed.</p></details>`;
        return `<div class="jv-list">
            ${verdict}
            <div><span>Simulated</span><b>${(R.tradesSimulated || 0).toLocaleString('en-IN')} trades · ${E(R.historyFrom || '')} → ${E(R.historyTo || '')}</b></div>
@@ -1574,7 +1592,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
            <div class="jv-actions"><button class="btn pri" data-jv="btrunf" ${(B.running || (C && C.running)) ? 'disabled' : ''}>${C && C.running ? 'Running…' : `Run ${SV.btcSel.size ? `(${SV.btcSel.size} selected)` : 'full'} backtest`}</button>
              <button class="btn" data-jv="btcnone">Clear selection</button></div>
            <p class="muted" style="font-size:11.5px;padding:2px 14px 8px">No selection = every strategy. A filtered run is faster and is shown below without touching the full result the auto trader uses.</p>
-         </details>${customBlock}`;
+         </details>${customBlock}${upBlock}`;
      })();
 
      // exit-reason breakdown + filter for the auto trades (raw server exit reasons: STOP / TSL / TARGET / TIME / EXPIRY / MANUAL)

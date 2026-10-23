@@ -960,6 +960,8 @@ def _run_cycle(now, force, dry):
         in_window = _hm(cfg["windowStart"]) <= _mins(now) <= _hm(cfg["lastEntry"])
         todays = [t for t in st["trades"] if t["date"] == today]
         guard, note = _day_guard(st, today)
+        if note:
+            rep["dayGuard"] = note
         if note and st.get("dayGuardMode") != guard:
             st["log"].append({"at": now.isoformat(), "msg": note})
         st["dayGuardMode"] = guard
@@ -1005,7 +1007,8 @@ def _run_cycle(now, force, dry):
                     st["fillBackoff"] = time.time() + 600        # Upstox pushed back: leave it alone for 10 minutes
             for c in chosen + filled:
                 if dry:
-                    rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"], "rank": round(c["rank"], 2)})
+                    rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"],
+                                           "rank": round(c["rank"], 2), "source": c.get("source") or c.get("label") or ""})
                     continue
                 try:
                     if c.get("key") == "rzt-hedge":
@@ -1018,6 +1021,13 @@ def _run_cycle(now, force, dry):
                     st["log"].append({"at": now.isoformat(), "msg": f"skip {c['sym']}: {str(e)[:80]}"})
         if not dry:
             _save(st)
+        else:
+            try:                                   # a preview still persists the day's scan cache so the next
+                real = _load()                     # preview (or live cycle) does not rescan every symbol from zero
+                real["cand"] = st.get("cand") or real.get("cand")
+                _save(real)
+            except Exception:
+                pass
         return rep
 
 
