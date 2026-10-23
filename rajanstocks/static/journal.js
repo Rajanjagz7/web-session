@@ -453,6 +453,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return { part, bar };
   }
   /* ---------- trade timestamps: when it was taken, when it exited, how long it was held ---------- */
+  const shortId = t => { const m = String(t.id || '').match(/\d+/g); return m ? m[m.length - 1] : String(t.id || ''); };   // A-1023-43-W -> 43: the number only, the A/T/M tag already says the source
   function tStart(t) {
     if (t.openedAt || t.created) { const d = new Date(t.openedAt || t.created); if (isFinite(d)) return d; }
     if (t.date && t.time) { const d = new Date(t.date + 'T' + t.time + ':00+05:30'); if (isFinite(d)) return d; }
@@ -496,7 +497,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       const stCls = st === 'Open' || st === 'Partial' ? 'b-up' : 'b-mute';
       const tips = [`Setup: ${t.setup || '—'}`, t.tf ? `TF ${t.tf}` : '', t.ind ? `Indicators: ${t.ind}` : ''].filter(Boolean).join(' · ');
       return `<tr data-jv="open" data-id="${t.id}" tabindex="0" title="Click for full details">
-        <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : t.paper ? '<span class="jv-tag m" title="Placed from the Trade screen">T</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${String(t.id).replace(/^A-\d{4}/, 'A-')}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
+        <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : t.paper ? '<span class="jv-tag m" title="Placed from the Trade screen">T</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${shortId(t)}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
         <td title="Taken: ${t.date} ${entryTime(t) || ''} (IST)">${String(t.date).slice(5)}${entryTime(t) ? ` <small class="num">${entryTime(t)}</small>` : ''}</td>
         <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small title="${E(tips)}">${E(t.setup || '')}</small></td>
         <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'SELL' : 'BUY'}</span></td>
@@ -668,7 +669,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const foot = t.auto ? ((st !== 'Closed' ? `<button class="btn pri" data-jv="autoexit" data-id="${t.id}">Exit now</button><button class="btn" data-jv="autotsl" data-id="${t.id}">Set TSL</button><button class="btn" data-jv="autostop" data-id="${t.id}">Move stop</button>` : '') + '<button class="btn" data-jv="cancelmodal">Close</button>') : ((t.status === 'Planned' ? `<button class="btn pri" data-jv="enterplan" data-id="${t.id}">Record entry now</button><button class="btn" data-jv="cancelplan" data-id="${t.id}">Cancel plan</button>` :
       st !== 'Closed' && t.status !== 'Cancelled' ? `<button class="btn" data-jv="movesl" data-id="${t.id}">Move stop</button><button class="btn" data-jv="settsl" data-id="${t.id}">Set TSL</button><button class="btn" data-jv="mktexit" data-id="${t.id}">Exit at market</button><button class="btn pri" data-jv="addexit" data-id="${t.id}">Add exit</button>` : '') +
       `<button class="btn" data-jv="savereview" data-id="${t.id}">Save review</button>`);
-    window.modal ? window.modal(`${t.id} · ${E(t.symbol || t.instrument)} ${t.dir}`, body, { foot, wide: true }) : alert('Detail unavailable');
+    window.modal ? window.modal(`#${shortId(t)} · ${E(t.symbol || t.instrument)} ${t.dir}`, body, { foot, wide: true }) : alert('Detail unavailable');
   }
 
   function smallForm(title, bodyHtml, submitLabel, onSubmit) {
@@ -716,7 +717,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       jpost('/api/auto/trade/' + encodeURIComponent(id) + '/exit').then(async r => {
         ok.disabled = false; ok.textContent = 'Exit now';
         if (!r.ok) { const er = document.getElementById('jvFormErr'); er.textContent = r.err; er.hidden = false; return; }
-        window.closeModal(); await syncAuto(true); render(); toast_(`Exited ${t.id} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
+        window.closeModal(); await syncAuto(true); render(); toast_(`Exited #${shortId(t)} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
       });
       return null;
     });
@@ -1068,7 +1069,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
           const now = new Date(), type = t.sl === t.sl0 ? 'SL' : 'TSL';
           t.exits.push({ qty: rem, price: +l.toFixed(2), type, date: istDay(now), time: istTime(now) });
           t.exitType = type; t.status = 'Closed'; t.closedAt = now.toISOString(); changed = true;
-          toast_(`${t.id}: ${type} hit — exited ${rem} at ${px(l)}`, 'warn');
+          toast_(`#${shortId(t)}: ${type} hit — exited ${rem} at ${px(l)}`, 'warn');
         }
       }
     });
