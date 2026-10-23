@@ -793,9 +793,8 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 #rInd table.rd td::before{content:attr(data-label);display:block;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:3px}
 @media (max-width:899px){#opStrat table.rd thead{display:none}#opStrat table.rd,#opStrat table.rd tbody{display:block!important}#opStrat table.rd tr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}#opStrat table.rd td{padding:0;border:0;display:block}#opStrat table.rd td:nth-child(3){grid-column:1/-1}#opStrat table.rd td[colspan]{grid-column:2}}
 @media (min-width:900px){
-  .opx-wtabs{display:none}.opx-ph{display:block;padding:12px 14px 0;font-weight:700;font-size:14px}
-  .opx-pane[hidden]{display:block!important}
-  .opx-panel #opRead,.opx-panel #opStrat{border-top:1px solid var(--line)}
+  .opx-ph{display:block;padding:12px 14px 0;font-weight:700;font-size:14px}
+  .opx-panel #opAll #opStrat{border-top:1px solid var(--line)}
 }
 @media (max-width:899px){.opx[data-mtab="chain"] .opx-work{display:none}.opx:not([data-mtab="chain"]) .opx-work .opx-sig{display:none}.opx[data-mtab="signals"] .opx-work .opx-sig{display:block}}
 .opx-sigf{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px}.opx-sigf .opx-chip{height:28px;padding:0 10px;font-size:12px}.opx-sigf .opx-chip span{opacity:.7;margin-left:3px}
@@ -812,9 +811,10 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .tc-pg .btn-xs{min-width:28px}
 .tc-about summary{color:var(--text-3);font-weight:400}
 .opx-siggrid>div{min-width:0}
-.opx-siggrid .vx-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0}
-.opx-siggrid h3{color:var(--text);font-size:12px;font-weight:700;margin:0 0 8px}
-.opx-siggrid .vx-note{font-size:11px;margin:6px 0 0}
+.opx-spane .vx-card,.opx-sig .vx-card{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 8px}
+.opx-spane .vx-card:last-child{margin-bottom:0}
+.opx-spane h3,.opx-siggrid h3{color:var(--text);font-size:12px;font-weight:700;margin:0 0 8px}
+.opx-spane .vx-note,.opx-siggrid .vx-note{font-size:11px;margin:6px 0 0}
 .rz-state{display:flex;align-items:center;gap:8px}
 .rz-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .rz-k{display:flex;flex-direction:column;gap:1px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:4px 9px;min-width:78px}
@@ -822,6 +822,13 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .rz-k b{font-size:12.5px}
 #opHedge .hg{background:transparent;border:0;padding:0;margin:0}
 #opGe .ob-one{margin:0}
+/* Signals sub-tabs (Vedic-page style): one thing at a time, compact */
+.opx-stabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 0}
+.opx-stabs button{height:30px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--text-3);font:inherit;font-weight:600;font-size:12px;cursor:pointer}
+.opx-stabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.opx-spane{padding:12px 14px;min-width:0}
+.opx-spane[hidden]{display:none}
+#opRead{padding-bottom:0}
 @media (max-width:640px){.opx-siggrid{grid-template-columns:1fr;padding:8px}}
 /* ---- Trade screen tidy-up: nothing hidden behind an invisible scroll ---- */
 @media (max-width:899px){
@@ -2643,7 +2650,7 @@ const VX_PCOL={'Su':'#f5b942','Mo':'#cfd8e3','Ma':'#ef5350','Me':'#26a69a','Ju':
 function vdNewsPanel(n){const items=((App.news&&App.news.items)||[]).filter(x=>x.category==='india').slice(0,n||5);
   if(!items.length)return'';
   return `<section class="vx-card"><h3>Indian market news</h3>${items.map(x=>`<a class="vx-news" href="${esc(x.link)}" target="_blank" rel="noopener">${x.source?`<span>${esc(x.source)}</span>`:''}<b>${esc(x.title)}</b></a>`).join('')}</section>`}
-VD.tab=(()=>{try{const t=localStorage.getItem('vx-tab');return ['plan','vedic','gann','cycle','watch'].includes(t)?t:'plan'}catch(e){return 'plan'}})();
+VD.tab=(()=>{try{const t=localStorage.getItem('vx-tab');return ['plan','vedic','gann','watch'].includes(t)?t:'plan'}catch(e){return 'plan'}})();
 const vxDeg=d=>{const s=Math.floor(d/30)%12,ins=d-s*30;return `${Math.floor(ins)}°${String(Math.round((ins%1)*60)).padStart(2,'0')}′`};
 const vxBar=(f,c)=>`<span class="vx-prog" title="${Math.round(f*100)}% remaining"><i style="width:${Math.max(2,Math.round(f*100))}%;background:${c}"></i></span>`;
 function vxWheel(planets){const S=280,c=S/2,R=128,r1=100,r2=76;let s=`<svg class="vx-wheel" viewBox="0 0 ${S} ${S}" role="img" aria-label="Sidereal zodiac wheel with planet positions">`;
@@ -2799,7 +2806,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
   const h=r.header,mc=r.market_context,c=r.confluence||{factors:[],score:0,max:1,lean:'—'},p=r.panchang;
   const last=mc.index_last.available?mc.index_last.value:null,prev=mc.index_prev_close.available?mc.index_prev_close.value:null,ch=last&&prev?last/prev-1:null;
   const rk=r.watch_windows.find(w=>w.key==='rahu_kaal')||{};
-  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['cycle','Time cycle'],['watch','Watchlist']];
+  const tabs=[['plan','Plan'],['vedic','Vedic'],['gann','Gann'],['watch','Watchlist']];   /* time cycle lives on the Trade screen now */
   el.innerHTML=`<div class="page vx">
    <div class="vx-hero">
     <div class="vx-h1"><div class="vx-eye">VEDIC ASTRO + GANN · ${esc(h.symbol_name)}</div><div class="vx-px"><b class="num">${last?fmtP(last,2):'—'}</b>${ch!=null?`<span class="num ${ch>=0?'up':'down'}">${ch>=0?'+':''}${fmtP(last-prev,2)} (${pct(ch)})</span>`:''}</div>
@@ -3470,23 +3477,30 @@ function drawWhatIf(){const box=$('#opxWhatIf');if(!box)return;const c=OPT.chain
     return`<tr class="${m===0?'wi-0':''}"><td class="${m>0?'up':m<0?'down':''}">${m>0?'+':''}${m}%</td><td class="num">${fmtP(S2,2)}</td><td class="num">${f(pn)} <small class="${cls(pn/px-1)}">${pc(Math.max(0.05,pn)/px-1)}</small></td><td class="num"><b>${f(po)}</b> <small class="${cls(po/px-1)}">${pc(Math.max(0.05,po)/px-1)}</small></td></tr>`}).join('');
   box.innerHTML=`<div class="opx-ph">What if · ${esc(OPT.sym)} opens up/down <span class="muted">· ${esc(sel.label)}</span></div>
    <div class="wi-kpis"><span title="Implied volatility from the live premium${assumed?' (could not be solved - assumed)':''}">IV <b>${(iv*100).toFixed(1)}%${assumed?'*':''}</b></span><span title="Premium one calendar day of time decay takes today, if the market is flat. It grows as expiry gets closer.">Theta / day <b class="down">−₹${fmtP(Math.abs(thDay),2)}</b></span><span title="Decay from ${live?'now':'the last close'} to the next open (${gapD.toFixed(1)} calendar days${gapD>1.2?' - includes the weekend / holiday':''}), market flat">Theta to next open <b class="down">−₹${fmtP(Math.abs(th),2)}</b></span><span title="Premium change for a 1-point move in ${esc(OPT.sym)}">Delta <b>${delta.toFixed(2)}</b></span><span title="Calendar days to expiry (15:30 on ${esc(c.expiry)}) · trading sessions left">Days left <b>${(T0*365).toFixed(1)}</b> · <b>${tdl}</b> sessions</span></div>
-   <div class="wi-tw"><table class="wi-t"><thead><tr><th>Move</th><th>${esc(OPT.sym)}</th><th>If it moved now</th><th>At next open (${esc(nlabel)})</th></tr></thead><tbody>${rows}</tbody></table></div>
-   <p class="muted wi-note">Black-Scholes at today's implied volatility, anchored on the ${live?'live':'last-close'} premium ₹${f(px)} and re-priced every minute. The next-open column includes the time decay up to ${esc(nlabel)} 09:15 (weekends and NSE holidays included). IV usually rises on a fall and drops on a rise, so real prices can differ.</p>`}
+   <div class="wi-tw"><table class="wi-t"><thead><tr><th>Move</th><th>${esc(OPT.sym)}</th><th>If it moved now</th><th>At next open (${esc(nlabel)})</th></tr></thead><tbody>${rows}</tbody></table></div>`}
 setInterval(()=>{try{if(App.view==='options'&&!document.hidden)drawWhatIf()}catch(e){}},3000);
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
-  if(t==='order'||t==='signals'){opxWtab(t==='signals'?'signals':'order');if(t==='signals'){const r=$('#opRead');if(r)r.hidden=false}}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
-function opxWtab(t){OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
-  const map={order:['#opTrade'],read:['#opRead'],signals:['#opSig']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));if(t==='signals')drawOptTc()}
+  if(t==='order'||t==='signals'){opxWtab(t==='signals'?'sig':'order')}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
+function opxWtab(t){if(t==='read'||t==='signals')t='sig';OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
+  const map={order:['#opTrade'],sig:['#opSig']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));if(t==='sig'){drawOptTc();opxStab(OPT.stab||'all')}}
+/* Signals sub-tabs (Vedic-page style): all indicators in one, then God's Eye / Time cycle / Z Trend / Hedge / Buy signals */
+const opxSigTabs=()=>`<div class="opx-stabs" role="tablist">${[['all','☰ All indicators'],['ge','👁 God\'s Eye'],['tc','⏳ Time cycle'],['rzt','⚡ Z Trend'],['hedge','🛡 Hedge'],['buy','✚ Buy signals']].map(([k,l])=>`<button role="tab" data-opx="stab:${k}" class="${(OPT.stab||'all')===k?'on':''}">${l}</button>`).join('')}</div>`;
+function opxStab(t){OPT.stab=t;document.querySelectorAll('.opx-stabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='stab:'+t));
+  const map={all:['#opAll'],ge:['#opGe'],tc:['#opTc'],rzt:['#opRzt'],hedge:['#opHedge'],buy:['#opBuyList']};
+  Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));
+  const rd=$('#opRead');if(rd)rd.hidden=t!=='all'||!OPT.osym;   // contract readings need a selected contract
+  if(t==='all'){if(OPT.osym)optReadings();optStrats()}
+  if(t==='tc')drawOptTc();if(t==='ge')drawOptGe();if(t==='rzt')drawOptRzt();if(t==='hedge')drawOptHedge();if(t==='buy')drawBuyList()}
 function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
-  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig"><div class="opx-siggrid"><div id="opGe"></div><div id="opTc"></div><div id="opRzt"></div><div id="opHedge"></div></div><div id="opBuyList"></div><div id="opStrat"></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();return}
+  if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig">${opxSigTabs()}<div class="opx-spane" id="opAll" hidden><div id="opStrat"></div></div><div class="opx-spane" id="opGe"></div><div class="opx-spane" id="opTc" hidden></div><div class="opx-spane" id="opRzt" hidden></div><div class="opx-spane" id="opHedge" hidden></div><div class="opx-spane" id="opBuyList" hidden></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();opxStab(OPT.stab||'all');return}
   if(!OPT.shell){box.innerHTML=`<div class="opx-card opx-chartcard"><div class="opt-h"><div><b class="opt-name" id="opName"></b><small class="muted" id="opSub"></small></div><div class="opx-sw" id="opSw"></div><div class="opt-px"><b class="num" id="opLast"></b><span class="num" id="opChg"></span></div></div>
      <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div><div class="opx-lv" id="opLv"></div></div>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
-     <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['read','Readings'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${OPT.wtab===k?'on':''}">${l}</button>`).join('')}</div>
-       <div id="opTrade" class="opx-pane"></div><div id="opRead" class="opx-pane"></div><div class="opx-pane" id="opSig"><div class="opx-siggrid"><div id="opGe"></div><div id="opTc"></div><div id="opRzt"></div><div id="opHedge"></div></div><div id="opBuyList"></div><div id="opStrat"></div></div></div>
+     <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['sig','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${(OPT.wtab==='read'||OPT.wtab==='signals'?'sig':OPT.wtab)===k?'on':''}">${l}</button>`).join('')}</div>
+       <div id="opTrade" class="opx-pane"></div><div class="opx-pane" id="opSig">${opxSigTabs()}<div class="opx-spane" id="opAll" hidden><div id="opRead"></div><div id="opStrat"></div></div><div class="opx-spane" id="opGe"></div><div class="opx-spane" id="opTc" hidden></div><div class="opx-spane" id="opRzt" hidden></div><div class="opx-spane" id="opHedge" hidden></div><div class="opx-spane" id="opBuyList" hidden></div></div></div>
      <div class="opx-card opx-wi" id="opxWhatIf"></div>
      <div class="opx-card opx-pos" id="opxPos"></div>`;
     OPT.shell=true;
@@ -3519,6 +3533,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(
   else if(k==='exp'){if(OPT.chain&&a===OPT.chain.expiry)return;OPT.expiry=a;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
   else if(k==='mtab')opxTab(a);
   else if(k==='wtab')opxWtab(a);
+  else if(k==='stab')opxStab(a);
   else if(k==='oldexp'){OPT.xpOn=!OPT.xpOn;const p=$('#optExpired');if(p)p.hidden=!OPT.xpOn;if(OPT.xpOn){XPB.exps=null;XPB.book=null;XPB.daily=null;xpLoad()}}
   else if(k==='dock'){const b=$(a==='buy'?'#opBuy':'#opSell');if(b)b.click()}});
 document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.opxf;if(!k)return;OPT.f[k]=e.target.checked;opxSave();opxBadge();drawChain()});
