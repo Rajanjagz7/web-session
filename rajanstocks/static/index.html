@@ -645,10 +645,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261025a"></script>
+<script src="/static/journal.js?v=20261025b"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261025a"></script>
-<script src="/static/observer.js?v=20261025a"></script>
+<script src="/static/godseye.js?v=20261025b"></script>
+<script src="/static/observer.js?v=20261025b"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2424,11 +2424,34 @@ function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view)
 /* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
 setInterval(()=>{if(!document.hidden)renderPfChip()},4000);setTimeout(()=>renderPfChip(),800);
 function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
-  const eq=t?t.eq:equity(),cap=t?t.capital:1000000,pl=t&&typeof t.today==='number'?t.today:eq-cap,pc=cap?pl/cap*100:0;   // today's total P&L: booked today + open positions
-  const sh=v=>{const a=Math.abs(v);return a>=1e7?(a/1e7).toFixed(2)+' Cr':a>=1e5?(a/1e5).toFixed(2)+' L':Math.round(a).toLocaleString('en-IN')};
-  const k=pl>0.5?'up':pl<-0.5?'down':'';
-  c.className='pf-chip '+k;c.innerHTML=`<small>Today P&amp;L</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;   // profit / loss only - the capital is in the tooltip
-  c.title=t?`Today's P&L ${pl>=0?'+':'−'}₹${Math.round(Math.abs(pl)).toLocaleString('en-IN')} (booked today ${t.todayBooked>=0?'+':'−'}₹${Math.round(Math.abs(t.todayBooked)).toLocaleString('en-IN')} + open) · Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} · booked ${t.booked>=0?'+':'−'}₹${Math.round(Math.abs(t.booked)).toLocaleString('en-IN')} · open ${t.unr>=0?'+':'−'}₹${Math.round(Math.abs(t.unr)).toLocaleString('en-IN')} (${t.open} open) — click for the journal`:'Portfolio value'}
+  const cap=t?t.capital:1000000;
+  let pl=0, isLast=false;
+  const isMktOpen = (typeof MKT !== 'undefined' && MKT.open);
+  const hasToday = t && typeof t.today === 'number' && (t.today !== 0 || (isMktOpen && t.open > 0));
+  if(hasToday && isMktOpen){
+    pl = t.today; isLast = false;
+  } else if(t && typeof t.lastDayPnl === 'number' && t.lastDayPnl !== 0){
+    pl = t.lastDayPnl; isLast = true;
+  } else if(hasToday && t.today !== 0){
+    pl = t.today; isLast = true;
+  } else {
+    try {
+      const saved = JSON.parse(localStorage.getItem('rs-last-pnl') || 'null');
+      if(saved && typeof saved.pl === 'number' && saved.pl !== 0){ pl = saved.pl; isLast = true; }
+    } catch(e){}
+  }
+  if(pl !== 0){
+    try { localStorage.setItem('rs-last-pnl', JSON.stringify({ pl, day: (t && t.lastDay) || (isLast ? (t && t.lastDay) : null), ts: Date.now() })); } catch(e){}
+  }
+  const eq = t ? t.eq : (equity() + (isLast ? 0 : pl));
+  const pc = cap ? pl / cap * 100 : 0;
+  const sh = v => { const a = Math.abs(v); return a >= 1e7 ? (a/1e7).toFixed(2)+' Cr' : a >= 1e5 ? (a/1e5).toFixed(2)+' L' : Math.round(a).toLocaleString('en-IN'); };
+  const k = pl > 0.5 ? 'up' : pl < -0.5 ? 'down' : '';
+  const lbl = isLast || !isMktOpen ? 'Last day P&amp;L' : 'Today P&amp;L';
+  c.className = 'pf-chip ' + k;
+  c.innerHTML = `<small>${lbl}</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;
+  c.title = `${isLast ? 'Last session' : "Today's"} P&L ${pl>=0?'+':'−'}₹${Math.round(Math.abs(pl)).toLocaleString('en-IN')} (${pc>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%) · Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} — click for the journal`;
+}
 function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
 const NAVI={picks:'trendup',trade:'candle',options:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
@@ -2833,7 +2856,7 @@ function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
     ${vxDayPower(r.day_power)}${vxAstroSlices(r.astro_slices)}
-    <section class="vx-card"><h3>Special timing (IST)</h3>${vxSpecial(r.special_timing)}</section>${vdNewsPanel(4)}`}
+    <section class="vx-card"><h3>Special timing</h3>${vxSpecial(r.special_timing)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
   return `<div class="vx-grid2"><section class="vx-card"><h3>Panchang · Mumbai</h3><div class="vx-pan">
@@ -2841,7 +2864,7 @@ function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bi
       <div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b>${p.nakshatra_remaining!=null?vxBar(p.nakshatra_remaining,'#8b9cf7'):''}</div>
       <div><small>Yoga</small><b>${esc(p.yoga||'—')}</b></div><div><small>Moon sign</small><b>${esc(p.moon_sign)}</b></div>
       <div><small>Day</small><b>${esc(p.day)}</b></div><div><small>Sunrise · Sunset</small><b>${esc(p.sunrise_ist||'—')} · ${esc(p.sunset_ist||'—')}</b></div>
-      <div class="wide rahu"><small>Rahu Kaal (Mumbai)</small><b>${esc(p.mumbai_rahu_kaal_ist)} IST</b></div></div>
+      <div class="wide rahu"><small>Rahu Kaal (Mumbai)</small><b>${esc(p.mumbai_rahu_kaal_ist)}</b></div></div>
       <div class="vx-biasbox ${esc(bias.tone)}"><b>${esc(bias.label)}</b><span>${esc(bias.basis)}</span><p>${esc(bias.note)}</p></div>
       <p class="vx-note">${esc(p.ayanamsa)} · true lunar node</p></section>
     <section class="vx-card"><h3>Planets · ${esc(r.sidereal_positions.reference_time_ist)}</h3><div class="vx-wheelwrap">${vxWheel(pl)}</div>
@@ -3092,7 +3115,7 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-ovs],[data
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
     window._pkCashLoading=true;
-    fetch('/static/picks_cash_seed.json?v=20261025a').then(r=>r.json()).then(cs=>{
+    fetch('/static/picks_cash_seed.json?v=20261025b').then(r=>r.json()).then(cs=>{
       const cl=Object.values(cs).filter(x=>(x.strength||0)>=55);
       P.picks=(P.picks||[]).concat(cl);P.count=P.picks.length;
       if(Array.isArray(P.buy))P.buy=P.buy.concat(cl.filter(x=>x.signal==='BUY'));
@@ -3139,7 +3162,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
   const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc(newsTime(n.pubDate))}</small></a>`).join(''):'';
-  el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false})+' IST':(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false})+' IST':'15:30 IST')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
+  el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    <div class="ixs">${idxHtml}</div>
    <div id="pkGodseye" class="pk-ge"></div>
    <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div></div>
@@ -4455,7 +4478,7 @@ function setStatus(){const t=$('#liveTxt'),d=$('#liveDot'),b=$('#liveBox');if(!t
   if(MKT.err)return S('No feed','Live prices unavailable — retrying','var(--down)');
   if(MKT.stale)return S('Delayed','Delayed by the data provider · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false}),'var(--warn)');
   const asOf=(App.picks&&App.picks.asOf)||MKT.asOf;
-  const tm=asOf?new Date(asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false})+' IST':'15:30 IST';
+  const tm=asOf?new Date(asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30';
   const liveTm=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
   S(MKT.open?('Live · '+liveTm):('Closed · '+tm),MKT.open?('Market open · live prices · '+liveTm):('Market closed · last updated '+tm),MKT.open?'var(--up)':'var(--warn)');}
 let pollBusy=false,firstQuotes=false;
@@ -4509,7 +4532,7 @@ async function checkCacheVersion(){
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
 function triggerSignalPush(){if(!MKT.open)return;fetch('/api/cron/signal-push',{method:'POST'}).catch(()=>{})}
-async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cr=await fetch('/static/picks_cash_seed.json?v=20261025a');if(cr.ok){const cs=await cr.json(),cl=Object.values(cs).filter(x=>(x.strength||0)>=55);App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
+async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cr=await fetch('/static/picks_cash_seed.json?v=20261025b');if(cr.ok){const cs=await cr.json(),cl=Object.values(cs).filter(x=>(x.strength||0)>=55);App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
   if(App.view==='picks')renderPicks();renderWatchlist();
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}
@@ -4517,7 +4540,7 @@ async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?
 /* feeds give their own time zone (GMT for CNBC / Yahoo / MarketWatch): always show IST + how long ago */
 function newsTime(p){const d=new Date(p||'');if(isNaN(d))return String(p||'').slice(5,22);const m=Math.round((Date.now()-d.getTime())/60000);
   const t=d.toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
-  return t+' IST'+(m>=0&&m<60?` · ${m} min ago`:m>=60&&m<1440?` · ${Math.round(m/60)} h ago`:'')}
+  return t+(m>=0&&m<60?` · ${m} min ago`:m>=60&&m<1440?` · ${Math.round(m/60)} h ago`:'')}
 async function loadNews(){try{App.news=await api('/api/news')}catch(e){App.news={items:[]}}renderNewsBar();if(App.view==='picks')renderPicks();else if(App.view==='vedic')vdPaint()}
 
 /* ======================= Events ======================= */

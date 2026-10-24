@@ -166,7 +166,7 @@
       <div class="gx-head">
         <div class="gx-brand"><svg viewBox="0 0 48 28" class="gx-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
           <h2>GOD'S EYE</h2><span>— The Observer</span></div>
-        ${embed ? '' : `<div class="gx-bar0">${status}<span class="gx-upd">${G.busy && d ? 'Updating…' : upd ? 'Updated ' + upd + ' IST' : ''}</span><button class="btn" data-gxr="1" ${G.busy ? 'disabled' : ''}>↻ Refresh</button></div>`}
+        ${embed ? '' : `<div class="gx-bar0">${status}<span class="gx-upd">${G.busy && d ? 'Updating…' : upd ? 'Updated ' + upd : ''}</span><button class="btn" data-gxr="1" ${G.busy ? 'disabled' : ''}>↻ Refresh</button></div>`}
       </div>
       ${body}
       ${G.open ? detail() : ''}

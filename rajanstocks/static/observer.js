@@ -54,7 +54,7 @@
   }
 
   function stamp(d) {
-    try { return new Date(d.asOf).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).replace(/\bam\b/, 'AM').replace(/\bpm\b/, 'PM') + ' IST'; } catch (e) { return ''; }
+    try { return new Date(d.asOf).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).replace(/\bam\b/, 'AM').replace(/\bpm\b/, 'PM'); } catch (e) { return ''; }
   }
 
   function paint(host) {
