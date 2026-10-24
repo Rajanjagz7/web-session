@@ -363,6 +363,7 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 .ix{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
 .ix small{color:var(--text-3);font-size:11.5px}.ix b{font-size:16px}
 .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+.pk-div{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--text-2);padding:6px 2px;border-top:1px dashed var(--line);margin-top:4px}
 .pk{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .pk-h{display:flex;justify-content:space-between;gap:10px}.pk-t b{font-size:15px;display:block}.pk-t small{color:var(--text-3);font-size:11.5px}
 .pk-p{text-align:right}.pk-p b{display:block;font-size:15px}
@@ -759,7 +760,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 #opTc .vx-card:last-child{margin-bottom:0}
 #opTc .vx-grid2{margin-bottom:0}
 #opTc h3{color:var(--text);font-size:12px;font-weight:700}
-.pk-div{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--text-2);padding:6px 2px;border-top:1px dashed var(--line);margin-top:4px}#v-trade.on{padding-bottom:70px}}
+#v-trade.on{padding-bottom:70px}}
 @media (max-width:1180px){.opx-grid{grid-template-columns:fit-content(58%) minmax(400px,1fr)}}
 @media (max-width:899px){
   .opx{padding:8px 10px 90px;gap:8px}
@@ -2332,8 +2333,8 @@ const spark7=s=>(s.spark&&s.spark.length>2)?s.spark.slice(-19).concat([s.last||s
 /* live-bound cells: data-px, data-chg, data-chga, data-pnl, data-pnlp, data-mv, data-eq, data-dpnl, data-cash, data-heat, data-range */
 function liveUpdate(){
   $$('[data-px]').forEach(e=>{const s=SYM(e.dataset.px);if(!s)return;e.textContent=s.last>0?fmtP(s.last,s.dp):'—'});
-  $$('[data-chg]').forEach(e=>{const s=SYM(e.dataset.chg),c=s.last/s.prev-1;e.textContent=pct(c);e.className=e.className.replace(/\b(up|down)\b/g,'').trim()+' '+cls(c)});
-  $$('[data-chga]').forEach(e=>{const s=SYM(e.dataset.chga),c=s.last-s.prev;e.textContent=(c>=0?'+':'−')+fmtP(Math.abs(c),s.dp);e.className=cls(c)});
+  $$('[data-chg]').forEach(e=>{const s=SYM(e.dataset.chg);if(!s)return;const c=s.last/s.prev-1;e.textContent=pct(c);e.className=e.className.replace(/\b(up|down)\b/g,'').trim()+' '+cls(c)});
+  $$('[data-chga]').forEach(e=>{const s=SYM(e.dataset.chga);if(!s)return;const c=s.last-s.prev;e.textContent=(c>=0?'+':'−')+fmtP(Math.abs(c),s.dp);e.className=cls(c)});
   $$('[data-pnl]').forEach(e=>{const p=posOf(e.dataset.pnl);if(!p||!SYM(p.sym))return;const v=p.q*(SYM(p.sym).last-p.avg);e.textContent=smoney(v);e.className='num '+cls(v)});
   $$('[data-pnlp]').forEach(e=>{const p=posOf(e.dataset.pnlp);if(!p||!SYM(p.sym))return;const v=(SYM(p.sym).last/p.avg-1)*Math.sign(p.q);e.textContent=pct(v);e.className='num '+cls(v)});
   $$('[data-mv]').forEach(e=>{const p=posOf(e.dataset.mv);if(p&&SYM(p.sym))e.textContent=money(p.q*SYM(p.sym).last)});
@@ -3048,7 +3049,7 @@ function mountOverview(){const host=$('#ovChart');if(!host)return;const s=SYM(OV
 document.addEventListener('click',e=>{const a=e.target.closest('[data-ovs],[data-ovr]');if(!a)return;
   if(a.dataset.ovs)OV.sym=a.dataset.ovs;else OV.rng=+a.dataset.ovr;renderPicks()});
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
-  (P&&P.picks||[]).forEach(p=>{if(p.universe==='cash'&&!SYM(p.s))SYMS.push({s:p.s,n:p.n||p.s,cls:'Stocks',last:p.ltp,prev:p.prev,dp:2});});   // cash names: SYM lookups, chart switching and paper pricing work
+  (P&&P.picks||[]).forEach(p=>{if(!SYM(p.s))SYMS.push({s:p.s,n:p.n||p.s,cls:p.kind==='index'?'Index':'Stocks',last:p.ltp||0,prev:p.prev||(p.ltp||0)/(1+(p.chg||0)/100),dp:2});});   // payload symbols the NAME map lacks (new indices, cash names): price/chg render and charts switch
   const idx=['NIFTY','BANKNIFTY','SENSEX','FINNIFTY'].map(k=>SYM(k)).filter(Boolean);
   const idxHtml=idx.map(s=>`<button class="ix" data-sym="${esc(s.s)}"><small>${esc(s.n)}</small><b class="num" data-px="${esc(s.s)}"></b><span class="num" data-chg="${esc(s.s)}"></span></button>`).join('');
   let body;
@@ -3081,7 +3082,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
     const pager=pages>1?`<div class="pager"><button class="btn-xs" data-pkpage="${f.page-1}" ${f.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===f.page?'pri':''}" data-pkpage="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-pkpage="${f.page+1}" ${f.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
-    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:'<div class="empty">No instruments match this filter right now.</div>'}
+    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:(f.mkt==='CASH'?'<div class="empty">The whole-market cash scan progresses through the trading day — no qualifying cash names yet. Check back in a bit.</div>':'<div class="empty">No instruments match this filter right now.</div>')}
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
