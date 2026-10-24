@@ -1,0 +1,522 @@
+{
+  "items": [
+    {
+      "price": 22600.0,
+      "chgPct": -0.39,
+      "score": -2.5,
+      "label": "BEARISH",
+      "divergence": null,
+      "spark": [
+        22555.75,
+        22776.1,
+        22603.05,
+        22231.8,
+        22520.45,
+        22363.35,
+        22721.95,
+        22622.7,
+        22997.35,
+        23146.15,
+        22888.95,
+        22811.35,
+        22687.65,
+        22600.0
+      ],
+      "action": {
+        "side": "SELL",
+        "label": "SELL ON RISE",
+        "zone": [
+          22646.95,
+          22787.25
+        ],
+        "sl": 22834.2,
+        "targets": [
+          22443.49,
+          22286.99
+        ],
+        "why": "Below its 20-day average with weak RSI"
+      },
+      "detail": {
+        "rsi": 42.4,
+        "ema20": 22840.2,
+        "vsEma20Pct": -1.05,
+        "avgRangePct": 1.39,
+        "high20": 23281.95,
+        "low20": 22179.9,
+        "dayHigh": 22787.25,
+        "dayLow": 22372.0,
+        "dayOpen": 22742.2,
+        "parts": {
+          "dayMove": -0.8,
+          "intraday": 0.3,
+          "trend": -1.4,
+          "rsi": -0.6
+        },
+        "reasons": [
+          "Day move -0.39% against a normal daily range of 1.39%",
+          "Intraday: 0.83% off today's high 22,787.25, 1.01% above today's low 22,372.00",
+          "Close is 1.05% below its 20-day average",
+          "RSI(14) is 42 (balanced)"
+        ]
+      },
+      "key": "NIFTY",
+      "name": "NIFTY",
+      "symbol": "NSE:NIFTY",
+      "ccy": "\u20b9"
+    },
+    {
+      "price": 73123.83,
+      "chgPct": -0.17,
+      "score": -1.3,
+      "label": "NEUTRAL",
+      "divergence": null,
+      "spark": [
+        72382.47,
+        73067.81,
+        72638.7,
+        71593.24,
+        72472.33,
+        71924.68,
+        73033.78,
+        72781.89,
+        74315.61,
+        74729.27,
+        73852.9,
+        73709.69,
+        73249.39,
+        73123.83
+      ],
+      "action": {
+        "side": "WAIT",
+        "label": "WAIT",
+        "range": [
+          72452.37,
+          73766.51
+        ],
+        "why": "No clear edge - range 72,452.37 to 73,766.51; act only on a break of either side"
+      },
+      "detail": {
+        "rsi": 45.7,
+        "ema20": 73486.47,
+        "vsEma20Pct": -0.49,
+        "avgRangePct": 1.4,
+        "high20": 74849.75,
+        "low20": 71292.88,
+        "dayHigh": 73766.51,
+        "dayLow": 72452.37,
+        "dayOpen": 73665.64,
+        "parts": {
+          "dayMove": -0.4,
+          "intraday": 0.1,
+          "trend": -0.7,
+          "rsi": -0.3
+        },
+        "reasons": [
+          "Day move -0.17% against a normal daily range of 1.40%",
+          "Intraday: 0.88% off today's high 73,766.51, 0.92% above today's low 72,452.37",
+          "Close is 0.49% below its 20-day average",
+          "RSI(14) is 46 (balanced)"
+        ]
+      },
+      "key": "SENSEX",
+      "name": "SENSEX",
+      "symbol": "BSE:SENSEX",
+      "ccy": "\u20b9"
+    },
+    {
+      "price": 54287.35,
+      "chgPct": -1.16,
+      "score": -6.4,
+      "label": "BEARISH",
+      "divergence": null,
+      "spark": [
+        54714.1,
+        55128.4,
+        55055.55,
+        54515.05,
+        55256.65,
+        54918.0,
+        55481.05,
+        55316.0,
+        55810.5,
+        55844.0,
+        55488.1,
+        54976.9,
+        54925.7,
+        54287.35
+      ],
+      "action": {
+        "side": "SELL",
+        "label": "SELL ON RISE",
+        "zone": [
+          54393.52,
+          54712.03
+        ],
+        "sl": 55096.67,
+        "targets": [
+          53933.45,
+          53579.55
+        ],
+        "why": "Sold off today - 1.3% off the high 54,990.50"
+      },
+      "detail": {
+        "rsi": 37.7,
+        "ema20": 55289.36,
+        "vsEma20Pct": -1.81,
+        "avgRangePct": 1.3,
+        "high20": 56065.5,
+        "low20": 53785.7,
+        "dayHigh": 54990.5,
+        "dayLow": 53942.35,
+        "dayOpen": 54965.75,
+        "parts": {
+          "dayMove": -2.1,
+          "intraday": -1.1,
+          "trend": -2.2,
+          "rsi": -1.0
+        },
+        "reasons": [
+          "Day move -1.16% against a normal daily range of 1.30%",
+          "Intraday: 1.30% off today's high 54,990.50, 0.64% above today's low 53,942.35 - sellers in control",
+          "Close is 1.81% below its 20-day average",
+          "RSI(14) is 38 (weak)"
+        ]
+      },
+      "key": "BANKNIFTY",
+      "name": "BANKNIFTY",
+      "symbol": "NSE:BANKNIFTY",
+      "ccy": "\u20b9"
+    },
+    {
+      "price": 4007.9,
+      "chgPct": -1.29,
+      "score": -7.0,
+      "label": "BEARISH",
+      "divergence": null,
+      "spark": [
+        4187.1,
+        4140.7,
+        4157.0,
+        4216.3,
+        4190.6,
+        4177.3,
+        4107.9,
+        4170.1,
+        4181.1,
+        4160.1,
+        4142.6,
+        4150.0,
+        4060.4,
+        4007.9
+      ],
+      "action": {
+        "side": "SELL",
+        "label": "SELL ON RISE",
+        "zone": [
+          4018.1,
+          4048.7
+        ],
+        "sl": 4060.4,
+        "targets": [
+          3973.9,
+          3939.9
+        ],
+        "why": "Sold off today - 1.1% off the high 4,050.20"
+      },
+      "detail": {
+        "rsi": 30.7,
+        "ema20": 4171.28,
+        "vsEma20Pct": -3.92,
+        "avgRangePct": 1.7,
+        "high20": 4315.6,
+        "low20": 3989.1,
+        "dayHigh": 4050.2,
+        "dayLow": 3989.1,
+        "dayOpen": 4042.2,
+        "parts": {
+          "dayMove": -1.9,
+          "intraday": -0.8,
+          "trend": -2.7,
+          "rsi": -1.5
+        },
+        "reasons": [
+          "Day move -1.29% against a normal daily range of 1.70%",
+          "Intraday: 1.06% off today's high 4,050.20, 0.47% above today's low 3,989.10",
+          "Close is 3.92% below its 20-day average",
+          "RSI(14) is 31 (weak)"
+        ]
+      },
+      "key": "GOLD",
+      "name": "GOLD",
+      "symbol": "COMEX:GC1!",
+      "ccy": "$"
+    },
+    {
+      "price": 53.95,
+      "chgPct": -1.92,
+      "score": -5.9,
+      "label": "BEARISH",
+      "divergence": null,
+      "spark": [
+        61.59,
+        60.29,
+        59.42,
+        61.05,
+        60.51,
+        59.52,
+        55.88,
+        57.16,
+        57.3,
+        57.27,
+        58.0,
+        57.71,
+        55.01,
+        53.95
+      ],
+      "action": {
+        "side": "SELL",
+        "label": "SELL ON RISE",
+        "zone": [
+          54.24,
+          54.8
+        ],
+        "sl": 55.08,
+        "targets": [
+          52.99,
+          52.03
+        ],
+        "why": "Below its 20-day average with weak RSI"
+      },
+      "detail": {
+        "rsi": 29.3,
+        "ema20": 58.94,
+        "vsEma20Pct": -8.47,
+        "avgRangePct": 3.56,
+        "high20": 64.66,
+        "low20": 53.08,
+        "dayHigh": 54.8,
+        "dayLow": 53.08,
+        "dayOpen": 54.7,
+        "parts": {
+          "dayMove": -1.5,
+          "intraday": 0.0,
+          "trend": -2.8,
+          "rsi": -1.7
+        },
+        "reasons": [
+          "Day move -1.92% against a normal daily range of 3.56%",
+          "Intraday: 1.57% off today's high 54.80, 1.62% above today's low 53.08",
+          "Close is 8.47% below its 20-day average",
+          "RSI(14) is 29 (weak)"
+        ]
+      },
+      "key": "SILVER",
+      "name": "SILVER",
+      "symbol": "COMEX:SI1!",
+      "ccy": "$"
+    },
+    {
+      "price": 103.27,
+      "chgPct": 3.82,
+      "score": 7.9,
+      "label": "BULLISH",
+      "divergence": null,
+      "spark": [
+        89.44,
+        88.28,
+        91.49,
+        91.85,
+        93.74,
+        94.14,
+        95.09,
+        97.97,
+        99.02,
+        98.54,
+        97.82,
+        97.15,
+        99.47,
+        103.27
+      ],
+      "action": {
+        "side": "BUY",
+        "label": "BUY ON DIPS",
+        "zone": [
+          100.84,
+          102.66
+        ],
+        "sl": 98.23,
+        "targets": [
+          105.3,
+          107.32
+        ],
+        "why": "Strong today - 4.3% up from the low 98.84"
+      },
+      "detail": {
+        "rsi": 68.3,
+        "ema20": 95.87,
+        "vsEma20Pct": 7.72,
+        "avgRangePct": 3.92,
+        "high20": 103.92,
+        "low20": 86.86,
+        "dayHigh": 103.92,
+        "dayLow": 98.84,
+        "dayOpen": 99.1,
+        "parts": {
+          "dayMove": 2.3,
+          "intraday": 1.6,
+          "trend": 2.6,
+          "rsi": 1.5
+        },
+        "reasons": [
+          "Day move +3.82% against a normal daily range of 3.92%",
+          "Intraday: 0.63% off today's high 103.92, 4.29% above today's low 98.84 - buyers in control",
+          "Close is 7.72% above its 20-day average",
+          "RSI(14) is 68 (strong)"
+        ]
+      },
+      "key": "CRUDEOIL",
+      "name": "CRUDEOIL",
+      "symbol": "NYMEX:CL1!",
+      "ccy": "$"
+    },
+    {
+      "price": 80430.62,
+      "chgPct": -0.8,
+      "score": -2.3,
+      "label": "BEARISH",
+      "divergence": null,
+      "spark": [
+        83679.01,
+        81745.86,
+        83093.57,
+        81574.32,
+        82131.1,
+        81501.1,
+        81384.63,
+        82001.58,
+        81840.01,
+        82946.03,
+        84023.24,
+        81315.35,
+        81076.46,
+        80430.62
+      ],
+      "action": {
+        "side": "SELL",
+        "label": "SELL ON RISE",
+        "zone": [
+          80746.8,
+          81101.44
+        ],
+        "sl": 81417.62,
+        "targets": [
+          79376.68,
+          78322.73
+        ],
+        "why": "Below its 20-day average with weak RSI"
+      },
+      "detail": {
+        "rsi": 43.0,
+        "ema20": 82220.44,
+        "vsEma20Pct": -2.18,
+        "avgRangePct": 2.62,
+        "high20": 86968.58,
+        "low20": 79145.75,
+        "dayHigh": 81101.44,
+        "dayLow": 79145.75,
+        "dayOpen": 81076.46,
+        "parts": {
+          "dayMove": -0.9,
+          "intraday": 0.7,
+          "trend": -1.5,
+          "rsi": -0.6
+        },
+        "reasons": [
+          "Day move -0.80% against a normal daily range of 2.62%",
+          "Intraday: 0.83% off today's high 81,101.44, 1.60% above today's low 79,145.75",
+          "Close is 2.18% below its 20-day average",
+          "RSI(14) is 43 (balanced)"
+        ]
+      },
+      "key": "BITCOIN",
+      "name": "BITCOIN",
+      "symbol": "BITSTAMP:BTCUSD",
+      "ccy": "$"
+    },
+    {
+      "price": 28957.53,
+      "chgPct": -0.0,
+      "score": -4.3,
+      "label": "BEARISH",
+      "divergence": null,
+      "spark": [
+        31224.69,
+        31160.08,
+        30725.81,
+        30883.15,
+        30664.7,
+        30569.48,
+        29950.82,
+        29935.59,
+        29187.55,
+        29529.34,
+        29490.28,
+        29822.52,
+        28958.69,
+        28957.53
+      ],
+      "action": {
+        "side": "SELL",
+        "label": "SELL ON RISE",
+        "zone": [
+          29015.14,
+          29161.03
+        ],
+        "sl": 29218.64,
+        "targets": [
+          28765.5,
+          28573.47
+        ],
+        "why": "Below its 20-day average with weak RSI"
+      },
+      "detail": {
+        "rsi": 36.7,
+        "ema20": 29888.93,
+        "vsEma20Pct": -3.12,
+        "avgRangePct": 1.33,
+        "high20": 31361.37,
+        "low20": 28825.72,
+        "dayHigh": 29161.03,
+        "dayLow": 28825.72,
+        "dayOpen": 28847.82,
+        "parts": {
+          "dayMove": -0.0,
+          "intraday": -0.4,
+          "trend": -2.7,
+          "rsi": -1.1
+        },
+        "reasons": [
+          "Day move -0.00% against a normal daily range of 1.33%",
+          "Intraday: 0.70% off today's high 29,161.03, 0.46% above today's low 28,825.72",
+          "Close is 3.12% below its 20-day average",
+          "RSI(14) is 37 (weak)"
+        ]
+      },
+      "key": "NASDAQ",
+      "name": "NASDAQ",
+      "symbol": "NASDAQ:NDX",
+      "ccy": ""
+    }
+  ],
+  "marketOpen": false,
+  "asOf": "2026-10-25T01:01:29+05:30",
+  "method": {
+    "summary": "Score = day move (\u00b13) + intraday pressure \u2014 slide from today's high vs bounce from today's low (\u00b12) + position vs 20-day average (\u00b13) + RSI(14) bias (\u00b12). Range \u221210 to +10.",
+    "action": "Sell on rise / Buy on dips comes from today's move and intraday pressure first; if today is quiet, from the 20-day trend and RSI; otherwise Wait. Zone, stop-loss and targets are sized from the instrument's average daily range and today's high/low.",
+    "label": "Bullish at +2 or more, Bearish at \u22122 or less, otherwise Neutral.",
+    "divergence": "Bearish: price makes a higher high but RSI makes a lower high. Bullish: price makes a lower low but RSI makes a higher low (last 10 daily bars vs the 10 before).",
+    "sparkline": "Closing prices of the last 14 daily candles.",
+    "source": "Daily candles from the TradingView feed. Indian indices and stocks use the live quote for today (the free feed is about 15 min late); crypto is live; US indices, gold, silver and crude are about 10 min delayed.",
+    "note": "Informational read of recent price action only. Not a prediction, not advice."
+  }
+}

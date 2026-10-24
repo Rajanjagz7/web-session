@@ -263,7 +263,7 @@ def _fetch(item):
 def build():
     """All instruments within a time budget. Anything still running is answered from the stale copy, or marked
     `pending` so the page asks again in a few seconds (a serverless function must answer inside ~30 s)."""
-    pool = ThreadPoolExecutor(max_workers=4)
+    pool = ThreadPoolExecutor(max_workers=8)
     futs = {pool.submit(_fetch, it): it for it in INSTRUMENTS}
     done, _ = wait(futs, timeout=BUDGET)
     pool.shutdown(wait=False)
@@ -299,7 +299,8 @@ def observer(refresh: bool = False):
             data = build()
             if any("error" not in i and not i.get("pending") for i in data["items"]) or not _cache["data"]:
                 pending = any(i.get("pending") for i in data["items"])
-                _cache.update(ts=time.time(), data=data, ttl=4 if pending else TTL)
+                effective_ttl = 4 if pending else (300 if market_open() else 1800)
+                _cache.update(ts=time.time(), data=data, ttl=effective_ttl)
             else:                       # every instrument failed: keep showing the last good read
                 data = _cache["data"]
         else:

@@ -5,6 +5,25 @@
 (function () {
   'use strict';
   const O = { data: null, err: null, busy: false, open: null, timer: null, ts: 0, retries: 0, retry: null };
+  const CACHE_KEY = 'rs-observer-v2';
+  try {
+    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (saved && Array.isArray(saved.items) && saved.items.length) {
+      O.data = saved;
+      O.ts = saved._ts || Date.now();
+    }
+  } catch (e) { }
+  if (!O.data) {
+    fetch('/static/observer_seed.json?v=20261025b')
+      .then(r => r.json())
+      .then(d => {
+        if (!O.data && d && Array.isArray(d.items)) {
+          O.data = d;
+          paintAll();
+        }
+      })
+      .catch(() => {});
+  }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = (v, d) => v == null || !isFinite(v) ? '—' : Number(v).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
   const sgn = (v, d) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d == null ? 1 : d);
@@ -81,7 +100,7 @@
       const r = await fetch('/api/observer' + (force ? '?refresh=true' : ''), { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json(); if (!j || !Array.isArray(j.items)) throw new Error('bad response');
-      O.data = j; O.ts = Date.now();
+      O.data = j; O.data._ts = Date.now(); O.ts = Date.now(); try { localStorage.setItem(CACHE_KEY, JSON.stringify(O.data)); } catch (e) { }
       if (O.data.items.some(x => x.pending) && O.retries++ < 8) { clearTimeout(O.retry); O.retry = setTimeout(() => load(false), 4000); } else if (!O.data.items.some(x => x.pending)) O.retries = 0;
     } catch (e) { O.err = e.message || 'network error'; }
     O.busy = false; paintAll();
@@ -121,8 +140,10 @@
   window.obsMount = function (host) {
     if (!host) return;
     host.setAttribute('data-ob-host', '1'); paint(host);
-    if (!O.data || Date.now() - O.ts > 60000) load(false);
-    clearInterval(O.timer); O.timer = setInterval(() => { if (hosts().length && !document.hidden) load(false); }, 90000);
+    const mkt = (window.rjMkt && rjMkt());
+    const staleLimit = mkt ? 120000 : 900000;
+    if (!O.data || Date.now() - O.ts > staleLimit) load(false);
+    clearInterval(O.timer); O.timer = setInterval(() => { if (hosts().length && !document.hidden && (!window.rjMkt || rjMkt())) load(false); }, 120000);
   };
 
   /* standalone God's Eye screen: the Observer on top, the older pre-market forecast ledger behind a button */
