@@ -33,54 +33,84 @@ _cache: dict = {}
 
 
 def ema(v, n):
-    a, out, e = 2 / (n + 1), [], None
+    """Chart parity (index.html emaA): SMA seed over the first n values, then the EMA factor.
+    The old first-value seed made the backend's Z Trend drift from the chart (different early
+    flips, up to ~5 points on the trail line on short series)."""
+    a, out, p, s, k = 2 / (n + 1), [], None, 0.0, 0
     for x in v:
-        e = x if e is None else e + a * (x - e)
-        out.append(e)
+        if p is None:
+            s += x
+            k += 1
+            if k == n:
+                p = s / n
+                out.append(p)
+            else:
+                out.append(None)
+        else:
+            p = x * a + p * (1 - a)
+            out.append(p)
     return out
 
 
 def rsi(c, n=14):
-    out, g, l = [50.0] * len(c), 0.0, 0.0
+    """Chart parity: Wilder smoothing with an SMA seed over the first n changes (NaN before that)."""
+    out = [None] * len(c)
+    g = l = 0.0
     for i in range(1, len(c)):
         d = c[i] - c[i - 1]
-        g = (g * (n - 1) + max(d, 0)) / n
-        l = (l * (n - 1) + max(-d, 0)) / n
-        out[i] = 100 - 100 / (1 + g / l) if l > 0 else 100.0
+        u, dn = max(d, 0), max(-d, 0)
+        if i <= n:
+            g += u
+            l += dn
+            if i == n:
+                g /= n
+                l /= n
+                out[i] = 100.0 if l == 0 else 100 - 100 / (1 + g / l)
+        else:
+            g = (g * (n - 1) + u) / n
+            l = (l * (n - 1) + dn) / n
+            out[i] = 100.0 if l == 0 else 100 - 100 / (1 + g / l)
+    return out
+
+
+def _rma_skip(vals, n):
+    """Chart emaA with alpha=1/n: SMA seed over the first n finite values (None/NaN entries skipped)."""
+    out, p, s, k = [None] * len(vals), None, 0.0, 0
+    al = 1.0 / n
+    for i, x in enumerate(vals):
+        if x is None or x != x:
+            continue
+        if p is None:
+            s += x
+            k += 1
+            if k == n:
+                p = s / n
+                out[i] = p
+        else:
+            p = x * al + p * (1 - al)
+            out[i] = p
     return out
 
 
 def adx(bars, n=14):
-    """Wilder ADX - only the direction strength is used (momentum filter)."""
+    """Chart parity (index.html adx): +DM/−DM/TR arrays, rma-smoothed, dx with (x+y)||1."""
     n_b = len(bars)
-    if n_b < 2 * n + 2:
+    if n_b < 2:
         return [None] * n_b
-    trs, pdms, ndms = [], [], []
+    pdm, mdm, tr = [None] * n_b, [None] * n_b, [None] * n_b
     for i in range(1, n_b):
-        h, l, pc = bars[i]["h"], bars[i]["l"], bars[i - 1]["c"]
-        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
-        pdms.append(h - bars[i - 1]["h"] if h - bars[i - 1]["h"] > bars[i - 1]["l"] - l else 0.0)
-        ndms.append(bars[i - 1]["l"] - l if bars[i - 1]["l"] - l > h - bars[i - 1]["h"] else 0.0)
-    atr = pdi = ndi = None
-    dxs = []
-    for i in range(len(trs)):
-        if atr is None:
-            atr, pdi, ndi = sum(trs[: i + 1]), sum(pdms[: i + 1]), sum(ndms[: i + 1])
-        else:
-            atr = atr - atr / n + trs[i]
-            pdi = pdi - pdi / n + pdms[i]
-            ndi = ndi - ndi / n + ndms[i]
-        dx = 100 * abs(pdi - ndi) / (pdi + ndi) if (pdi + ndi) else 0.0
-        dxs.append(dx)
-    out = [None] * (n_b - len(dxs))
-    a = None
-    for i, dx in enumerate(dxs):
-        a = dx if a is None else (a * (n - 1) + dx) / n
-        if i >= n - 1:
-            out.append(a)
-    while len(out) < n_b:
-        out.append(out[-1] if out else None)
-    return out
+        u = bars[i]["h"] - bars[i - 1]["h"]
+        dn = bars[i - 1]["l"] - bars[i]["l"]
+        pdm[i] = u if (u > dn and u > 0) else 0.0
+        mdm[i] = dn if (dn > u and dn > 0) else 0.0
+        tr[i] = max(bars[i]["h"] - bars[i]["l"], abs(bars[i]["h"] - bars[i - 1]["c"]), abs(bars[i]["l"] - bars[i - 1]["c"]))
+    a = _rma_skip(tr, n)
+    p = _rma_skip(pdm, n)
+    m = _rma_skip(mdm, n)
+    pdi = [None if (a[i] is None or p[i] is None) else 100 * p[i] / a[i] for i in range(n_b)]
+    mdi = [None if (a[i] is None or m[i] is None) else 100 * m[i] / a[i] for i in range(n_b)]
+    dx = [None if (pdi[i] is None or mdi[i] is None) else 100 * abs(pdi[i] - mdi[i]) / ((pdi[i] + mdi[i]) or 1) for i in range(n_b)]
+    return _rma_skip(dx, n)
 
 
 def momentum(bars):
@@ -112,12 +142,22 @@ def true_ranges(bars):
 
 
 def atr_series(bars, n=14):
-    """Wilder ATR (same smoothing the chart uses)."""
+    """Wilder ATR with the chart's SMA seed (index.html: rma(trA(d), n) over emaA)."""
     trs = true_ranges(bars)
-    out, prev = [], None
-    for i, t in enumerate(trs):
-        prev = t if prev is None else (prev * (n - 1) + t) / n
-        out.append(prev)
+    out, p, s, k = [], None, 0.0, 0
+    al = 1.0 / n
+    for t in trs:
+        if p is None:
+            s += t
+            k += 1
+            if k == n:
+                p = s / n
+                out.append(p)
+            else:
+                out.append(None)
+        else:
+            p = t * al + p * (1 - al)
+            out.append(p)
     return out
 
 
@@ -162,6 +202,7 @@ def compute(bars, ln=14, mult=2.0, flt=1, sw=5):
     a = atr_series(bars, ln)
     mb = momentum(bars)
     tr, d, sig = [None] * n, [0] * n, [0] * n
+    lvl = [None] * n
     c = [b["c"] for b in bars]
     for i in range(1, n):
         L = mult * (a[i] or 0)
@@ -182,7 +223,10 @@ def compute(bars, ln=14, mult=2.0, flt=1, sw=5):
             ok = (not flt) or (dd > 0 and mb[i] > -2) or (dd < 0 and mb[i] < 2)
             if ok:
                 sig[i] = dd
-    return {"sig": sig, "dir": d, "lvl": tr, "zones": zones_from(bars, a, sw), "mb": mb, "atr": a}
+        # the drawn STOP LINE is the chart's step line (rztCalc's lvl): the flip candle's low (B) /
+        # high (S), carried forward until the next flip - NOT the continuous ATR trail (tr)
+        lvl[i] = bars[i]["l"] if sig[i] > 0 else bars[i]["h"] if sig[i] < 0 else lvl[i - 1]
+    return {"sig": sig, "dir": d, "lvl": lvl, "trail": tr, "zones": zones_from(bars, a, sw), "mb": mb, "atr": a}
 
 
 def flip_history(bars, res, i0=0):
@@ -280,6 +324,7 @@ def readout(symbol, mode="underlying", strike=None, tf="5m", ln=14, mult=2.0, fl
         "state": "BUY" if d > 0 else "SELL" if d < 0 else "WAIT",
         "price": round(last["c"], 2),
         "sl": round(trail, 2) if trail is not None and math.isfinite(trail) else None,
+        "atrTrail": round(res["trail"][-1], 2) if res["trail"][-1] is not None and math.isfinite(res["trail"][-1]) else None,
         "resistance": round(sum(z["r1"]) / 2, 2) if z.get("r1") else None,
         "support": round(sum(z["s1"]) / 2, 2) if z.get("s1") else None,
         "zones": z,
@@ -317,19 +362,16 @@ def rzt_scan(symbol: str, lookback_days: int = 400, ln=14, mult=2.0, flt=1, sw=5
     rows = []
     for i, b in enumerate(bars):
         sg = res["sig"][i]
-        stop = None
-        if sg:
-            stop = b["low"] if sg > 0 else b["high"]
         rows.append({"date": b["date"], "open": b["open"], "high": b["high"], "low": b["low"], "close": b["close"],
                      "signal": "BUY" if sg > 0 else "SELL" if sg < 0 else "",
-                     "stop": stop,
-                     "trail": round(res["lvl"][i], 2) if res["lvl"][i] is not None and math.isfinite(res["lvl"][i]) else None})
+                     "stop": round(res["lvl"][i], 2) if res["lvl"][i] is not None and math.isfinite(res["lvl"][i]) else None,
+                     "trail": round(res["trail"][i], 2) if res["trail"][i] is not None and math.isfinite(res["trail"][i]) else None})
     last = rows[-1]
     return {"symbol": symbol,
             "columns": [{"key": "trail", "label": "Z Trend line"}],
             "current": {"date": last["date"], "close": last["close"], "signal": last["signal"],
                         "state": "BUY" if res["dir"][-1] > 0 else "SELL" if res["dir"][-1] < 0 else "WAIT",
-                        "stop": last["trail"]},
+                        "stop": last["stop"], "trail": last["trail"]},
             "bars": rows[-300:]}
 
 

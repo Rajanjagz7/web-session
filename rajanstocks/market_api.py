@@ -60,11 +60,13 @@ INDICES = [
     ("NIFTY", "Nifty 50"), ("BANKNIFTY", "Nifty Bank"), ("FINNIFTY", "Nifty Fin Service"),
     ("MIDCPNIFTY", "Nifty Midcap Select"), ("SENSEX", "BSE Sensex"), ("INDIAVIX", "India VIX"),
 ]
+# (replaced below once the instrument master is loaded - see ensure_universe)
 CORE = [s for s, _, _ in STOCKS]            # curated liquid set (sectors known) -> default for heavy scans
 CORE_SECTOR = {s: sec for s, _, sec in STOCKS}
 CORE_NAME = {s: n for s, n, _ in STOCKS}
 INDICES[:] = [("NIFTY", "Nifty 50"), ("BANKNIFTY", "Nifty Bank"), ("FINNIFTY", "Nifty Fin Service"),
-              ("MIDCPNIFTY", "Nifty Midcap Select"), ("NIFTYNXT50", "Nifty Next 50"), ("SENSEX", "BSE Sensex"),
+              ("MIDCPNIFTY", "Nifty Midcap Select"), ("NIFTYNXT50", "Nifty Next 50"), ("NIFTYFPI", "Nifty FPI 150"),
+              ("SENSEX", "BSE Sensex"), ("BANKEX", "BSE Bankex"), ("SENSEX50", "BSE Sensex 50"), ("FOCIT", "BSE FOCIT"),
               ("INDIAVIX", "India VIX")]
 NAME = {s: n for s, n, _ in STOCKS} | {s: n for s, n in INDICES}
 SECTOR = {s: sec for s, _, sec in STOCKS}
