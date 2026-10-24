@@ -1522,6 +1522,7 @@ def _picks_compute(deadline_s, progress=None):
     failed = {}
     fno_syms = set(PICK_INDICES) | {s for s, _, _ in STOCKS}
     extra_done = set()                               # extras that got data this build (cursor advances past them)
+    fallback_used = set()                            # extras that fell back to the Upstox candle path this build
     bhav_days = None                                 # loaded once per build: 1 GET per session, not per symbol
 
     @bg
@@ -1548,6 +1549,14 @@ def _picks_compute(deadline_s, progress=None):
                     op_q = _num(o.get("open")) or ltp_now
                     rows = rows + [{"date": today_iso, "open": op_q, "high": max(hi_q, ltp_now),
                                     "low": min(lo_q, ltp_now), "close": ltp_now, "volume": vol_now}]
+            if rows is None and len(fallback_used) < 25:
+                # the bhav read failed for this symbol (store hiccup): fall back to the Upstox
+                # candle path, capped per build so a store outage cannot blow the rate budget
+                fallback_used.add(sym)
+                try:
+                    rows = daily(k)
+                except Exception:
+                    rows = None
             if rows is None:
                 failed[k] = sym                      # bhav not warmed for this session count yet: retry next build
                 return None
@@ -1604,7 +1613,9 @@ def _picks_compute(deadline_s, progress=None):
         nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
         shared_cache.set(f"picks:extra-cursor|{date.today().isoformat()}", nxt, 20 * 3600)
         coverage = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt,
-                    "bhav": bhav, "bhav_diag": bhav_diag, "failed": len(failed)}
+                    "bhav": bhav, "bhav_diag": bhav_diag, "failed": len(failed),
+                    "days": len(bhav_days) if isinstance(bhav_days, dict) else 0,
+                    "fallback": len(fallback_used)}
         # the day's cash picks ACCUMULATE: each build's slice would otherwise replace the previous
         # one, and strong names found earlier today would vanish from the screen on the next build
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
