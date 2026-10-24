@@ -57,10 +57,6 @@
     try { return new Date(d.asOf).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }).replace(/\bam\b/, 'AM').replace(/\bpm\b/, 'PM') + ' IST'; } catch (e) { return ''; }
   }
 
-  function howCard(m) {
-    return '';
-  }
-
   function paint(host) {
     if (!host) return;
     const d = O.data;
@@ -74,7 +70,7 @@
     let body;
     if (!d && O.busy) body = `<div class="ob-grid">${Array.from({ length: 8 }, () => '<div class="ob-card ob-skel"></div>').join('')}</div>`;
     else if (!d) body = `<div class="ob-empty">Could not load the Observer${O.err ? ': ' + esc(O.err) : ''}. <button type="button" class="btn" data-ob-refresh>Retry</button></div>`;
-    else body = `<div class="ob-grid">${d.items.map(card).join('')}</div>${howCard(d.method)}`;
+    else body = `<div class="ob-grid">${d.items.map(card).join('')}</div>`;
     host.innerHTML = `<div class="ob">${head}${body}</div>`;
   }
 

@@ -133,10 +133,6 @@
     </div></div>`;
   }
 
-  function howItWorks() {
-    return '';
-  }
-
   /* God's Eye lives inside the Picks page (#pkGodseye); the old standalone view still works if it is ever shown. */
   function host() {
     if (typeof App === 'undefined') return null;
@@ -164,7 +160,7 @@
       ${G.view === 'heat' ? `<div class="gx-tw"><table class="gx-t"><thead><tr><th>Market</th><th class="r">Price</th><th>Score −10 … +10</th><th class="r">Score</th><th>Bias</th><th class="r">RSI</th><th>Trend</th><th>Divergence</th><th>30 sessions</th></tr></thead>
         <tbody>${list.slice().sort((a, b) => (b.score ?? -99) - (a.score ?? -99)).map(heatRow).join('')}</tbody></table></div>`
         : `<div class="gx-grid">${list.map(card).join('')}</div>`}
-      ${howItWorks()}`;
+      `;
     const embed = el.id === 'pkGodseye';
     el.innerHTML = `<div class="${embed ? 'gx gx-embed' : 'page gx'}">
       <div class="gx-head">

@@ -643,11 +643,12 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(max-width:560px){.pnl-chip small{display:none}}
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
+.ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261024L"></script>
+<script src="/static/journal.js?v=20261025a"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261024L"></script>
-<script src="/static/observer.js?v=20261024L"></script>
+<script src="/static/godseye.js?v=20261025a"></script>
+<script src="/static/observer.js?v=20261025a"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1102,7 +1103,7 @@ async function loadTab(){const tok=++S.tok;S.loading=true;S.err='';S.page=0;S.qu
     if(S.tab==='IDX'){const u=await get('/api/m/universe');
       rows=[...(u.indices||[]).map(i=>({s:i.s,n:i.n,industry:'Main',idx:1})),...(u.more||[]).map(i=>({s:i.s,n:i.n,industry:i.g,idx:1}))];S.idxAll=rows}
     else if(S.tab==='ALL'){rows=(await ensureAll()).map(([s,n])=>({s,n}))}
-    else if(S.tab==='multi'){const r=await get('/api/m/multibaggers?min_x=2&limit=300');rows=(r.stocks||[]).map(x=>({s:x.s,n:x.n,industry:x.industry}));(r.stocks||[]).forEach(x=>{S.quotes[x.s]={s:x.s,last:x.last,prev:x.prev,yl:x.yl,yh:x.yh}})}
+    else if(S.tab==='multi'){const r=await get('/api/m/multibaggers?min_x=2&limit=1000');rows=(r.stocks||[]).map(x=>({s:x.s,n:x.n,industry:x.industry}));(r.stocks||[]).forEach(x=>{S.quotes[x.s]={s:x.s,last:x.last,prev:x.prev,yl:x.yl,yh:x.yh,vol:x.vol}})}
     else{const r=await get('/api/m/index-stocks?index='+encodeURIComponent(S.tab));rows=r.stocks||[]}
     if(tok!==S.tok)return;S.rows=rows;S.loading=false;
     S.sort=S.tab==='multi'?'x':S.tab==='IDX'?'grp':'sym';S.asc=S.tab!=='multi';
@@ -1119,7 +1120,7 @@ function view(noQF){const q=S.q.trim().toLowerCase();
   if(S.sort==='grp'&&!q)return l;
   if(q)l=l.slice().sort((a,b)=>(+b.s.toLowerCase().startsWith(q)-+a.s.toLowerCase().startsWith(q))||a.s.localeCompare(b.s));
   else{const v=r=>{const k=S.quotes[r.s];if(S.sort==='sym')return r.s;if(!k||!(k.last>0))return null;
-      return S.sort==='chg'?(k.prev>0?(k.last/k.prev-1):0):S.sort==='x'?(k.yl>0?k.last/k.yl:0):S.sort==='off'?(k.yh>0?k.last/k.yh:0):k.last};
+      return S.sort==='chg'?(k.prev>0?(k.last/k.prev-1):0):S.sort==='x'?(k.yl>0?k.last/k.yl:0):S.sort==='off'?(k.yh>0?k.last/k.yh:0):S.sort==='vol'?(k.vol||0):k.last};
     l=l.slice().sort((a,b)=>{const x=v(a),y=v(b);if(x===y)return 0;if(x==null)return 1;if(y==null)return -1;return(S.asc?1:-1)*(typeof x==='string'?x.localeCompare(y):x-y)})}
   return l}
 async function fetchQuotes(all){if(!S.h)return;const lu=view(true),lf=view(),page=S.tab==='ALL'||S.q?lu.slice(S.page*S.size,(S.page+1)*S.size):lu;
@@ -1138,7 +1139,7 @@ const ICON={
   bell:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
   list:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
   x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>'};
-const SORTS=[['grp','Default order','IDX'],['sym','Symbol A–Z',''],['last','Price (LTP)',''],['chg','Day % change',''],['off','% off 52W high','IDX'],['x','× 52W low','NOIDX']];
+const SORTS=[['grp','Default order','IDX'],['sym','Symbol A–Z',''],['last','Price (LTP)',''],['chg','Day % change',''],['off','% off 52W high','IDX'],['x','× 52W low','NOIDX'],['vol','Volume (shares)','']];
 function qFilterOn(){const f=S.f;return f.mv!=='all'||f.pmin!==''||f.pmax!==''||f.near}
 function activeCount(){return (S.tab==='IDX'&&S.grp!=='ALL'?1:0)+(S.f.mv!=='all'?1:0)+(S.f.pmin!==''||S.f.pmax!==''?1:0)+(S.f.near?1:0)}
 function chipsHtml(){return `<div class="sb-tabs-s" role="tablist">`+CHIPS.map(([k,l])=>`<button class="sb-chip ${S.tab===k?'on':''}" role="tab" aria-selected="${S.tab===k}" data-sb="tab:${k}">${esc(l)}</button>`).join('')+`</div>`+
@@ -1198,7 +1199,7 @@ function drawTable(){const b=$('#sbBody'),pg=$('#sbPg');if(!b)return;
     const cons=r.idx&&S.nameKey[(r.n||'').toLowerCase()];
     const yr=idx?(off==null?'<span class="sb-dim">—</span>':`<span class="${off>=-3?'up':off<=-20?'down':''}">${off.toFixed(1)}%</span>`):(x?`<span class="${x>=2?'up':''}">${x.toFixed(2)}×</span>`:'<span class="sb-dim">—</span>');
     return `<div class="sb-row" role="row">
-      <div class="c-stk" role="cell"><b class="sb-sym">${esc(r.s)}</b><div class="sb-name">${esc(r.n||'')}${r.industry&&r.industry!=='Main'?' · '+esc(r.industry):''}</div></div>
+      <div class="c-stk" role="cell"><b class="sb-sym">${esc(r.s)}</b><div class="sb-name">${esc(r.n||'')}${r.industry&&r.industry!=='Main'?' · '+esc(r.industry):''}${k.vol!=null?`<span class="sb-vol" style="margin-left:6px;color:var(--text-2);font-weight:600">· Vol ${fmtN(k.vol)}</span>`:''}</div></div>
       <div class="c-ltp r num" role="cell">${ok?fp(k.last):'<span class="sb-dim">—</span>'}</div>
       <div class="c-chg r" role="cell">${chg==null?'<span class="sb-dim">—</span>':`<span class="sb-chg ${chg>=0?'up':'down'}">${chg>=0?'+':'−'}${Math.abs(chg).toFixed(2)}%</span>`}</div>
       <div class="c-rng" role="cell"><span class="sb-mlbl">${idx?'Day range':'52-week range'}</span>${idx?rng(k.low,k.high,k.last):rng(k.yl,k.yh,k.last)}</div>
@@ -3033,7 +3034,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
   const L=hs?hs==='BUY':p.signal!=='SELL';p=hs?Object.assign({},p,{signal:hs}):p;
   const cash=p.universe==='cash';
   return`<article class="pk">
-   <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}${cash?' · <span class="ipf-tag main">CASH</span>':''}</small></div>
+   <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}${cash?' · <span class="ipf-tag main">CASH</span>':''}${p.x?` · <span class="badge b-up">${p.x}× 52WL</span>`:''}</small></div>
     <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
    <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
    <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
@@ -3091,7 +3092,7 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-ovs],[data
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
     window._pkCashLoading=true;
-    fetch('/static/picks_cash_seed.json').then(r=>r.json()).then(cs=>{
+    fetch('/static/picks_cash_seed.json?v=20261025a').then(r=>r.json()).then(cs=>{
       const cl=Object.values(cs).filter(x=>(x.strength||0)>=55);
       P.picks=(P.picks||[]).concat(cl);P.count=P.picks.length;
       if(Array.isArray(P.buy))P.buy=P.buy.concat(cl.filter(x=>x.signal==='BUY'));
@@ -3475,10 +3476,7 @@ function hedgeHTML(){const c=OPT.chain;if(!c||!c.rows||!(c.spot>0))return'';cons
     <span class="${okDay?'up':'muted'}">${okDay?'✔ Entry day: enter at/after 09:30':'Best entry: '+esc(P.entry)+(P.entry.startsWith('T-1')?' (the session before expiry)':'')}</span></div>
     ${legs.length?`<div class="tbl-wrap"><table class="bl-t hg-t"><thead><tr><th>Spread</th><th>Sell</th><th>Hedge (buy)</th><th class="num">Credit · max profit</th><th class="num">Loss at exit · worst</th><th class="num">Breakeven · exit ≥</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="muted hg-n">No strikes in this chain far enough out yet - widen the strike filter.</div>'}
     ${legs.some(x=>x.weak)?`<p class="hg-n warn">⚠ No strike pays ${Math.round((P.minRatio||0.25)*100)}% of the hedge width today - the row shown has the best ratio available; better to skip or wait for the entry day.</p>`:''}
-    <details class="hg-how"><summary>How is this made?</summary>
-      <p class="hg-n">Rule: farthest strike (0.35-${P.k}× the expected move) that pays at least ${Math.round((P.minRatio||0.25)*100)}% of the spread width, 1- or 2-strike hedge - max loss ≤ ${((1-(P.minRatio||0.25))/(P.minRatio||0.25)).toFixed(0)}× max profit; with the exit at ${P.stop||2}× credit the planned loss ≈ the credit. "Worst" = a gap straight through both strikes.</p>
-      <p class="hg-n">${stat} ${(SYM(OPT.sym)||{}).cls!=='Indices'?'<b>Stock options were not part of the backtest</b> - treat as untested. ':''}High win rate comes with rare larger losses - the hedge caps them at the max loss shown. Paper trading only.</p>
-    </details></div>`}
+    </div>`}
 /* place both legs as paper trades: buy the hedge first, then sell the short leg; the pair exits together */
 function hgPlace(sd,shortK,longK,credit){if(!OPT.chain)return;const was=OPT.att,ot=OPT.otype,keep=OPT.sel?{s:OPT.sel.side,k:OPT.sel.strike}:null;const P=hgParams();
   const noAtt=()=>{OPT.att=false;const a=$('#opAtt');if(a)a.checked=false};   // the pair is managed together: no per-leg stop / target
@@ -4511,7 +4509,7 @@ async function checkCacheVersion(){
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
 function triggerSignalPush(){if(!MKT.open)return;fetch('/api/cron/signal-push',{method:'POST'}).catch(()=>{})}
-async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cr=await fetch('/static/picks_cash_seed.json');if(cr.ok){const cs=await cr.json(),cl=Object.values(cs).filter(x=>(x.strength||0)>=55);App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
+async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cr=await fetch('/static/picks_cash_seed.json?v=20261025a');if(cr.ok){const cs=await cr.json(),cl=Object.values(cs).filter(x=>(x.strength||0)>=55);App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
   if(App.view==='picks')renderPicks();renderWatchlist();
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}

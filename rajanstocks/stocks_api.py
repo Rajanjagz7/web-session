@@ -212,7 +212,16 @@ def _quote_rows(symbols: List[str]) -> Dict[str, dict]:
     out = {}
     if not keymap:
         return out
-    raw = upstox_service._full_quotes(list(keymap.keys()))
+    keys = list(keymap.keys())
+    if len(keys) <= 500:
+        raw = upstox_service._full_quotes(keys)
+    else:
+        import concurrent.futures
+        batches = [keys[i:i + 500] for i in range(0, len(keys), 500)]
+        raw = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+            for b_raw in pool.map(upstox_service._full_quotes, batches):
+                raw.update(b_raw)
     for k, q in raw.items():
         s = keymap.get(k)
         if not s:
@@ -237,32 +246,50 @@ def stocks_quotes(symbols: str = Query("")):
 
 
 @router.get("/multibaggers")
-def multibaggers(min_x: float = 2.0, limit: int = 120):
-    """Stocks trading at >= min_x times their 52-week low across the Midcap 150, Smallcap 250 and Microcap 250 lists."""
-    min_x = max(1.2, min(min_x, 20.0))
+def multibaggers(min_x: float = 2.0, limit: int = 500):
+    """Stocks trading at >= min_x times their 52-week low across ALL listed NSE equities, including low-volume names."""
+    min_x = max(1.1, min(min_x, 20.0))
+    limit = max(10, min(limit, 2000))
     if _multi["rows"] and time.time() - _multi["t"] < 300 and _multi.get("x") == min_x:
-        return {"stocks": _multi["rows"][:limit], "cached": True}
+        return {"stocks": _multi["rows"][:limit], "cached": True, "count": len(_multi["rows"]), "scanned": _multi.get("scanned", 0)}
     names = {}
-    for key in ("midcap150", "smallcap250", "microcap250"):
+    for key in ("nifty50", "niftynext50", "midcap150", "smallcap250", "microcap250", "infra"):
         try:
             for r in _constituents(key):
                 names.setdefault(r["s"], r)
-        except HTTPException:
+        except Exception:
             continue
+    try:
+        eq = _equities()
+        for r in eq.get("rows", []):
+            s = r["s"]
+            if s not in names:
+                names[s] = {"s": s, "n": r["n"], "industry": "NSE Equity"}
+    except Exception:
+        pass
     if not names:
-        raise HTTPException(502, "Index lists are unavailable right now")
+        raise HTTPException(502, "Stock lists are unavailable right now")
     try:
         quotes = _quote_rows(list(names.keys()))
     except Exception as e:
         if _multi["rows"]:
-            return {"stocks": _multi["rows"][:limit], "cached": True, "stale": True}
+            return {"stocks": _multi["rows"][:limit], "cached": True, "stale": True, "count": len(_multi["rows"])}
         raise HTTPException(503, f"Live prices are temporarily unavailable: {str(e)[:120]}")
     rows = []
     for s, q in quotes.items():
         if q["last"] > 0 and q["yl"] > 0 and q["last"] / q["yl"] >= min_x:
-            rows.append({"s": s, "n": names[s]["n"], "industry": names[s]["industry"], "last": q["last"], "prev": q["prev"],
-                         "yl": q["yl"], "yh": q["yh"], "x": round(q["last"] / q["yl"], 2),
-                         "chg": round((q["last"] / q["prev"] - 1) * 100, 2) if q["prev"] else 0})
+            rows.append({
+                "s": s,
+                "n": names[s]["n"],
+                "industry": names[s].get("industry") or "NSE Equity",
+                "last": q["last"],
+                "prev": q["prev"],
+                "yl": q["yl"],
+                "yh": q["yh"],
+                "vol": q.get("vol") or 0,
+                "x": round(q["last"] / q["yl"], 2),
+                "chg": round((q["last"] / q["prev"] - 1) * 100, 2) if q["prev"] else 0
+            })
     rows.sort(key=lambda r: -r["x"])
-    _multi.update(t=time.time(), rows=rows, x=min_x)
+    _multi.update(t=time.time(), rows=rows, x=min_x, scanned=len(quotes))
     return {"stocks": rows[:limit], "count": len(rows), "scanned": len(quotes)}
