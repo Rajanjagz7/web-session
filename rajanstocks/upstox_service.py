@@ -379,6 +379,10 @@ class UpstoxService:
     def _load_equity_keys(self):
         if getattr(self, "_eq_keys", None):
             return self._eq_keys
+        # a failing 2MB master download must not hang every caller: after one failure,
+        # back off for 90 s and answer from the (empty) cache while the retry waits
+        if getattr(self, "_eq_fail_until", 0) > time.time():
+            return getattr(self, "_eq_keys", None) or {}
         import gzip, json
         try:
             resp = self.session.get(
@@ -410,8 +414,10 @@ class UpstoxService:
                     stocks[u] = names[u]
             self._fo = {"stocks": stocks, "indices": sorted(indices), "lots": lots}
             self._eq_names = names                     # every NSE_EQ name (also non-F&O) - the cash-universe scan needs it
+            self._eq_fail_until = 0
         except Exception:
             self._eq_keys = {}
+            self._eq_fail_until = time.time() + 90     # stop the 20 s download retries from stacking up
         return self._eq_keys
 
     def eq_names(self):

@@ -4549,8 +4549,10 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   $('#zoom').innerHTML=`<button class="ibtn" aria-label="Zoom out" data-z="out">${I('zout',16)}</button><button class="ibtn" aria-label="Reset view" data-z="reset">${I('reset',16)}</button><button class="ibtn" aria-label="Zoom in" data-z="in">${I('zin',16)}</button>`;
   $('#zoom').addEventListener('click',e=>{const z=e.target.closest('[data-z]')?.dataset.z;if(z==='in')chart.zoom(1.25);if(z==='out')chart.zoom(0.8);if(z==='reset'){chart.resetView();chart.req()}});
   restoreInds();restoreTfLast();
-  await loadUniverse();
-  await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])]);
+  /* the boot must NEVER block on one fetch: a hanging universe/unquote call used to leave the
+     loader on screen forever - race both with timeouts and swallow failures (they retry later) */
+  try{await Promise.race([loadUniverse(),new Promise(r=>setTimeout(r,10000))])}catch(e){}
+  try{await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])])}catch(e){}
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'vedic');
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);

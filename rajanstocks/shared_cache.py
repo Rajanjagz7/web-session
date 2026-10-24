@@ -392,9 +392,8 @@ def diagnose():
 
 
 # ---- one-time move of the saved state to a new Upstash database ----
-def cleanup_junk(budget_s=20.0):
-    """Delete leftover rate-limit counters (rl2:*) from the PRIMARY database. Only keys starting with rl2: are touched.
-    About 2 commands per 1000 keys. Call again until done is True."""
+def cleanup_prefix(match, budget_s=20.0):
+    """Delete keys matching `match` (e.g. 'bhav:day|') from the ACTIVE database. About 2 commands per 1000 keys."""
     import time as _t
     c = _creds()
     if not c:
@@ -402,18 +401,24 @@ def cleanup_junk(budget_s=20.0):
     t0, cur, n = _t.time(), "0", 0
     try:
         while True:
-            r = _pipe_to(c, [["SCAN", cur, "MATCH", "rl2:*", "COUNT", 1000]])[0]
+            r = _pipe_to(c, [["SCAN", cur, "MATCH", match + "*", "COUNT", 1000]])[0]
             if r.get("error"):
                 return {"ok": False, "deleted": n, "reason": r["error"][:160]}
-            cur, keys = r["result"][0], [k for k in r["result"][1] if k.startswith("rl2:")]
+            cur, keys = r["result"][0], [k for k in r["result"][1] if k.startswith(match)]
             if keys:
                 _pipe_to(c, [["DEL", *keys]]); n += len(keys)
             if cur == "0":
                 return {"ok": True, "deleted": n, "done": True}
             if _t.time() - t0 > budget_s:
-                return {"ok": True, "deleted": n, "done": False, "next": "open this link again to continue"}
+                return {"ok": True, "deleted": n, "done": False, "next": "call again to continue"}
     except Exception as e:
         return {"ok": False, "deleted": n, "reason": str(e)[:160]}
+
+
+def cleanup_junk(budget_s=20.0):
+    """Delete leftover rate-limit counters (rl2:*) from the PRIMARY database. Only keys starting with rl2: are touched.
+    About 2 commands per 1000 keys. Call again until done is True."""
+    return cleanup_prefix("rl2:", budget_s)
 
 
 STATE_KEYS = ("rajanone:auto:v1", "rajanone:push:v1", "rajanone:stockbot:v1")   # auto trader, push subscriptions, stock trader

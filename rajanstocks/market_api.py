@@ -1928,8 +1928,15 @@ def kv_health():
 
 @router.get("/kv-cleanup")
 def kv_cleanup():
-    """Removes leftover rl2:* rate-limit counters (junk) from Upstash. Never touches any other key."""
-    return shared_cache.cleanup_junk()
+    """Removes leftover rl2:* rate-limit counters (junk) and the broken first-generation bhavcopy
+    day cache (bhav:day|* - parsed with the wrong volume column, every row volume=0) from Upstash.
+    Never touches any other key."""
+    out = shared_cache.cleanup_junk()
+    try:
+        out["bhav_day_junk"] = shared_cache.cleanup_prefix("bhav:day|")
+    except Exception as e:
+        out["bhav_day_junk"] = {"ok": False, "reason": str(e)[:120]}
+    return out
 
 
 @router.api_route("/kv-migrate", methods=["GET", "POST"])
