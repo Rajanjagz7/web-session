@@ -1,0 +1,70 @@
+{
+  "product": "GOD'S EYE \u2014 The Observer",
+  "version": "1.0",
+  "themes": {
+    "dark": {
+      "background": "#080D18",
+      "surface": "#111B2B",
+      "surfaceElevated": "#1B2940",
+      "textPrimary": "#F3F6FC",
+      "textSecondary": "#9AA8BC",
+      "border": "#29364A",
+      "brand": "#7C9CFF",
+      "positive": "#32D6A0",
+      "negative": "#FF727C",
+      "neutral": "#F5BD55",
+      "info": "#69B8FF",
+      "dangerSurface": "#321D2A"
+    },
+    "light": {
+      "background": "#F5F7FB",
+      "surface": "#FFFFFF",
+      "surfaceElevated": "#EEF2F8",
+      "textPrimary": "#172033",
+      "textSecondary": "#596579",
+      "border": "#D8DFEA",
+      "brand": "#315EEA",
+      "positive": "#087F5B",
+      "negative": "#C62838",
+      "neutral": "#946200",
+      "info": "#1769AA",
+      "dangerSurface": "#FDECEF"
+    }
+  },
+  "breakpointsPx": {
+    "mobileMax": 767,
+    "tabletMin": 768,
+    "tabletMax": 1279,
+    "desktopMin": 1280
+  },
+  "horizons": [
+    "NEXT_SESSION",
+    "INTRADAY_15M",
+    "INTRADAY_30M",
+    "INTRADAY_60M"
+  ],
+  "signals": [
+    "UP",
+    "NEUTRAL",
+    "DOWN",
+    "NO_SIGNAL"
+  ],
+  "dataStatuses": [
+    "FRESH",
+    "DELAYED",
+    "STALE",
+    "UNAVAILABLE"
+  ],
+  "probabilityStatuses": [
+    "VALIDATED",
+    "NOT_VALIDATED",
+    "UNAVAILABLE"
+  ],
+  "rules": {
+    "showProbabilitiesOnlyWhen": "probabilityStatus == VALIDATED and probabilities are valid",
+    "demoLabel": "DEMO \u2014 MOCK DATA",
+    "timestampFormat": "ISO-8601 with timezone",
+    "minimumTouchTargetCssPx": 44,
+    "accessibilityTarget": "WCAG 2.2 AA"
+  }
+}

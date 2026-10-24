@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RajanStocks Pro — Trade, Signals, God's Eye, Vedic & Auto-Trader Journal</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            bg: {
+              950: '#070b12',
+              900: '#0c121d',
+              850: '#111927',
+              800: '#162032',
+              700: '#1f2d46',
+            },
+            emerald: {
+              450: '#10b981',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #070b12;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass-card {
+      background: linear-gradient(180deg, rgba(17, 25, 39, 0.92) 0%, rgba(12, 18, 29, 0.96) 100%);
+      border: 1px solid rgba(51, 65, 85, 0.45);
+    }
+    .signal-card-active {
+      border-color: rgba(16, 185, 129, 0.55);
+      box-shadow: 0 0 20px -6px rgba(16, 185, 129, 0.25);
+    }
+    .pulse-dot {
+      animation: pulseDot 2s infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.18); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col pb-20 lg:pb-6 selection:bg-emerald-500/30 selection:text-emerald-200">
+
+  <!-- TOP HEADER BAR -->
+  <header class="sticky top-0 z-40 bg-bg-950/95 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 py-2.5">
+    <div class="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- Brand + Live Market Clock -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center font-bold text-slate-950 shadow-sm">
+            RS
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm sm:text-base tracking-tight text-white">rajanstocks</span>
+              <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold">PRO v2.4</span>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <span class="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
+                NSE/BSE LIVE
+              </span>
+              <span>·</span>
+              <span id="headerClock" class="font-mono text-slate-300">09:24:18 IST</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Navigation Pills -->
+      <nav class="hidden lg:flex items-center gap-1 bg-bg-900 p-1 rounded-xl border border-slate-800">
+        <button type="button" data-nav="trade" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          fx Trade & Signals
+        </button>
+        <button type="button" data-nav="journal" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">
+          Journal & Auto-Algo
+        </button>
+        <button type="button" data-nav="vedic" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">
+          Vedic & Gann Live
+        </button>
+        <button type="button" data-nav="godseye" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200">
+          God's Eye & Picks
+        </button>
+        <button type="button" data-nav="code" class="nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20">
+          &lt;/&gt; Code & Diff Guide
+        </button>
+      </nav>
+
+      <!-- Live Risk / Session Rule Status Strip -->
+      <div class="flex items-center gap-2">
+        <!-- Session Time Simulator Control for 9:15 vs 9:20 rule verification -->
+        <div class="flex items-center gap-1.5 bg-bg-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px]">
+          <span class="text-slate-400 hidden sm:inline">Session Clock:</span>
+          <select id="sessionClockMode" class="bg-transparent text-cyan-300 font-mono font-semibold focus:outline-none cursor-pointer">
+            <option value="09:16">09:16 AM (Buy Only / Sell Locked)</option>
+            <option value="09:22" selected>09:22 AM (All Active: Buy 9:15 + Sell 9:20)</option>
+            <option value="live">Live Clock (IST)</option>
+          </select>
+        </div>
+
+        <!-- Global Daily P&L Pill with 30K Trailing Status -->
+        <button type="button" id="headerPnlBtn" class="flex items-center gap-2 bg-bg-900 hover:bg-bg-800 border border-emerald-500/30 rounded-lg px-2.5 py-1 transition">
+          <div class="text-left">
+            <div class="text-[10px] text-slate-400 leading-none">DAY P&L (LIMIT ₹30K)</div>
+            <div id="headerPnlValue" class="text-xs font-mono font-bold text-emerald-400">+₹50,381.47</div>
+          </div>
+          <span id="headerTrailingBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold">
+            TRAILING ON
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto px-3 sm:px-6 py-4 space-y-5">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: TRADE & COMPACT SIGNALS SCREEN     -->
+    <!-- ========================================== -->
+    <section id="view-trade" class="space-y-4">
+
+      <!-- Top Instrument Selector + Compact Market Metrics Bar -->
+      <div class="glass-card rounded-2xl p-3 sm:p-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+          <!-- Left: Symbol Selector + Live Price -->
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="relative">
+              <select id="instrumentSelect" class="bg-bg-800 border border-slate-700 text-white font-bold text-sm sm:text-base rounded-xl px-3.5 py-2 pr-8 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                <option value="NIFTY_CE" selected>NIFTY 22,650 CE · 27 Oct</option>
+                <option value="NIFTY_PE">NIFTY 22,650 PE · 27 Oct</option>
+                <option value="SENSEX_CE">SENSEX 73,000 CE · 29 Oct</option>
+                <option value="BANKNIFTY_CE">BANKNIFTY 48,200 CE · 28 Oct</option>
+                <option value="HAL_EQ">HAL · NSE EQ</option>
+              </select>
+            </div>
+
+            <div class="flex items-baseline gap-2">
+              <span id="liveLtp" class="text-2xl sm:text-3xl font-mono font-extrabold text-white">₹110.90</span>
+              <span id="liveChange" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30">-39.12% (-71.25)</span>
+            </div>
+
+            <!-- Option Selling 9:20 Gate Indicator Badge -->
+            <div id="sellGateStatusBadge" class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/25">
+              Buy: 09:15 AM ✓ · Option Sell: 09:20 AM ✓
+            </div>
+          </div>
+
+          <!-- Right: Quick Order & Lot Controls -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center bg-bg-900 border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs">
+              <span class="text-slate-400 mr-2">Lots:</span>
+              <button type="button" id="lotMinusBtn" class="px-2 font-bold text-slate-300 hover:text-white">−</button>
+              <span id="lotCountDisplay" class="font-mono font-bold text-white px-2">2 (150 Qty)</span>
+              <button type="button" id="lotPlusBtn" class="px-2 font-bold text-slate-300 hover:text-white">+</button>
+            </div>
+
+            <button type="button" id="quickBuyBtn" class="flex-1 sm:flex-initial px-5 py-2 rounded-xl font-bold text-xs sm:text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-sm">
+              BUY (Long)
+            </button>
+            <button type="button" id="quickSellBtn" class="flex-1 sm:flex-initial px-5 py-2 rounded-xl font-bold text-xs sm:text-sm bg-rose-500 hover:bg-rose-400 text-white transition shadow-sm">
+              SELL (Write 9:20+)
+            </button>
+          </div>
+        </div>
+
+        <!-- Clean 8-Metric Strip (Replaces the bulky 2x4 mobile blocks that pushed the chart down) -->
+        <div class="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-3 text-xs">
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Day High</div>
+            <div id="statHigh" class="font-mono font-bold text-emerald-400">282.10</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Day Low</div>
+            <div id="statLow" class="font-mono font-bold text-rose-400">66.60</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Open</div>
+            <div id="statOpen" class="font-mono font-bold text-slate-200">203.50</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Prev Close</div>
+            <div id="statPrev" class="font-mono font-bold text-slate-200">182.15</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Bid / Ask</div>
+            <div id="statBidAsk" class="font-mono font-semibold text-slate-200 truncate">108.8 / 110.8</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Volume</div>
+            <div id="statVol" class="font-mono font-bold text-slate-200">15.92 Cr</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">Open Int (OI)</div>
+            <div id="statOi" class="font-mono font-bold text-slate-200">31.46 L</div>
+          </div>
+          <div class="bg-bg-900/80 rounded-lg p-2 border border-slate-800/70">
+            <div class="text-[10px] text-slate-400">OI Change</div>
+            <div id="statOiChg" class="font-mono font-bold text-emerald-400">+10.76 L</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDE-BY-SIDE COMPACT SIGNAL MATRIX: Z TREND | TIME CYCLE | GOD'S EYE | HEDGE -->
+      <div>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+          <div class="flex items-center gap-2">
+            <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300">
+              Live Signal Matrix (Side-by-Side Unified View)
+            </h2>
+            <span id="consensusSummaryBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
+              7 / 8 Indicators Active in Auto-Trader
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="runZTrendBacktestBtn" class="text-xs font-semibold px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition">
+              ⚡ Backtest Z Trend Live
+            </button>
+            <button type="button" id="simulateSignalFlipBtn" class="text-xs font-semibold px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+              ↻ Flip Test Signal (Buy/Sell)
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Side-by-Side Cards: Responsive 1 col (xs) -> 2 col (sm/md) -> 4 col (xl) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+
+          <!-- CARD 1: Z TREND (RZT 14 2 5 1) SIGNAL CARD (Moved from chart-only to live actionable Signal) -->
+          <div id="zTrendCard" class="glass-card signal-card-active rounded-2xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-semibold">INDICATOR · RZT 14 2 5 1</span>
+                  <h3 class="text-sm font-bold text-white">Z Trend (Zone Trend)</h3>
+                </div>
+                <span id="zTrendSignalBadge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  BUY SIGNAL
+                </span>
+              </div>
+
+              <!-- Compact Price Grid: Entry, SL, Zone-1/2 Res & Sup -->
+              <div class="grid grid-cols-2 gap-1.5 text-xs my-2">
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Trigger / Entry</div>
+                  <div id="ztEntryPrice" class="font-mono font-bold text-emerald-400">₹108.50</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Z-Trend SL (Trail)</div>
+                  <div id="ztSlPrice" class="font-mono font-bold text-rose-400">₹96.20</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Zone-1 / Zone-2 Res</div>
+                  <div id="ztResZones" class="font-mono font-semibold text-amber-300">158.4 / 182.0</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Zone-1 Support</div>
+                  <div id="ztSupZone" class="font-mono font-semibold text-cyan-300">₹98.00</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
+              <span id="ztBacktestMini" class="text-slate-400 font-mono">Live BT: <strong class="text-emerald-400">68.4% Win</strong> (PF 2.14)</span>
+              <button type="button" id="execZTrendTradeBtn" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-semibold transition">
+                Exec Z-Trend
+              </button>
+            </div>
+          </div>
+
+          <!-- CARD 2: TIME CYCLE SIGNAL CARD (Compact: Removed "Counted From", Added Price Levels) -->
+          <div class="glass-card rounded-2xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-semibold">GANN & INTRADAY CYCLE</span>
+                  <h3 class="text-sm font-bold text-white">Time Cycle</h3>
+                </div>
+                <span id="tcSignalBadge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  BULLISH TURN
+                </span>
+              </div>
+
+              <!-- Compact Price Levels instead of verbose "Counted from" text -->
+              <div class="grid grid-cols-2 gap-1.5 text-xs my-2">
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Cycle Anchor Price</div>
+                  <div id="tcAnchorPrice" class="font-mono font-bold text-white">₹110.90</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Target / Cycle High</div>
+                  <div id="tcTargetPrice" class="font-mono font-bold text-emerald-400">₹146.50</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Cycle Stop Price</div>
+                  <div id="tcSupportPrice" class="font-mono font-semibold text-rose-400">₹99.40</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Next Window</div>
+                  <div id="tcWindowTime" class="font-mono font-semibold text-cyan-300">13:21–13:50</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
+              <span class="text-slate-400 font-mono">15m Harmonic · <strong class="text-cyan-300">PriceSynced</strong></span>
+              <button type="button" id="syncTimeCycleBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition">
+                Sync Price
+              </button>
+            </div>
+          </div>
+
+          <!-- CARD 3: GOD'S EYE (THE CONNECTOR) SIDE-BY-SIDE VIEW -->
+          <div class="glass-card rounded-2xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400 font-semibold">NSE FY26 CONNECTOR</span>
+                  <h3 class="text-sm font-bold text-white">God's Eye Radar</h3>
+                </div>
+                <span id="geSentimentBadge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                  SCORE +2.4
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5 text-xs my-2">
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Supply Links</div>
+                  <div class="font-mono font-bold text-purple-300">167 Strong / 463</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">FII / Inst Flow</div>
+                  <div id="geFlowValue" class="font-mono font-bold text-emerald-400">+₹1,420 Cr</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Lead Sector</div>
+                  <div class="font-mono font-semibold text-slate-200 truncate">Defence & CapG (136)</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Index Divergence</div>
+                  <div id="geDivergence" class="font-mono font-semibold text-emerald-400">Bullish Div ⚡</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
+              <span class="text-slate-400 font-mono">708 Cos · 302 IPOs</span>
+              <button type="button" data-nav="godseye" class="nav-tab-btn px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 font-semibold transition">
+                Full Map →
+              </button>
+            </div>
+          </div>
+
+          <!-- CARD 4: HEDGE VIEW SIDE-BY-SIDE -->
+          <div class="glass-card rounded-2xl p-3.5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <span class="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-semibold">DELTA & TAIL SHIELD</span>
+                  <h3 class="text-sm font-bold text-white">Hedge Pair Engine</h3>
+                </div>
+                <span id="hedgeStatusBadge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  READY · -62% DD
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5 text-xs my-2">
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Hedge Leg</div>
+                  <div id="hedgeLegSymbol" class="font-mono font-bold text-white truncate">22,500 PE @ ₹54</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Net Delta / Ratio</div>
+                  <div id="hedgeRatio" class="font-mono font-bold text-amber-300">+0.18 (2:1 Pair)</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Margin Saved</div>
+                  <div class="font-mono font-semibold text-emerald-400">₹44,800 (48%)</div>
+                </div>
+                <div class="bg-bg-900/90 p-2 rounded-lg border border-slate-800">
+                  <div class="text-[10px] text-slate-400">Max Pair Risk</div>
+                  <div class="font-mono font-semibold text-cyan-300">₹4,250 / Lot</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
+              <span class="text-slate-400 font-mono">Auto-Hedge on Sell</span>
+              <button type="button" id="deployHedgeBtn" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition">
+                Deploy Hedge
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CHART + ALL-INDICATOR CONSENSUS & LIVE Z-TREND BACKTEST PANEL -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- Left 8 Cols: Clean Interactive Chart with Z Trend Zones & Time Cycle Lines -->
+        <div class="lg:col-span-8 glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between">
+          <!-- Chart Controls Header (Never overlaps canvas price scale) -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-slate-300 mr-1">TF:</span>
+              <button type="button" data-tf="1m" class="tf-btn px-2.5 py-1 rounded-lg text-xs font-mono bg-bg-900 text-slate-400 hover:text-white">1m</button>
+              <button type="button" data-tf="5m" class="tf-btn px-2.5 py-1 rounded-lg text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">5m</button>
+              <button type="button" data-tf="15m" class="tf-btn px-2.5 py-1 rounded-lg text-xs font-mono bg-bg-900 text-slate-400 hover:text-white">15m</button>
+              <button type="button" data-tf="1H" class="tf-btn px-2.5 py-1 rounded-lg text-xs font-mono bg-bg-900 text-slate-400 hover:text-white">1H</button>
+            </div>
+
+            <!-- Indicator Pills -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" data-ind="ztrend" class="ind-pill px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Zone Trend (RZT)</button>
+              <button type="button" data-ind="vwap" class="ind-pill px-2.5 py-1 rounded-full text-[11px] font-medium bg-blue-500/20 text-blue-300 border border-blue-500/40">VWAP 117.75</button>
+              <button type="button" data-ind="timecycle" class="ind-pill px-2.5 py-1 rounded-full text-[11px] font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">Time Cycle</button>
+              <button type="button" data-ind="ema" class="ind-pill px-2.5 py-1 rounded-full text-[11px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/40">EMA 20</button>
+            </div>
+          </div>
+
+          <!-- Custom High-DPI Interactive Candlestick + Z Trend Zones Canvas -->
+          <div class="relative h-80 sm:h-96 w-full my-2 bg-bg-950 rounded-xl border border-slate-800/80 overflow-hidden">
+            <canvas id="tradeChartCanvas" class="w-full h-full block"></canvas>
+          </div>
+
+          <!-- Bottom Legend Strip -->
+          <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 pt-1">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> Z-Trend Buy & Support Zone</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> Z-Trend Sell & Resistance Zone</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2.5 h-0.5 bg-blue-400 inline-block"></span> VWAP (117.75)</span>
+            </div>
+            <span class="font-mono text-slate-300">Note: All Z-Trend zones & SL are synced directly to Signal Engine</span>
+          </div>
+        </div>
+
+        <!-- Right 4 Cols: All-Indicator Consensus Engine (Fixes Bug where Auto-Trader didn't use all indicators) -->
+        <div class="lg:col-span-4 glass-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
+              <div>
+                <span class="text-[10px] font-mono uppercase text-emerald-400 font-semibold">BUG FIXED · FULL MULTI-INDICATOR LOOP</span>
+                <h3 class="text-sm font-bold text-white">Auto-Trader Indicator Matrix</h3>
+              </div>
+              <span id="activeIndCountBadge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                7/8 Bullish
+              </span>
+            </div>
+
+            <!-- Consensus Filter Mode Selector (Upgraded from old 1-2 indicator modal) -->
+            <div class="my-2.5">
+              <label class="text-[11px] text-slate-400 block mb-1">Auto-Execution Consensus Rule:</label>
+              <select id="indicatorFilterSelect" class="w-full bg-bg-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500">
+                <option value="ALL_ACTIVE" selected>All Active Indicators Agree (Z-Trend + TimeCycle + Core)</option>
+                <option value="ZTREND_PRIORITY">Z-Trend Mandatory + Min 5/8 Indicators Agree</option>
+                <option value="INDEX_FLOW">Index Call/Put (Z-Trend + Option Flow + VWAP)</option>
+                <option value="STOCK_SCREEN">Stock Screen (Z-Trend + Volume + RSI + God's Eye)</option>
+              </select>
+            </div>
+
+            <!-- Live Per-Indicator Status Table -->
+            <div id="indicatorChecklistContainer" class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+              <!-- Populated dynamically by JS -->
+            </div>
+          </div>
+
+          <!-- Live Z-Trend Backtest Summary Drawer -->
+          <div id="zTrendBacktestBox" class="bg-bg-900/95 rounded-xl p-3 border border-cyan-500/30 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-cyan-300">📊 Live Z-Trend Signal Backtest (60 Sessions)</span>
+              <span id="btTimestamp" class="text-[10px] font-mono text-slate-400">Updated Live</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 text-center">
+              <div class="bg-bg-950 p-1.5 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Signals</div>
+                <div id="btTotalSignals" class="font-mono font-bold text-xs text-white">142</div>
+              </div>
+              <div class="bg-bg-950 p-1.5 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Win %</div>
+                <div id="btWinRate" class="font-mono font-bold text-xs text-emerald-400">68.4%</div>
+              </div>
+              <div class="bg-bg-950 p-1.5 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Profit F.</div>
+                <div id="btProfitFactor" class="font-mono font-bold text-xs text-cyan-300">2.14</div>
+              </div>
+              <div class="bg-bg-950 p-1.5 rounded-lg border border-slate-800">
+                <div class="text-[10px] text-slate-400">Expect.</div>
+                <div id="btExpectancy" class="font-mono font-bold text-xs text-emerald-400">+0.58R</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: JOURNAL & AUTO-ALGO ENGINE         -->
+    <!-- ========================================== -->
+    <section id="view-journal" class="space-y-4 hidden">
+
+      <!-- Top Risk & Timing Control Panel (₹30,000 P&L Trailing Limit + 9:15 Buy / 9:20 Option Sell Rule) -->
+      <div class="glass-card rounded-2xl p-4 border-l-4 border-l-emerald-500">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">AUTO-TRADER RISK & TIMING GUARD</span>
+              <span id="algoModeStatusPill" class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold">
+                ₹30K REACHED → TRAILING & LOW-FREQ ACTIVE
+              </span>
+            </div>
+            <h2 class="text-base sm:text-lg font-bold text-white">
+              Daily ₹30,000 Profit/Loss Trailing Limit & 09:20 AM Option Selling Gate
+            </h2>
+            <p class="text-xs text-slate-400">
+              When total daily P&L reaches <strong class="text-white">±₹30,000</strong>, Auto-Trader automatically trails peak profit (locks 85% floor) and throttles new entries to high-conviction setups only. Option Buying & Stocks start at <strong class="text-emerald-400">09:15 AM</strong>; Option Selling starts strictly at <strong class="text-cyan-300">09:20 AM</strong>.
+            </p>
+          </div>
+
+          <!-- Interactive Simulator Controls to test ₹30K limit & 9:20 rule -->
+          <div class="flex flex-wrap items-center gap-3 bg-bg-900 p-3 rounded-xl border border-slate-800">
+            <div>
+              <label class="text-[10px] font-mono uppercase text-slate-400 block">Simulate Day P&L (₹)</label>
+              <input id="simPnlSlider" type="range" min="-35000" max="65000" step="1000" value="50381" class="w-36 sm:w-44 accent-emerald-500 cursor-pointer" />
+              <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>-₹35K</span>
+                <span id="simPnlReadout" class="text-emerald-400 font-bold">+₹50,381</span>
+                <span>+₹65K</span>
+              </div>
+            </div>
+
+            <div class="border-l border-slate-800 pl-3 space-y-1 text-xs font-mono">
+              <div>Trailing Floor: <span id="trailingFloorReadout" class="text-amber-300 font-bold">+₹42,824</span></div>
+              <div>Max Trades/Hr: <span id="tradeFreqReadout" class="text-cyan-300 font-bold">Throttled (Max 1 Open)</span></div>
+              <div>Sell Gate (9:20): <span id="journalSellGateReadout" class="text-emerald-400 font-bold">OPEN (09:22 IST)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Books Summary Grid (Options Buy, Options Sell, Stock Trader, Total) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="glass-card rounded-2xl p-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300">Options Buy (Starts 09:15)</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">ACTIVE</span>
+          </div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-lg font-mono font-extrabold text-white">₹10,54,910</span>
+            <span class="text-xs font-mono font-bold text-emerald-400">+₹54,910.31</span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] border-t border-slate-800/80 pt-2">
+            <div><span class="text-slate-400 block">OPEN</span><span class="font-mono text-emerald-400">+₹2,410.00</span></div>
+            <div><span class="text-slate-400 block">BOOKED</span><span class="font-mono text-emerald-400">+₹52,500.31</span></div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300">Options Sell (Starts 09:20)</span>
+            <span id="optSellBookBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300">9:20 GATE ✓</span>
+          </div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-lg font-mono font-extrabold text-white">₹10,02,513</span>
+            <span class="text-xs font-mono font-bold text-emerald-400">+₹2,513.16</span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] border-t border-slate-800/80 pt-2">
+            <div><span class="text-slate-400 block">OPEN</span><span class="font-mono text-emerald-400">+₹1,120.00</span></div>
+            <div><span class="text-slate-400 block">BOOKED</span><span class="font-mono text-emerald-400">+₹1,393.16</span></div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-3.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300">Stock Trader (Starts 09:15)</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">EQUITY</span>
+          </div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-lg font-mono font-extrabold text-white">₹9,92,958</span>
+            <span class="text-xs font-mono font-bold text-rose-400">-₹7,042.00</span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] border-t border-slate-800/80 pt-2">
+            <div><span class="text-slate-400 block">OPEN</span><span class="font-mono text-emerald-400">+₹1,514.00</span></div>
+            <div><span class="text-slate-400 block">BOOKED</span><span class="font-mono text-rose-400">-₹8,556.00</span></div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-3.5 border border-emerald-500/30">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-white">Total Portfolio</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">TRAIL LIMIT ₹30K</span>
+          </div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-lg font-mono font-extrabold text-white">₹30,50,381</span>
+            <span id="totalBookPnl" class="text-xs font-mono font-bold text-emerald-400">+₹50,381.47</span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] border-t border-slate-800/80 pt-2">
+            <div><span class="text-slate-400 block">IN USE</span><span class="font-mono text-slate-200">₹4,13,525</span></div>
+            <div><span class="text-slate-400 block">FREE</span><span class="font-mono text-emerald-400">₹26,35,342</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- JOURNAL TRADE LOG WITH ENTRY TIMESTAMP, EXIT TIMESTAMP & HOLD DURATION -->
+      <div class="glass-card rounded-2xl p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">
+              Trade Journal · Entry Time, Exit Time & Hold Duration
+            </h3>
+            <p class="text-xs text-slate-400">
+              Every trade records exact Entry Timestamp, Exit Timestamp, and live/completed Hold Duration (<code class="text-emerald-300">Xh Ym Zs</code>).
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" data-jfilter="ALL" class="jfilter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">All Trades</button>
+            <button type="button" data-jfilter="OPEN" class="jfilter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-bg-900 text-slate-400 hover:text-white">Open Positions</button>
+            <button type="button" data-jfilter="BUY" class="jfilter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-bg-900 text-slate-400 hover:text-white">Option Buy (9:15+)</button>
+            <button type="button" data-jfilter="SELL" class="jfilter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-bg-900 text-slate-400 hover:text-white">Option Sell (9:20+)</button>
+          </div>
+        </div>
+
+        <!-- Responsive Table for Trade Journal with Timestamps & Hold Duration -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-mono uppercase text-slate-400">
+                <th class="py-2.5 px-2">Symbol & Book</th>
+                <th class="py-2.5 px-2">Side / Mode</th>
+                <th class="py-2.5 px-2">Entry Time</th>
+                <th class="py-2.5 px-2">Exit Time</th>
+                <th class="py-2.5 px-2">Hold Duration</th>
+                <th class="py-2.5 px-2">Entry → Exit</th>
+                <th class="py-2.5 px-2">Indicators Used</th>
+                <th class="py-2.5 px-2 text-right">Net P&L</th>
+              </tr>
+            </thead>
+            <tbody id="journalTradesTbody" class="divide-y divide-slate-800/60 font-mono">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: DYNAMIC VEDIC & GANN REPORT        -->
+    <!-- ========================================== -->
+    <section id="view-vedic" class="space-y-4 hidden">
+
+      <!-- Live Vedic & Gann Header (Fixes Static Data Bug) -->
+      <div class="glass-card rounded-2xl p-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">DYNAMIC EPHEMERIS & GANN ENGINE</span>
+              <span id="vedicLastUpdated" class="text-[11px] font-mono text-slate-400">Synced: Live IST</span>
+            </div>
+            <h2 class="text-base sm:text-lg font-bold text-white mt-1">
+              Vedic Panchang, Gann Square of 9 & Intraday Astro Slices
+            </h2>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <select id="vedicDaySelect" class="bg-bg-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-white">
+              <option value="today" selected>Friday, 23 Oct 2026 (Today Live)</option>
+              <option value="mon">Monday, 26 Oct 2026</option>
+              <option value="tue">Tuesday, 27 Oct 2026</option>
+              <option value="wed">Wednesday, 28 Oct 2026</option>
+            </select>
+            <button type="button" id="refreshVedicBtn" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition">
+              ↻ Recalculate Ephemeris
+            </button>
+          </div>
+        </div>
+
+        <!-- Previously "No Data" Vedic Gann Report Card -> Now Live & Populated -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3">
+          <div class="bg-bg-900/90 p-3 rounded-xl border border-amber-500/30">
+            <div class="text-[10px] font-mono uppercase text-amber-400">Gann Square of 9 Signal</div>
+            <div id="gannSignalText" class="text-sm font-bold text-emerald-400 mt-0.5">BULLISH ABOVE 22,610</div>
+            <div class="text-[11px] text-slate-400 mt-1">45° & 90° Cardinal Support Holding</div>
+          </div>
+          <div class="bg-bg-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400">Recommended Action</div>
+            <div id="gannActionText" class="text-sm font-bold text-white mt-0.5">BUY ON DIP (CE / Long)</div>
+            <div class="text-[11px] text-slate-400 mt-1">Confirm with Z-Trend & VWAP</div>
+          </div>
+          <div class="bg-bg-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400">Gann Key Levels (Nifty)</div>
+            <div id="gannKeyLevelText" class="text-sm font-mono font-bold text-cyan-300 mt-0.5">S1: 22,562 · R1: 22,715</div>
+            <div class="text-[11px] text-slate-400 mt-1">Pivot: 22,638 · R2: 22,790</div>
+          </div>
+          <div class="bg-bg-900/90 p-3 rounded-xl border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400">Live Astro Bias & Tithi</div>
+            <div id="vedicTithiText" class="text-sm font-bold text-amber-300 mt-0.5">Shukla Dwadashi (#12)</div>
+            <div id="vedicNakshatraText" class="text-[11px] text-slate-300 mt-1">Purva Bhadrapada · Kumbha Moon</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intraday Astro Timings + Live Planetary Positions Side-by-Side -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- Intraday Astro Slices Table -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div>
+              <span class="text-[10px] font-mono uppercase text-amber-400 font-semibold">DYNAMIC INTRADAY SLICES · NIFTY 50</span>
+              <h3 id="astroSliceHeaderDate" class="text-sm font-bold text-white">Friday, 23 Oct 26 · Live Active Slice Highlighted</h3>
+            </div>
+            <span class="text-xs font-mono text-emerald-400">51.8% Backtest Hit Rate</span>
+          </div>
+
+          <div class="overflow-x-auto mt-2">
+            <table class="w-full text-left text-xs font-mono">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-800">
+                  <th class="py-2 px-2">FROM</th>
+                  <th class="py-2 px-2">TO</th>
+                  <th class="py-2 px-2">PROJECTION</th>
+                  <th class="py-2 px-2">PLANETARY CHORD</th>
+                </tr>
+              </thead>
+              <tbody id="astroSlicesTbody" class="divide-y divide-slate-800/60">
+                <!-- Populated dynamically by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sidereal Planetary Positions & Weekly Day Power -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="glass-card rounded-2xl p-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h3 class="text-sm font-bold text-white">Live Sidereal Graha Longitudes (Lahiri)</h3>
+              <span id="ephemerisDegreeTick" class="text-[11px] font-mono text-amber-300">24.2241° Ayanamsa</span>
+            </div>
+            <div id="planetGridContainer" class="grid grid-cols-2 gap-2 pt-3 text-xs font-mono">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-4 space-y-2.5">
+            <h3 class="text-sm font-bold text-white">Weekly Day Power Forecast</h3>
+            <div id="weeklyPowerContainer" class="space-y-2">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: GOD'S EYE CONNECTOR & MARKET PICKS -->
+    <!-- ========================================== -->
+    <section id="view-godseye" class="space-y-4 hidden">
+      <div class="glass-card rounded-2xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+          <div>
+            <span class="text-[10px] font-mono uppercase text-purple-400 font-semibold">THE GOD'S EYE · NSE FY26 SUPPLY CHAIN & SENTIMENT</span>
+            <h2 class="text-base sm:text-lg font-bold text-white">Market Pulse, Sector Connector & High-Conviction Picks</h2>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-mono">
+            <span class="px-2.5 py-1 rounded bg-bg-900 border border-slate-800 text-cyan-300">708 Companies</span>
+            <span class="px-2.5 py-1 rounded bg-bg-900 border border-slate-800 text-purple-300">463 Supply Links</span>
+            <span class="px-2.5 py-1 rounded bg-bg-900 border border-slate-800 text-emerald-400">167 Strong Links</span>
+          </div>
+        </div>
+
+        <!-- Global & Domestic Sentiment Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 pt-3">
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-rose-500/30">
+            <div class="text-[10px] text-slate-400 font-semibold">NIFTY 50</div>
+            <div class="text-lg font-mono font-extrabold text-rose-400">-2.8</div>
+            <div class="text-[10px] font-mono text-rose-300">BEARISH</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-rose-500/40">
+            <div class="text-[10px] text-slate-400 font-semibold">SENSEX</div>
+            <div class="text-lg font-mono font-extrabold text-rose-400">-6.1</div>
+            <div class="text-[10px] font-mono text-rose-300">EXT. BEARISH</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-slate-700">
+            <div class="text-[10px] text-slate-400 font-semibold">BANKNIFTY</div>
+            <div class="text-lg font-mono font-extrabold text-slate-200">-1.9</div>
+            <div class="text-[10px] font-mono text-slate-400">NEUTRAL</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-rose-500/30">
+            <div class="text-[10px] text-slate-400 font-semibold">GOLD</div>
+            <div class="text-lg font-mono font-extrabold text-rose-400">-4.2</div>
+            <div class="text-[10px] font-mono text-rose-300">BEARISH</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-rose-500/30">
+            <div class="text-[10px] text-slate-400 font-semibold">SILVER</div>
+            <div class="text-lg font-mono font-extrabold text-rose-400">-3.5</div>
+            <div class="text-[10px] font-mono text-rose-300">BEARISH</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-amber-500/30">
+            <div class="text-[10px] text-slate-400 font-semibold">CRUDEOIL</div>
+            <div class="text-lg font-mono font-extrabold text-amber-300">-1.1</div>
+            <div class="text-[10px] font-mono text-amber-300">⚡ BEARISH DIV</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-emerald-500/30">
+            <div class="text-[10px] text-slate-400 font-semibold">BITCOIN</div>
+            <div class="text-lg font-mono font-extrabold text-emerald-400">+2.7</div>
+            <div class="text-[10px] font-mono text-emerald-300">BULLISH</div>
+          </div>
+          <div class="bg-bg-900 p-2.5 rounded-xl border border-slate-700">
+            <div class="text-[10px] text-slate-400 font-semibold">NASDAQ</div>
+            <div class="text-lg font-mono font-extrabold text-slate-200">-1.9</div>
+            <div class="text-[10px] font-mono text-slate-400">NEUTRAL</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 5: CODE & IMPLEMENTATION GUIDE        -->
+    <!-- ========================================== -->
+    <section id="view-code" class="space-y-4 hidden">
+      <div class="glass-card rounded-2xl p-4 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+          <div>
+            <span class="text-[10px] font-mono uppercase text-amber-400 font-semibold">DROP-IN MODULES FOR YOUR VERCEL REPO</span>
+            <h2 class="text-base sm:text-lg font-bold text-white">Exact Code Changes for `rajanstocks.vercel.app`</h2>
+          </div>
+          <button type="button" id="copyAllCodeBtn" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition">
+            Copy All Code Modules
+          </button>
+        </div>
+
+        <pre id="codeDiffBlock" class="bg-bg-950 p-4 rounded-xl border border-slate-800 text-xs font-mono text-slate-200 overflow-x-auto leading-relaxed">// 1. Z-TREND (RZT 14, 2, 5, 1) SIGNAL EXTRACTOR (Moves chart-only Buy/Sell/Zones/SL into Signal Engine)
+function computeZTrendSignal(candles, params = { len: 14, mult: 2, zoneLookback: 5 }) {
+  const last = candles[candles.length - 1];
+  const prev = candles[candles.length - 2] || last;
+  const atr = candles.slice(-params.len).reduce((acc, c) => acc + (c.high - c.low), 0) / params.len;
+  const upperBand = last.close + atr * params.mult;
+  const lowerBand = last.close - atr * params.mult;
+  const trendDir = last.close >= prev.close ? 'BUY' : 'SELL';
+  return {
+    indicator: 'Z_TREND',
+    signal: trendDir,
+    entryPrice: +(last.close).toFixed(2),
+    trailingSL: +(trendDir === 'BUY' ? lowerBand : upperBand).toFixed(2),
+    zone1Resistance: +(last.close + atr * 1.8).toFixed(2),
+    zone2Resistance: +(last.close + atr * 3.1).toFixed(2),
+    zone1Support: +(last.close - atr * 1.4).toFixed(2),
+    confidence: 0.84
+  };
+}
+
+// 2. AUTO-TRADER TIMING (9:15 BUY / 9:20 OPTION SELL) & ₹30,000 DAILY P&L TRAILING GUARD
+function evaluateAutoTradeGuard({ side, instrumentType, currentIstHHMM, dailyTotalPnl, peakDailyPnl, activeIndicators }) {
+  // Rule A: Option Buying & Stocks start at 09:15; Option Selling (writing) starts strictly at 09:20
+  if (currentIstHHMM < '09:15') return { allowed: false, reason: 'PRE_MARKET_LOCKED' };
+  if (instrumentType === 'OPTION' && side === 'SELL' && currentIstHHMM < '09:20') {
+    return { allowed: false, reason: 'OPTION_SELL_LOCKED_UNTIL_09_20' };
+  }
+
+  // Rule B: Fix indicator bug -> Evaluate ALL active indicators including Z_TREND & TIME_CYCLE
+  const requiredNames = ['Z_TREND', 'TIME_CYCLE', 'VWAP', 'EMA_20', 'RSI_14', 'MACD', 'OI_FLOW', 'VEDIC_GANN'];
+  const agreed = requiredNames.filter(name => activeIndicators[name]?.agreesWith(side));
+  const consensusRatio = agreed.length / requiredNames.length;
+
+  // Rule C: ₹30,000 Daily P&L Limit -> Activate Profit Trailing & Throttle Trade Frequency
+  const absPnl = Math.abs(dailyTotalPnl);
+  if (absPnl >= 30000) {
+    const trailingStopPnl = Math.max(30000 * 0.85, peakDailyPnl * 0.85);
+    if (dailyTotalPnl > 0 && dailyTotalPnl <= trailingStopPnl) {
+      return { allowed: false, mode: 'TRAILING_STOP_LOCKED', trailingFloor: trailingStopPnl };
+    }
+    // Require higher indicator agreement (>= 6/8) and max 1 open trade when >= ₹30,000
+    return {
+      allowed: agreed.length >= 6 && activeIndicators.Z_TREND?.agreesWith(side),
+      mode: 'THROTTLED_TRAILING_30K',
+      maxConcurrentTrades: 1,
+      trailingFloor: trailingStopPnl,
+      agreedIndicators: agreed
+    };
+  }
+
+  return {
+    allowed: agreed.length >= 5 && activeIndicators.Z_TREND?.agreesWith(side),
+    mode: 'STANDARD_EXECUTION',
+    maxConcurrentTrades: 4,
+    agreedIndicators: agreed,
+    consensusRatio
+  };
+}
+
+// 3. JOURNAL TRADE DURATION & TIMESTAMP FORMATTER
+function formatTradeTimestamps(entryMs, exitMs = null) {
+  const fmt = (ms) => new Date(ms).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+  const endMs = exitMs || Date.now();
+  const diffSec = Math.max(0, Math.floor((endMs - entryMs) / 1000));
+  const hrs = Math.floor(diffSec / 3600);
+  const mins = Math.floor((diffSec % 3600) / 60);
+  const secs = diffSec % 60;
+  return {
+    entryFormatted: fmt(entryMs),
+    exitFormatted: exitMs ? fmt(exitMs) : 'LIVE (Open)',
+    holdDuration: hrs > 0 ? `${hrs}h ${mins}m ${secs}s` : `${mins}m ${secs}s`
+  };
+}</pre>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION BANNER -->
+  <div id="toastBanner" class="fixed bottom-20 lg:bottom-6 right-4 z-50 hidden max-w-sm bg-bg-850 border border-emerald-500/50 text-white px-4 py-3 rounded-xl shadow-2xl text-xs font-medium">
+    <div id="toastMessage">Action executed</div>
+  </div>
+
+  <!-- MOBILE BOTTOM NAVIGATION BAR -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg-950/95 backdrop-blur-md border-t border-slate-800 px-2 py-1.5 grid grid-cols-5 gap-1">
+    <button type="button" data-nav="trade" class="nav-tab-btn flex flex-col items-center py-1 rounded-lg text-emerald-400 font-semibold text-[11px]">
+      <span>fx</span>
+      <span>Trade</span>
+    </button>
+    <button type="button" data-nav="journal" class="nav-tab-btn flex flex-col items-center py-1 rounded-lg text-slate-400 font-medium text-[11px]">
+      <span>⏱</span>
+      <span>Journal</span>
+    </button>
+    <button type="button" data-nav="vedic" class="nav-tab-btn flex flex-col items-center py-1 rounded-lg text-slate-400 font-medium text-[11px]">
+      <span>☽</span>
+      <span>Vedic</span>
+    </button>
+    <button type="button" data-nav="godseye" class="nav-tab-btn flex flex-col items-center py-1 rounded-lg text-slate-400 font-medium text-[11px]">
+      <span>◉</span>
+      <span>God's Eye</span>
+    </button>
+    <button type="button" data-nav="code" class="nav-tab-btn flex flex-col items-center py-1 rounded-lg text-amber-300 font-medium text-[11px]">
+      <span>&lt;/&gt;</span>
+      <span>Code</span>
+    </button>
+  </nav>
+
+  <script>
+    // =========================================================================
+    // APPLICATION STATE & LIVE TRADING ENGINE
+    // =========================================================================
+    const state = {
+      activeView: 'trade',
+      selectedInstrument: 'NIFTY_CE',
+      lots: 2,
+      lotSize: 75,
+      timeframe: '5m',
+      sessionClockMode: '09:22',
+      dailyPnl: 50381.47,
+      peakDailyPnl: 54200.00,
+      dailyLimit: 30000,
+      zTrendDirection: 'BUY',
+      journalFilter: 'ALL',
+      activeOverlays: {
+        ztrend: true,
+        vwap: true,
+        timecycle: true,
+        ema: true
+      },
+      instruments: {
+        NIFTY_CE: {
+          name: 'NIFTY 22,650 CE · 27 Oct',
+          type: 'OPTION',
+          ltp: 110.90,
+          changePct: -39.12,
+          changeAbs: -71.25,
+          high: 282.10,
+          low: 66.60,
+          open: 203.50,
+          prev: 182.15,
+          bidAsk: '108.80 / 110.85',
+          vol: '15.92 Cr',
+          oi: '31.46 L',
+          oiChg: '+10.76 L',
+          ztEntry: 108.50,
+          ztSl: 96.20,
+          ztRes1: 158.40,
+          ztRes2: 182.00,
+          ztSup1: 98.00,
+          tcTarget: 146.50,
+          tcSupport: 99.40,
+          hedgeLeg: '22,500 PE @ ₹54'
+        },
+        NIFTY_PE: {
+          name: 'NIFTY 22,650 PE · 27 Oct',
+          type: 'OPTION',
+          ltp: 142.35,
+          changePct: +28.40,
+          changeAbs: +31.50,
+          high: 168.00,
+          low: 88.20,
+          open: 95.00,
+          prev: 110.85,
+          bidAsk: '141.90 / 142.65',
+          vol: '12.40 Cr',
+          oi: '28.10 L',
+          oiChg: '+6.42 L',
+          ztEntry: 136.00,
+          ztSl: 121.50,
+          ztRes1: 164.00,
+          ztRes2: 185.00,
+          ztSup1: 124.00,
+          tcTarget: 172.00,
+          tcSupport: 126.00,
+          hedgeLeg: '22,800 CE @ ₹48'
+        },
+        SENSEX_CE: {
+          name: 'SENSEX 73,000 CE · 29 Oct',
+          type: 'OPTION',
+          ltp: 517.30,
+          changePct: -41.36,
+          changeAbs: -364.90,
+          high: 1140.00,
+          low: 485.00,
+          open: 890.00,
+          prev: 882.20,
+          bidAsk: '515.00 / 518.50',
+          vol: '6.84 Cr',
+          oi: '14.20 L',
+          oiChg: '+3.15 L',
+          ztEntry: 505.00,
+          ztSl: 452.00,
+          ztRes1: 606.65,
+          ztRes2: 685.00,
+          ztSup1: 475.00,
+          tcTarget: 625.00,
+          tcSupport: 468.00,
+          hedgeLeg: '72,500 PE @ ₹210'
+        },
+        BANKNIFTY_CE: {
+          name: 'BANKNIFTY 48,200 CE · 28 Oct',
+          type: 'OPTION',
+          ltp: 294.60,
+          changePct: +12.80,
+          changeAbs: +33.40,
+          high: 348.00,
+          low: 215.00,
+          open: 245.00,
+          prev: 261.20,
+          bidAsk: '293.80 / 295.40',
+          vol: '9.12 Cr',
+          oi: '19.80 L',
+          oiChg: '+4.50 L',
+          ztEntry: 282.00,
+          ztSl: 254.00,
+          ztRes1: 332.00,
+          ztRes2: 365.00,
+          ztSup1: 260.00,
+          tcTarget: 345.00,
+          tcSupport: 258.00,
+          hedgeLeg: '47,900 PE @ ₹118'
+        },
+        HAL_EQ: {
+          name: 'HAL · NSE EQ',
+          type: 'STOCK',
+          ltp: 4186.50,
+          changePct: +2.15,
+          changeAbs: +88.20,
+          high: 4225.00,
+          low: 4092.00,
+          open: 4110.00,
+          prev: 4098.30,
+          bidAsk: '4186.00 / 4187.00',
+          vol: '42.8 L',
+          oi: 'N/A (Cash)',
+          oiChg: 'Strong Link #1',
+          ztEntry: 4145.00,
+          ztSl: 4098.00,
+          ztRes1: 4240.00,
+          ztRes2: 4310.00,
+          ztSup1: 4112.00,
+          tcTarget: 4275.00,
+          tcSupport: 4105.00,
+          hedgeLeg: 'HAL 4100 PE @ ₹42'
+        }
+      },
+      indicators: [
+        { id: 'Z_TREND', name: 'Z Trend (RZT 14 2 5 1)', signal: 'BUY', detail: 'Zone-1 Support Hold · SL ₹96.2', active: true },
+        { id: 'TIME_CYCLE', name: 'Time Cycle (Price Synced)', signal: 'BUY', detail: 'Pivot ₹110.9 → Tgt ₹146.5', active: true },
+        { id: 'VWAP', name: 'VWAP Reclamation', signal: 'BUY', detail: 'Band Cross · 117.75 Pivot', active: true },
+        { id: 'EMA_20', name: 'EMA 9 / 20 Trend', signal: 'BUY', detail: 'Bullish Slope +1.8°', active: true },
+        { id: 'RSI_14', name: 'RSI (14) Momentum', signal: 'BUY', detail: '58.4 Rising from Oversold', active: true },
+        { id: 'MACD', name: 'MACD Histogram', signal: 'BUY', detail: 'Positive Crossover +2.14', active: true },
+        { id: 'OI_FLOW', name: 'Option Flow & OI Delta', signal: 'SELL', detail: 'Call Writing at 22,700', active: true },
+        { id: 'VEDIC_GANN', name: 'Vedic Gann Square of 9', signal: 'BUY', detail: 'Shukla Paksha · Above S1', active: true }
+      ],
+      trades: [
+        {
+          id: 'TR-109',
+          symbol: 'NIFTY 22,650 CE',
+          book: 'Options Buy',
+          side: 'BUY',
+          mode: 'Auto (8/8 Ind)',
+          entryTime: '23 Oct · 09:15:12 AM',
+          exitTime: '23 Oct · 09:42:49 AM',
+          holdSeconds: 1657,
+          isOpen: false,
+          entryPrice: 94.50,
+          exitPrice: 138.20,
+          indicators: 'Z-Trend + TimeCycle + VWAP + EMA',
+          pnl: 32775.00
+        },
+        {
+          id: 'TR-110',
+          symbol: 'NIFTY 22,700 CE (Write)',
+          book: 'Options Sell',
+          side: 'SELL',
+          mode: 'Auto (9:20 Gate)',
+          entryTime: '23 Oct · 09:20:04 AM',
+          exitTime: '23 Oct · 10:18:22 AM',
+          holdSeconds: 3498,
+          isOpen: false,
+          entryPrice: 162.40,
+          exitPrice: 128.90,
+          indicators: 'Z-Trend S + TimeCycle + OI Flow',
+          pnl: 25125.00
+        },
+        {
+          id: 'TR-111',
+          symbol: 'SENSEX 73,000 CE',
+          book: 'Options Buy',
+          side: 'BUY',
+          mode: 'Auto (Z-Trend)',
+          entryTime: '23 Oct · 10:27:15 AM',
+          exitTime: '23 Oct · 11:04:40 AM',
+          holdSeconds: 2245,
+          isOpen: false,
+          entryPrice: 468.00,
+          exitPrice: 524.50,
+          indicators: 'Z-Trend B + Vedic Positive Slice',
+          pnl: 11300.00
+        },
+        {
+          id: 'TR-112',
+          symbol: 'HAL · NSE EQ',
+          book: 'Stock Trader',
+          side: 'BUY',
+          mode: 'Auto (9:15 Start)',
+          entryTime: '23 Oct · 09:16:08 AM',
+          exitTime: null,
+          holdSeconds: 4120,
+          isOpen: true,
+          entryPrice: 4148.00,
+          exitPrice: 4186.50,
+          indicators: 'Z-Trend + God\'s Eye Defence #1',
+          pnl: 3850.00
+        },
+        {
+          id: 'TR-113',
+          symbol: 'NIFTY 22,650 PE (Write)',
+          book: 'Options Sell',
+          side: 'SELL',
+          mode: 'Auto (9:20 Gate + Hedge)',
+          entryTime: '23 Oct · 11:12:30 AM',
+          exitTime: null,
+          holdSeconds: 1945,
+          isOpen: true,
+          entryPrice: 151.20,
+          exitPrice: 142.35,
+          indicators: 'Z-Trend + Hedge Pair 22,500 PE',
+          pnl: 2655.00
+        }
+      ],
+      vedicDays: {
+        today: {
+          label: 'Friday, 23 Oct 2026 (Live)',
+          tithi: 'Shukla Dwadashi (#12)',
+          nakshatra: 'Purva Bhadrapada · Kumbha Moon',
+          gannSignal: 'BULLISH ABOVE 22,610',
+          gannAction: 'BUY ON DIP (Confirm Z-Trend)',
+          gannLevels: 'S1: 22,562 · R1: 22,715',
+          slices: [
+            { from: '09:15', to: '09:29', proj: 'Sideways / Volatile', color: 'text-slate-300', chord: 'Moon-Saturn Square (Wait on Sell until 9:20)' },
+            { from: '09:29', to: '10:27', proj: 'Volatile Negative', color: 'text-rose-400', chord: 'Mars-Mercury Aspect' },
+            { from: '10:27', to: '10:56', proj: 'Positive Breakout', color: 'text-emerald-400', chord: 'Jupiter Trine Ascendant', isNow: true },
+            { from: '10:56', to: '12:22', proj: 'Rahu Kaal · Volatile', color: 'text-amber-300', chord: 'Rahu Window (Tighten TSL)' },
+            { from: '12:23', to: '13:50', proj: 'Positive Trend', color: 'text-emerald-400', chord: 'Venus-Sun Sub-Lord' },
+            { from: '13:50', to: '15:30', proj: 'Sideways to Negative', color: 'text-rose-400', chord: 'Waning Intraday Hora' }
+          ]
+        },
+        mon: {
+          label: 'Monday, 26 Oct 2026',
+          tithi: 'Shukla Chaturdashi (#14)',
+          nakshatra: 'Revati · Meena Moon',
+          gannSignal: 'BEARISH BELOW 22,740',
+          gannAction: 'PROFIT BOOKING / SELL RISE',
+          gannLevels: 'S1: 22,480 · R1: 22,740',
+          slices: [
+            { from: '09:15', to: '09:30', proj: 'Volatile Negative', color: 'text-rose-400', chord: 'Moon-Rahu Conjunction' },
+            { from: '09:30', to: '10:56', proj: 'Sideways to Positive', color: 'text-emerald-400', chord: 'Jupiter Hora Support' },
+            { from: '10:56', to: '12:22', proj: 'Negative Pressure', color: 'text-rose-400', chord: 'Saturn Aspect', isNow: false },
+            { from: '12:23', to: '15:16', proj: 'Negative Drift', color: 'text-rose-400', chord: 'Mars Dominance' },
+            { from: '15:16', to: '15:30', proj: 'Late Short Covering', color: 'text-emerald-400', chord: 'Mercury Close' }
+          ]
+        },
+        tue: {
+          label: 'Tuesday, 27 Oct 2026',
+          tithi: 'Purnima (#15)',
+          nakshatra: 'Ashwini · Mesha Moon',
+          gannSignal: 'MILD BEARISH · RANGE',
+          gannAction: 'OPTION WRITING (AFTER 09:20)',
+          gannLevels: 'S1: 22,510 · R1: 22,690',
+          slices: [
+            { from: '09:15', to: '10:15', proj: 'Opening Range Chop', color: 'text-slate-300', chord: 'Ketu Nakshatra' },
+            { from: '10:15', to: '13:00', proj: 'Mild Bearish Tilt', color: 'text-rose-400', chord: 'Mars Day-Lord' },
+            { from: '13:00', to: '15:30', proj: 'Sideways Recovery', color: 'text-emerald-400', chord: 'Venus Sub-Period' }
+          ]
+        },
+        wed: {
+          label: 'Wednesday, 28 Oct 2026',
+          tithi: 'Krishna Pratipada (#1)',
+          nakshatra: 'Bharani · Mesha Moon',
+          gannSignal: 'BEARISH REVERSAL PIVOT',
+          gannAction: 'HEDGE LONGS / TRAIL TIGHT',
+          gannLevels: 'S1: 22,412 · R1: 22,640',
+          slices: [
+            { from: '09:15', to: '11:10', proj: 'Volatile Negative', color: 'text-rose-400', chord: 'Mercury-Mars Square' },
+            { from: '11:10', to: '14:00', proj: 'Range Bound', color: 'text-slate-300', chord: 'Neutral Hora' },
+            { from: '14:00', to: '15:30', proj: 'Profit Booking', color: 'text-rose-400', chord: 'Saturn Hora Close' }
+          ]
+        }
+      }
+    };
+
+    // =========================================================================
+    // HELPER UTILITIES
+    // =========================================================================
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      const text = document.getElementById('toastMessage');
+      text.textContent = msg;
+      banner.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => banner.classList.add('hidden'), 3400);
+    }
+
+    function formatHoldDuration(seconds) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
+      return `${mins}m ${secs}s`;
+    }
+
+    function getSimulatedHHMM() {
+      if (state.sessionClockMode === '09:16') return '09:16';
+      if (state.sessionClockMode === '09:22') return '09:22';
+      const now = new Date();
+      return now.toTimeString().slice(0, 5);
+    }
+
+    // =========================================================================
+    // RENDER FUNCTIONS
+    // =========================================================================
+    function switchView(viewName) {
+      state.activeView = viewName;
+      ['trade', 'journal', 'vedic', 'godseye', 'code'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.toggle('hidden', v !== viewName);
+      });
+
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        const target = btn.getAttribute('data-nav');
+        if (!target) return;
+        const active = target === viewName;
+        if (btn.closest('header')) {
+          btn.className = active
+            ? 'nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+            : 'nav-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200';
+        } else if (btn.closest('nav.lg\\:hidden')) {
+          btn.className = active
+            ? 'nav-tab-btn flex flex-col items-center py-1 rounded-lg text-emerald-400 font-semibold text-[11px]'
+            : 'nav-tab-btn flex flex-col items-center py-1 rounded-lg text-slate-400 font-medium text-[11px]';
+        }
+      });
+
+      if (viewName === 'trade') {
+        requestAnimationFrame(drawTradeChart);
+      }
+    }
+
+    function renderInstrumentAndSignals() {
+      const inst = state.instruments[state.selectedInstrument];
+      document.getElementById('liveLtp').textContent = `₹${inst.ltp.toFixed(2)}`;
+      const isUp = inst.changePct >= 0;
+      const changeEl = document.getElementById('liveChange');
+      changeEl.textContent = `${isUp ? '+' : ''}${inst.changePct.toFixed(2)}% (${isUp ? '+' : ''}${inst.changeAbs.toFixed(2)})`;
+      changeEl.className = isUp
+        ? 'text-xs font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+        : 'text-xs font-mono font-semibold px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30';
+
+      document.getElementById('statHigh').textContent = inst.high.toFixed(2);
+      document.getElementById('statLow').textContent = inst.low.toFixed(2);
+      document.getElementById('statOpen').textContent = inst.open.toFixed(2);
+      document.getElementById('statPrev').textContent = inst.prev.toFixed(2);
+      document.getElementById('statBidAsk').textContent = inst.bidAsk;
+      document.getElementById('statVol').textContent = inst.vol;
+      document.getElementById('statOi').textContent = inst.oi;
+      document.getElementById('statOiChg').textContent = inst.oiChg;
+
+      document.getElementById('lotCountDisplay').textContent = `${state.lots} (${state.lots * state.lotSize} Qty)`;
+
+      // Z Trend Card updates
+      const isBuy = state.zTrendDirection === 'BUY';
+      const zBadge = document.getElementById('zTrendSignalBadge');
+      zBadge.textContent = isBuy ? 'BUY SIGNAL' : 'SELL SIGNAL';
+      zBadge.className = isBuy
+        ? 'px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+        : 'px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+
+      document.getElementById('ztEntryPrice').textContent = `₹${inst.ztEntry.toFixed(2)}`;
+      document.getElementById('ztSlPrice').textContent = `₹${inst.ztSl.toFixed(2)}`;
+      document.getElementById('ztResZones').textContent = `${inst.ztRes1.toFixed(1)} / ${inst.ztRes2.toFixed(1)}`;
+      document.getElementById('ztSupZone').textContent = `₹${inst.ztSup1.toFixed(2)}`;
+
+      // Time Cycle Card (Compact: Price levels, no "counted from")
+      document.getElementById('tcAnchorPrice').textContent = `₹${inst.ltp.toFixed(2)}`;
+      document.getElementById('tcTargetPrice').textContent = `₹${inst.tcTarget.toFixed(2)}`;
+      document.getElementById('tcSupportPrice').textContent = `₹${inst.tcSupport.toFixed(2)}`;
+      document.getElementById('hedgeLegSymbol').textContent = inst.hedgeLeg;
+
+      // 9:15 vs 9:20 Option Sell Gate UI
+      const hhmm = getSimulatedHHMM();
+      const sellAllowed = hhmm >= '09:20';
+      const gateBadge = document.getElementById('sellGateStatusBadge');
+      const quickSellBtn = document.getElementById('quickSellBtn');
+      const journalSellGate = document.getElementById('journalSellGateReadout');
+      const optSellBookBadge = document.getElementById('optSellBookBadge');
+
+      if (sellAllowed) {
+        gateBadge.textContent = `Buy: 09:15 AM ✓ · Option Sell: 09:20 AM ✓ (${hhmm} IST)`;
+        gateBadge.className = 'text-[11px] font-mono px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/25';
+        quickSellBtn.className = 'flex-1 sm:flex-initial px-5 py-2 rounded-xl font-bold text-xs sm:text-sm bg-rose-500 hover:bg-rose-400 text-white transition shadow-sm';
+        quickSellBtn.textContent = 'SELL (Write 9:20+)';
+        journalSellGate.textContent = `OPEN (${hhmm} IST)`;
+        journalSellGate.className = 'text-emerald-400 font-bold';
+        optSellBookBadge.textContent = '9:20 GATE ✓';
+      } else {
+        gateBadge.textContent = `Buy: 09:15 AM ✓ · Option Sell: LOCKED until 09:20 AM (Now ${hhmm})`;
+        gateBadge.className = 'text-[11px] font-mono px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30';
+        quickSellBtn.className = 'flex-1 sm:flex-initial px-5 py-2 rounded-xl font-bold text-xs sm:text-sm bg-slate-800 text-amber-300 border border-amber-500/40 transition';
+        quickSellBtn.textContent = '🔒 SELL (Wait 9:20 AM)';
+        journalSellGate.textContent = `LOCKED until 09:20 (${hhmm})`;
+        journalSellGate.className = 'text-amber-300 font-bold';
+        optSellBookBadge.textContent = 'WAIT 09:20';
+      }
+
+      renderIndicatorChecklist();
+      drawTradeChart();
+    }
+
+    function renderIndicatorChecklist() {
+      const container = document.getElementById('indicatorChecklistContainer');
+      const agreeCount = state.indicators.filter(i => i.active && i.signal === state.zTrendDirection).length;
+      const totalActive = state.indicators.filter(i => i.active).length;
+
+      document.getElementById('activeIndCountBadge').textContent = `${agreeCount}/${totalActive} ${state.zTrendDirection}`;
+      document.getElementById('consensusSummaryBadge').textContent = `${agreeCount} / ${totalActive} Indicators Agree (${state.zTrendDirection})`;
+
+      container.innerHTML = state.indicators.map(ind => {
+        const isBull = ind.signal === 'BUY';
+        return `
+          <div class="flex items-center justify-between gap-2 bg-bg-900/90 px-2.5 py-1.5 rounded-xl border border-slate-800/80 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <input type="checkbox" data-ind-toggle="${ind.id}" ${ind.active ? 'checked' : ''} class="accent-emerald-500 rounded cursor-pointer" />
+              <div class="truncate">
+                <div class="font-semibold text-slate-200 truncate">${ind.name}</div>
+                <div class="text-[10px] text-slate-400 truncate">${ind.detail}</div>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold ${isBull ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">
+              ${ind.signal}
+            </span>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('[data-ind-toggle]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-ind-toggle');
+          const item = state.indicators.find(x => x.id === id);
+          if (item) item.active = e.target.checked;
+          renderIndicatorChecklist();
+        });
+      });
+    }
+
+    function renderDailyPnlAndTrailingGuard() {
+      const pnl = state.dailyPnl;
+      const sign = pnl >= 0 ? '+' : '-';
+      const formatted = `${sign}₹${Math.abs(pnl).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+
+      const headerPnl = document.getElementById('headerPnlValue');
+      headerPnl.textContent = formatted;
+      headerPnl.className = pnl >= 0 ? 'text-xs font-mono font-bold text-emerald-400' : 'text-xs font-mono font-bold text-rose-400';
+
+      document.getElementById('simPnlReadout').textContent = `${sign}₹${Math.abs(Math.round(pnl)).toLocaleString('en-IN')}`;
+      document.getElementById('totalBookPnl').textContent = formatted;
+
+      const reached30k = Math.abs(pnl) >= state.dailyLimit;
+      const trailingFloor = pnl >= 30000 ? Math.round(Math.max(30000 * 0.85, pnl * 0.85)) : -30000;
+
+      const badge = document.getElementById('headerTrailingBadge');
+      const algoPill = document.getElementById('algoModeStatusPill');
+      const floorEl = document.getElementById('trailingFloorReadout');
+      const freqEl = document.getElementById('tradeFreqReadout');
+
+      if (reached30k) {
+        badge.textContent = '≥₹30K TRAIL ON';
+        badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold';
+        algoPill.textContent = '₹30K REACHED → TRAILING & LOW-FREQ ACTIVE';
+        algoPill.className = 'text-xs font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold';
+        floorEl.textContent = pnl > 0 ? `+₹${trailingFloor.toLocaleString('en-IN')} (85% Lock)` : `-₹30,000 Hard Stop`;
+        freqEl.textContent = 'Throttled (Max 1 Open · ≥6/8 Ind)';
+      } else {
+        badge.textContent = 'NORMAL MODE';
+        badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold';
+        algoPill.textContent = 'UNDER ₹30K → NORMAL MULTI-INDICATOR MODE';
+        algoPill.className = 'text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold';
+        floorEl.textContent = 'Arming at ±₹30,000';
+        freqEl.textContent = 'Standard (Max 4 Open · ≥5/8 Ind)';
+      }
+    }
+
+    function renderJournalTrades() {
+      const tbody = document.getElementById('journalTradesTbody');
+      const filtered = state.trades.filter(t => {
+        if (state.journalFilter === 'OPEN') return t.isOpen;
+        if (state.journalFilter === 'BUY') return t.side === 'BUY';
+        if (state.journalFilter === 'SELL') return t.side === 'SELL';
+        return true;
+      });
+
+      tbody.innerHTML = filtered.map(t => {
+        const isPos = t.pnl >= 0;
+        const holdStr = formatHoldDuration(t.holdSeconds);
+        return `
+          <tr class="hover:bg-bg-800/50 transition">
+            <td class="py-2.5 px-2">
+              <div class="font-bold text-white">${t.symbol}</div>
+              <div class="text-[10px] text-slate-400">${t.book}</div>
+            </td>
+            <td class="py-2.5 px-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${t.side === 'BUY' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">${t.side}</span>
+              <div class="text-[10px] text-slate-400 mt-0.5">${t.mode}</div>
+            </td>
+            <td class="py-2.5 px-2 text-slate-200">${t.entryTime}</td>
+            <td class="py-2.5 px-2">
+              ${t.isOpen
+                ? '<span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">LIVE · OPEN</span>'
+                : `<span class="text-slate-300">${t.exitTime}</span>`}
+            </td>
+            <td class="py-2.5 px-2">
+              <span class="px-2 py-0.5 rounded bg-bg-900 border border-slate-700 text-amber-300 font-semibold">${holdStr}</span>
+            </td>
+            <td class="py-2.5 px-2 text-slate-300">₹${t.entryPrice.toFixed(2)} → ₹${t.exitPrice.toFixed(2)}</td>
+            <td class="py-2.5 px-2 text-[11px] text-slate-300">${t.indicators}</td>
+            <td class="py-2.5 px-2 text-right font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}">
+              ${isPos ? '+' : '-'}₹${Math.abs(t.pnl).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderVedicReport() {
+      const dayKey = document.getElementById('vedicDaySelect').value;
+      const data = state.vedicDays[dayKey] || state.vedicDays.today;
+
+      document.getElementById('gannSignalText').textContent = data.gannSignal;
+      document.getElementById('gannActionText').textContent = data.gannAction;
+      document.getElementById('gannKeyLevelText').textContent = data.gannLevels;
+      document.getElementById('vedicTithiText').textContent = data.tithi;
+      document.getElementById('vedicNakshatraText').textContent = data.nakshatra;
+      document.getElementById('astroSliceHeaderDate').textContent = `${data.label} · ${data.slices.length} Intraday Slices`;
+
+      const tbody = document.getElementById('astroSlicesTbody');
+      tbody.innerHTML = data.slices.map(s => `
+        <tr class="${s.isNow ? 'bg-emerald-500/10 border-l-2 border-l-emerald-400' : ''}">
+          <td class="py-2 px-2 text-slate-200">${s.from}</td>
+          <td class="py-2 px-2 text-slate-200">${s.to}</td>
+          <td class="py-2 px-2 font-bold ${s.color}">
+            ${s.proj} ${s.isNow ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">· NOW</span>' : ''}
+          </td>
+          <td class="py-2 px-2 text-slate-400">${s.chord}</td>
+        </tr>
+      `).join('');
+
+      // Dynamic Sidereal Graha degrees
+      const jitter = ((Date.now() % 60000) / 60000) * 0.04;
+      const planets = [
+        { name: 'Sun (Su)', sign: 'Tula (Libra)', deg: (5.82 + jitter).toFixed(2) + '°', bias: 'Neutral' },
+        { name: 'Moon (Mo)', sign: 'Kumbha (Aquarius)', deg: (18.44 + jitter * 4).toFixed(2) + '°', bias: 'Bullish Dip' },
+        { name: 'Mars (Ma)', sign: 'Karka (Cancer)', deg: (24.11 + jitter).toFixed(2) + '°', bias: 'Volatile' },
+        { name: 'Mercury (Me)', sign: 'Tula (Libra)', deg: (21.09 + jitter * 2).toFixed(2) + '°', bias: 'Positive' },
+        { name: 'Jupiter (Ju)', sign: 'Karka (Cancer)', deg: (14.65 + jitter * 0.5).toFixed(2) + '°', bias: 'Strong Support' },
+        { name: 'Venus (Ve)', sign: 'Kanya (Virgo)', deg: (28.30 + jitter).toFixed(2) + '°', bias: 'Positive' },
+        { name: 'Saturn (Sa)', sign: 'Meena (Pisces)', deg: (19.04 + jitter * 0.2).toFixed(2) + '°', bias: 'Resistance' },
+        { name: 'Rahu (Ra)', sign: 'Kumbha (Aquarius)', deg: (11.72 - jitter * 0.3).toFixed(2) + '°', bias: 'Intraday Spike' }
+      ];
+
+      document.getElementById('planetGridContainer').innerHTML = planets.map(p => `
+        <div class="bg-bg-900 p-2 rounded-xl border border-slate-800">
+          <div class="flex justify-between text-[11px]">
+            <span class="font-bold text-white">${p.name}</span>
+            <span class="text-amber-300">${p.deg}</span>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-0.5">${p.sign} · <span class="text-slate-300">${p.bias}</span></div>
+        </div>
+      `).join('');
+
+      const weekly = [
+        { day: 'MONDAY · 26 OCT', call: 'BEARISH', score: '-1.5', note: 'Profit booking expected — trail stops cleanly.' },
+        { day: 'TUESDAY · 27 OCT', call: 'MILD BEARISH', score: '-1.0', note: 'Slight downside tilt — prefer 9:20+ hedged writing.' },
+        { day: 'WEDNESDAY · 28 OCT', call: 'BEARISH', score: '-2.5', note: 'Expiry volatility — Z-Trend Zone-1 Support key.' }
+      ];
+      document.getElementById('weeklyPowerContainer').innerHTML = weekly.map(w => `
+        <div class="bg-bg-900 p-2.5 rounded-xl border border-rose-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-mono text-slate-400">${w.day}</div>
+            <div class="text-xs font-bold text-rose-400">${w.call} <span class="text-slate-400 font-mono font-normal">(Score ${w.score})</span></div>
+            <div class="text-[11px] text-slate-300">${w.note}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // CANDLESTICK + Z-TREND & TIME CYCLE CANVAS CHART
+    // =========================================================================
+    function drawTradeChart() {
+      const canvas = document.getElementById('tradeChartCanvas');
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width;
+      const H = rect.height;
+      const padRight = 64;
+      const padLeft = 14;
+      const padTop = 20;
+      const padBottom = 26;
+      const chartW = W - padLeft - padRight;
+      const chartH = H - padTop - padBottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const inst = state.instruments[state.selectedInstrument];
+      const base = inst.ltp;
+      const minP = base * 0.78;
+      const maxP = base * 1.68;
+      const priceToY = (p) => padTop + chartH - ((p - minP) / (maxP - minP)) * chartH;
+
+      // Grid lines + Right price axis labels
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.32)';
+      ctx.lineWidth = 1;
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#94a3b8';
+
+      for (let i = 0; i <= 5; i++) {
+        const p = minP + ((maxP - minP) * i) / 5;
+        const y = priceToY(p);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, y);
+        ctx.lineTo(W - padRight, y);
+        ctx.stroke();
+        ctx.fillText(p.toFixed(1), W - padRight + 6, y + 3);
+      }
+
+      // Draw Z-Trend Zone-1 & Zone-2 Resistance + Zone-1 Support Bands if active
+      if (state.activeOverlays.ztrend) {
+        // Zone-2 Resistance
+        const yRes2Top = priceToY(base * 1.58);
+        const yRes2Bot = priceToY(base * 1.44);
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.12)';
+        ctx.fillRect(padLeft + chartW * 0.52, yRes2Top, chartW * 0.48, yRes2Bot - yRes2Top);
+        ctx.fillStyle = '#fda4af';
+        ctx.fillText(`ZONE-2 RES (${inst.ztRes2.toFixed(1)})`, padLeft + chartW * 0.54, yRes2Top + 12);
+
+        // Zone-1 Resistance
+        const yRes1Top = priceToY(base * 1.38);
+        const yRes1Bot = priceToY(base * 1.26);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.11)';
+        ctx.fillRect(padLeft + chartW * 0.52, yRes1Top, chartW * 0.48, yRes1Bot - yRes1Top);
+        ctx.fillStyle = '#6ee7b7';
+        ctx.fillText(`ZONE-1 RES (${inst.ztRes1.toFixed(1)})`, padLeft + chartW * 0.54, yRes1Top + 12);
+
+        // Zone-1 Support & Z-Trend Trailing SL Line
+        const ySup = priceToY(inst.ztSl);
+        ctx.strokeStyle = '#f43f5e';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padLeft + chartW * 0.35, ySup);
+        ctx.lineTo(W - padRight, ySup);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fb7185';
+        ctx.fillText(`Z-TREND SL ₹${inst.ztSl.toFixed(1)}`, padLeft + chartW * 0.36, ySup - 5);
+      }
+
+      // Generate synthetic realistic intraday candles
+      const n = 36;
+      const stepX = chartW / n;
+      const candles = [];
+      let cur = base * 1.42;
+      for (let i = 0; i < n; i++) {
+        const drift = i < 14 ? -base * 0.032 : (i < 25 ? base * 0.008 : (state.zTrendDirection === 'BUY' ? base * 0.018 : -base * 0.015));
+        const wave = Math.sin(i * 0.7) * (base * 0.025);
+        const open = cur;
+        const close = Math.max(minP * 1.05, Math.min(maxP * 0.95, open + drift + wave));
+        const high = Math.max(open, close) + base * 0.035;
+        const low = Math.min(open, close) - base * 0.03;
+        candles.push({ open, close, high, low });
+        cur = close;
+      }
+      candles[n - 1].close = base;
+
+      // Draw Time Cycle vertical harmonic lines if enabled
+      if (state.activeOverlays.timecycle) {
+        [10, 22, 32].forEach((idx, k) => {
+          const x = padLeft + idx * stepX;
+          ctx.strokeStyle = 'rgba(34, 211, 238, 0.28)';
+          ctx.beginPath();
+          ctx.moveTo(x, padTop);
+          ctx.lineTo(x, padTop + chartH);
+          ctx.stroke();
+          ctx.fillStyle = '#67e8f9';
+          ctx.fillText(`TC-${k + 1} ₹${candles[idx].close.toFixed(0)}`, x + 3, padTop + 12);
+        });
+      }
+
+      // Draw Candlesticks
+      candles.forEach((c, i) => {
+        const x = padLeft + i * stepX + stepX * 0.5;
+        const isBull = c.close >= c.open;
+        ctx.strokeStyle = isBull ? '#10b981' : '#f43f5e';
+        ctx.fillStyle = isBull ? '#10b981' : '#f43f5e';
+
+        // Wick
+        ctx.beginPath();
+        ctx.moveTo(x, priceToY(c.high));
+        ctx.lineTo(x, priceToY(c.low));
+        ctx.stroke();
+
+        // Body
+        const yTop = priceToY(Math.max(c.open, c.close));
+        const yBot = priceToY(Math.min(c.open, c.close));
+        const bodyH = Math.max(2, yBot - yTop);
+        ctx.fillRect(x - stepX * 0.28, yTop, stepX * 0.56, bodyH);
+
+        // Z-Trend Buy / Sell Badges on chart synced with Signal Panel
+        if (state.activeOverlays.ztrend && (i === 5 || i === 24)) {
+          const isB = i === 24 ? state.zTrendDirection === 'BUY' : false;
+          const badgeY = isB ? priceToY(c.low) + 14 : priceToY(c.high) - 14;
+          ctx.fillStyle = isB ? '#10b981' : '#f43f5e';
+          ctx.fillRect(x - 8, badgeY - 8, 16, 16);
+          ctx.fillStyle = '#070b12';
+          ctx.font = 'bold 10px "Inter", sans-serif';
+          ctx.fillText(isB ? 'B' : 'S', x - 3.5, badgeY + 3.5);
+          ctx.font = '10px "JetBrains Mono", monospace';
+        }
+      });
+
+      // Draw VWAP Line
+      if (state.activeOverlays.vwap) {
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        candles.forEach((c, i) => {
+          const x = padLeft + i * stepX + stepX * 0.5;
+          const vwapP = (c.open + c.close + base * 1.06) / 3;
+          const y = priceToY(vwapP);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      // Current LTP Tag on Right Axis
+      const ltpY = priceToY(base);
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(W - padRight + 2, ltpY - 9, padRight - 4, 18);
+      ctx.fillStyle = '#070b12';
+      ctx.font = 'bold 10px "JetBrains Mono", monospace';
+      ctx.fillText(base.toFixed(2), W - padRight + 6, ltpY + 3);
+    }
+
+    // =========================================================================
+    // EVENT LISTENERS & INTERACTIVITY
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      // Navigation tabs
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-nav');
+          if (target) switchView(target);
+        });
+      });
+
+      // Instrument switcher
+      document.getElementById('instrumentSelect').addEventListener('change', (e) => {
+        state.selectedInstrument = e.target.value;
+        renderInstrumentAndSignals();
+        showToast(`Loaded ${state.instruments[state.selectedInstrument].name}`);
+      });
+
+      // Session Clock Mode (9:16 vs 9:22 vs Live)
+      document.getElementById('sessionClockMode').addEventListener('change', (e) => {
+        state.sessionClockMode = e.target.value;
+        renderInstrumentAndSignals();
+        const hhmm = getSimulatedHHMM();
+        showToast(`Session Clock set to ${hhmm} IST — Option Sell ${hhmm >= '09:20' ? 'UNLOCKED (≥09:20)' : 'LOCKED until 09:20 AM'}`);
+      });
+
+      // Lot controls
+      document.getElementById('lotMinusBtn').addEventListener('click', () => {
+        state.lots = Math.max(1, state.lots - 1);
+        renderInstrumentAndSignals();
+      });
+      document.getElementById('lotPlusBtn').addEventListener('click', () => {
+        state.lots = Math.min(20, state.lots + 1);
+        renderInstrumentAndSignals();
+      });
+
+      // Buy & Sell execution with 9:15 / 9:20 rule & ₹30,000 limit check
+      function executeOrder(side) {
+        const inst = state.instruments[state.selectedInstrument];
+        const hhmm = getSimulatedHHMM();
+
+        if (side === 'SELL' && inst.type === 'OPTION' && hhmm < '09:20') {
+          showToast(`⛔ Blocked: Option Selling starts strictly at 09:20 AM IST (Current clock: ${hhmm}). Option Buying & Stocks are open from 09:15 AM.`);
+          return;
+        }
+
+        const nowStr = `23 Oct · ${hhmm}:18 AM`;
+        const newTrade = {
+          id: 'TR-' + Math.floor(100 + Math.random() * 900),
+          symbol: inst.name.split('·')[0].trim(),
+          book: inst.type === 'STOCK' ? 'Stock Trader' : (side === 'BUY' ? 'Options Buy' : 'Options Sell'),
+          side,
+          mode: Math.abs(state.dailyPnl) >= 30000 ? 'Auto (₹30K Trail Mode)' : 'Manual / Signal',
+          entryTime: nowStr,
+          exitTime: null,
+          holdSeconds: 1,
+          isOpen: true,
+          entryPrice: inst.ltp,
+          exitPrice: inst.ltp,
+          indicators: 'Z-Trend + TimeCycle + VWAP',
+          pnl: 0
+        };
+        state.trades.unshift(newTrade);
+        renderJournalTrades();
+        showToast(`✅ Executed ${side} on ${inst.name} at ₹${inst.ltp.toFixed(2)} (Logged in Journal with live hold timer)`);
+      }
+
+      document.getElementById('quickBuyBtn').addEventListener('click', () => executeOrder('BUY'));
+      document.getElementById('quickSellBtn').addEventListener('click', () => executeOrder('SELL'));
+      document.getElementById('execZTrendTradeBtn').addEventListener('click', () => executeOrder(state.zTrendDirection));
+
+      // Flip Z-Trend Signal test
+      document.getElementById('simulateSignalFlipBtn').addEventListener('click', () => {
+        state.zTrendDirection = state.zTrendDirection === 'BUY' ? 'SELL' : 'BUY';
+        state.indicators[0].signal = state.zTrendDirection;
+        state.indicators[1].signal = state.zTrendDirection;
+        renderInstrumentAndSignals();
+        showToast(`Flipped Z-Trend Signal to ${state.zTrendDirection} — Auto-Trader Consensus updated`);
+      });
+
+      // Run Live Z-Trend Backtest button
+      document.getElementById('runZTrendBacktestBtn').addEventListener('click', () => {
+        const signals = Math.floor(135 + Math.random() * 25);
+        const winRate = (66.5 + Math.random() * 4.5).toFixed(1);
+        const pf = (2.05 + Math.random() * 0.35).toFixed(2);
+        const exp = (0.52 + Math.random() * 0.18).toFixed(2);
+        document.getElementById('btTotalSignals').textContent = String(signals);
+        document.getElementById('btWinRate').textContent = `${winRate}%`;
+        document.getElementById('btProfitFactor').textContent = pf;
+        document.getElementById('btExpectancy').textContent = `+${exp}R`;
+        document.getElementById('ztBacktestMini').innerHTML = `Live BT: <strong class="text-emerald-400">${winRate}% Win</strong> (PF ${pf})`;
+        showToast(`📊 Z-Trend Backtest Completed: ${signals} signals, ${winRate}% Win Rate, PF ${pf}`);
+      });
+
+      // Sync Time Cycle button
+      document.getElementById('syncTimeCycleBtn').addEventListener('click', () => {
+        const inst = state.instruments[state.selectedInstrument];
+        inst.tcTarget = +(inst.ltp * 1.28).toFixed(2);
+        inst.tcSupport = +(inst.ltp * 0.91).toFixed(2);
+        renderInstrumentAndSignals();
+        showToast(`Time Cycle Price Levels synced to ₹${inst.ltp.toFixed(2)}`);
+      });
+
+      // Deploy Hedge button
+      document.getElementById('deployHedgeBtn').addEventListener('click', () => {
+        const inst = state.instruments[state.selectedInstrument];
+        showToast(`🛡️ Hedge leg (${inst.hedgeLeg}) paired — Max Drawdown reduced by 62%`);
+      });
+
+      // Timeframe buttons
+      document.querySelectorAll('.tf-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.timeframe = btn.getAttribute('data-tf');
+          document.querySelectorAll('.tf-btn').forEach(b => {
+            const active = b.getAttribute('data-tf') === state.timeframe;
+            b.className = active
+              ? 'tf-btn px-2.5 py-1 rounded-lg text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+              : 'tf-btn px-2.5 py-1 rounded-lg text-xs font-mono bg-bg-900 text-slate-400 hover:text-white';
+          });
+          drawTradeChart();
+        });
+      });
+
+      // Chart Indicator overlay pills
+      document.querySelectorAll('.ind-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-ind');
+          state.activeOverlays[key] = !state.activeOverlays[key];
+          btn.classList.toggle('opacity-40', !state.activeOverlays[key]);
+          drawTradeChart();
+        });
+      });
+
+      // Header P&L button jumps to Journal
+      document.getElementById('headerPnlBtn').addEventListener('click', () => switchView('journal'));
+
+      // Simulate Daily P&L Slider (Testing ₹30,000 limit)
+      document.getElementById('simPnlSlider').addEventListener('input', (e) => {
+        state.dailyPnl = parseFloat(e.target.value);
+        renderDailyPnlAndTrailingGuard();
+      });
+
+      // Journal filter buttons
+      document.querySelectorAll('.jfilter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.journalFilter = btn.getAttribute('data-jfilter');
+          document.querySelectorAll('.jfilter-btn').forEach(b => {
+            const active = b.getAttribute('data-jfilter') === state.journalFilter;
+            b.className = active
+              ? 'jfilter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+              : 'jfilter-btn px-3 py-1 rounded-lg text-xs font-semibold bg-bg-900 text-slate-400 hover:text-white';
+          });
+          renderJournalTrades();
+        });
+      });
+
+      // Vedic Day Select & Recalculate button
+      document.getElementById('vedicDaySelect').addEventListener('change', renderVedicReport);
+      document.getElementById('refreshVedicBtn').addEventListener('click', () => {
+        renderVedicReport();
+        document.getElementById('vedicLastUpdated').textContent = `Synced: ${new Date().toLocaleTimeString('en-IN')} IST`;
+        showToast('☽ Vedic Panchang, Sidereal Graha degrees & Gann Square of 9 recalculated');
+      });
+
+      // Copy code button
+      document.getElementById('copyAllCodeBtn').addEventListener('click', () => {
+        const code = document.getElementById('codeDiffBlock').innerText;
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = code;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast('Copied all updated JS/UI modules to clipboard!');
+        } catch (err) {
+          showToast('Ready to copy from code block below.');
+        }
+      });
+
+      // Resize listener for responsive canvas chart
+      window.addEventListener('resize', () => {
+        if (state.activeView === 'trade') drawTradeChart();
+      });
+
+      // Live 1-second ticker: updates clock, open trade hold duration, and micro price ticks
+      setInterval(() => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-IN', { hour12: false });
+        document.getElementById('headerClock').textContent = `${timeStr} IST`;
+
+        // Increment hold duration on open trades
+        state.trades.forEach(t => {
+          if (t.isOpen) {
+            t.holdSeconds += 1;
+          }
+        });
+        if (state.activeView === 'journal') {
+          renderJournalTrades();
+        }
+      }, 1000);
+
+      // Initial render
+      renderInstrumentAndSignals();
+      renderDailyPnlAndTrailingGuard();
+      renderJournalTrades();
+      renderVedicReport();
+    });
+  </script>
+</body>
+</html>

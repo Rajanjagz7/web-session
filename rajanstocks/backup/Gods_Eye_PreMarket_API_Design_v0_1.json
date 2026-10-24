@@ -1,0 +1,143 @@
+{
+  "title": "GOD'S EYE Pre-Market API Design (Draft)",
+  "version": "0.2",
+  "note": "Illustrative contract only; requires engineering review and approved signal methodology.",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/premarket/overview",
+      "purpose": "Latest pre-market signal summary",
+      "response": {
+        "sessionDate": "YYYY-MM-DD",
+        "cutoffAt": "ISO-8601",
+        "issuedAt": "ISO-8601",
+        "modelVersion": "string",
+        "signals": [
+          {
+            "forecastId": "string",
+            "symbol": "string",
+            "direction": "BULLISH|BEARISH|NEUTRAL|NO_SIGNAL",
+            "signalStrength": "WEAK|MODERATE|STRONG|UNAVAILABLE",
+            "horizon": "string",
+            "volatilityOutlook": "LOW|NORMAL|HIGH|UNAVAILABLE",
+            "drivers": [],
+            "invalidationConditions": [],
+            "dataQuality": "FRESH|STALE|PARTIAL|INSUFFICIENT|UNAVAILABLE",
+            "sourceTimestamp": "ISO-8601|null",
+            "probabilities": "optional object or null"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/premarket/signals/{symbol}",
+      "purpose": "Signal details for one instrument"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forecasts/{forecastId}",
+      "purpose": "Immutable forecast record and audit metadata"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forecasts/history",
+      "query": [
+        "symbol",
+        "horizon",
+        "from",
+        "to",
+        "page",
+        "pageSize"
+      ],
+      "purpose": "Historical forecasts and evaluation status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health/data",
+      "purpose": "Protected operational feed health; never return credentials"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/evaluation/run",
+      "purpose": "Optional protected, audited evaluation job trigger"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/premarket/signals/{symbol}?horizon=",
+      "purpose": "Retrieve the current signal for a selected target horizon",
+      "supportedHorizonExamples": [
+        "NEXT_SESSION",
+        "INTRADAY_15M",
+        "INTRADAY_30M",
+        "INTRADAY_60M"
+      ]
+    }
+  ],
+  "error_contract": {
+    "error": {
+      "code": "STALE_DATA|INSUFFICIENT_DATA|PROVIDER_UNAVAILABLE|INVALID_SYMBOL|RATE_LIMITED|INTERNAL_ERROR",
+      "message": "Safe user-facing description",
+      "requestId": "string"
+    }
+  },
+  "providerDecision": {
+    "status": "Existing provider intended; provider name and documentation still required",
+    "requirements": [
+      "instrument/exchange coverage and canonical symbol mapping",
+      "historical OHLCV and appropriate intraday resolution",
+      "pre-market/overnight data availability where applicable",
+      "source timestamps, timezone and bar conventions",
+      "history depth, corrections, corporate actions/roll handling where relevant",
+      "freshness/latency, delay flags, rate limits, quotas, retries and outage status",
+      "personal-use and display/derived-data licensing terms",
+      "server-side credentials, secret rotation and log redaction"
+    ]
+  },
+  "forecastTargets": [
+    {
+      "targetId": "PREMARKET_NEXT_SESSION",
+      "issueTime": "Configured cutoff before regular session open",
+      "outcome": "Return from previous official session close to target session official close",
+      "labels": {
+        "UP": "return > +epsilon",
+        "DOWN": "return < -epsilon",
+        "NEUTRAL": "otherwise"
+      },
+      "notes": "epsilon must be pre-registered and fit only on training data; mature after official close and data quality checks."
+    },
+    {
+      "targetId": "INTRADAY_15M",
+      "issueTime": "Approved intraday checkpoint",
+      "outcome": "Forward return from latest eligible reference price to issue time + 15 minutes",
+      "labels": "UP/DOWN/NEUTRAL via pre-registered horizon-specific epsilon",
+      "notes": "Exclude invalid/missing target endpoints; no future or unfinished-bar data."
+    },
+    {
+      "targetId": "INTRADAY_30M",
+      "issueTime": "Approved intraday checkpoint",
+      "outcome": "Forward return from latest eligible reference price to issue time + 30 minutes",
+      "labels": "UP/DOWN/NEUTRAL via pre-registered horizon-specific epsilon"
+    },
+    {
+      "targetId": "INTRADAY_60M",
+      "issueTime": "Approved intraday checkpoint",
+      "outcome": "Forward return from latest eligible reference price to issue time + 60 minutes",
+      "labels": "UP/DOWN/NEUTRAL via pre-registered horizon-specific epsilon"
+    }
+  ],
+  "probabilityContract": {
+    "classes": [
+      "UP",
+      "NEUTRAL",
+      "DOWN"
+    ],
+    "constraints": [
+      "each probability in [0,1]",
+      "probabilities sum to 1 within agreed tolerance",
+      "only expose after calibration and out-of-sample acceptance gates pass",
+      "include calibrationVersion and modelVersion"
+    ],
+    "preValidationBehaviour": "probabilities null/unavailable; do not send placeholder values"
+  }
+}
