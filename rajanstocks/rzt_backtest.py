@@ -1,6 +1,11 @@
 """Rajan Zone Trend on real 1-minute prices of expired NIFTY / BANKNIFTY / SENSEX options (ATM / OTM only; same data and
 cache as premium_backtest.py).
 
+NOTE (2026-10-25 audit): this offline grid keeps its own simpler seeding (first-value EMA/ATR, immediate
+Wilder RSI). The LIVE engine (rzt.py) was since aligned to the chart's SMA-seeded math, so numbers here
+are not directly comparable to the live Signals card / auto trader. Stored JSON predates that change;
+kept as-is by decision (no re-run).
+
 Option premiums can only be BOUGHT here, so: B = buy the premium at the signal candle's close, stop = the B candle's low
 (the signal line), exit on the next S (at its close), the stop, or 15:25. One position at a time per contract, entries
 09:20-15:00. Grid: timeframe 1 / 3 / 5 minutes, ATR length 10 / 14, multiplier 1.5 / 2 / 3, momentum filter off / on.
