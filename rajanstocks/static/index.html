@@ -74,6 +74,15 @@ svg.i{display:block;flex-shrink:0}
 .ibtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--text-2);position:relative;flex-shrink:0}
 .ibtn:hover{background:var(--panel-2);color:var(--text)}
 .ibtn.on{background:var(--brand-2);color:var(--brand)}
+/* Install-app button: gradient pill with a soft pulse so users notice it can install the app */
+#pwaBtn{width:auto;min-width:32px;height:32px;padding:0 10px 0 8px;border-radius:16px;grid-auto-flow:column;align-items:center;gap:5px;
+  background:linear-gradient(135deg,#2a78d6,#5b9cf0);color:#fff;border:none;
+  box-shadow:0 2px 8px rgba(42,120,214,.35);animation:pwaPulse 2.8s ease-out infinite}
+#pwaBtn::after{content:'App';font-size:11.5px;font-weight:700;letter-spacing:.3px}
+#pwaBtn svg{width:15px;height:15px}
+#pwaBtn:active{transform:scale(.94)}
+@keyframes pwaPulse{0%{box-shadow:0 2px 8px rgba(42,120,214,.35),0 0 0 0 rgba(42,120,214,.45)}70%{box-shadow:0 2px 8px rgba(42,120,214,.35),0 0 0 8px rgba(42,120,214,0)}100%{box-shadow:0 2px 8px rgba(42,120,214,.35),0 0 0 0 rgba(42,120,214,0)}}
+@media (prefers-reduced-motion: reduce){#pwaBtn{animation:none}}
 .cnt{position:absolute;top:2px;right:2px;min-width:15px;height:15px;border-radius:8px;background:var(--down);color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 3px}
 
 /* Generic */
@@ -2990,7 +2999,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
    <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':cash?L?'<b>Buy (cash)</b> with the plan&rsquo;s stop and targets':'<b>Sell (cash)</b> with the plan&rsquo;s stop and targets':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
    ${pkPlans(p)}
    <ul class="pk-why">${p.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>No strong trend, volume or range signal today</li>'}</ul>
-   <div class="pk-f"><span class="muted">R:R ${p.rr} · RSI ${p.rsi??'—'} · Vol ${p.volx}×</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button>${cash?'':` <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button>`} <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
+   <div class="pk-f"><span class="muted">R:R ${p.rr}</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button>${cash?'':` <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button>`} <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
   </article>`}
 /* per-horizon plan: Intraday (today, square off 15:15) · Swing (days) · Positional (weeks) - each with its own stop / targets */
 const PK_HZ={INTRA:['intraday','Intraday'],SWING:['swing','Swing'],POS:['positional','Positional']};
@@ -3072,8 +3081,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
     const pager=pages>1?`<div class="pager"><button class="btn-xs" data-pkpage="${f.page-1}" ${f.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===f.page?'pri':''}" data-pkpage="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-pkpage="${f.page+1}" ${f.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
-    const cov=P&&P.coverage?` · cash-universe coverage ${P.coverage.extra_done}/${P.coverage.extra_total} listed stocks today`:'';   // the whole-market walk advances each refresh
-    body=l.length?`<p class="muted pk-meta">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · indices first · showing ${f.page*size+1}–${f.page*size+part.length}${cov}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:'<div class="empty">No instruments match this filter right now.</div>'}
+    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:'<div class="empty">No instruments match this filter right now.</div>'}
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
@@ -3085,7 +3093,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    
    ${body}
-   <p class="disc">Rule-based screen of the whole listed NSE market: the F&amp;O universe first (option trades), then every other listed equity (cash-only picks for the Stock Trader) as the scan walks through it. Trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI; levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
+   <p class="disc">Automated screen of NSE-listed instruments, refreshed through the trading day. This is a screening aid, not investment advice — trades here are paper trades only.</p>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});

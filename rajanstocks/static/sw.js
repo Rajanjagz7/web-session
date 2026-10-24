@@ -1,5 +1,5 @@
 /* Service worker: shows push notifications (also when the app is closed) and handles taps. */
-const SHELL = 'algo-shell-v1';
+const SHELL = 'algo-shell-v2';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(['/', '/static/journal.js', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png'])).catch(() => {}));
   self.skipWaiting();
@@ -14,7 +14,11 @@ self.addEventListener('fetch', e => {
     return res;
   }).catch(() => caches.match(r, { ignoreSearch: true }).then(m => m || caches.match('/'))));
 });
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', e => e.waitUntil((async () => {   // shell bump: drop every older cache so devices start clean
+  const names = await caches.keys();
+  await Promise.all(names.filter(n => n !== SHELL).map(n => caches.delete(n)));
+  await self.clients.claim();
+})()));
 
 self.addEventListener('push', e => {
   let d = {};

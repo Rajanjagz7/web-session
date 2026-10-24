@@ -1616,6 +1616,10 @@ def _picks_compute(deadline_s, progress=None):
                     "bhav": bhav, "bhav_diag": bhav_diag, "failed": len(failed),
                     "days": len(bhav_days) if isinstance(bhav_days, dict) else 0,
                     "fallback": len(fallback_used)}
+        try:
+            print("picks walk:", {k: (v if not isinstance(v, dict) else "dict") for k, v in coverage.items()}, flush=True)
+        except Exception:
+            pass        # diagnostics go to the logs only - the public payload must not reveal the scan mechanics
         # the day's cash picks ACCUMULATE: each build's slice would otherwise replace the previous
         # one, and strong names found earlier today would vanish from the screen on the next build
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
@@ -1627,7 +1631,6 @@ def _picks_compute(deadline_s, progress=None):
             shared_cache.set(cash_day_key, cash_day, 20 * 3600)
         res = [r for r in res if r.get("universe") != "cash"] +               [r for r in cash_day.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
         out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
-        out["coverage"] = coverage
     return out
 
 
