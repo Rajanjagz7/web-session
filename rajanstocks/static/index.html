@@ -125,11 +125,11 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 .wl-h b{font-size:13px}
 .wl-list{overflow:auto;flex:1}
 .wl-g{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:10px 12px 4px}
-.wl-row{display:grid;grid-template-columns:1fr 54px auto;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 12px;border-left:2px solid transparent}
+.wl-row{display:grid;grid-template-columns:minmax(0,1fr) 54px auto;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 12px;border-left:2px solid transparent}
 .wl-row:hover{background:var(--panel-2)}
 .wl-row.on{background:var(--brand-2);border-left-color:var(--brand)}
-.wl-row b{display:block;font-size:12.5px}.wl-row small{display:block;color:var(--text-3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px}
-.wl-row .r{text-align:right;font-size:12px;line-height:1.3}
+.wl-row b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wl-row small{display:block;color:var(--text-3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px}
+.wl-row .r{text-align:right;font-size:12px;line-height:1.3;white-space:nowrap}
 .center{display:flex;flex-direction:column;min-width:0;min-height:0}
 .symbar{display:flex;align-items:center;gap:18px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);min-height:54px;overflow-x:auto;scrollbar-width:none}
 .symbtn{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700;padding:4px 6px;border-radius:6px}
@@ -3989,7 +3989,11 @@ const glHTML=()=>`<div class="gl-wrap"><div class="gl-h"><b>Global markets &amp;
 
 /* ======================= Global instrument charts, news bar, picks pagination ======================= */
 const EXTRA={};                                   // chart-only pseudo symbols (global futures / indices)
-const tvCount=(tf)=>{const bpd=tf.sec>=86400?86400/tf.sec:22500/tf.sec;return Math.min(5000,Math.max(300,Math.ceil((App.span||1830)*bpd)+50))};
+/* Bars-per-day must come from EACH market's own session, not NSE's 6.25h: GIFT Nifty/Bank Nifty trade ~21h
+   (6:15am–3:30am) and crypto 24h — otherwise a selected range loads a third of the real window and the chart
+   looks like it "runs out of data" part-way through. */
+const TV_SESS=id=>/NIFTY1!|BANKNIFTY1!/.test(id)?76500:/BTC|BITCOIN|ETH/i.test(id)?86400:22500;
+const tvCount=(tf)=>{const sess=TV_SESS(App.sym&&App.sym.tv||'');const bpd=tf.sec>=86400?86400/tf.sec:sess/tf.sec;return Math.min(5000,Math.max(300,Math.ceil((App.span||1830)*bpd)+50))};
 const candleURL=(sym,tf)=>sym.tv?'/api/m/gcandles?id='+encodeURIComponent(sym.tv)+'&tf='+tf.k+'&count='+tvCount(tf):'/api/m/candles?'+(sym.ikey?'ikey='+encodeURIComponent(sym.ikey):'symbol='+encodeURIComponent(sym.s))+'&tf='+tf.k+histQS(sym,tf);
 function openGlobal(id){const it=GL.items&&GL.items.find(i=>i.id===id);if(!it)return;
   const e=EXTRA[it.name]||(EXTRA[it.name]={s:it.name,n:it.name,sec:'Global',cls:'Global',ex:it.group,tv:id,dp:it.price<100?3:2,qdp:0,vol:.01,vb:1e5,unit:'units',noTrade:true,dvol:0,turn:0,bid:0,ask:0});
@@ -4003,7 +4007,7 @@ function syncGlobalSym(){const s=App.sym;if(!s||!s.tv||!GL.items)return;const it
     chart.setData(c,s,App.tf,true);renderSymbar();updatePlan()}}
 let gRefreshTs=0;
 async function refreshGlobalChart(){const s=App.sym;if(!s.tv||Date.now()-gRefreshTs<60000)return;gRefreshTs=Date.now();
-  try{const r=await api(candleURL(s,App.tf));if(r.bars&&r.bars.length&&App.sym===s){const k=s.s+'|'+App.tf.k;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();chart.setData(r.bars,s,App.tf,true);syncGlobalSym();updatePlan()}}catch(e){}}   /* re-apply the live price: history is cached for minutes */
+  try{const r=await api(candleURL(s,App.tf));if(r.bars&&r.bars.length&&App.sym===s){const k=s.s+'|'+App.tf.k;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();chart.setData(r.bars,s,App.tf,true);syncGlobalSym();updatePlan()}}catch(e){gRefreshTs=Date.now()-45000}}   /* a failed history refresh retries in ~15s instead of freezing the chart for a minute */
 document.addEventListener('click',e=>{const g=e.target.closest('[data-gl]');if(g){openGlobal(g.dataset.gl);return}
   const p=e.target.closest('[data-pkpage]');if(p&&!p.disabled){App.pk.page=+p.dataset.pkpage;renderPicks();window.scrollTo({top:0,behavior:'smooth'})}});
 document.addEventListener('change',e=>{if(e.target.id==='pkSort'){App.pk.sort=e.target.value;App.pk.page=0;renderPicks()}else if(e.target.id==='pkSize'){App.pk.size=+e.target.value;App.pk.page=0;renderPicks()}});
