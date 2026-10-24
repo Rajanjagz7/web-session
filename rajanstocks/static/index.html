@@ -644,8 +644,8 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script src="/static/journal.js?v=20261022g"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261024f"></script>
-<script src="/static/observer.js?v=20261024f"></script>
+<script src="/static/godseye.js?v=20261024g"></script>
+<script src="/static/observer.js?v=20261024g"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -3065,7 +3065,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
         if(!x)return f.sig==='BUY'?p.signal==='BUY'&&p[hzKey]==='Bullish':f.sig==='SELL'?p.signal==='SELL'&&p[hzKey]==='Bearish':p[hzKey]!=='Neutral';
         if(f.sig==='EVERY')return true;if(x.side==='WAIT')return false;if(x.ok===false)return false;if(x.ok===undefined&&p[hzKey]==='Neutral')return false;   // each horizon's own entry test
         return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})}
-    else if(f.sig==='BUY')l=P.buy.slice();else if(f.sig==='SELL')l=P.sell.slice();else if(f.sig==='EVERY')l=P.picks.slice();else l=P.buy.concat(P.sell);
+    else{const pBuys=Array.isArray(P.buy)?P.buy:(P.picks||[]).filter(p=>p.signal==='BUY'),pSells=Array.isArray(P.sell)?P.sell:(P.picks||[]).filter(p=>p.signal==='SELL');if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=(P.picks||[]).slice();else l=pBuys.concat(pSells);}
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
     if(f.mkt==='FNO')l=l.filter(p=>p.universe!=='cash');else if(f.mkt==='CASH')l=l.filter(p=>p.universe==='cash');
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
@@ -4586,8 +4586,10 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   $('#zoom').innerHTML=`<button class="ibtn" aria-label="Zoom out" data-z="out">${I('zout',16)}</button><button class="ibtn" aria-label="Reset view" data-z="reset">${I('reset',16)}</button><button class="ibtn" aria-label="Zoom in" data-z="in">${I('zin',16)}</button>`;
   $('#zoom').addEventListener('click',e=>{const z=e.target.closest('[data-z]')?.dataset.z;if(z==='in')chart.zoom(1.25);if(z==='out')chart.zoom(0.8);if(z==='reset'){chart.resetView();chart.req()}});
   restoreInds();restoreTfLast();
-  /* Optimized boot: parallelize universe, quotes, and series with 3.5s timeout to eliminate loader delay */
-  try{await Promise.all([Promise.race([loadUniverse(),new Promise(r=>setTimeout(r,3500))]),Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,3500))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,3500))])])}catch(e){}
+  /* the boot must NEVER block on one fetch: a hanging universe/unquote call used to leave the
+     loader on screen forever - race both with timeouts and swallow failures (they retry later) */
+  try{await Promise.race([loadUniverse(),new Promise(r=>setTimeout(r,10000))])}catch(e){}
+  try{await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])])}catch(e){}
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
   const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'vedic');
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
