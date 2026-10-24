@@ -1668,6 +1668,12 @@ def warm_picks():
 @router.get("/picks")
 def picks(refresh: bool = False):
     ensure_universe()
+    def _public(v):
+        # never publish scan diagnostics (also cleans copies built before this was private)
+        if isinstance(v, dict):
+            v.pop("coverage", None)
+            v.pop("bhav_diag", None)
+        return v
     if os.environ.get("VERCEL"):
         # serverless freezes background threads after the response: build inline within the 30s cap
         if refresh and _allow_refresh("picks", 20, 120):
@@ -1679,20 +1685,20 @@ def picks(refresh: bool = False):
         def build_ok():
             got = shared_cache.get(sk)                                  # another instance already built it
             if got and not refresh and time.time() - got.get("_t", 0) < ttl_s:
-                return got, True
+                return _public(got), True
             if not shared_cache.lock("picks-build", 40):                # someone else is building: serve what exists
                 if got:
-                    return got, True
+                    return _public(got), True
                 time.sleep(4)
                 got = shared_cache.get(sk)
                 if got:
-                    return got, True
+                    return _public(got), True
             v = _picks_compute(22)
             if v["complete"]:
                 v["_t"] = time.time()
                 shared_cache.set(sk, v, 20 * 3600)
             shared_cache.unlock("picks-build")
-            return v, v["complete"]
+            return _public(v), v["complete"]
         try:
             return _cached_ok("picks", 120 if market_open() else 3600, build_ok, short=20)
         except Exception as e:
@@ -1703,11 +1709,11 @@ def picks(refresh: bool = False):
     if d is None or (refresh and _allow_refresh("picks", 20, 120)) or time.time() - _PK["t"] > ttl:
         _picks_kick()                              # stale-while-revalidate: a refresh never blocks the user
     if d is not None:
-        return {**d, "refreshing": _PK["busy"]}
+        return _public({**d, "refreshing": _PK["busy"]})
     _PK["done"].wait(timeout=20)                   # very first load: wait for the full screen, else show what is ready
     if _PK["data"] is not None:
-        return {**_PK["data"], "refreshing": False}
-    return {**_picks_payload(_PK["partial"], _PK["total"], False), "refreshing": True}
+        return _public({**_PK["data"], "refreshing": False})
+    return _public({**_picks_payload(_PK["partial"], _PK["total"], False), "refreshing": True})
 
 
 # ----------------------------- Index F&O calls (Recommendation for the Day) -----------------------------
