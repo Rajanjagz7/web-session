@@ -216,7 +216,7 @@
   }
 
   /* ---------- IPO tab ---------- */
-  const STAGES = [['all', 'All'], ['open', 'Open'], ['upcoming', 'Upcoming'], ['closed', 'Awaiting listing'], ['listed', 'Listed']];
+  const STAGES = [['all', 'All'], ['open', 'Open'], ['upcoming', 'Upcoming'], ['closed', 'Closed'], ['listed', 'Listed']];   /* closed = bidding over, awaiting listing (the card badge says so) */
   const STAGE_TXT = { open: 'Open now', upcoming: 'Upcoming', closed: 'Awaiting listing', listed: 'Listed' };
   function ipoFiltered() {
     const list = (S.ipo && S.ipo.ipos) || [], q = S.q.trim().toLowerCase();

@@ -233,7 +233,11 @@ def _update_gmp_history(rows):
 # ----------------------------------------------------------------------------- NSE
 def _nse(path):
     from nse_service import nse_service
-    return nse_service._get_json("https://www.nseindia.com" + path)
+    try:
+        return nse_service._get_json("https://www.nseindia.com" + path)
+    except Exception:
+        time.sleep(1.5)                                  # NSE throttles datacenter IPs (Vercel): one patient retry
+        return nse_service._get_json("https://www.nseindia.com" + path)
 
 
 def fetch_nse_current():
@@ -477,8 +481,9 @@ def build_ipo_dashboard():
             row["expected_gain_pct"] = round(gm / p * 100, 2)
         row["status"] = _status_of(row, today)
 
+    perf_n = 24 if os.environ.get("VERCEL") else 45      # listing charts: fit the serverless 30 s budget
     with ThreadPoolExecutor(8) as ex:
-        listed = list(ex.map(_listing_perf, past[:45]))
+        listed = list(ex.map(_listing_perf, past[:perf_n]))
     for row in listed:
         row["sme"] = row.get("series") == "SME"
         row["status"] = "listed"
@@ -524,11 +529,37 @@ def _dash_store(data):
 
 
 def _dash_refresh():
-    """Rebuild the dashboard (about 7 s: three slow public sources) and keep a long-lived stale copy beside the fresh one."""
+    """Rebuild the dashboard (about 7 s: three slow public sources) and keep a long-lived stale copy beside the fresh one.
+    If the rebuild comes back degenerate - NSE's current/past-issue APIs are the flakiest part and on datacenter
+    IPs they can both fail while the GMP feed works - the previous good copy's listed/closed rows are carried
+    forward (marked stale) instead of publishing a dashboard that pretends no IPO ever closed."""
     try:
-        data = build_ipo_dashboard()
+        try:
+            data = build_ipo_dashboard()
+        except Exception as e:
+            print(f"[ipo] dashboard build failed: {str(e)[:140]}")
+            data = None
+        prev = shared_cache.get(_DASH_KEY + ":stale")
+        if data and prev and isinstance(prev, dict):
+            have = {(r.get("symbol") or r.get("name") or "").upper() for r in data["ipos"]}
+            for status in ("listed", "closed"):
+                if data["counts"].get(status) == 0 and prev.get("counts", {}).get(status):
+                    keep = [r for r in prev.get("ipos", []) if r.get("status") == status
+                            and (r.get("symbol") or r.get("name") or "").upper() not in have]
+                    if keep:
+                        data["ipos"] = data["ipos"] + keep
+                        data["counts"][status] = len(keep)
+                        data["stale"] = True
+            if data["counts"].get("listed") == 0 and prev.get("stats", {}).get("avg_listing_gain_pct") is not None                     and not data["stats"].get("avg_listing_gain_pct"):
+                data["stats"] = prev["stats"]                      # 120-day stats need history the fresh build lost
         if data:
             _dash_store(data)
+        elif prev:
+            prev = dict(prev)
+            prev["stale"] = True
+            with _mem_lock:
+                _mem[_DASH_KEY] = (time.time() - _DASH_TTL, prev)   # serve it once, then retry the build
+            return prev
         return data
     finally:
         _dash_busy.clear()
@@ -562,7 +593,15 @@ def ipo_dashboard(refresh: bool = False):
                     warm_dashboard()
                 return {**stale, "stale": True}
         _dash_busy.set()
-        return _dash_refresh()
+        fresh = _dash_refresh()
+        if fresh:
+            return fresh
+        stale = shared_cache.get(_DASH_KEY + ":stale")
+        if stale:
+            return {**stale, "stale": True}
+        raise HTTPException(502, "Could not load IPO data - the sources did not respond this time. Try Refresh again in a minute.")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(502, f"Could not load IPO data: {e}")
 
