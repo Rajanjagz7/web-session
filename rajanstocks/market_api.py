@@ -1429,8 +1429,8 @@ _PK = {"data": None, "t": 0.0, "busy": False, "partial": [], "total": 0,
 
 
 def _picks_payload(res, universe, complete):
-    buys = sorted([r for r in res if r["signal"] == "BUY"], key=lambda r: (-r["score"], -r["volx"]))
-    sells = sorted([r for r in res if r["signal"] == "SELL"], key=lambda r: (r["score"], -r["volx"]))
+    buys = sorted([r for r in res if r["signal"] == "BUY"], key=lambda r: (-r.get("score", 0), -r.get("volx", 0)))
+    sells = sorted([r for r in res if r["signal"] == "SELL"], key=lambda r: (r.get("score", 0), -r.get("volx", 0)))
     return {
         "picks": list(res), "buy": buys, "sell": sells, "complete": complete,
         "count": len(res), "universe": universe, "marketOpen": market_open(),
@@ -1441,6 +1441,7 @@ def _picks_payload(res, universe, complete):
 
 PICK_EXTRA_FLOOR_VOL = 25000      # cash-universe liquidity floor: today's traded shares (non-F&O names)
 PICK_EXTRA_FLOOR_LTP = 20         # ...and a minimum price, so penny names stay out of the Stock Trader
+PICK_CASH_MIN_STRENGTH = 55       # cash picks below this confluence strength are dropped (user: show 50-60+ only)
 
 
 def _extra_equity_syms():
@@ -1535,9 +1536,11 @@ def _picks_compute(deadline_s, progress=None):
         if r:
             r["kind"] = "index" if sym in PICK_INDICES else "stock"
             r["universe"] = "fno" if sym in fno_syms else "cash"
-            if sym not in fno_syms:                  # cash universe: liquidity floors keep junk out
+            if sym not in fno_syms:                  # cash universe: liquidity + strength floors keep junk out
                 extra_done.add(sym)
                 if (qs_vol.get(sym) or 0) < PICK_EXTRA_FLOOR_VOL or r["ltp"] < PICK_EXTRA_FLOOR_LTP:
+                    return None
+                if (r.get("strength") or 0) < PICK_CASH_MIN_STRENGTH:
                     return None
         return r
 
@@ -1570,7 +1573,19 @@ def _picks_compute(deadline_s, progress=None):
         done = sum(1 for s in slice_syms if s in extra_done)        # only symbols that actually got data
         nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
         shared_cache.set(f"picks:extra-cursor|{date.today().isoformat()}", nxt, 20 * 3600)
-        out["coverage"] = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt}
+        coverage = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt}
+        # the day's cash picks ACCUMULATE: each build's slice would otherwise replace the previous
+        # one, and strong names found earlier today would vanish from the screen on the next build
+        cash_day_key = f"picks:cash|{date.today().isoformat()}"
+        cash_day = shared_cache.get(cash_day_key) or {}
+        for r in res:
+            if r.get("universe") == "cash" and r.get("score") is not None:
+                cash_day[r["s"]] = r
+        if cash_day:
+            shared_cache.set(cash_day_key, cash_day, 20 * 3600)
+        res = [r for r in res if r.get("universe") != "cash"] +               [r for r in cash_day.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
+        out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
+        out["coverage"] = coverage
     return out
 
 
@@ -1850,9 +1865,11 @@ def quick_screen(symbols, deadline_s=12):
         if r:
             r["kind"] = "index" if sym in PICK_INDICES else "stock"
             r["universe"] = "fno" if sym in fno_syms else "cash"
-            if sym not in fno_syms:                  # cash universe: liquidity floors keep junk out
+            if sym not in fno_syms:                  # cash universe: liquidity + strength floors keep junk out
                 extra_done.add(sym)
                 if (qs_vol.get(sym) or 0) < PICK_EXTRA_FLOOR_VOL or r["ltp"] < PICK_EXTRA_FLOOR_LTP:
+                    return None
+                if (r.get("strength") or 0) < PICK_CASH_MIN_STRENGTH:
                     return None
         return r
 
