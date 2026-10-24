@@ -1466,9 +1466,10 @@ function pwaHidden(){
   if(window.navigator.standalone===true)return true;                 // iOS standalone
   return false}
 function pwaRefresh(){const b=document.getElementById('pwaBtn');if(!b)return;
-  b.innerHTML=I('download',17);
+  try{if(typeof I!=='undefined')b.innerHTML=I('download',17)}catch(e){}   // I lives in the main script block; skip the icon until it exists
   const touch=/android|iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   b.hidden=pwaHidden()||!(PWA.evt||touch)}
+global.pwaRefresh=pwaRefresh;                        // the main block's boot() calls this to size/show the button
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();PWA.evt=e;pwaRefresh()});
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-pwa-btn]'))pwaInstall()});
 pwaRefresh();                                       // the button markup is already parsed at this point
