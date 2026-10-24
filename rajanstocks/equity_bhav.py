@@ -86,7 +86,8 @@ def warm(max_downloads=6, target_sessions=60):
     {"have": n_REAL_sessions_cached (holidays don't count), "target", "downloaded"}."""
     with _lock:
         idx = shared_cache.get("bhav:index") or {}
-        sessions = set(shared_cache.get("bhav:sessions") or [])
+        stored = shared_cache.get("bhav:sessions") or []   # re-read at SET time: another instance may have
+        sessions = set(stored) | set(idx)                  # warmed sessions meanwhile - union, never overwrite
         wanted = _dates_back(max(0, target_sessions - len(sessions)), idx)
         got = misses = 0
         for d in wanted[:max(0, max_downloads)]:
@@ -102,9 +103,10 @@ def warm(max_downloads=6, target_sessions=60):
                 continue                                   # transient: leave unmarked, retry in the next warm()
             if misses >= 8:                                # 8 straight non-sessions = walked past all listings
                 break
+        merged = sorted(set(stored) | sessions)            # union with whatever other instances stored meanwhile
         shared_cache.set("bhav:index", idx, 30 * 86400)
-        shared_cache.set("bhav:sessions", sorted(sessions), 30 * 86400)
-        return {"have": len(sessions), "target": target_sessions, "downloaded": got}
+        shared_cache.set("bhav:sessions", merged, 30 * 86400)
+        return {"have": len(merged), "target": target_sessions, "downloaded": got}
 
 
 _days_cache = {"at": 0.0, "days": None}
