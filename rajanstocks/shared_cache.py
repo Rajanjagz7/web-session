@@ -392,10 +392,17 @@ def diagnose():
 
 
 # ---- one-time move of the saved state to a new Upstash database ----
+def _active_creds():
+    """The database commands currently route to: the primary, or the backup while the primary is refusing."""
+    p, b = _creds(), _backup_creds()
+    return b if (p and b and _FO.get("on")) else p
+
+
 def cleanup_prefix(match, budget_s=20.0):
-    """Delete keys matching `match` (e.g. 'bhav:day|') from the ACTIVE database. About 2 commands per 1000 keys."""
+    """Delete keys matching `match` (e.g. 'bhav:day|') from the ACTIVE database (failover-aware).
+    About 2 commands per 1000 keys."""
     import time as _t
-    c = _creds()
+    c = _active_creds()
     if not c:
         return {"ok": False, "reason": "no Upstash configured"}
     t0, cur, n = _t.time(), "0", 0
