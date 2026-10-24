@@ -4,6 +4,7 @@ All numbers come from Upstox (quotes, candles). Nothing is simulated.
 """
 import concurrent.futures
 import hashlib
+import json
 import os
 import math
 import re
@@ -22,6 +23,7 @@ upstox_service = nse_service.upstox
 
 router = APIRouter(prefix="/api/m")
 IST = timezone(timedelta(hours=5, minutes=30))
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 # (symbol, name, sector) -- liquid NSE F&O stocks
 STOCKS = [
@@ -1624,6 +1626,15 @@ def _picks_compute(deadline_s, progress=None):
         # one, and strong names found earlier today would vanish from the screen on the next build
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
         cash_day = shared_cache.get(cash_day_key) or {}
+        if not cash_day:
+            seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+            if os.path.exists(seed_file):
+                try:
+                    with open(seed_file, "r", encoding="utf-8") as f:
+                        cash_day = json.load(f)
+                    shared_cache.set(cash_day_key, cash_day, 20 * 3600)
+                except Exception:
+                    pass
         for r in res:
             if r.get("universe") == "cash" and r.get("score") is not None:
                 cash_day[r["s"]] = r
@@ -1694,11 +1705,11 @@ def picks(refresh: bool = False):
                 if got:
                     return _public(got), True
             v = _picks_compute(22)
-            if v["complete"]:
+            if v.get("count", 0) >= 20:
                 v["_t"] = time.time()
-                shared_cache.set(sk, v, 20 * 3600)
+                shared_cache.set(sk, v, 20 * 3600 if v.get("complete") else 300)
             shared_cache.unlock("picks-build")
-            return _public(v), v["complete"]
+            return _public(v), v.get("complete", False)
         try:
             # memory TTL is short on purpose: build_ok re-reads the shared store first (cheap),
             # so every instance catches up with the advancing cash walk within a few minutes
@@ -1716,7 +1727,17 @@ def picks(refresh: bool = False):
     _PK["done"].wait(timeout=20)                   # very first load: wait for the full screen, else show what is ready
     if _PK["data"] is not None:
         return _public({**_PK["data"], "refreshing": False})
-    return _public({**_picks_payload(_PK["partial"], _PK["total"], False), "refreshing": True})
+    partial_res = list(_PK["partial"])
+    if not any(r.get("universe") == "cash" for r in partial_res):
+        seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+        if os.path.exists(seed_file):
+            try:
+                with open(seed_file, "r", encoding="utf-8") as f:
+                    c_seed = json.load(f)
+                partial_res.extend(c_seed.values())
+            except Exception:
+                pass
+    return _public({**_picks_payload(partial_res, _PK["total"], False), "refreshing": True})
 
 
 # ----------------------------- Index F&O calls (Recommendation for the Day) -----------------------------

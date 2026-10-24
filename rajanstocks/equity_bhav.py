@@ -113,7 +113,7 @@ def warm(max_downloads=6, target_sessions=60):
 _days_cache = {"at": 0.0, "days": None}
 
 
-def load_days(max_age=300):
+def load_days(max_age=1800):
     """All cached session day-dicts in ONE read pass ({date: {SYMBOL: row}}) - a build scanning
     120 extras would otherwise spend ~50 GETs per symbol on the shared store (the primary Upstash
     just hit its request limit; every command counts). Cached in memory for max_age seconds."""
@@ -121,11 +121,11 @@ def load_days(max_age=300):
     if _days_cache["days"] is not None and now - _days_cache["at"] < max_age:
         return _days_cache["days"]
     sessions = shared_cache.get("bhav:sessions") or []
-    days = {}
-    for d in sessions:
-        day = shared_cache.get(f"bhav:day2|{d}") or {}
-        if day:
-            days[d] = day
+    if not sessions:
+        return {}
+    keys = [f"bhav:day2|{d}" for d in sessions]
+    fetched = shared_cache.get_many(keys)
+    days = {d: fetched[f"bhav:day2|{d}"] for d in sessions if f"bhav:day2|{d}" in fetched}
     _days_cache["at"] = now
     _days_cache["days"] = days
     return days

@@ -260,7 +260,7 @@ def _dec(s):
 # Upstash budget (free plan: 500K commands a month). Only values that are expensive to rebuild AND worth sharing between
 # server copies go to Redis; everything else (prices, candles, quote copies, observer, research proxy) stays in this
 # instance's memory + /tmp disk. Durable state (auto trader, stock trader, push) uses its own keys, not this module.
-REMOTE_PREFIXES = ("picks|", "ipo:")
+REMOTE_PREFIXES = ("picks|", "picks:", "ipo:", "bhav:", "bt:", "backtest_")
 REMOTE_LOCKS = ("auto-cycle", "stockbot-cycle")
 _MEM = {}
 
