@@ -1615,7 +1615,6 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const exitRows = Object.entries(byExit).sort((a, b) => b[1].n - a[1].n).map(([k, v]) =>
        `<tr class="${exitFilter === k ? 'sel' : ''}"><td>${E(k)}</td><td class="num">${v.n}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num">${v.n ? Math.round(v.w / v.n * 100) : 0}%</td></tr>`).join('');
      const exFiltered = exitFilter ? closedAutoAll.filter(t => exKey(t) === exitFilter) : closedAutoAll;
-     const exPg = pagerBar(exFiltered, 'algoexP');
 
      return `<div class="jv-grid">
        <div class="card"><div class="card-h"><h3>🤖 Auto Trader Status</h3></div>
@@ -1637,8 +1636,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">how every auto trade ended, and what it returned</span></div>
        <div class="jv-pos-bar">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}<span class="muted" style="font-size:12px">${closedAutoAll.length} closed auto trades</span></div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Exit</th><th class="num">Trades</th><th class="num">Net P&L</th><th class="num">Win %</th></tr></thead><tbody>${exitRows || '<tr><td colspan="4" class="muted">No closed auto trades yet.</td></tr>'}</tbody></table></div>
-       ${exPg.part.length ? tradeTable(exPg.part, true, 'algoex') : ''}
-       ${exFiltered.length ? exPg.bar : ''}
+       ${exFiltered.length ? tradeTable(exFiltered, true, 'algoex') : ''}
      </div>`;
    }
 
