@@ -2258,7 +2258,7 @@ function countdown(ms){if(ms<0)ms=0;const s=Math.floor(ms/1000),h=Math.floor(s/3
 /* ======================= App state ======================= */
 const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000000,positions:[],orders:[],history:[],alerts:[],notes:[],unread:0,
   btab:'positions',book:'book',tape:[],tk:{side:'buy',type:'market',qty:10,price:'',tp:false,tpPx:'',sl:false,slPx:'',tsl:false,tslV:'',tslU:'pct',tif:'Day'},
-  mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
+  mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
 async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path+' '+r.status);return r.json()}
@@ -2943,15 +2943,16 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
 
   const hp=PK_HZ[App.pk.hz]&&p.plans?p.plans[PK_HZ[App.pk.hz][0]]:null,hs=hp&&hp.side!=='WAIT'?hp.side:null;   // a chosen horizon decides the direction shown
   const L=hs?hs==='BUY':p.signal!=='SELL';p=hs?Object.assign({},p,{signal:hs}):p;
+  const cash=p.universe==='cash';
   return`<article class="pk">
-   <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}</small></div>
+   <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}${cash?' · <span class="ipf-tag main">CASH</span>':''}</small></div>
     <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
    <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
    <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
-   <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
+   <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':cash?L?'<b>Buy (cash)</b> with the plan&rsquo;s stop and targets':'<b>Sell (cash)</b> with the plan&rsquo;s stop and targets':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
    ${pkPlans(p)}
    <ul class="pk-why">${p.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>No strong trend, volume or range signal today</li>'}</ul>
-   <div class="pk-f"><span class="muted">R:R ${p.rr} · RSI ${p.rsi??'—'} · Vol ${p.volx}×</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button> <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button> <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
+   <div class="pk-f"><span class="muted">R:R ${p.rr} · RSI ${p.rsi??'—'} · Vol ${p.volx}×</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button>${cash?'':` <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button>`} <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
   </article>`}
 /* per-horizon plan: Intraday (today, square off 15:15) · Swing (days) · Positional (weeks) - each with its own stop / targets */
 const PK_HZ={INTRA:['intraday','Intraday'],SWING:['swing','Swing'],POS:['positional','Positional']};
@@ -3000,6 +3001,7 @@ function mountOverview(){const host=$('#ovChart');if(!host)return;const s=SYM(OV
 document.addEventListener('click',e=>{const a=e.target.closest('[data-ovs],[data-ovr]');if(!a)return;
   if(a.dataset.ovs)OV.sym=a.dataset.ovs;else OV.rng=+a.dataset.ovr;renderPicks()});
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
+  (P&&P.picks||[]).forEach(p=>{if(p.universe==='cash'&&!SYM(p.s))SYMS.push({s:p.s,n:p.n||p.s,cls:'Stocks',last:p.ltp,prev:p.prev,dp:2});});   // cash names: SYM lookups, chart switching and paper pricing work
   const idx=['NIFTY','BANKNIFTY','SENSEX','FINNIFTY'].map(k=>SYM(k)).filter(Boolean);
   const idxHtml=idx.map(s=>`<button class="ix" data-sym="${esc(s.s)}"><small>${esc(s.n)}</small><b class="num" data-px="${esc(s.s)}"></b><span class="num" data-chg="${esc(s.s)}"></span></button>`).join('');
   let body;
@@ -3015,6 +3017,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
         return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})}
     else if(f.sig==='BUY')l=P.buy.slice();else if(f.sig==='SELL')l=P.sell.slice();else if(f.sig==='EVERY')l=P.picks.slice();else l=P.buy.concat(P.sell);
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
+    if(f.mkt==='FNO')l=l.filter(p=>p.universe!=='cash');else if(f.mkt==='CASH')l=l.filter(p=>p.universe==='cash');
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
     const SORTS={strength:(a,b)=>(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
     
@@ -3031,7 +3034,8 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
     const pager=pages>1?`<div class="pager"><button class="btn-xs" data-pkpage="${f.page-1}" ${f.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===f.page?'pri':''}" data-pkpage="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-pkpage="${f.page+1}" ${f.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
-    body=l.length?`<p class="muted pk-meta">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · indices first · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:'<div class="empty">No instruments match this filter right now.</div>'}
+    const cov=P&&P.coverage?` · cash-universe coverage ${P.coverage.extra_done}/${P.coverage.extra_total} listed stocks today`:'';   // the whole-market walk advances each refresh
+    body=l.length?`<p class="muted pk-meta">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · indices first · showing ${f.page*size+1}–${f.page*size+part.length}${cov}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:'<div class="empty">No instruments match this filter right now.</div>'}
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
@@ -3039,11 +3043,11 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed — showing last session'}${P&&P.asOf?' · screened '+new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):''}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    <div class="ixs">${idxHtml}</div>
    <div id="pkGodseye" class="pk-ge"></div>
-   <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>
+   <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div></div>
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    
    ${body}
-   <p class="disc">Rule-based screen of liquid NSE F&amp;O stocks using trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI. Levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
+   <p class="disc">Rule-based screen of the whole listed NSE market: the F&amp;O universe first (option trades), then every other listed equity (cash-only picks for the Stock Trader) as the scan walks through it. Trend (20/50-day EMA), position in today’s range, volume vs 20-day average and RSI; levels use ATR. This is a screening aid, not investment advice — trades here are paper trades only.</p>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});

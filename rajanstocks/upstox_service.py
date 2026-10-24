@@ -409,9 +409,15 @@ class UpstoxService:
                 elif u in names:
                     stocks[u] = names[u]
             self._fo = {"stocks": stocks, "indices": sorted(indices), "lots": lots}
+            self._eq_names = names                     # every NSE_EQ name (also non-F&O) - the cash-universe scan needs it
         except Exception:
             self._eq_keys = {}
         return self._eq_keys
+
+    def eq_names(self):
+        """{SYMBOL: company name} for every listed NSE equity (F&O or not), or {} until the master loads."""
+        self._load_equity_keys()
+        return getattr(self, "_eq_names", None) or {}
 
     @staticmethod
     def _normal_expiry(value):

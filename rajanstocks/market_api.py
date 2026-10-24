@@ -216,6 +216,9 @@ def ensure_universe():
         for sym, nm, sec in new:
             NAME[sym] = nm
             SECTOR[sym] = sec
+        for sym, nm in nse_service.upstox.eq_names().items():   # every listed NSE equity (also non-F&O):
+            if sym not in NAME:                                  # quotes/plans for the cash-universe Picks
+                NAME[sym] = _nice(nm, sym)                       # and the stock trader work on any instance
         _uni["t"] = time.time()
     except Exception as exc:
         print("[universe] refresh failed:", exc)
@@ -1436,9 +1439,29 @@ def _picks_payload(res, universe, complete):
     }
 
 
+PICK_EXTRA_FLOOR_VOL = 25000      # cash-universe liquidity floor: today's traded shares (non-F&O names)
+PICK_EXTRA_FLOOR_LTP = 20         # ...and a minimum price, so penny names stay out of the Stock Trader
+
+
+def _extra_equity_syms():
+    """Every listed NSE equity NOT in the F&O universe, sorted, with names registered - the Picks
+    screen scans these after the F&O set so the Stock Trader sees candidates from the whole market."""
+    try:
+        eq = nse_service.upstox._load_equity_keys() or {}
+        names = nse_service.upstox.eq_names()
+        fno = {s for s, _, _ in STOCKS} | set(PICK_INDICES)
+        return sorted(((s, names.get(s) or s) for s in eq if s not in fno), key=lambda x: x[0])
+    except Exception:
+        return []
+
+
 def _picks_compute(deadline_s, progress=None):
     """Screen indices first, then the curated liquid stocks, then the rest. Rate-limited requests are
-    retried and swept again in a gentle second pass, so a symbol is never silently dropped."""
+    retried and swept again in a gentle second pass, so a symbol is never silently dropped.
+    After the F&O set, the scan continues into the WHOLE listed NSE market (cash universe) with a
+    per-day cursor in shared cache: every build advances the frontier, the daily candle cache makes
+    already-scanned symbols free, and rows are tagged universe=fno/cash so the Stock Trader can
+    act on strong non-F&O stocks."""
     up = nse_service.upstox
     keymap = {}
     for s in list(PICK_INDICES) + [s for s, _, _ in STOCKS]:
@@ -1446,9 +1469,32 @@ def _picks_compute(deadline_s, progress=None):
             keymap[_key(s)] = s
         except Exception:
             pass
+    fno_n = len(keymap)
+    extra = _extra_equity_syms()
+    cursor = int(shared_cache.get(f"picks:extra-cursor|{date.today().isoformat()}") or 0)
+    if cursor >= len(extra):
+        cursor = 0                                   # a fresh day re-walks the market (daily cache makes it cheap)
+    # pace the walk: each NEW symbol needs its own daily-candle call from Upstox, and the shared
+    # rate budget is finite - a small batch per build (the daily candle cache makes repeats free,
+    # so the frontier advances build over build until the whole market is covered for the day)
+    take = 0 if not extra else min(len(extra) - cursor, 25 if os.environ.get("VERCEL") else 60)
+    slice_syms = [s for s, _nm in extra[cursor:cursor + take]]
+    for s in slice_syms:                             # one batched quotes call covers all of them (500/batch)
+        try:
+            keymap.setdefault(_key(s), s)
+        except Exception:
+            pass
     qs = up._full_quotes(list(keymap.keys()))
+    qs_vol = {}                                          # today's traded shares, keyed by SYMBOL (the floors look up by symbol)
+    for k, q in qs.items():
+        o = q.get("ohlc") or {}
+        v = _num(q.get("volume")) or _num(o.get("volume"))
+        qs_vol[k] = v
+        if k in keymap:
+            qs_vol[keymap[k]] = v
     deadline = time.time() + deadline_s
     _PK["total"] = len(keymap)
+    _PK["coverage"] = {"fno": fno_n, "extra_total": len(extra), "extra_from": cursor, "extra_to": cursor + take}
 
     today_s = date.today().isoformat()
     pre = shared_cache.get_many([f"dc|{k}|{today_s}" for k in keymap])       # ONE Redis command for every symbol
@@ -1463,6 +1509,8 @@ def _picks_compute(deadline_s, progress=None):
         return rows
 
     failed = {}
+    fno_syms = set(PICK_INDICES) | {s for s, _, _ in STOCKS}
+    extra_done = set()                               # extras that got data this build (cursor advances past them)
 
     @bg
     def one(item):
@@ -1486,6 +1534,11 @@ def _picks_compute(deadline_s, progress=None):
         r = _pick(sym, q, rows)
         if r:
             r["kind"] = "index" if sym in PICK_INDICES else "stock"
+            r["universe"] = "fno" if sym in fno_syms else "cash"
+            if sym not in fno_syms:                  # cash universe: liquidity floors keep junk out
+                extra_done.add(sym)
+                if (qs_vol.get(sym) or 0) < PICK_EXTRA_FLOOR_VOL or r["ltp"] < PICK_EXTRA_FLOOR_LTP:
+                    return None
         return r
 
     res = []
@@ -1509,7 +1562,13 @@ def _picks_compute(deadline_s, progress=None):
         run(retry, 3)
     if progress:
         progress(res)
-    return _picks_payload(res, len(keymap), len(res) >= 0.95 * len(keymap))
+    out = _picks_payload(res, len(keymap), len(res) >= 0.95 * len(keymap))
+    if extra:
+        done = sum(1 for s in slice_syms if s in extra_done)        # only symbols that actually got data
+        nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
+        shared_cache.set(f"picks:extra-cursor|{date.today().isoformat()}", nxt, 20 * 3600)
+        out["coverage"] = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt}
+    return out
 
 
 def _picks_run():
@@ -1787,6 +1846,11 @@ def quick_screen(symbols, deadline_s=12):
         r = _pick(sym, q, rows)
         if r:
             r["kind"] = "index" if sym in PICK_INDICES else "stock"
+            r["universe"] = "fno" if sym in fno_syms else "cash"
+            if sym not in fno_syms:                  # cash universe: liquidity floors keep junk out
+                extra_done.add(sym)
+                if (qs_vol.get(sym) or 0) < PICK_EXTRA_FLOOR_VOL or r["ltp"] < PICK_EXTRA_FLOOR_LTP:
+                    return None
         return r
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
