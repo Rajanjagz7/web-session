@@ -3626,7 +3626,7 @@ async function rztLoad(){RZT.busy=true;RZT.err='';const b=$('#opRzt');if(b)b.inn
     RZT.d=await api('/api/m/rzt?'+q)}catch(e){RZT.d=null;RZT.err=(e&&e.message)||'Z Trend unavailable'}
   RZT.busy=false;const b2=$('#opRzt');if(b2)b2.innerHTML=vxRztCard()}
 function vxRztCard(){const d=RZT.d;
-  const head=`<section class="vx-card"><h3>Z Trend <span class="muted" style="font-weight:400">· ${esc((d&&d.series)||RZT.sym)} 5m${d&&d.session?` · ${esc(d.session)}`:''}</span></h3>`;
+  const head=`<section class="vx-card"><h3>Z Trend <span class="muted" style="font-weight:400">· ${esc((d&&d.series)||RZT.sym)} 5m${d&&d.session?` · ${esc(d.session)}`:''}${d&&d.stale?' · <span style="color:var(--warn,#f5b942)">stale</span>':''}</span></h3>`;
   if(RZT.err)return head+`<p class="vx-note">${esc(RZT.err)}</p></section>`;
   if(!d)return head+`<p class="vx-note">${RZT.busy?'Loading…':'Waiting for data'}</p></section>`;
   const up=d.state==='BUY',stc=up?'b-up':d.state==='SELL'?'b-down':'b-mute';

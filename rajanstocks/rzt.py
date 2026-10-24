@@ -272,7 +272,11 @@ def _hm(m):
 
 
 def _bars(symbol="", ikey="", tf="5m", recent=5):
-    r = market_api.candles(symbol=symbol, ikey=ikey, tf=tf, frm="", to="", recent=recent) or {}
+    try:
+        r = market_api.candles(symbol=symbol, ikey=ikey, tf=tf, frm="", to="", recent=recent) or {}
+    except Exception:
+        time.sleep(0.6)                                    # Upstox throttles in bursts: one patient retry
+        r = market_api.candles(symbol=symbol, ikey=ikey, tf=tf, frm="", to="", recent=recent) or {}
     out = []
     for b in r.get("bars") or []:
         t = datetime.fromtimestamp(b["t"] / 1000, IST)
@@ -423,15 +427,21 @@ def rzt(symbol: str = "NIFTY", mode: str = "underlying", strike: float = 0, tf: 
     k = (symbol.upper(), mode, strike, tf, ln, mult, flt, sw)
     hit = _cache.get(("rzt:ro", k))
     ttl = 90 if market_api.market_open() else 600
-    if refresh or not hit or time.time() - hit[0] > ttl:
-        try:
-            r = readout(symbol, mode, strike or None, tf, ln, mult, flt, sw)
-        except ValueError as e:
-            raise HTTPException(400, str(e))
-        except Exception as e:
-            raise HTTPException(502, f"Z Trend unavailable: {str(e)[:160]}")
+    if not refresh and hit and time.time() - hit[0] <= ttl:
+        return hit[1]
+    try:
+        r = readout(symbol, mode, strike or None, tf, ln, mult, flt, sw)
         _cache[("rzt:ro", k)] = (time.time(), r)
+        _cache[("rzt:stale", k)] = (time.time(), r)        # last good copy: served when a rebuild fails
         if len(_cache) > 400:
             _cache.clear()
         return r
-    return hit[1]
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        stale = _cache.get(("rzt:stale", k)) or hit
+        if stale and time.time() - stale[0] < 6 * 3600:
+            out = dict(stale[1])
+            out["stale"] = True
+            return out                                     # degrade to the last good readout, never 502
+        raise HTTPException(502, f"Z Trend unavailable: {str(e)[:160]}")
