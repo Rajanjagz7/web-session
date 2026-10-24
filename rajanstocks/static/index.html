@@ -2628,8 +2628,13 @@ function renderAlerts(){$('#v-alerts').innerHTML=`<div class="page">${pageHead('
 let VD={data:null,busy:false,err:null,symbol:(()=>{try{return localStorage.getItem('vx-symbol')||'NIFTY'}catch(e){return 'NIFTY'}})()};
 const VX_INDICES=[['NIFTY','Nifty 50'],['SENSEX','BSE Sensex'],['BANKNIFTY','Nifty Bank']];
 async function loadVedic(refresh){if(VD.busy)return;VD.busy=true;VD.err=null;
-  try{VD._ts=Date.now();VD.data=await Promise.race([api('/api/vedic/report?symbol='+VD.symbol+(refresh?'&refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))]);if(!VD.data||!VD.data.header||!Array.isArray(VD.data.watch_windows))throw new Error('bad report')}
-  catch(e){VD.err='Could not load the Vedic Astro report. Try again in a moment.'}
+  try{VD._ts=Date.now();VD.data=await Promise.race([api('/api/vedic/report?symbol='+VD.symbol+(refresh?'&refresh=true':'')),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),20000))]);if(!VD.data||!VD.data.header||!Array.isArray(VD.data.watch_windows))throw new Error('bad report');VD._retries=0}
+  catch(e){
+    /* a cold server can miss the 20s window (ephemeris + market context on first build) - retry on our own
+       instead of leaving the page on the error shell; only give up after two automatic retries */
+    VD.data=null;VD._retries=(VD._retries||0)+1;
+    if(VD._retries<=2){VD.busy=false;setTimeout(()=>{if(App.view==='vedic'&&!VD.busy&&VD._retries<=2)loadVedic(false)},VD._retries===1?5000:12000);return}
+    VD.err='Could not load the Vedic Astro report. Try again in a moment.'}
   VD.busy=false}
 function vdField(label,f,fmt){if(!f)return'';
   const v=f.available?(fmt?fmt(f.value):esc(f.value)):`<span class="muted" title="${esc(f.reason||'Not available')}">N/A</span>`;
