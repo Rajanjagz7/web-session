@@ -1483,7 +1483,7 @@ def _picks_compute(deadline_s, progress=None):
     if extra:
         import equity_bhav
         try:
-            bhav_diag = equity_bhav.warm(max_downloads=4 if os.environ.get("VERCEL") else 10, target_sessions=60)
+            bhav_diag = equity_bhav.warm(max_downloads=8 if os.environ.get("VERCEL") else 10, target_sessions=60)
         except Exception as e:
             bhav_diag = {"error": str(e)[:140]}
         bhav = bhav_diag if (isinstance(bhav_diag, dict) and bhav_diag.get("have", 0) >= 25) else None
