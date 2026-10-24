@@ -1633,8 +1633,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
        <div class="card"><div class="card-h"><h3>📊 Backtest Results</h3></div>${btCard}</div>
      </div>
-     <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">how every auto trade ended, and what it returned</span></div>
-       <div class="jv-pos-bar">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}<span class="muted" style="font-size:12px">${closedAutoAll.length} closed auto trades</span></div>
+     <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">exit breakdown · ${closedAutoAll.length} closed</span></div>
+       <div class="jv-exitf">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}</div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Exit</th><th class="num">Trades</th><th class="num">Net P&L</th><th class="num">Win %</th></tr></thead><tbody>${exitRows || '<tr><td colspan="4" class="muted">No closed auto trades yet.</td></tr>'}</tbody></table></div>
        ${exFiltered.length ? tradeTable(exFiltered, true, 'algoex') : ''}
      </div>`;
@@ -1696,6 +1696,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
   .jv-chip{height:24px;padding:0 9px;border-radius:12px;border:0;background:var(--brand-2,rgba(79,142,247,.15));color:var(--brand,#4f8ef7);font-size:11.5px;font-weight:600;cursor:pointer}
   .jv .card{margin-bottom:10px}.jv .card-h{padding:8px 12px}.jv .card-h h3{font-size:13.5px}
+  .jv .card-h h3{white-space:nowrap}.jv .card-h{flex-wrap:wrap}.jv .card-h .muted{min-width:0}
   .jv-t{font-size:12.5px}.jv-t th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;cursor:help;padding:6px 8px;position:sticky;top:0;background:var(--panel)}
   .jv-t td{padding:5px 8px;vertical-align:middle}.jv-t td.num,.jv-t th.num{text-align:right}
   .jv-sym b{display:block;font-size:12.5px;max-width:230px;overflow:hidden;text-overflow:ellipsis}.jv-sym small{display:block;font-size:10.5px;color:var(--text-3,#8a93a6);max-width:230px;overflow:hidden;text-overflow:ellipsis}
@@ -1718,8 +1719,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   @media(max-width:1100px){.jv-books{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .jv-tot td{border-top:2px solid var(--line)}.jv-sbh{margin:12px 14px 4px;font-size:13px}.jv-sbr{margin:8px 14px 12px;font-size:12px}.jv-sbr pre{white-space:pre-wrap;font-size:11.5px;color:var(--text-2)}
   .jv-pos-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 10px}.jv-sidesw button small{opacity:.7;margin-left:2px}.jv-sidesw button.buy.on{background:color-mix(in srgb,var(--up,#22ab94) 22%,transparent);color:var(--up,#22ab94)}.jv-sidesw button.sell.on{background:color-mix(in srgb,var(--down,#f7525f) 22%,transparent);color:var(--down,#f7525f)}
-  .jv-btcsel{gap:6px}.jv-btcsel button{height:26px;padding:0 10px;border:1px solid var(--line,#223052);border-radius:8px;background:none;color:var(--text-2,#93a4bf);font:inherit;font-size:11.5px;cursor:pointer}
-  .jv-btcsel button.on{background:var(--brand,#2f81f7);border-color:var(--brand,#2f81f7);color:#fff}
+  .jv-btcsel,.jv-exitf{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 14px}
+  .jv-btcsel button,.jv-exitf button{height:26px;padding:0 10px;border:1px solid var(--line,#223052);border-radius:8px;background:none;color:var(--text-2,#93a4bf);font:inherit;font-size:11.5px;cursor:pointer}
+  .jv-btcsel button.on,.jv-exitf button.on{background:var(--brand,#2f81f7);border-color:var(--brand,#2f81f7);color:#fff}
+  .jv-exitf button.on{border-color:var(--up,#22ab94);background:color-mix(in srgb,var(--up,#22ab94) 20%,transparent);color:var(--up,#22ab94)}
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
   .jv-hr{display:flex;align-items:center;gap:10px;margin-left:auto}
