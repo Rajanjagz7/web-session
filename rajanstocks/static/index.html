@@ -2794,7 +2794,7 @@ function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
     ${vxDayPower(r.day_power)}${vxAstroSlices(r.astro_slices)}
-    <section class="vx-card"><h3>Session timeline (IST)</h3>${vxSpecial(r.special_timing)}${vxTimeline(r.watch_windows)}${vxWinCards(r.watch_windows)}</section>${vdNewsPanel(4)}`}
+    <section class="vx-card"><h3>Special timing (IST)</h3>${vxSpecial(r.special_timing)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
   return `<div class="vx-grid2"><section class="vx-card"><h3>Panchang · Mumbai</h3><div class="vx-pan">
