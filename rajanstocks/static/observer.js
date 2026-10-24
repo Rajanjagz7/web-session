@@ -58,10 +58,7 @@
   }
 
   function howCard(m) {
-    if (!m) return '';
-    return `<details class="ob-how"><summary>How is this made?</summary>
-      <ol><li><b>Data.</b> ${esc(m.source)}</li><li><b>Score.</b> ${esc(m.summary)}</li><li><b>Label.</b> ${esc(m.label)}</li>${m.action ? `<li><b>Action.</b> ${esc(m.action)}</li>` : ''}<li><b>Divergence ⚡.</b> ${esc(m.divergence)}</li><li><b>Sparkline.</b> ${esc(m.sparkline)}</li></ol>
-      <p class="ob-note">${esc(m.note)}</p></details>`;
+    return '';
   }
 
   function paint(host) {
@@ -201,7 +198,7 @@
   .ob-pbar{position:relative;height:8px;border-radius:4px;background:var(--panel-2,rgba(255,255,255,.07))}.ob-pbar b{position:absolute;top:0;bottom:0;border-radius:4px;max-width:50%}.ob-pbar b.up{background:var(--up,#22ab94)}.ob-pbar b.down{background:var(--down,#f7525f)}
   .ob-part em{font-style:normal;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}.ob .up{color:var(--up,#22ab94)}.ob .down{color:var(--down,#f7525f)}
   .ob-why{grid-column:1/-1;margin:0;padding-left:18px;font-size:12.5px;color:var(--text-2,inherit);display:grid;gap:3px}
-  .ob-how{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 14px}.ob-how summary{padding:13px 0;font-weight:700;font-size:13.5px;cursor:pointer}
+  .ob-how{display:none !important;margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 14px}.ob-how summary{padding:13px 0;font-weight:700;font-size:13.5px;cursor:pointer}
   .ob-how ol{margin:0 0 8px;padding-left:20px;font-size:13px;line-height:1.55;color:var(--text-2,inherit)}.ob-note{margin:0 0 14px;font-size:12px;color:var(--text-3,#8a93a6)}
   .ob-empty{padding:30px 16px;text-align:center;color:var(--text-3,#8a93a6);background:var(--panel);border:1px dashed var(--line);border-radius:14px}
   .ob-legacy{margin:18px 0 90px;text-align:center}.ob-page{padding-top:8px}

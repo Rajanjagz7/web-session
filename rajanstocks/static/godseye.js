@@ -134,19 +134,9 @@
   }
 
   function howItWorks() {
-    return `<details class="gx-how" ${G.how ? 'open' : ''}><summary>How the score is made</summary>
-      <p>Each market gets a score from −10 to +10 built from its own daily price history. Every part is measured in ATRs (average daily range), so a quiet index and a volatile coin are judged on the same scale.</p>
-      <table class="gx-ht"><thead><tr><th>Part</th><th>What it reads</th><th class="r">Points</th></tr></thead><tbody>
-        <tr><td>Price vs 20-day EMA</td><td>How far price is above or below its 20-day average</td><td class="r">±1</td></tr>
-        <tr><td>20 vs 50-day EMA</td><td>Whether the short trend is above the longer trend</td><td class="r">±1</td></tr>
-        <tr><td>Momentum (RSI 14)</td><td>RSI above or below 50</td><td class="r">±2</td></tr>
-        <tr><td>MACD histogram</td><td>Whether momentum is accelerating up or down</td><td class="r">±2</td></tr>
-        <tr><td>5-day move</td><td>The last week's move compared with normal daily range</td><td class="r">±2</td></tr>
-        <tr><td>Place in 20-day range</td><td>Near the 20-day high (+) or low (−)</td><td class="r">±2</td></tr></tbody></table>
-      <p><b>Bias:</b> +2.5 or more is BULLISH, −2.5 or less is BEARISH, anything between is NEUTRAL. <b>⚡ Divergence:</b> price makes a new high (low) but RSI does not; flagged when it happened in the last 10 sessions.</p></details>`;
+    return '';
   }
 
-  /* ---------- page ---------- */
   /* God's Eye lives inside the Picks page (#pkGodseye); the old standalone view still works if it is ever shown. */
   function host() {
     if (typeof App === 'undefined') return null;
@@ -261,7 +251,7 @@
   .gx-pill{font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:6px;background:var(--panel-2);color:var(--text-2)}
   .gx-pill.gx-bull{background:var(--up-bg);color:var(--up)}.gx-pill.gx-bear{background:var(--down-bg);color:var(--down)}
   .gx-dv{font-weight:700;font-size:12px}.gx-dv.bearish{color:var(--down)}.gx-dv.bullish{color:var(--up)}
-  .gx-how{margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 16px;font-size:13px;color:var(--text-2)}
+  .gx-how{display:none !important;margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 16px;font-size:13px;color:var(--text-2)}
   .gx-how summary{cursor:pointer;font-weight:700;color:var(--text)}.gx-how p{line-height:1.55}
   .gx-ht{width:100%;border-collapse:collapse;font-size:12.5px}.gx-ht th,.gx-ht td{padding:6px 8px;border-top:1px solid var(--line);text-align:left}.gx-ht .r{text-align:right}
   body.gx-noscroll{overflow:hidden}
