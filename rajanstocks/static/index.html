@@ -1010,6 +1010,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
   <div class="hdr-r">
     <span class="live" id="liveBox"><i id="liveDot"></i><span id="liveTxt">…</span></span>
     <button class="pf-chip" id="pfChip" data-view="journal" aria-label="Portfolio value - open the journal"></button>
+    <button class="ibtn" id="pwaBtn" data-pwa-btn hidden aria-label="Install Rajan Algo app" title="Install the app on this device"></button>
     <button class="ibtn" id="bellBtn" aria-label="Notifications"></button>
     <button class="ibtn" id="themeBtn" aria-label="Toggle theme"></button>
   </div>
@@ -1454,6 +1455,42 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
   if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+
+/* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
+   Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
+   running as the installed app. ---------- */
+const PWA={evt:null};
+function pwaHidden(){
+  try{const s=localStorage.getItem('pwa-hide');if(s&&Date.now()-(+s)<7*864e5)return true}catch(e){}
+  if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)return true;
+  if(window.navigator.standalone===true)return true;                 // iOS standalone
+  return false}
+function pwaRefresh(){const b=document.getElementById('pwaBtn');if(!b)return;
+  b.innerHTML=I('download',17);
+  const touch=/android|iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  b.hidden=pwaHidden()||!(PWA.evt||touch)}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();PWA.evt=e;pwaRefresh()});
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-pwa-btn]'))pwaInstall()});
+pwaRefresh();                                       // the button markup is already parsed at this point
+window.addEventListener('appinstalled',()=>{try{localStorage.setItem('pwa-hide',String(Date.now()))}catch(e){}PWA.evt=null;pwaRefresh();toast('Rajan Algo installed — find it on your home screen','ok')});
+function pwaInstall(){
+  if(PWA.evt){const e=PWA.evt;PWA.evt=null;e.prompt();
+    e.userChoice&&e.userChoice.then(r=>{if(r&&r.outcome==='dismissed'){try{localStorage.setItem('pwa-hide',String(Date.now()-4*864e5))}catch(x){}}pwaRefresh()});return}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const shareI=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px"><path d="M12 15V3"/><path d="m8 6 4-3 4 3"/><path d="M6 10H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1"/></svg>`;
+  const bg=document.createElement('div');bg.className='sheet-bg';
+  bg.innerHTML=`<div class="sheet"><div class="grab"></div><b style="font-size:16px">Install Rajan Algo on your home screen</b>
+    ${ios?`<ol style="margin:10px 0 4px;padding-left:20px;line-height:2">
+      <li>Tap the <b>Share</b> button ${shareI} in Safari's toolbar</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b></li>
+      <li>Tap <b>Add</b> — the app opens full-screen from your home screen, with notifications</li></ol>`
+    :`<ol style="margin:10px 0 4px;padding-left:20px;line-height:2">
+      <li>Open your browser's menu (⋮ or ⋯)</li>
+      <li>Tap <b>Install app</b> or <b>Add to Home screen</b></li></ol>
+      <p class="muted" style="font-size:12px">Your browser will trigger the one-tap installer automatically once it offers it.</p>`}
+    <button class="btn pri" style="width:100%;margin-top:8px" data-pwa="close">Got it</button></div>`;
+  bg.addEventListener('click',e=>{if(e.target===bg||e.target.closest('[data-pwa="close"]'))bg.remove()});
+  document.body.appendChild(bg)}
 /* system notification through the service worker — works on Android Chrome, desktop and installed PWAs */
 function showSystem(n,title,body){return swReg().then(reg=>{const o={body:body||'',tag:n.id,icon:'/icon-192.png',badge:'/icon-192.png',data:{url:'/',nid:n.id},renotify:false};
   if(reg&&reg.showNotification)return reg.showNotification(title,o);
@@ -4504,6 +4541,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
 /* ======================= Boot ======================= */
 (async function boot(){loadPaper();loadTrades();rehydrateMeta();setInterval(()=>{if(!document.hidden)pollOptPositions()},8000);let th='dark';try{th=localStorage.getItem('mer-theme')||th}catch(e){}document.documentElement.dataset.theme=th;readTheme();
   $('#logoI').innerHTML=I('trendup',16,2.4);$('#searchI').innerHTML=I('search',15);$('#themeBtn').innerHTML=I(th==='dark'?'sun':'moon');renderBell();renderNav();
+  $('#pwaBtn').innerHTML=I('download',17);pwaRefresh();window.addEventListener('resize',pwaRefresh);
   chart=new Chart($('#chart'),{onTool:()=>renderTools(),onLegend:(uid,a)=>{const i=chart.ind.findIndex(x=>x.uid===uid);if(i<0)return;
       if(a==='hide'){chart.ind[i].hidden=!chart.ind[i].hidden;chart.lgDirty=true;chart.req();saveInds()}else if(a==='rm'){const n=DEFS[chart.ind[i].key].name;chart.ind.splice(i,1);chart.indChanged();renderToolbar();toast(n+' removed')}else indSettings(uid)},
     onLineDrag:ln=>{ln.label=ln.label.replace(/^(TP|SL) .*/,(m,k)=>k+' '+chart.fmt(ln.price))},
