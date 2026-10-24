@@ -103,7 +103,8 @@ def warm(max_downloads=6, target_sessions=60):
                 continue                                   # transient: leave unmarked, retry in the next warm()
             if misses >= 8:                                # 8 straight non-sessions = walked past all listings
                 break
-        merged = sorted(set(stored) | sessions)            # union with whatever other instances stored meanwhile
+        latest = set(shared_cache.get("bhav:sessions") or [])   # re-read AT SET time: another instance may
+        merged = sorted(latest | sessions | set(stored))        # have warmed sessions during our downloads
         shared_cache.set("bhav:index", idx, 30 * 86400)
         shared_cache.set("bhav:sessions", merged, 30 * 86400)
         return {"have": len(merged), "target": target_sessions, "downloaded": got}
