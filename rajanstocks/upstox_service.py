@@ -379,11 +379,21 @@ class UpstoxService:
     def _load_equity_keys(self):
         if getattr(self, "_eq_keys", None):
             return self._eq_keys
-        # a failing 2MB master download must not hang every caller: after one failure,
-        # back off for 90 s and answer from the (empty) cache while the retry waits
         if getattr(self, "_eq_fail_until", 0) > time.time():
             return getattr(self, "_eq_keys", None) or {}
-        import gzip, json
+        import gzip, json, zlib
+        cache_f = os.path.join(shared_cache._DISK, "upstox_nse_cache.z")
+        try:
+            if os.path.exists(cache_f) and time.time() - os.path.getmtime(cache_f) < 12 * 3600:
+                with open(cache_f, "rb") as f:
+                    cd = json.loads(zlib.decompress(f.read()).decode())
+                self._eq_keys = cd.get("eq_keys") or {}
+                self._fo = cd.get("fo") or {}
+                self._eq_names = cd.get("eq_names") or {}
+                if self._eq_keys:
+                    return self._eq_keys
+        except Exception:
+            pass
         try:
             resp = self.session.get(
                 "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz",
@@ -415,6 +425,13 @@ class UpstoxService:
             self._fo = {"stocks": stocks, "indices": sorted(indices), "lots": lots}
             self._eq_names = names                     # every NSE_EQ name (also non-F&O) - the cash-universe scan needs it
             self._eq_fail_until = 0
+            try:
+                os.makedirs(shared_cache._DISK, exist_ok=True)
+                with open(cache_f + ".tmp", "wb") as f:
+                    f.write(zlib.compress(json.dumps({"eq_keys": self._eq_keys, "fo": self._fo, "eq_names": self._eq_names}, separators=(",", ":")).encode(), 6))
+                os.replace(cache_f + ".tmp", cache_f)
+            except Exception:
+                pass
         except Exception:
             self._eq_keys = {}
             self._eq_fail_until = time.time() + 90     # stop the 20 s download retries from stacking up

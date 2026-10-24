@@ -69,7 +69,7 @@
       (d ? `<span class="ob-badge ${d.marketOpen ? 'on' : ''}"><i></i>${d.marketOpen ? 'Market Open' : 'Market Closed'}</span><span class="ob-upd">Updated: ${esc(stamp(d))}</span>` : '') +
       `<button type="button" class="ob-ref" data-ob-refresh title="Refresh now" aria-label="Refresh">${O.busy ? '…' : '↻'}</button>`
     );
-    const head = `<div class="ob-head"><h2><span class="ob-eye">👁</span> <span class="ob-grad">GOD'S EYE</span> <small>— The Observer</small></h2>
+    const head = `<div class="ob-head"><h2><svg viewBox="0 0 48 28" class="ob-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg><span class="ob-grad">GOD'S EYE</span> <small>— The Observer</small></h2>
       ${meta ? `<div class="ob-meta">${meta}</div>` : ''}</div>`;
     let body;
     if (!d && O.busy) body = `<div class="ob-grid">${Array.from({ length: 8 }, () => '<div class="ob-card ob-skel"></div>').join('')}</div>`;
@@ -167,10 +167,10 @@
   .ob-lv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.ob-lv small{display:block;font-size:10.5px;color:var(--text-3,#8a93a6)}.ob-lv em{font-style:normal;font-weight:700;font-size:13px}
   @media(max-width:520px){.ob-lv{grid-template-columns:1fr 1fr}.ob-lv>div:last-child{grid-column:1/-1}}
   .ob-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:4px 0 14px}
-  .ob-head h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .ob-head h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .ob-head h2 small{font-size:15px;font-weight:600;color:var(--text-3,#8a93a6)}
   .ob-grad{background:linear-gradient(90deg,#7c9cff,#9b7cff 45%,#34d6a0);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .ob-eye{font-size:24px}
+  .ob-eye{width:34px;height:20px;color:var(--brand,#2563eb);flex-shrink:0;vertical-align:middle;display:inline-block;margin-right:2px}
   .ob-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--text-3,#8a93a6)}
   .ob-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:14px;font-weight:700;background:var(--panel-2,rgba(255,255,255,.06));color:var(--text-2,inherit)}
   .ob-badge i{width:8px;height:8px;border-radius:50%;background:var(--text-3,#8a93a6)}
