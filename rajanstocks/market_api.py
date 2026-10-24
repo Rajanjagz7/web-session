@@ -1700,7 +1700,10 @@ def picks(refresh: bool = False):
             shared_cache.unlock("picks-build")
             return _public(v), v["complete"]
         try:
-            return _cached_ok("picks", 120 if market_open() else 3600, build_ok, short=20)
+            # memory TTL is short on purpose: build_ok re-reads the shared store first (cheap),
+            # so every instance catches up with the advancing cash walk within a few minutes
+            # instead of serving its own hour-old copy on a closed day
+            return _cached_ok("picks", 120 if market_open() else 240, build_ok, short=20)
         except Exception as e:
             raise HTTPException(502, f"Picks failed: {e}")
 
