@@ -373,8 +373,8 @@ def intraday_cands(syms=None, fresh_min=15):
 
 @router.get("/rzt")
 def rzt(symbol: str = "NIFTY", mode: str = "underlying", strike: float = 0, tf: str = "5m",
-        ln: int = Query(14, min=2, max=100), mult: float = Query(2.0, min=.5, max=6),
-        flt: int = Query(1, ge=0, le=1), sw: int = Query(5, min=2, max=30), refresh: bool = False):
+        ln: int = Query(14, ge=2, le=100), mult: float = Query(2.0, ge=.5, le=6),
+        flt: int = Query(1, ge=0, le=1), sw: int = Query(5, ge=2, le=30), refresh: bool = False):
     """Live Z Trend readout for the Trade > Signals card."""
     mode = mode.lower() if mode.lower() in ("underlying", "ce", "pe") else "underlying"
     tf = tf if tf in ("1m", "3m", "5m", "15m") else "5m"
