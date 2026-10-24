@@ -1479,15 +1479,14 @@ def _picks_compute(deadline_s, progress=None):
     # pace the walk: each NEW symbol needs its own daily-candle call from Upstox, and the shared
     # rate budget is finite - a small batch per build (the daily candle cache makes repeats free,
     # so the frontier advances build over build until the whole market is covered for the day)
-    bhav = None
+    bhav = bhav_diag = None
     if extra:
         import equity_bhav
         try:
-            bhav = equity_bhav.warm(max_downloads=4 if os.environ.get("VERCEL") else 10, target_sessions=60)
-        except Exception:
-            bhav = None
-        if bhav and bhav["have"] < 25:
-            bhav = None                                  # not enough sessions warmed yet for >=25 bars
+            bhav_diag = equity_bhav.warm(max_downloads=4 if os.environ.get("VERCEL") else 10, target_sessions=60)
+        except Exception as e:
+            bhav_diag = {"error": str(e)[:140]}
+        bhav = bhav_diag if (isinstance(bhav_diag, dict) and bhav_diag.get("have", 0) >= 25) else None
     take = 0 if not (extra and bhav) else min(len(extra) - cursor, 120 if os.environ.get("VERCEL") else 300)
     slice_syms = [s for s, _nm in extra[cursor:cursor + take]]
     for s in slice_syms:                             # one batched quotes call covers all of them (500/batch)
@@ -1590,7 +1589,7 @@ def _picks_compute(deadline_s, progress=None):
         nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
         shared_cache.set(f"picks:extra-cursor|{date.today().isoformat()}", nxt, 20 * 3600)
         coverage = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt,
-                    "bhav": bhav, "failed": len(failed)}
+                    "bhav": bhav, "bhav_diag": bhav_diag, "failed": len(failed)}
         # the day's cash picks ACCUMULATE: each build's slice would otherwise replace the previous
         # one, and strong names found earlier today would vanish from the screen on the next build
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
