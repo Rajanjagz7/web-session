@@ -1507,6 +1507,7 @@ def _picks_compute(deadline_s, progress=None):
     _PK["coverage"] = {"fno": fno_n, "extra_total": len(extra), "extra_from": cursor, "extra_to": cursor + take}
 
     today_s = date.today().isoformat()
+    today_iso = today_s
     pre = shared_cache.get_many([f"dc|{k}|{today_s}" for k in keymap])       # ONE Redis command for every symbol
 
     def daily(k):
@@ -1537,6 +1538,16 @@ def _picks_compute(deadline_s, progress=None):
             if bhav_days is None:
                 bhav_days = equity_bhav.load_days()  # one shared-store read per session for the WHOLE build
             rows = equity_bhav.history(sym, days=bhav_days)
+            if rows is not None and market_open():   # LIVE data guarantee: during the session the bhavcopy
+                o = q.get("ohlc") or {}              # history ends at yesterday - append TODAY's live bar so
+                ltp_now = _num(q.get("last_price"))  # the cash indicators are as fresh as the F&O ones
+                if ltp_now > 0:
+                    vol_now = _num(q.get("volume")) or _num(o.get("volume"))
+                    hi_q = _num(o.get("high")) or ltp_now
+                    lo_q = _num(o.get("low")) or ltp_now
+                    op_q = _num(o.get("open")) or ltp_now
+                    rows = rows + [{"date": today_iso, "open": op_q, "high": max(hi_q, ltp_now),
+                                    "low": min(lo_q, ltp_now), "close": ltp_now, "volume": vol_now}]
             if rows is None:
                 failed[k] = sym                      # bhav not warmed for this session count yet: retry next build
                 return None

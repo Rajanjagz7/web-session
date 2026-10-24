@@ -199,6 +199,7 @@
   .ob-empty{padding:30px 16px;text-align:center;color:var(--text-3,#8a93a6);background:var(--panel);border:1px dashed var(--line);border-radius:14px}
   .ob-legacy{margin:18px 0 90px;text-align:center}.ob-page{padding-top:8px}
   @media (max-width:900px){.ob-grid{grid-template-columns:repeat(2,1fr)}.ob-detail{grid-template-columns:1fr}}
+  @media (max-width:600px){.ob-grid{grid-template-columns:1fr}.ob-score{font-size:38px}}
   @media (max-width:430px){.ob-head h2{font-size:22px}.ob-score{font-size:30px}.ob-card{padding:12px 11px 10px}.ob-kv{grid-template-columns:repeat(2,1fr)}.ob-part{grid-template-columns:80px 1fr 36px}}
   `;
   document.head.appendChild(st);
