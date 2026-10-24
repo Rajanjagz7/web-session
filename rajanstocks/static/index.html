@@ -657,6 +657,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-expc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.opx-expc::-webkit-scrollbar{display:none}
 .opx-chip{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--text-2);font:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
 .opx-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.opx-chip.xp{border-style:dashed;color:var(--text-3)}.opx-chip.xp.on{border-style:solid;color:#fff}
 .opx-expsel{height:30px;font-weight:500;font-size:12.5px;max-width:130px}
 .opx-act{display:flex;gap:6px;margin-left:auto}
 .opx-fbtn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);font:inherit;font-weight:600;font-size:13px;cursor:pointer}
@@ -3303,7 +3304,7 @@ function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.t
       <div class="opx-und"><select class="opx-sel" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
         <div class="opx-spot" id="opxSpot"></div></div>
       <div class="opx-exp"><span class="opx-lbl">Expiry</span><div class="opx-expc" id="opxExp"></div><select class="opx-sel opx-expsel" id="optExp" aria-label="All expiries"></select></div>
-      <div class="opx-act"><button class="opx-fbtn" id="opxXp" data-opx="oldexp" title="Review an old (expired) expiry: what did each contract do afterwards?" aria-pressed="${OPT.xpOn?'true':'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Old expiry</span></button><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
+      <div class="opx-act"><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
         <button class="opx-ib" id="optRef" title="Refresh chain" aria-label="Refresh chain">↻</button></div>
     </div>
     <div class="opx-sum" id="opxSum"></div>
@@ -3453,8 +3454,7 @@ document.addEventListener('click',e=>{const pgb=e.target.closest('[data-blpg]');
   if(e.target.closest('[data-act="buylist"]')){if(opxMobile())opxTab('signals');else{opxWtab('signals');const p=document.querySelector('.opx-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})}}});
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
   if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
-  const xs=$('#optExp');if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('');
-  const xc=$('#opxExp');if(xc)xc.innerHTML=c.expiries.slice(0,4).map(e=>`<button class="opx-chip ${e===c.expiry?'on':''}" data-opx="exp:${e}">${fmtExp(e)}</button>`).join('');
+  drawExpCtl(c);xpEnsureExps();
   const und=SYMS.find(x=>x.s===c.symbol),uch=und&&und.prev>0?und.last/und.prev-1:null,sp=$('#opxSpot');
   if(sp)sp.innerHTML=`<b class="num">${fmtP(c.spot)}</b>${uch==null?'':`<span class="num ${cls(uch)}">${pct(uch)}</span>`}<small>${MKT.open?'Live':'Last session'} · ${new Date(c.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</small>${und?`<span class="opx-ohl num"><span>O <b data-open="${esc(und.s)}">${fmtP(und.open,und.dp)}</b></span><span>H <b class="up" data-high="${esc(und.s)}">${fmtP(und.hi,und.dp)}</b></span><span>L <b class="down" data-low="${esc(und.s)}">${fmtP(und.lo,und.dp)}</b></span><span>Prev <b data-prev="${esc(und.s)}">${fmtP(und.prev,und.dp)}</b></span></span>`:''}`;
   const S=opxSummary(c),sm=$('#opxSum');
@@ -3582,7 +3582,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(
     if(hit)selectOption(hit[0],hit[1]);else toast('That contract is on another underlying or expiry - pick it from the chain','info')}
   else if(k==='span'){OPT.f.span=+a;OPT.span=+a;opxSave();opxBadge();$('#opxFp').innerHTML=opxFilterHtml();drawChain()}
   else if(k==='freset'){OPT.f=Object.assign({},OPXF_DEF);OPT.span=OPT.f.span;opxSave();opxBadge();$('#opxFp').innerHTML=opxFilterHtml();drawChain()}
-  else if(k==='exp'){if(OPT.chain&&a===OPT.chain.expiry)return;OPT.expiry=a;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
+  else if(k==='exp'){xpPickExpiry(a)}
   else if(k==='mtab')opxTab(a);
   else if(k==='wtab')opxWtab(a);
   else if(k==='stab')opxStab(a);
@@ -3651,16 +3651,39 @@ function vxRztCard(){const d=RZT.d;
    <div class="rz-chips">${chip('Price',fmtP(d.price))}${chip('Stop (line)',d.sl!=null?fmtP(d.sl):'—','down')}${chip('Resistance',d.resistance!=null?fmtP(d.resistance):'—','down')}${chip('Support',d.support!=null?fmtP(d.support):'—','up')}</div>
    ${lf}${tbl}</section>`}
 setInterval(()=>{try{if(App.view==='options'&&!document.hidden&&$('#opRzt')&&!$('#opRzt').hidden&&!RZT.busy){RZT.d=null;rztLoad()}}catch(e){}},180000);
+/* ---- Expiry controls: live expiries + old (expired) ones from the diary, all in the filter row ---- */
+let XPB={sym:'',exps:null,exp:'',book:null,strike:'',leg:'CE',daily:null,busy:false,err:''};
+function drawExpCtl(c){const past=(XPB.sym===c.symbol&&XPB.exps?XPB.exps.filter(e=>e.passed):[]),rev=OPT.xpOn?XPB.exp:'';
+  const xs=$('#optExp');
+  if(xs)xs.innerHTML=c.expiries.map(e=>`<option value="${e}" ${!rev&&e===c.expiry?'selected':''}>${fmtExp(e)} ${e.slice(0,4)}</option>`).join('')+
+    (past.length?`<optgroup label="Old (expired) · review">${past.slice(-12).reverse().map(e=>`<option value="${e.expiry}" ${rev===e.expiry?'selected':''}>⏳ ${fmtExp(e.expiry)} ${e.expiry.slice(0,4)} · past</option>`).join('')}</optgroup>`:'');
+  const xc=$('#opxExp');
+  if(xc)xc.innerHTML=c.expiries.slice(0,3).map(e=>`<button class="opx-chip ${!rev&&e===c.expiry?'on':''}" data-opx="exp:${e}">${fmtExp(e)}</button>`).join('')+
+    past.slice(-3).reverse().map(e=>`<button class="opx-chip xp ${rev===e.expiry?'on':''}" data-opx="exp:${e.expiry}" title="Old expiry review · what did each contract do?">⏳ ${fmtExp(e.expiry)}</button>`).join('');
+}
+async function xpEnsureExps(){const sym=OPT.sym||'NIFTY';
+  if(XPB.sym!==sym){XPB.sym=sym;XPB.exps=null;XPB.exp='';XPB.book=null;XPB.daily=null;XPB.strike='';XPB.err=''}
+  if(XPB.exps)return;
+  try{const r=await api('/api/m/expiries?symbol='+encodeURIComponent(sym));if(OPT.sym!==sym)return;
+    XPB.exps=r.expiries||[];const passed=XPB.exps.filter(e=>e.passed);XPB.exp=passed.length?passed[passed.length-1].expiry:''}
+  catch(e){XPB.err=(e&&e.message)||'Expiry diary unavailable'}
+  const c=OPT.chain;if(c)drawExpCtl(c)}
+function xpPickExpiry(e){if(!e)return;
+  const past=XPB.sym===OPT.sym&&XPB.exps?XPB.exps.find(x=>x.expiry===e&&x.passed):null;
+  if(!past){                                                        // a live expiry: normal chain, leave review mode
+    if(OPT.chain&&e===OPT.chain.expiry&&!OPT.xpOn)return;
+    OPT.expiry=e;OPT.sel=null;OPT.osym=null;OPT.chain=null;OPT.xpOn=false;const p=$('#optExpired');if(p)p.hidden=true;
+    drawChain();drawDetail();loadChain(true);return}
+  if(OPT.xpOn&&XPB.exp===e)return;                                  // already reviewing this one
+  OPT.xpOn=true;const p=$('#optExpired');if(p)p.hidden=false;
+  XPB.exp=e;XPB.book=null;XPB.daily=null;XPB.err='';drawExpCtl(OPT.chain||{symbol:OPT.sym,expiry:OPT.expiry,expiries:[]});
+  xpLoadBook()}
 /* ---- Old expiry review: what did an expired contract actually do? The expiry diary (expiry_book.py) recorded every
    contract key while it traded; pick an old expiry + strike + CE/PE and its daily candles load from that key. ---- */
-let XPB={sym:'',exps:null,exp:'',book:null,strike:'',leg:'CE',daily:null,busy:false,err:''};
 async function xpLoad(){if(XPB.busy)return;const box=$('#optExpired');if(!box)return;
-  const sym=OPT.sym||'NIFTY';
-  if(XPB.sym!==sym){XPB.sym=sym;XPB.exps=null;XPB.exp='';XPB.book=null;XPB.daily=null;XPB.err=''}
-  if(!XPB.exps){XPB.busy=true;box.innerHTML='<div class="xp-h">Old expiry review</div><p class="muted" style="padding:0 14px 10px">Loading recorded expiries…</p>';
-    try{const r=await api('/api/m/expiries?symbol='+encodeURIComponent(sym));XPB.exps=r.expiries||[];const passed=XPB.exps.filter(e=>e.passed);XPB.exp=passed.length?passed[passed.length-1].expiry:'';}
-    catch(e){XPB.err=(e&&e.message)||'Expiry diary unavailable'}XPB.busy=false}
-  xpPaint();if(XPB.exp&&!XPB.book)xpLoadBook()}
+  XPB.busy=true;box.innerHTML='<div class="xp-h">Old expiry review</div><p class="muted" style="padding:0 14px 10px">Loading recorded expiries…</p>';
+  await xpEnsureExps();XPB.busy=false;
+  if(XPB.exp&&XPB.exps&&!XPB.book)xpLoadBook();else xpPaint()}
 async function xpLoadBook(){const box=$('#optExpired');XPB.busy=true;XPB.daily=null;xpPaint();
   try{XPB.book=await api('/api/m/expired?symbol='+encodeURIComponent(XPB.sym)+'&expiry='+encodeURIComponent(XPB.exp));XPB.err='';
     const near=XPB.book.rows&&XPB.book.rows.length?XPB.book.rows.reduce((a,b)=>Math.abs(b.strike-(XPB.book.spotAt||0))<Math.abs(a.strike-(XPB.book.spotAt||0))?b:a):null;
@@ -3675,10 +3698,7 @@ async function xpLoadDaily(){XPB.busy=true;XPB.daily=null;xpPaint();
   catch(e){XPB.daily=[];XPB.err=(e&&e.message)||'Candles unavailable for this contract'}
   XPB.busy=false;xpPaint()}
 function xpPaint(){const box=$('#optExpired');if(!box)return;
-  const exps=(XPB.exps||[]),passed=exps.filter(e=>e.passed),live=exps.filter(e=>!e.passed);
-  const opt=(e,sel)=>`<option value="${esc(e.expiry)}" ${e.expiry===sel?'selected':''}>${esc(fmtExp(e.expiry))}${e.passed?' · past':' · live'} · ${e.strikes} strikes</option>`;
-  let html=`<div class="xp-h">⏳ Old expiry review · ${esc(XPB.sym)}</div><div class="xp-f">
-    <select class="inp" id="xpExp" aria-label="Expiry">${passed.map(e=>opt(e,XPB.exp)).join('')}${live.map(e=>opt(e,XPB.exp)).join('')}</select>
+  let html=`<div class="xp-h">⏳ Old expiry review · ${esc(XPB.sym)} ${XPB.exp?'· '+esc(fmtExp(XPB.exp)):''}</div><div class="xp-f">
     <select class="inp" id="xpLeg" aria-label="CE or PE">${['CE','PE'].map(s=>`<option ${XPB.leg===s?'selected':''}>${s}</option>`).join('')}</select>
     <select class="inp" id="xpStrike" aria-label="Strike">${(XPB.book&&XPB.book.rows||[]).map(r=>`<option value="${r.strike}" ${String(r.strike)===XPB.strike?'selected':''}>${fmtP(r.strike,r.strike%1?2:0)}</option>`).join('')}</select>
     <button class="btn-xs pri" data-xp="go">${XPB.busy?'Loading…':'Show'}</button></div>`;
@@ -3715,7 +3735,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opt]');if(
   if(e.target.id==='optRef'){OPT.chain=null;drawChain();loadChain(true)}});
 document.addEventListener('change',e=>{const id=e.target.id;
   if(id==='optSym'){OPT.sym=e.target.value;OPT.expiry='';OPT.sel=null;OPT.osym=null;OPT.chain=null;OPT.shell=false;TC._userEdited=false;drawChain();drawDetail();loadChain(true)}
-  else if(id==='optExp'){OPT.expiry=e.target.value;OPT.sel=null;OPT.osym=null;OPT.chain=null;drawChain();drawDetail();loadChain(true)}
+  else if(id==='optExp'){xpPickExpiry(e.target.value)}
   else if(id==='optSpan'){OPT.span=parseInt(e.target.value);drawChain()}});
 
 
