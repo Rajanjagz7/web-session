@@ -3011,7 +3011,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   else{let l;
     const hzKey=f.hz!=='ALL'?{INTRA:'intraday',SWING:'swing',POS:'positional'}[f.hz]:null;
     if(hzKey){   /* a horizon is chosen: Buy / Sell follow THAT horizon's own plan, so intraday and positional lists differ */
-      l=P.picks.filter(p=>{if(p.kind==='index')return f.sig!=='SELL'||p.signal==='SELL';const x=p.plans&&p.plans[hzKey];
+      l=P.picks.filter(p=>{if(p.kind==='index')return f.hz==='ALL'&&(f.sig!=='SELL'||p.signal==='SELL');const x=p.plans&&p.plans[hzKey];
         if(!x)return f.sig==='BUY'?p.signal==='BUY'&&p[hzKey]==='Bullish':f.sig==='SELL'?p.signal==='SELL'&&p[hzKey]==='Bearish':p[hzKey]!=='Neutral';
         if(f.sig==='EVERY')return true;if(x.side==='WAIT')return false;if(x.ok===false)return false;if(x.ok===undefined&&p[hzKey]==='Neutral')return false;   // each horizon's own entry test
         return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})}

@@ -1521,9 +1521,11 @@ def _picks_compute(deadline_s, progress=None):
     failed = {}
     fno_syms = set(PICK_INDICES) | {s for s, _, _ in STOCKS}
     extra_done = set()                               # extras that got data this build (cursor advances past them)
+    bhav_days = None                                 # loaded once per build: 1 GET per session, not per symbol
 
     @bg
     def one(item):
+        nonlocal bhav_days
         k, sym = item
         q = qs.get(k)
         if not q:
@@ -1532,7 +1534,9 @@ def _picks_compute(deadline_s, progress=None):
             failed[k] = sym
             return None
         if sym not in fno_syms and bhav:
-            rows = equity_bhav.history(sym)          # whole-market history from ONE bhavcopy download set
+            if bhav_days is None:
+                bhav_days = equity_bhav.load_days()  # one shared-store read per session for the WHOLE build
+            rows = equity_bhav.history(sym, days=bhav_days)
             if rows is None:
                 failed[k] = sym                      # bhav not warmed for this session count yet: retry next build
                 return None

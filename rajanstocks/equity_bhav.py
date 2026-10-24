@@ -107,17 +107,37 @@ def warm(max_downloads=6, target_sessions=60):
         return {"have": len(sessions), "target": target_sessions, "downloaded": got}
 
 
-def history(symbol, window=60):
+_days_cache = {"at": 0.0, "days": None}
+
+
+def load_days(max_age=300):
+    """All cached session day-dicts in ONE read pass ({date: {SYMBOL: row}}) - a build scanning
+    120 extras would otherwise spend ~50 GETs per symbol on the shared store (the primary Upstash
+    just hit its request limit; every command counts). Cached in memory for max_age seconds."""
+    now = time.time()
+    if _days_cache["days"] is not None and now - _days_cache["at"] < max_age:
+        return _days_cache["days"]
+    sessions = shared_cache.get("bhav:sessions") or []
+    days = {}
+    for d in sessions:
+        day = shared_cache.get(f"bhav:day2|{d}") or {}
+        if day:
+            days[d] = day
+    _days_cache["at"] = now
+    _days_cache["days"] = days
+    return days
+
+
+def history(symbol, window=60, days=None):
     """Daily rows (oldest -> newest) for one symbol from the cached bhavcopy sessions, in the
     shape the Picks screen consumes ({date, open, high, low, close, volume}). None when the
     history is not warmed yet or the symbol has too few sessions."""
-    sessions = shared_cache.get("bhav:sessions") or []
-    if len(sessions) < 25:
+    days = days if days is not None else load_days()
+    if not days:
         return None                                        # history not warmed yet
     rows = []
-    for d in sorted(sessions):
-        day = shared_cache.get(f"bhav:day2|{d}") or {}
-        r = day.get(symbol)
+    for d in sorted(days):
+        r = days[d].get(symbol)
         if r and r.get("volume"):
             rows.append(r)
     if len(rows) < 25:
