@@ -46,7 +46,7 @@ MIN_DTE = 3                                 # the live trader buys the nearest e
 SKIP_KEYS = {"vix-range", "volume-buzzer-15m", "volume-buzzer-daily", "potential-breakout"}   # not directional entries
 
 _tl = threading.local()          # the as-of replay must only affect the backtest thread
-_state = {"running": False, "progress": "", "result": None, "started": 0.0, "error": None}
+_state = {"running": False, "progress": "", "result": None, "started": 0.0, "error": None, "cleared": False}
 _lock = threading.Lock()
 
 
@@ -246,6 +246,7 @@ def collect_signals(runners, syms, full, progress=None, orig_daily=None):
     istops = {}         # (key, sym) -> {date: the indicator's own stop, when it gives one}
     total = len(runners) * len(syms) * len(ASOF_OFFSETS)
     done = 0
+    t_start = time.time()
     bar_source.daily_bars = replay
     try:
         for off in ASOF_OFFSETS:
@@ -253,8 +254,19 @@ def collect_signals(runners, syms, full, progress=None, orig_daily=None):
             for key, fn in runners.items():
                 for s in syms:
                     done += 1
-                    if progress and done % 25 == 0:
-                        progress(f"replaying strategies {done}/{total}")
+                    if progress and (done % 10 == 0 or done == total):
+                        pct = int((done / total) * 100)
+                        el = max(0.1, time.time() - t_start)
+                        rate = done / el
+                        rem_s = max(0, int((total - done) / rate)) if rate > 0 else 0
+                        progress({
+                            "pct": pct,
+                            "done": done,
+                            "total": total,
+                            "elapsed": int(el),
+                            "eta": rem_s,
+                            "msg": f"{pct}% ({done}/{total} combinations) · ~{rem_s}s remaining"
+                        })
                     try:
                         r = fn(s, 400)
                         rows = r.get("bars") or []
@@ -476,7 +488,7 @@ def _worker():
 # never replace the FULL result that drives the auto trader's proven / research selection
 CACHE_KEY_CUSTOM = "backtest_result_custom_v1"
 OUT_FILE_CUSTOM = os.path.join(HERE, "static", "backtest_custom.json")
-_custom = {"running": False, "progress": "", "result": None, "error": None, "started": 0.0}
+_custom = {"running": False, "progress": "", "result": None, "error": None, "started": 0.0, "cleared": False}
 
 
 def _worker_custom(only):
@@ -504,12 +516,14 @@ def start_custom(only):
     with _lock:
         if _custom["running"]:
             return False
-        _custom.update(running=True, started=time.time(), error=None, progress="starting", result=None)
+        _custom.update(running=True, started=time.time(), error=None, progress="starting", result=None, cleared=False)
     threading.Thread(target=_worker_custom, args=(sorted(set(only)),), daemon=True, name="backtest-custom").start()
     return True
 
 
 def custom_get():
+    if _custom.get("cleared"):
+        return {"running": False, "progress": "", "pct": 0, "eta": 0, "error": None, "elapsed": 0, "result": None, "cleared": True}
     if _custom["result"] is None:
         try:
             _custom["result"] = shared_cache.get(CACHE_KEY_CUSTOM)
@@ -521,23 +535,33 @@ def custom_get():
                 _custom["result"] = json.load(f)
         except Exception:
             pass
-    return {"running": _custom["running"], "progress": _custom["progress"], "error": _custom["error"],
+    prog = _custom["progress"]
+    prog_str = prog if isinstance(prog, str) else (prog.get("msg") if isinstance(prog, dict) else "")
+    prog_pct = prog.get("pct", 0) if isinstance(prog, dict) else (100 if _custom["result"] else 0)
+    eta = prog.get("eta", 0) if isinstance(prog, dict) else 0
+    return {"running": _custom["running"], "progress": prog_str, "pct": prog_pct, "eta": eta, "error": _custom["error"],
             "elapsed": round(time.time() - _custom["started"], 0) if _custom["running"] else 0,
-            "result": _custom["result"]}
+            "result": _custom["result"], "cleared": False}
 
 
 def start(force=False):
     with _lock:
         if _state["running"]:
             return False
-        if not force and _state["result"] is not None:
+        if not force and _state["result"] is not None and not _state.get("cleared"):
             return False
-        _state.update(running=True, started=time.time(), error=None, progress="starting")
+        _state.update(running=True, started=time.time(), error=None, progress="starting", cleared=False)
+        try:
+            shared_cache.set("bt:cleared", None, 1)
+        except Exception:
+            pass
     threading.Thread(target=_worker, daemon=True, name="backtest").start()
     return True
 
 
 def get():
+    if _state.get("cleared") or shared_cache.get("bt:cleared"):
+        return {"running": False, "progress": "", "pct": 0, "eta": 0, "error": None, "elapsed": 0, "result": None, "cleared": True}
     if _state["result"] is None:
         try:
             _state["result"] = shared_cache.get(CACHE_KEY)
@@ -549,9 +573,13 @@ def get():
                 _state["result"] = json.load(f)
         except Exception:
             pass
-    return {"running": _state["running"], "progress": _state["progress"], "error": _state["error"],
+    prog = _state["progress"]
+    prog_str = prog if isinstance(prog, str) else (prog.get("msg") if isinstance(prog, dict) else "")
+    prog_pct = prog.get("pct", 0) if isinstance(prog, dict) else (100 if _state["result"] else 0)
+    eta = prog.get("eta", 0) if isinstance(prog, dict) else 0
+    return {"running": _state["running"], "progress": prog_str, "pct": prog_pct, "eta": eta, "error": _state["error"],
             "elapsed": round(time.time() - _state["started"], 0) if _state["running"] else 0,
-            "result": _state["result"]}
+            "result": _state["result"], "cleared": False}
 
 
 def proven_scores():
@@ -586,8 +614,17 @@ def api_reset():
     """Journal 'Reset': drop the stored full result (shared store + local file) so nothing is shown until a fresh run."""
     with _lock:
         _state["result"] = None
+        _state["cleared"] = True
+        _state["running"] = False
+        _state["progress"] = ""
+        _custom["result"] = None
+        _custom["cleared"] = True
+        _custom["running"] = False
+        _custom["progress"] = ""
     try:
         shared_cache.set(CACHE_KEY, None, 1)
+        shared_cache.set(CACHE_KEY_CUSTOM, None, 1)
+        shared_cache.set("bt:cleared", True, 86400)
     except Exception:
         pass
     try:
@@ -595,7 +632,12 @@ def api_reset():
             os.remove(OUT_FILE)
     except Exception:
         pass
-    return {"ok": True}
+    try:
+        if os.path.exists(OUT_FILE_CUSTOM):
+            os.remove(OUT_FILE_CUSTOM)
+    except Exception:
+        pass
+    return {"ok": True, "reset": True}
 
 
 @router.get("/custom")

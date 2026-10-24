@@ -966,7 +966,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     try {
       if (which === 'auto') SV.auto = await jget('/api/auto/status');
       else if (which === 'btc') { SV.btc = await jget('/api/backtest/custom'); SV.btcBusy = !!SV.btc.running; if (SV.btcBusy) setTimeout(() => { if (effTab() === 'algo' && !document.hidden) loadSrv('btc'); }, 5000); }
-      else { const b = await jget('/api/backtest'); SV.bt = b; SV.btBusy = !!b.running; }
+      else { const b = await jget('/api/backtest'); SV.bt = b; SV.btBusy = !!b.running; if (SV.btBusy) setTimeout(() => { if (effTab() === 'algo' && !document.hidden) loadSrv('bt'); }, 2000); }
     } catch (e) { if (which === 'auto') SV.auto = { error: String(e.message || e) }; else if (which === 'btc') SV.btc = { error: String(e.message || e) }; else SV.bt = { error: String(e.message || e) }; }
     const eff = effTab(); if (eff === which || (which === 'bt' && (eff === 'backtest' || eff === 'algo' || eff === 'portfolio')) || (which === 'btc' && eff === 'algo')) render();
   }
@@ -1155,13 +1155,28 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'csv') exportCsv();
     else if (a === 'csvsum') exportSummary();
     else if (a === 'runlab') runLab();
-    else if (a === 'btrun') { fetch('/api/backtest/run', { method: 'POST' }).then(() => { SV.btBusy = true; SV.bt = null; render(); }); }
+    else if (a === 'btrun') {
+      SV.bt = { running: true, progress: 'Starting backtest…', pct: 0, elapsed: 0, result: null };
+      SV.btBusy = true;
+      render();
+      fetch('/api/backtest/run', { method: 'POST' }).then(() => loadSrv('bt'));
+    }
     else if (a === 'autotoggle') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.enabled : (AUTO.srv ? AUTO.srv.enabled : null); if (cur == null) return;
       fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
     else if (a === 'exitf') { AUTO.exitFilter = b.dataset.k || ''; render(); }
-    else if (a === 'btreset') { SV.bt = null; fetch('/api/backtest/reset', { method: 'POST' }).then(() => loadSrv('bt')); }
+    else if (a === 'btreset') {
+      SV.bt = { running: false, result: null, cleared: true };
+      SV.btc = null;
+      render();
+      fetch('/api/backtest/reset', { method: 'POST' })
+        .then(r => r.json())
+        .then(() => {
+          toast_('Backtest result reset', 'ok');
+          loadSrv('bt');
+        });
+    }
     else if (a === 'btcsel') { SV.btcSel = SV.btcSel || new Set(); const k = b.dataset.k; if (SV.btcSel.has(k)) SV.btcSel.delete(k); else SV.btcSel.add(k); render(); }
     else if (a === 'btcnone') { SV.btcSel = new Set(); render(); }
     else if (a === 'btrunf') { SV.btc = null; SV.btcBusy = true; fetch('/api/backtest/run?only=' + encodeURIComponent([...(SV.btcSel || [])].join(',')), { method: 'POST' }).then(() => loadSrv('btc')); }
@@ -1538,8 +1553,31 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        const B = SV.bt;
        if (!B) return '<div class="empty">Loading backtest…</div>';
        if (B.error) return `<div class="empty">Backtest unavailable (${E(B.error)}).</div>`;
+       const btProgressBar = (b, label) => {
+         const pct = Math.min(100, Math.max(0, b.pct || 0));
+         const el = b.elapsed || 0;
+         const eta = b.eta ? `· ~${b.eta}s remaining` : '';
+         return `<div class="bt-prog-wrap" style="padding:14px;background:var(--panel-2,rgba(255,255,255,.05));border-radius:10px;margin:10px 0;border:1px solid var(--line)">
+           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+             <b style="font-size:13.5px;color:var(--brand,#2563eb)">⚙ ${label}</b>
+             <span style="font-size:13.5px;font-weight:800;color:var(--text)">${pct}%</span>
+           </div>
+           <div style="height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-bottom:8px">
+             <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:4px;transition:width 0.4s ease"></div>
+           </div>
+           <div style="font-size:12px;color:var(--text-2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
+             <span>${E(b.progress || 'Processing strategy replays…')}</span>
+             <span>Elapsed: ${el}s ${eta}</span>
+           </div>
+           <p style="margin:8px 0 0;font-size:11.5px;color:var(--text-3);line-height:1.45">
+             Evaluating 24 strategies across 25 instruments over ~5 years of daily bars (1,440 combinations). Typically takes ~40–60s total.
+           </p>
+         </div>`;
+       };
        const R = B.result;
-       if (!R) return `<div class="empty">${B.running ? 'Backtest running — ' + E(B.progress || '') : 'No backtest has been run yet.'}</div><div class="jv-actions"><button class="btn pri" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running…' : 'Run full backtest'}</button></div>`;
+       if (!R) return B.running
+         ? `${btProgressBar(B, 'Full Backtest Running')}<div class="jv-actions"><button class="btn pri" disabled>Running… ${B.pct || 0}%</button></div>`
+         : `<div class="empty">No backtest has been run yet. Click below to run a fresh backtest across 24 strategies and 25 instruments.</div><div class="jv-actions"><button class="btn pri" data-jv="btrun">Run full backtest</button></div>`;
        const proven = (R.provenKeys || []).length;
        const verdict = proven
          ? `<span>Verdict</span><b class="up">${proven} of ${R.strategiesTested} passed</b>`
@@ -1590,7 +1628,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
            <div><span>Generated</span><b>${E((R.generatedAt || B.generatedAt || '').replace('T', ' ').slice(0, 16))}</b></div>
          </div>
          ${top ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${top}</tbody></table></div>` : ''}
-         <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? 'Running… ' + E(B.progress || '') : 'Re-run full backtest'}</button><button class="btn" data-jv="btreset" ${B.running ? 'disabled' : ''} title="Clear the stored result until the next run">Reset</button></div>
+         ${B.running ? btProgressBar(B, 'Re-running Full Backtest…') : ''}
+         <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? `Running… ${B.pct || 0}%` : 'Re-run full backtest'}</button><button class="btn" data-jv="btreset" ${B.running ? 'disabled' : ''} title="Clear the stored result until the next run">Reset</button></div>
          <details class="jv-more" data-jvopen="btcFilter"${detOpen('btcFilter')}><summary>Backtest by filter · pick indicators / strategies</summary>
            <div class="jv-pos-bar jv-btcsel">${chips || '<span class="muted">Strategy list unavailable.</span>'}</div>
            <div class="jv-actions"><button class="btn pri" data-jv="btrunf" ${(B.running || (C && C.running)) ? 'disabled' : ''}>${C && C.running ? 'Running…' : `Run ${SV.btcSel.size ? `(${SV.btcSel.size} selected)` : 'full'} backtest`}</button>

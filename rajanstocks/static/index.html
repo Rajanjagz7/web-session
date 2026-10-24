@@ -83,6 +83,8 @@ svg.i{display:block;flex-shrink:0}
 #pwaBtn:active{transform:scale(.94)}
 @keyframes pwaPulse{0%{box-shadow:0 2px 8px rgba(42,120,214,.35),0 0 0 0 rgba(42,120,214,.45)}70%{box-shadow:0 2px 8px rgba(42,120,214,.35),0 0 0 8px rgba(42,120,214,0)}100%{box-shadow:0 2px 8px rgba(42,120,214,.35),0 0 0 0 rgba(42,120,214,0)}}
 @media (prefers-reduced-motion: reduce){#pwaBtn{animation:none}}
+@media all and (display-mode: standalone), all and (display-mode: fullscreen), all and (display-mode: minimal-ui) { #pwaBtn { display: none !important; } }
+#pwaBtn[hidden] { display: none !important; }
 .cnt{position:absolute;top:2px;right:2px;min-width:15px;height:15px;border-radius:8px;background:var(--down);color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 3px}
 
 /* Generic */
@@ -642,10 +644,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 </style>
-<script src="/static/journal.js?v=20261022g"></script>
+<script src="/static/journal.js?v=20261024h"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261024g"></script>
-<script src="/static/observer.js?v=20261024g"></script>
+<script src="/static/godseye.js?v=20261024h"></script>
+<script src="/static/observer.js?v=20261024h"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1473,19 +1475,25 @@ function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null)
    running as the installed app. ---------- */
 const PWA={evt:null};
 function pwaHidden(){
-  try{const s=localStorage.getItem('pwa-hide');if(s&&Date.now()-(+s)<7*864e5)return true}catch(e){}
-  if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)return true;
+  try{
+    if(localStorage.getItem('pwa-installed')==='1'||localStorage.getItem('pwa-downloaded')==='1')return true;
+    const s=localStorage.getItem('pwa-hide');if(s&&Date.now()-(+s)<30*864e5)return true;
+  }catch(e){}
+  if(window.matchMedia&&(window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||window.matchMedia('(display-mode: minimal-ui)').matches))return true;
   if(window.navigator.standalone===true)return true;                 // iOS standalone
   return false}
 function pwaRefresh(){const b=document.getElementById('pwaBtn');if(!b)return;
   try{if(typeof I!=='undefined')b.innerHTML=I('download',17)}catch(e){}   // I lives in the main script block; skip the icon until it exists
   const touch=/android|iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  b.hidden=pwaHidden()||!(PWA.evt||touch)}
+  const hidden=pwaHidden()||!(PWA.evt||touch);
+  b.hidden=hidden;
+  b.style.display=hidden?'none':'';}
+if(navigator.getInstalledRelatedApps){navigator.getInstalledRelatedApps().then(a=>{if(a&&a.length){try{localStorage.setItem('pwa-installed','1')}catch(e){}pwaRefresh()}}).catch(()=>{})}
 global.pwaRefresh=pwaRefresh;                        // the main block's boot() calls this to size/show the button
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();PWA.evt=e;pwaRefresh()});
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-pwa-btn]'))pwaInstall()});
 pwaRefresh();                                       // the button markup is already parsed at this point
-window.addEventListener('appinstalled',()=>{try{localStorage.setItem('pwa-hide',String(Date.now()))}catch(e){}PWA.evt=null;pwaRefresh();toast('Rajan Algo installed — find it on your home screen','ok')});
+window.addEventListener('appinstalled',()=>{try{localStorage.setItem('pwa-installed','1');localStorage.setItem('pwa-hide',String(Date.now()))}catch(e){}PWA.evt=null;pwaRefresh();toast('Rajan Algo installed — find it on your home screen','ok')});
 function pwaInstall(){
   if(PWA.evt){const e=PWA.evt;PWA.evt=null;e.prompt();
     e.userChoice&&e.userChoice.then(r=>{if(r&&r.outcome==='dismissed'){try{localStorage.setItem('pwa-hide',String(Date.now()-4*864e5))}catch(x){}}pwaRefresh()});return}
