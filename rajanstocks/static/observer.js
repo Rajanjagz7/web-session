@@ -67,9 +67,13 @@
   function paint(host) {
     if (!host) return;
     const d = O.data;
+    const isPicks = !!host.closest('#pkGodseye');
+    const meta = isPicks ? '' : (
+      (d ? `<span class="ob-badge ${d.marketOpen ? 'on' : ''}"><i></i>${d.marketOpen ? 'Market Open' : 'Market Closed'}</span><span class="ob-upd">Updated: ${esc(stamp(d))}</span>` : '') +
+      `<button type="button" class="ob-ref" data-ob-refresh title="Refresh now" aria-label="Refresh">${O.busy ? '…' : '↻'}</button>`
+    );
     const head = `<div class="ob-head"><h2><span class="ob-eye">👁</span> <span class="ob-grad">GOD'S EYE</span> <small>— The Observer</small></h2>
-      <div class="ob-meta">${d ? `<span class="ob-badge ${d.marketOpen ? 'on' : ''}"><i></i>${d.marketOpen ? 'Market Open' : 'Market Closed'}</span><span class="ob-upd">Updated: ${esc(stamp(d))}</span>` : ''}
-      ${host.closest('#pkGodseye') ? (O.busy ? '<span class="ob-upd">Updating…</span>' : '') : `<button type="button" class="ob-ref" data-ob-refresh title="Refresh now" aria-label="Refresh">${O.busy ? '…' : '↻'}</button>`}</div></div>`;
+      ${meta ? `<div class="ob-meta">${meta}</div>` : ''}</div>`;
     let body;
     if (!d && O.busy) body = `<div class="ob-grid">${Array.from({ length: 8 }, () => '<div class="ob-card ob-skel"></div>').join('')}</div>`;
     else if (!d) body = `<div class="ob-empty">Could not load the Observer${O.err ? ': ' + esc(O.err) : ''}. <button type="button" class="btn" data-ob-refresh>Retry</button></div>`;
@@ -149,6 +153,9 @@
   const st = document.createElement('style');
   st.textContent = `
   .ob{max-width:1100px;margin:0 auto}   /* user prefers the previous centered board over full-100% stretch */
+  #pkGodseye .ob-head .ob-meta,
+  #pkGodseye .ob-head .ob-badge,
+  #pkGodseye .ob-head .ob-upd { display: none !important; }
   .ob-one{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--text-3,#8a93a6);border-radius:10px;font-size:13px}
   .ob-one.bull{border-left-color:var(--up,#22ab94)}.ob-one.bear{border-left-color:var(--down,#f7525f)}
   .ob-one-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.ob-one-t{font-weight:700}.ob-one-s{font-size:18px;font-weight:800}
