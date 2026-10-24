@@ -1464,6 +1464,7 @@ def _picks_compute(deadline_s, progress=None):
     already-scanned symbols free, and rows are tagged universe=fno/cash so the Stock Trader can
     act on strong non-F&O stocks."""
     up = nse_service.upstox
+    import equity_bhav
     keymap = {}
     for s in list(PICK_INDICES) + [s for s, _, _ in STOCKS]:
         try:
@@ -1478,7 +1479,16 @@ def _picks_compute(deadline_s, progress=None):
     # pace the walk: each NEW symbol needs its own daily-candle call from Upstox, and the shared
     # rate budget is finite - a small batch per build (the daily candle cache makes repeats free,
     # so the frontier advances build over build until the whole market is covered for the day)
-    take = 0 if not extra else min(len(extra) - cursor, 10 if os.environ.get("VERCEL") else 60)
+    bhav = None
+    if extra:
+        import equity_bhav
+        try:
+            bhav = equity_bhav.warm(max_downloads=4 if os.environ.get("VERCEL") else 10, target_sessions=60)
+        except Exception:
+            bhav = None
+        if bhav and bhav["have"] < 25:
+            bhav = None                                  # not enough sessions warmed yet for >=25 bars
+    take = 0 if not (extra and bhav) else min(len(extra) - cursor, 120 if os.environ.get("VERCEL") else 300)
     slice_syms = [s for s, _nm in extra[cursor:cursor + take]]
     for s in slice_syms:                             # one batched quotes call covers all of them (500/batch)
         try:
@@ -1522,16 +1532,22 @@ def _picks_compute(deadline_s, progress=None):
         if time.time() > deadline:
             failed[k] = sym
             return None
-        rows = None
-        for attempt in range(3):
-            try:
-                rows = daily(k)
-                break
-            except Exception:
-                time.sleep(0.4 * (attempt + 1))
-        if rows is None:
-            failed[k] = sym
-            return None
+        if sym not in fno_syms and bhav:
+            rows = equity_bhav.history(sym)          # whole-market history from ONE bhavcopy download set
+            if rows is None:
+                failed[k] = sym                      # bhav not warmed for this session count yet: retry next build
+                return None
+        else:
+            rows = None
+            for attempt in range(3):
+                try:
+                    rows = daily(k)
+                    break
+                except Exception:
+                    time.sleep(0.4 * (attempt + 1))
+            if rows is None:
+                failed[k] = sym
+                return None
         r = _pick(sym, q, rows)
         if r:
             r["kind"] = "index" if sym in PICK_INDICES else "stock"
