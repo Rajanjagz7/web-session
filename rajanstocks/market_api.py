@@ -1562,7 +1562,10 @@ def _picks_compute(deadline_s, progress=None):
         run(retry, 3)
     if progress:
         progress(res)
-    out = _picks_payload(res, len(keymap), len(res) >= 0.95 * len(keymap))
+    # "complete" means the F&O core was fully screened - the cash-universe walk is progressive
+    # by design (a rate-limited extra must never stop the day's payload from being stored)
+    core_got = sum(1 for r in res if r.get("universe") != "cash")
+    out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
     if extra:
         done = sum(1 for s in slice_syms if s in extra_done)        # only symbols that actually got data
         nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
