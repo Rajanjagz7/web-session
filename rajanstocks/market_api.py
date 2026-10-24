@@ -1642,6 +1642,23 @@ def _picks_compute(deadline_s, progress=None):
             shared_cache.set(cash_day_key, cash_day, 20 * 3600)
         res = [r for r in res if r.get("universe") != "cash"] +               [r for r in cash_day.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
         out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
+    if not any(r.get("universe") == "cash" for r in res):
+        cash_day_key = f"picks:cash|{date.today().isoformat()}"
+        cash_day = shared_cache.get(cash_day_key) or {}
+        if not cash_day:
+            seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+            if not os.path.exists(seed_file):
+                seed_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "picks_cash_seed.json")
+            if os.path.exists(seed_file):
+                try:
+                    with open(seed_file, "r", encoding="utf-8") as f:
+                        cash_day = json.load(f)
+                    shared_cache.set(cash_day_key, cash_day, 20 * 3600)
+                except Exception:
+                    pass
+        if cash_day:
+            res = [r for r in res if r.get("universe") != "cash"] +                   [r for r in cash_day.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
+            out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
     return out
 
 
@@ -1676,6 +1693,34 @@ def warm_picks():
     _picks_kick()
 
 
+def _inject_cash_seed_if_needed(data):
+    if not isinstance(data, dict):
+        return data
+    picks = data.get("picks")
+    if not isinstance(picks, list):
+        return data
+    if any(r.get("universe") == "cash" for r in picks):
+        return data
+    seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+    if not os.path.exists(seed_file):
+        alt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "picks_cash_seed.json")
+        if os.path.exists(alt):
+            seed_file = alt
+    if os.path.exists(seed_file):
+        try:
+            with open(seed_file, "r", encoding="utf-8") as f:
+                c_seed = json.load(f)
+            cash_items = [r for r in c_seed.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
+            all_picks = list(picks) + cash_items
+            data["picks"] = all_picks
+            data["buy"] = sorted([r for r in all_picks if r.get("signal") == "BUY"], key=lambda r: (-r.get("score", 0), -r.get("volx", 0)))
+            data["sell"] = sorted([r for r in all_picks if r.get("signal") == "SELL"], key=lambda r: (r.get("score", 0), -r.get("volx", 0)))
+            data["count"] = len(all_picks)
+        except Exception:
+            pass
+    return data
+
+
 @router.get("/picks")
 def picks(refresh: bool = False):
     ensure_universe()
@@ -1684,6 +1729,7 @@ def picks(refresh: bool = False):
         if isinstance(v, dict):
             v.pop("coverage", None)
             v.pop("bhav_diag", None)
+            _inject_cash_seed_if_needed(v)
         return v
     if os.environ.get("VERCEL"):
         # serverless freezes background threads after the response: build inline within the 30s cap
@@ -1695,6 +1741,8 @@ def picks(refresh: bool = False):
 
         def build_ok():
             got = shared_cache.get(sk)                                  # another instance already built it
+            if got:
+                _inject_cash_seed_if_needed(got)
             if got and not refresh and time.time() - got.get("_t", 0) < ttl_s:
                 return _public(got), True
             if not shared_cache.lock("picks-build", 40):                # someone else is building: serve what exists
@@ -1703,8 +1751,10 @@ def picks(refresh: bool = False):
                 time.sleep(4)
                 got = shared_cache.get(sk)
                 if got:
+                    _inject_cash_seed_if_needed(got)
                     return _public(got), True
             v = _picks_compute(22)
+            _inject_cash_seed_if_needed(v)
             if v.get("count", 0) >= 20:
                 v["_t"] = time.time()
                 shared_cache.set(sk, v, 20 * 3600 if v.get("complete") else 300)

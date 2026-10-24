@@ -644,10 +644,10 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 </style>
-<script src="/static/journal.js?v=20261024j"></script>
+<script src="/static/journal.js?v=20261024k"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261024j"></script>
-<script src="/static/observer.js?v=20261024j"></script>
+<script src="/static/godseye.js?v=20261024k"></script>
+<script src="/static/observer.js?v=20261024k"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -3103,7 +3103,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
         if(!x)return f.sig==='BUY'?p.signal==='BUY'&&p[hzKey]==='Bullish':f.sig==='SELL'?p.signal==='SELL'&&p[hzKey]==='Bearish':p[hzKey]!=='Neutral';
         if(f.sig==='EVERY')return true;if(x.side==='WAIT')return false;if(x.ok===false)return false;if(x.ok===undefined&&p[hzKey]==='Neutral')return false;   // each horizon's own entry test
         return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})}
-    else{const pBuys=Array.isArray(P.buy)?P.buy:(P.picks||[]).filter(p=>p.signal==='BUY'),pSells=Array.isArray(P.sell)?P.sell:(P.picks||[]).filter(p=>p.signal==='SELL');if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=(P.picks||[]).slice();else l=pBuys.concat(pSells);}
+    else{const allP=P.picks||[],pBuys=allP.filter(p=>p.signal==='BUY'),pSells=allP.filter(p=>p.signal==='SELL');if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=allP.slice();else l=pBuys.concat(pSells);}
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
     if(f.mkt==='FNO')l=l.filter(p=>p.universe!=='cash');else if(f.mkt==='CASH')l=l.filter(p=>p.universe==='cash');
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
@@ -4498,7 +4498,7 @@ async function checkCacheVersion(){
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
 function triggerSignalPush(){if(!MKT.open)return;fetch('/api/cron/signal-push',{method:'POST'}).catch(()=>{})}
-async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
+async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cr=await fetch('/static/picks_cash_seed.json');if(cr.ok){const cs=await cr.json(),cl=Object.values(cs).filter(x=>(x.strength||0)>=55);App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)}}
   if(App.view==='picks')renderPicks();renderWatchlist();
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}
