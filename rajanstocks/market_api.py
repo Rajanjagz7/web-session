@@ -1478,7 +1478,7 @@ def _picks_compute(deadline_s, progress=None):
     # pace the walk: each NEW symbol needs its own daily-candle call from Upstox, and the shared
     # rate budget is finite - a small batch per build (the daily candle cache makes repeats free,
     # so the frontier advances build over build until the whole market is covered for the day)
-    take = 0 if not extra else min(len(extra) - cursor, 25 if os.environ.get("VERCEL") else 60)
+    take = 0 if not extra else min(len(extra) - cursor, 10 if os.environ.get("VERCEL") else 60)
     slice_syms = [s for s, _nm in extra[cursor:cursor + take]]
     for s in slice_syms:                             # one batched quotes call covers all of them (500/batch)
         try:
