@@ -148,7 +148,7 @@
 
   const st = document.createElement('style');
   st.textContent = `
-  .ob{max-width:100%;margin:0}   /* align God's Eye edges with the host page content (was 1100px centered, leaving uneven gaps on web) */
+  .ob{max-width:1100px;margin:0 auto}   /* user prefers the previous centered board over full-100% stretch */
   .ob-one{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--text-3,#8a93a6);border-radius:10px;font-size:13px}
   .ob-one.bull{border-left-color:var(--up,#22ab94)}.ob-one.bear{border-left-color:var(--down,#f7525f)}
   .ob-one-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.ob-one-t{font-weight:700}.ob-one-s{font-size:18px;font-weight:800}
