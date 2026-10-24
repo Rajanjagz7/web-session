@@ -1589,7 +1589,8 @@ def _picks_compute(deadline_s, progress=None):
         done = sum(1 for s in slice_syms if s in extra_done)        # only symbols that actually got data
         nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
         shared_cache.set(f"picks:extra-cursor|{date.today().isoformat()}", nxt, 20 * 3600)
-        coverage = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt}
+        coverage = {"fno": fno_n, "extra_total": len(extra), "extra_done": nxt,
+                    "bhav": bhav, "failed": len(failed)}
         # the day's cash picks ACCUMULATE: each build's slice would otherwise replace the previous
         # one, and strong names found earlier today would vanish from the screen on the next build
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
