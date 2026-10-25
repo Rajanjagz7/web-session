@@ -445,7 +445,7 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
             except Exception:
                 nb = None
         nb = nb if isinstance(nb, list) else None
-        day_power_block = day_power.build(nse_calendar.HOLIDAYS, nb, 3)
+        day_power_block = day_power.build(nse_calendar.HOLIDAYS, nb, 5, start=sdate)
     except Exception as e:
         day_power_block = {"available": False, "reason": f"Day power unavailable: {str(e)[:160]}"}
     bias = _day_bias(panchang["paksha"], panchang["tithi_number"])

@@ -655,7 +655,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261025g"></script>
+<script src="/static/journal.js?v=20261025h"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261025d"></script>
 <script src="/static/observer.js?v=20261025d"></script>
@@ -914,16 +914,52 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-idx button.on{background:var(--gold);color:#1a1200;border-color:var(--gold)}
 .vx-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:700;background:var(--panel-2);color:var(--text-2);white-space:nowrap}
 .vx-chip.up{background:var(--up-bg);color:var(--up)}.vx-chip.down{background:var(--down-bg);color:var(--down)}.vx-chip.gold{background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold)}
-.vx-dp{background:radial-gradient(120% 140% at 50% 0%,#0b1020,#05070d)!important}.vx-dph small{letter-spacing:.12em;color:var(--text-3);font-size:10.5px}.vx-dph .dp-t{font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin:4px 0 2px;color:var(--text);text-transform:uppercase}
-.vx-dpg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:12px;align-items:start}
-.vx-dpc{border-radius:16px;padding:14px 16px;background:#06080d;border:1.5px solid var(--line);display:flex;flex-direction:column;gap:6px}
-.vx-dpc.bull{border-color:#22c55e;box-shadow:0 0 18px #22c55e40,inset 0 0 10px #22c55e14}.vx-dpc.bear{border-color:#ef4444;box-shadow:0 0 18px #ef444440,inset 0 0 10px #ef444414}
-.vx-dpc.mix{border:1.5px solid transparent;background:linear-gradient(#06080d,#06080d) padding-box,linear-gradient(90deg,#22c55e,#ef4444) border-box;box-shadow:-8px 0 18px -8px #22c55e60,8px 0 18px -8px #ef444460}
-.vx-dpc small{color:var(--text-3);letter-spacing:.08em}.vx-dpc .wd{font-size:15px;letter-spacing:.06em}
-.vx-dpc .lab{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:30px;line-height:1.05;text-align:center;margin:6px 0}.vx-dpc.bull .lab,.vx-dpc .bull{color:#4ade80}.vx-dpc.bear .lab,.vx-dpc .bear{color:#f87171}
-.vx-dpc .dots{display:flex;gap:8px;justify-content:center}.vx-dpc .dots i{width:13px;height:13px;border-radius:50%;border:1.5px solid #ffffff30}.vx-dpc .dots i.on.bull{background:#4ade80;border-color:#4ade80}.vx-dpc .dots i.on.bear{background:#f87171;border-color:#f87171}
-.vx-dpc p{text-align:center;font-size:12.5px;color:var(--text-2);margin:4px 0}.vx-dpc details{font-size:12px;margin-top:4px}.vx-dpc summary{cursor:pointer;color:var(--text-3)}.vx-dpc ul{margin:6px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
-@media(max-width:900px){.vx-dpg{grid-template-columns:1fr}.vx-dpc .lab{font-size:26px}}
+.vx-dp{border-radius:18px;margin-bottom:14px;border:1px solid var(--line)}
+.vx-dph small{letter-spacing:.12em;font-size:10.5px;font-weight:700}
+.vx-dph .dp-t{font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;letter-spacing:.03em;margin:4px 0 2px;text-transform:uppercase}
+.vx-dpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:14px}
+.vx-dpc{border-radius:18px;padding:16px 14px 14px;display:flex;flex-direction:column;gap:10px;position:relative}
+.vx-dpc::before{content:"";position:absolute;top:0;left:18px;right:18px;height:4px;border-radius:0 0 4px 4px}
+.vx-dpc.bull{border:1.5px solid #22c55e60;box-shadow:0 0 24px -6px rgba(34,197,94,.35)}.vx-dpc.bull::before{background:#22c55e;box-shadow:0 0 12px #22c55e}
+.vx-dpc.bear{border:1.5px solid #ef444460;box-shadow:0 0 24px -6px rgba(239,68,68,.35)}.vx-dpc.bear::before{background:#ef4444;box-shadow:0 0 12px #ef4444}
+.vx-dpc .dp-day{text-align:center;font-size:11px;letter-spacing:.12em;font-weight:700;text-transform:uppercase}
+.vx-dpc .dp-day b{display:block;font-size:16px;letter-spacing:.05em;margin-top:2px}
+.vx-dpc .lab{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:28px;line-height:1.05;text-align:center;margin:6px 0}
+.vx-dpc.bull .lab,.vx-dpc .bull{color:#22c55e}
+.vx-dpc.bear .lab,.vx-dpc .bear{color:#ef4444}
+.vx-dpc .dots{display:flex;gap:8px;justify-content:center}
+.vx-dpc .dots i{width:13px;height:13px;border-radius:50%;border:1.5px solid currentColor}
+.vx-dpc .dots i.on.bull{background:#22c55e;border-color:#22c55e}
+.vx-dpc .dots i.on.bear{background:#ef4444;border-color:#ef4444}
+.vx-dpc p{text-align:center;font-size:12.5px;margin:4px 0}
+.vx-dpc details{font-size:12px;margin-top:4px}
+.vx-dpc summary{cursor:pointer}
+.vx-dpc ul{margin:6px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+@media(max-width:900px){.vx-dpg{grid-template-columns:1fr}.vx-dpc .lab{font-size:24px}}
+
+:root:not([data-theme="dark"]) .vx-dp{background:var(--panel)!important;border:1px solid var(--line)!important}
+:root:not([data-theme="dark"]) .vx-dph small{color:var(--text-3)!important}
+:root:not([data-theme="dark"]) .vx-dph .dp-t{color:var(--text)!important}
+:root:not([data-theme="dark"]) .vx-dph p{color:var(--text-2)!important}
+:root:not([data-theme="dark"]) .vx-dpc{background:var(--panel-2)!important;border:1px solid var(--line)}
+:root:not([data-theme="dark"]) .vx-dpc .dp-day{color:var(--text-3)!important}
+:root:not([data-theme="dark"]) .vx-dpc .dp-day b{color:var(--text)!important}
+:root:not([data-theme="dark"]) .vx-dpc p{color:var(--text)!important;font-weight:500}
+:root:not([data-theme="dark"]) .vx-dpc summary{color:var(--text-2)!important}
+:root:not([data-theme="dark"]) .vx-dpc ul{color:var(--text)!important}
+:root:not([data-theme="dark"]) .vx-dpc .dots i{border-color:rgba(0,0,0,0.25)!important}
+
+:root[data-theme="dark"] .vx-dp{background:radial-gradient(120% 140% at 50% 0%,#0b1020,#05070d)!important;border:1px solid #1e293b!important}
+:root[data-theme="dark"] .vx-dph small{color:#94a3b8!important}
+:root[data-theme="dark"] .vx-dph .dp-t{color:#f8fafc!important}
+:root[data-theme="dark"] .vx-dph p{color:#94a3b8!important}
+:root[data-theme="dark"] .vx-dpc{background:#06080d!important}
+:root[data-theme="dark"] .vx-dpc .dp-day{color:#94a3b8!important}
+:root[data-theme="dark"] .vx-dpc .dp-day b{color:#f8fafc!important}
+:root[data-theme="dark"] .vx-dpc p{color:#cbd5e1!important}
+:root[data-theme="dark"] .vx-dpc summary{color:#94a3b8!important}
+:root[data-theme="dark"] .vx-dpc ul{color:#cbd5e1!important}
+:root[data-theme="dark"] .vx-dpc .dots i{border-color:#ffffff35!important}
 .vx-lean{display:flex;flex-direction:column;gap:6px;cursor:help}.vx-lean small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}
 .vx-lean b{font-size:20px;letter-spacing:.02em}.vx-lean.up b{color:var(--up)}.vx-lean.down b{color:var(--down)}.vx-lean.mute b{color:var(--gold)}
 .vx-meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--line) 50%,var(--up))}.vx-meter i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
@@ -1480,7 +1516,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025g',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025h',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -2931,16 +2967,17 @@ function vxAstroSlices(reportOrSlices){
    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
      <div>
        <h3 style="margin:0">Astro intraday timings · Nifty 50</h3>
-       <p class="muted" style="margin:2px 0 0">${esc(ds)} · ${t.count} time slices · ${mth==='m2'?'<b>Method 2 (18 KP Slices)</b>':'<b>Method 1 (12 Slices)</b>'}</p>
+       <p class="muted" style="margin:2px 0 0">${esc(ds)}</p>
      </div>
-     <div class="seg seg-sm" style="display:inline-flex">
-       <button class="${mth==='m2'?'on':''}" data-asmth="m2" title="Darshan Jain Method 2 (KP Ascendant Sub-Lord 18 time slices)">Method 2 (18 Slices)</button>
-       <button class="${mth==='m1'?'on':''}" data-asmth="m1" title="Method 1 (Merged Hora + Choghadiya + Lagna 12 slices)">Method 1 (12 Slices)</button>
+     <div>
+       <select class="inp" id="vxAsMthSelect" style="width:auto;padding:5px 12px;font-size:12px;font-weight:600;border-radius:8px" aria-label="Astro Calculation Method">
+         <option value="m2" ${mth==='m2'?'selected':''}>Method 2 (KP Sub-Lord)</option>
+         <option value="m1" ${mth==='m1'?'selected':''}>Method 1 (Standard)</option>
+       </select>
      </div>
    </div>
    <div class="vx-astbl"><table><thead><tr><th>From</th><th>To</th><th>Projection</th></tr></thead><tbody>${t.slices.map(s=>{const on=today&&now>=s.a&&now<s.b;
-     return`<tr class="${on?'on':''}"><td><b>${s.from}</b></td><td><b>${s.to}</b></td><td><details><summary class="as-${s.tone}"><b>${esc(s.projection)}</b>${on?' <small>· now</small>':''}</summary><small class="muted">${whyText(s.why)}</small></details></td></tr>`}).join('')}</tbody></table></div>
-   <p class="vx-note">${esc(t.note)} Tap a projection to see why.</p><p class="vx-note" id="vxAsAcc">${asbHTML()}</p></section>`}
+     return`<tr class="${on?'on':''}"><td><b>${s.from}</b></td><td><b>${s.to}</b></td><td><details><summary class="as-${s.tone}"><b>${esc(s.projection)}</b>${on?' <small>· now</small>':''}</summary><small class="muted">${whyText(s.why)}</small></details></td></tr>`}).join('')}</tbody></table></div></section>`}
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>

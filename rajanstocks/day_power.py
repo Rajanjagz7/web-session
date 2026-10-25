@@ -25,6 +25,40 @@ NAK_LORDS = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn"
 BENEFIC = {"Jupiter", "Venus", "Moon", "Mercury"}
 GANN_DAYS = (30, 45, 60, 90, 120, 144, 180, 270, 360)
 
+# Weekly anchor days for Nifty 50 Day Power Matrix (Darshan Jain / Vedic Astro research)
+WEEKLY_ANCHOR_DAYS = {
+    "2026-10-26": {
+        "label": "BULLISH",
+        "side": "bull",
+        "dots": 4,
+        "note": "Positive bias. Favor selective longs."
+    },
+    "2026-10-27": {
+        "label": "STRONG BEARISH",
+        "side": "bear",
+        "dots": 5,
+        "note": "Heavy downside pressure. Avoid fresh longs."
+    },
+    "2026-10-28": {
+        "label": "BULLISH",
+        "side": "bull",
+        "dots": 4,
+        "note": "Recovery bias expected. Buy on dips."
+    },
+    "2026-10-29": {
+        "label": "SIDEWAYS TO BULLISH",
+        "side": "bull",
+        "dots": 3,
+        "note": "Range-bound with upside tilt. Patience preferred."
+    },
+    "2026-10-30": {
+        "label": "BEARISH",
+        "side": "bear",
+        "dots": 3,
+        "note": "Profit booking likely. Reduce exposure."
+    },
+}
+
 
 def _sg(v):
     """+0.4 / -0.6 / 0.0 (never "-0.0")."""
@@ -145,12 +179,19 @@ def score_day(d, holidays, bars=None):
     else:
         label, side, note = "MILD BEARISH", "bear", "Slight downside tilt - be careful with fresh longs."
     dots = {"STRONG": 5, "MILD": 3}.get(label.split()[0], 3 if side == "mix" else 4)
-    return {"date": d.isoformat(), "weekday": d.strftime("%A"), "score": round(s, 1), "label": label, "side": side, "dots": dots,
+    res = {"date": d.isoformat(), "weekday": d.strftime("%A"), "score": round(s, 1), "label": label, "side": side, "dots": dots,
             "note": note, "parts": parts,
             "halves": {"first": round(first, 2) if first is not None else None, "second": round(second, 2) if second is not None else None}}
+    if d.isoformat() in WEEKLY_ANCHOR_DAYS:
+        anc = WEEKLY_ANCHOR_DAYS[d.isoformat()]
+        res["label"] = anc["label"]
+        res["side"] = anc["side"]
+        res["dots"] = anc["dots"]
+        res["note"] = anc["note"]
+    return res
 
 
-def build(holidays, bars=None, n=3, start=None):
+def build(holidays, bars=None, n=5, start=None):
     now = datetime.now(IST)
     first = start or (now.date() if (now.hour, now.minute) < (15, 30) else now.date() + timedelta(days=1))
     days = _trading_days(first, n, holidays)

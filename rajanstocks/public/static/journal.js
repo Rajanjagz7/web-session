@@ -1651,8 +1651,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          : `<div class="empty">No backtest has been run yet. Click below to run a fresh backtest across 24 strategies and 25 instruments.</div><div class="jv-actions"><button class="btn pri" data-jv="btrun">Run full backtest</button></div>`;
        const proven = (R.provenKeys || []).length;
        const verdict = proven
-         ? `<span>Verdict</span><b class="up">${proven} of ${R.strategiesTested} passed</b>`
-         : `<span>Verdict</span><b class="down">0 of ${R.strategiesTested} passed · forward-testing top settings</b>`;
+         ? `<div><span>Verdict</span><b class="up">${proven} of ${R.strategiesTested} passed</b></div>`
+         : `<div><span>Verdict</span><b class="down">0 of ${R.strategiesTested} passed · forward-testing top settings</b></div>`;
        const top = (R.ranking || []).slice(0, 4).map(r => {
          const i = r.inSample, o = r.outOfSample;
          return `<tr><td><b>${E(KEYNAME(r.key))}</b></td><td class="num">${i.n}</td><td class="num ${cc(i.avgR)}">${rr(i.avgR)}</td><td class="num">${o.n}</td><td class="num ${cc(o.avgR)}">${rr(o.avgR)}</td><td>${r.proven ? '<span class="badge b-up">Proven</span>' : '<span class="badge b-mute">Fwd test</span>'}</td></tr>`;
@@ -1672,7 +1672,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        const customBlock = C ? (C.running
          ? `<p class="muted" style="padding:4px 14px 8px">Filtered backtest running — ${E(C.progress || '')}</p>`
          : C.error ? `<p class="muted" style="padding:4px 14px 8px">Filtered run failed: ${E(C.error)}</p>`
-           : C.result ? `<details class="jv-more" data-jvopen="btcResult"${detOpen('btcResult')}><summary>Filtered run · ${(C.result.filteredKeys || []).length} strategies · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
+           : C.result ? `<details class="jv-more" data-jvopen="btcResult"${detOpen('btcResult')}><summary>Filtered run · ${(C.result.filteredKeys || []).length} ${(C.result.filteredKeys || []).length === 1 ? "strategy" : "strategies"} · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
                <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${customRows}</tbody></table></div>
                <p class="muted" style="padding:4px 14px 8px;font-size:11.5px">This run is kept separately — the full result above still drives the auto trader.</p></details>` : '') : '';
        // upcoming trades: the same entry logic as the live trader, run as a dry preview - what it WOULD take right now
@@ -1741,7 +1741,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
          </div>
        </div>
 
-       <div class="card"><div class="card-h"><h3>📊 Backtest Results</h3></div>${btCard}</div>
+       <div class="card"><div class="card-h" style="padding-top:14px"><h3>📊 Backtest Results</h3></div>${btCard}</div>
      </div>
      <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">exit breakdown · ${closedAutoAll.length} closed</span></div>
        <div class="jv-exitf">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}</div>
@@ -1967,7 +1967,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
   .jv-hr{display:flex;align-items:center;gap:10px;margin-left:auto}
   .jv-list>div{padding:7px 12px;font-size:12.5px}
-  @media (max-width:600px){.jv-kpis{grid-template-columns:repeat(3,1fr)}.jv-kpi b{font-size:13.5px}.jv-search{max-width:none;order:5;flex-basis:100%}.jv-tabs{overflow-x:auto}.jv-more{display:grid;grid-template-columns:1fr 1fr}.jv-more .inp{min-width:0;width:100%}.jv-t .jv-tg,.jv-t th[title^="T1"]{display:none}}`;
+  @media (max-width:600px){.jv-kpis{grid-template-columns:repeat(3,1fr)}.jv-kpi b{font-size:13.5px}.jv-search{max-width:none;order:5;flex-basis:100%}.jv-tabs{overflow-x:auto}div.jv-more{display:grid;grid-template-columns:1fr 1fr}.jv-more .inp{min-width:0;width:100%}.jv-t .jv-tg,.jv-t th[title^="T1"]{display:none}}`;
+  details.jv-more{display:block !important;width:100% !important}
+  details.jv-more>summary{display:flex !important;width:100% !important;align-items:center;gap:6px}
+  details.jv-more>*{max-width:100% !important}
   document.head.appendChild(st);
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
