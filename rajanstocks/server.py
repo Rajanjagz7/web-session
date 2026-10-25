@@ -92,7 +92,8 @@ def index():
     return FileResponse(_get_public_or_static("index.html"))
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/sw.js")
