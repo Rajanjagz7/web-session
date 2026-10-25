@@ -399,7 +399,7 @@ if __name__ == "__main__":
                    "expiryDays": len({(t["sym"], t["date"]) for t in A}), "optionDays": len({(t["sym"], t["date"]) for t in B + BOL})},
         "runtimeSec": round(time.time() - t0),
     }
-    with open(os.path.join(HERE, "static", "premium_backtest.json"), "w") as f:
+    with open(os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "premium_backtest.json"), "w") as f:
         json.dump(res, f)
     for name in ("A_expiry_divisor", "B_daily_divisor", "B_open_low_clean_buy", "C_ohol_options", "C_ohol_stocks", "D_sensex_310", "E_prem_38_42"):
         print("==", name)

@@ -80,7 +80,7 @@ def main():
            "byLabel": by,
            "readMe": "rightDirection near 0.5 (or near the base rate) = no better than a coin flip. avgAbsPtsPerHour shows whether "
                      "Volatile/Sideways slices really move more or less than the others."}
-    with open(os.path.join(HERE, "static", "astro_slices_backtest.json"), "w") as f:
+    with open(os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "astro_slices_backtest.json"), "w") as f:
         json.dump(res, f)
     print(json.dumps(res, indent=1))
 

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#3730a3"/>
+    </linearGradient>
+    <linearGradient id="up" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6ee7b7"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="dn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fda4af"/>
+      <stop offset="1" stop-color="#f43f5e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <path d="M7 50 L24 38 L33 43 L52 17" fill="none" stroke="#fbbf24" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M42.5 15.5 L53.5 14.5 L52 25.5 Z" fill="#fbbf24"/>
+  <g stroke-linecap="round">
+    <line x1="17" y1="33" x2="17" y2="53" stroke="#f43f5e" stroke-width="2.6"/>
+    <rect x="12.5" y="38" width="9" height="10" rx="2" fill="url(#dn)"/>
+    <line x1="32" y1="26" x2="32" y2="50" stroke="#10b981" stroke-width="2.6"/>
+    <rect x="27.5" y="31" width="9" height="13" rx="2" fill="url(#up)"/>
+    <line x1="47" y1="30" x2="47" y2="56" stroke="#10b981" stroke-width="2.6"/>
+    <rect x="42.5" y="36" width="9" height="14" rx="2" fill="url(#up)"/>
+  </g>
+</svg>

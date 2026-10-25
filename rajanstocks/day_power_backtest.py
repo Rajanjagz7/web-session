@@ -52,6 +52,6 @@ if __name__ == "__main__":
            "byLabel": by_label, "components": comps,
            "mixDaysRange": round(statistics.mean(x["range"] for x in mix), 3) if mix else None,
            "allDaysRange": round(statistics.mean(x["range"] for x in rows), 3)}
-    with open(os.path.join(HERE, "static", "day_power_backtest.json"), "w") as f:
+    with open(os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "day_power_backtest.json"), "w") as f:
         json.dump(res, f)
     print(json.dumps(res, indent=1))

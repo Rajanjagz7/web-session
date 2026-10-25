@@ -194,7 +194,7 @@ def _main():
     rows.sort(key=lambda r: -min(r["older"].get("pf", 0), r["recent"].get("pf", 0)))
     res = {"generatedAt": datetime.now(PB.IST).isoformat(), "method": __doc__, "split": SPLIT, "rows": rows,
            "best": rows[0] if rows else None, "runtimeSec": round(time.time() - t0)}
-    with open(os.path.join(HERE, "static", "rzt_backtest.json"), "w") as f:
+    with open(os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "rzt_backtest.json"), "w") as f:
         json.dump(res, f)
     for r in rows[:10]:
         print(r["tf"], r["atrLen"], r["mult"], r["filter"], r["all"], "| older", r["older"].get("pf"), "| recent", r["recent"].get("pf"))

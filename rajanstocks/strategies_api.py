@@ -684,7 +684,10 @@ def _hedge_params():
     if time.time() - _HG["ts"] > 600:
         p = {"k": 1.5, "w": 2, "stop": 2.0, "mode": "condor", "entry": "T-1 09:30", "stats": None}
         try:
-            with open(_os.path.join(_os.path.dirname(__file__), "static", "hedge_backtest.json")) as f:
+            _p_h = _os.path.join(_os.path.dirname(__file__), "public", "static", "hedge_backtest.json")
+            if not _os.path.exists(_p_h):
+                _p_h = _os.path.join(_os.path.dirname(__file__), "static", "hedge_backtest.json")
+            with open(_p_h) as f:
                 b = (_json.load(f) or {}).get("best")
             if b:
                 p = {"k": b["k"], "w": b["w"], "stop": float(str(b["stop"]).split("x")[0]) if "x" in str(b["stop"]) else None,

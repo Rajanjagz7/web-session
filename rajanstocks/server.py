@@ -2,7 +2,7 @@ import os
 import threading
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
@@ -16,7 +16,8 @@ import strategies_api
 from nse_service import nse_service
 
 BASE_DIR = os.path.dirname(__file__)
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+STATIC_DIR = os.path.join(PUBLIC_DIR, "static") if os.path.exists(os.path.join(PUBLIC_DIR, "static")) else os.path.join(BASE_DIR, "static")
 
 app = FastAPI(title="Bhavcopy & Live Option Scanner")
 
@@ -62,10 +63,10 @@ app.include_router(stock_trader.router)
 
 @app.middleware("http")
 async def _no_stale_assets(request, call_next):
-    """HTML / JS / CSS / manifest are revalidated on every load, so a phone never keeps running an old build."""
+    """HTML / manifest / sw.js are revalidated on every load, so devices never keep running an old build."""
     resp = await call_next(request)
     p = request.url.path
-    if p == "/" or p.endswith((".html", ".js", ".css", ".webmanifest")) or p.startswith("/static/"):
+    if p == "/" or p.endswith((".html", ".webmanifest", "sw.js")):
         resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     return resp
 
@@ -79,9 +80,16 @@ app.add_middleware(
 )
 
 
+def _get_public_or_static(name: str):
+    p = os.path.join(PUBLIC_DIR, name)
+    if os.path.exists(p):
+        return p
+    return os.path.join(STATIC_DIR, name)
+
+
 @app.get("/")
 def index():
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+    return FileResponse(_get_public_or_static("index.html"))
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -89,13 +97,13 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/sw.js")
 def service_worker():
-    return FileResponse(os.path.join(STATIC_DIR, "sw.js"), media_type="application/javascript",
+    return FileResponse(_get_public_or_static("sw.js"), media_type="application/javascript",
                         headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
 
 
 @app.get("/manifest.webmanifest")
 def web_manifest():
-    return FileResponse(os.path.join(STATIC_DIR, "manifest.webmanifest"), media_type="application/manifest+json")
+    return FileResponse(_get_public_or_static("manifest.webmanifest"), media_type="application/manifest+json")
 
 
 _ICON_CACHE = {"Cache-Control": "public, max-age=604800"}   # 7 days - these only change on an explicit icon edit
@@ -103,27 +111,27 @@ _ICON_CACHE = {"Cache-Control": "public, max-age=604800"}   # 7 days - these onl
 
 @app.get("/icon-192.png")
 def app_icon():
-    return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"), media_type="image/png", headers=_ICON_CACHE)
+    return FileResponse(_get_public_or_static("icon-192.png"), media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/favicon.svg")
 def favicon_svg():
-    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml", headers=_ICON_CACHE)
+    return FileResponse(_get_public_or_static("favicon.svg"), media_type="image/svg+xml", headers=_ICON_CACHE)
 
 
 @app.get("/favicon-32.png")
 def favicon_png():
-    return FileResponse(os.path.join(STATIC_DIR, "favicon-32.png"), media_type="image/png", headers=_ICON_CACHE)
+    return FileResponse(_get_public_or_static("favicon-32.png"), media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/icon-512.png")
 def icon_512():
-    return FileResponse(os.path.join(STATIC_DIR, "icon-512.png"), media_type="image/png", headers=_ICON_CACHE)
+    return FileResponse(_get_public_or_static("icon-512.png"), media_type="image/png", headers=_ICON_CACHE)
 
 
 @app.get("/favicon.ico")
 def favicon():
-    return FileResponse(os.path.join(STATIC_DIR, "favicon.svg"), media_type="image/svg+xml", headers=_ICON_CACHE)
+    return FileResponse(_get_public_or_static("favicon.svg"), media_type="image/svg+xml", headers=_ICON_CACHE)
 
 
 _IST = timezone(timedelta(hours=5, minutes=30))
@@ -143,8 +151,9 @@ def cache_version():
 
 
 @app.get("/api/news")
-def api_news(limit: int = 40):
+def api_news(response: Response, limit: int = 40):
     limit = max(5, min(limit, 100))
+    response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=300"
     try:
         return market_news.get_market_news(limit=limit)
     except Exception as exc:

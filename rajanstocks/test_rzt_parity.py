@@ -42,7 +42,8 @@ def _main():
                "mb": be["mb"]}, open("/tmp/parity_be.json", "w"))
 
     # 3. frontend results: extract the chart's functions from static/index.html and run them in node
-    html = open("static/index.html", encoding="utf-8").read()
+    html_path = "public/index.html" if os.path.exists("public/index.html") else "static/index.html"
+    html = open(html_path, encoding="utf-8").read()
 
     def grab(pattern):
         m = re.search(pattern, html, re.S)

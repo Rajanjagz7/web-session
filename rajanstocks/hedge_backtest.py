@@ -259,7 +259,7 @@ def main():
     res = {"generated": datetime.now(IST).isoformat(timespec="seconds"), "method": __doc__.strip(), "best": best,
            "top": sorted(good, key=lambda v: (-(v["pf"] or 0), -v["winRate"]))[:15], "variants": len(variants),
            "all": [{k2: v[k2] for k2 in ("entry", "rule", "k", "stop", "mode", "n", "winRate", "pf", "total", "perTrade", "worst", "avgMaxProfit", "avgMaxLoss")} for v in variants]}
-    out = os.path.join(HERE, "static", "hedge_backtest.json")
+    out = os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "hedge_backtest.json")
     with open(out, "w") as f:
         json.dump(res, f, indent=1)
     print(json.dumps({k2: res[k2] for k2 in ("best",)}, indent=1)[:3000])

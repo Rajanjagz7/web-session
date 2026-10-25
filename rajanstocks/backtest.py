@@ -26,7 +26,8 @@ import shared_cache
 
 IST = timezone(timedelta(hours=5, minutes=30))
 HERE = os.path.dirname(__file__)
-OUT_FILE = os.path.join(HERE, "static", "backtest_result.json")   # local-dev fallback only - read-only on Vercel
+STATIC_DIR = os.path.join(HERE, "public", "static") if os.path.exists(os.path.join(HERE, "public", "static")) else os.path.join(HERE, "static")
+OUT_FILE = os.path.join(STATIC_DIR, "backtest_result.json")   # local-dev fallback only - read-only on Vercel
 CACHE_KEY = "backtest_result_v2"          # v2: option-premium stop (30% cap), theta, kept indicators only
 CACHE_TTL = 48 * 3600   # Vercel runs several instances with their own /tmp and a read-only static/ -
                         # shared_cache (Upstash) is what actually makes a fresh run visible to every instance
@@ -487,7 +488,7 @@ def _worker():
 # filtered runs ("only these strategies") live in their own state + store so a custom run can
 # never replace the FULL result that drives the auto trader's proven / research selection
 CACHE_KEY_CUSTOM = "backtest_result_custom_v1"
-OUT_FILE_CUSTOM = os.path.join(HERE, "static", "backtest_custom.json")
+OUT_FILE_CUSTOM = os.path.join(STATIC_DIR, "backtest_custom.json")
 _custom = {"running": False, "progress": "", "result": None, "error": None, "started": 0.0, "cleared": False}
 
 
@@ -648,7 +649,7 @@ def api_custom():
 def api_accuracy(full: bool = False):
     """Accuracy of every indicator and of the Picks screen with stop-loss and target (see accuracy_report.py).
     Default: a compact summary; ?full=true adds every exit rule, long/short, index/stock and per-year split."""
-    path = os.path.join(HERE, "static", "accuracy_report.json")
+    path = os.path.join(STATIC_DIR, "accuracy_report.json")
     try:
         with open(path, encoding="utf-8") as f:
             rep = json.load(f)

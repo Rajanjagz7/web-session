@@ -499,7 +499,7 @@ if __name__ == "__main__":
     out = {"generatedAt": datetime.now(IST).isoformat(), "symbols": SYMS, "split": split, "results": res,
            "duplicates": sorted(dups, key=lambda x: -max(x["aInB"], x["bInA"])), "info": info,
            "method": __doc__, "runtimeSec": round(time.time() - t0)}
-    with open(os.path.join(HERE, "static", "strategy_audit.json"), "w") as f:
+    with open(os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "strategy_audit.json"), "w") as f:
         json.dump(out, f)
     for k, r in sorted(res.items(), key=lambda x: x[1]["verdict"]):
         print(f"{r['verdict']:7} {k:22} {r['why']}")

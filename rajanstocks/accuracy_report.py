@@ -27,7 +27,7 @@ import backtest as bt
 
 IST = timezone(timedelta(hours=5, minutes=30))
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_JSON = os.path.join(HERE, "static", "accuracy_report.json")
+OUT_JSON = os.path.join(HERE, "public", "static", "accuracy_report.json") if os.path.exists(os.path.join(HERE, "public", "static")) else os.path.join(HERE, "static", "accuracy_report.json")
 OUT_MD = os.path.join(HERE, "docs", "INDICATOR_ACCURACY.md")
 TARGETS = (1.0, 1.5, 2.0, 3.0)
 HOLD = 10

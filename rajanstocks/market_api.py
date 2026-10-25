@@ -14,7 +14,7 @@ import time
 import shared_cache
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from nse_service import nse_service
 from upstox_service import _BG, UpstoxRateLimited, background
@@ -24,6 +24,18 @@ upstox_service = nse_service.upstox
 router = APIRouter(prefix="/api/m")
 IST = timezone(timedelta(hours=5, minutes=30))
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+def _static_path(filename: str):
+    for c in [
+        os.path.join(HERE, 'public', 'static', filename),
+        os.path.join(HERE, 'static', filename),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'public', 'static', filename),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', filename),
+    ]:
+        if os.path.exists(c):
+            return c
+    return os.path.join(HERE, 'public', 'static', filename)
+
 
 # (symbol, name, sector) -- liquid NSE F&O stocks
 STOCKS = [
@@ -1627,7 +1639,7 @@ def _picks_compute(deadline_s, progress=None):
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
         cash_day = shared_cache.get(cash_day_key) or {}
         if not cash_day:
-            seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+            seed_file = _static_path("picks_cash_seed.json")
             if os.path.exists(seed_file):
                 try:
                     with open(seed_file, "r", encoding="utf-8") as f:
@@ -1646,7 +1658,7 @@ def _picks_compute(deadline_s, progress=None):
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
         cash_day = shared_cache.get(cash_day_key) or {}
         if not cash_day:
-            seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+            seed_file = _static_path("picks_cash_seed.json")
             if not os.path.exists(seed_file):
                 seed_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "picks_cash_seed.json")
             if os.path.exists(seed_file):
@@ -1701,7 +1713,7 @@ def _inject_cash_seed_if_needed(data):
         return data
     if any(r.get("universe") == "cash" for r in picks):
         return data
-    seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+    seed_file = _static_path("picks_cash_seed.json")
     if not os.path.exists(seed_file):
         alt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "picks_cash_seed.json")
         if os.path.exists(alt):
@@ -1722,7 +1734,9 @@ def _inject_cash_seed_if_needed(data):
 
 
 @router.get("/picks")
-def picks(refresh: bool = False):
+def picks(refresh: bool = False, response: Response = None):
+    if response and not refresh:
+        response.headers["Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=60"
     ensure_universe()
     def _public(v):
         # never publish scan diagnostics (also cleans copies built before this was private)
@@ -1779,7 +1793,7 @@ def picks(refresh: bool = False):
         return _public({**_PK["data"], "refreshing": False})
     partial_res = list(_PK["partial"])
     if not any(r.get("universe") == "cash" for r in partial_res):
-        seed_file = os.path.join(HERE, "static", "picks_cash_seed.json")
+        seed_file = _static_path("picks_cash_seed.json")
         if os.path.exists(seed_file):
             try:
                 with open(seed_file, "r", encoding="utf-8") as f:

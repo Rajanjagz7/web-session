@@ -119,7 +119,7 @@ if __name__ == "__main__":
            "variants": {v: PB.summarize(ts, ["offset", "stop"]) for v, ts in T.items()},
            "bySym": {v: PB.summarize(ts, ["sym"]) for v, ts in T.items()},
            "counts": {v: len(ts) for v, ts in T.items()}, "runtimeSec": round(time.time() - t0)}
-    with open(os.path.join(HERE, "static", "bounce_backtest.json"), "w") as f:
+    with open(os.path.join(HERE, "public", "static" if os.path.exists(os.path.join(HERE, "public", "static")) else "static", "bounce_backtest.json"), "w") as f:
         json.dump(res, f)
     for v, rows in res["variants"].items():
         print("==", v, res["counts"][v])
