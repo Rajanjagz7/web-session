@@ -166,7 +166,7 @@
 
   const st = document.createElement('style');
   st.textContent = `
-  .ob{max-width:1100px;margin:0 auto}   /* user prefers the previous centered board over full-100% stretch */
+  .ob{width:100%;max-width:100%;margin:0}
   #pkGodseye .ob-head .ob-meta,
   #pkGodseye .ob-head .ob-badge,
   #pkGodseye .ob-head .ob-upd { display: none !important; }

@@ -37,12 +37,12 @@
   background: var(--ge-bg);
   color: var(--ge-text);
   min-height: calc(100vh - 54px);
-  padding: 16px 20px 40px;
+  padding: 12px 14px 40px;
 }
 
 .ge-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;

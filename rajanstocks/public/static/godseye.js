@@ -198,7 +198,7 @@
   }, 15e3);
 
   const css = `
-  .page.gx{max-width:2200px;padding:12px clamp(14px,2vw,32px) 48px}
+  .page.gx{width:100%;max-width:100%;padding:12px clamp(8px,1.5vw,16px) 48px}
   .gx .muted{color:var(--text-3)}.gx .up{color:var(--up)}.gx .down{color:var(--down)}
   .gx-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;margin:2px 0 14px}
   .gx-bar0{display:flex;justify-content:flex-end;align-items:center;gap:12px}

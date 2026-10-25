@@ -46,7 +46,7 @@ svg.i{display:block;flex-shrink:0}
 
 /* Header */
 .hdr{position:sticky;top:var(--nb,0px);z-index:30;height:52px;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;white-space:nowrap;cursor:pointer;user-select:none}
 .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),#7aa8ff);display:grid;place-items:center;color:#fff}
 .nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 0}
 .nav button{height:32px;padding:0 11px;border-radius:8px;color:var(--text-2);font-weight:500;white-space:nowrap}
@@ -647,8 +647,8 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script src="/static/journal.js?v=20261025c"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261025c"></script>
-<script src="/static/observer.js?v=20261025c"></script>
+<script src="/static/godseye.js?v=20261025d"></script>
+<script src="/static/observer.js?v=20261025d"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1018,7 +1018,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 <body>
 <div class="newsbar" id="newsBar" hidden></div>
 <header class="hdr">
-  <div class="brand"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
+  <div class="brand" data-view="picks" title="Go to Picks"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
   <div class="here" id="here" aria-live="polite"></div>
   <nav class="nav" id="nav"></nav>
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
@@ -4663,7 +4663,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   try{await Promise.race([loadUniverse(),new Promise(r=>setTimeout(r,10000))])}catch(e){}
   try{await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])])}catch(e){}
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
-  const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'vedic');
+  const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'picks');
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}});
   let _rszT;window.addEventListener('resize',()=>{clearTimeout(_rszT);_rszT=setTimeout(()=>{try{if(App.view==='options'&&OPT.chain)drawChain()}catch(e){}},250)})})();
