@@ -2931,7 +2931,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
    ${({plan:vxTabPlan,vedic:vxTabVedic,gann:vxTabGann,cycle:vxTabCycle,watch:vxTabWatch}[VD.tab]||vxTabPlan)(r)}
    <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
   </div>`}
-const TC={sym:'NIFTY',mode:'underlying',strike:'',d:null,err:'',busy:false,_userEdited:false};
+const TC={sym:'NIFTY',mode:'underlying',strike:'',d:null,err:'',busy:false,_userEdited:false,tab:'cycles',allLevels:false};
 async function tcLoad(){TC.busy=true;TC.err='';if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q);TC.pg=null}catch(e){TC.d=null;TC.err=(e&&e.message)||'Time cycle unavailable'}TC.busy=false;if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc()}
 function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setTimeout(tcLoad,0);
   const form=`<section class="vx-card"><h3>Time cycle</h3><p class="muted" style="margin:0 0 8px">Gann time cycles and price vibration zones for any index or F&amp;O stock, or its option premium.</p>
@@ -2939,33 +2939,57 @@ function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setT
    <input class="inp" id="tcStrike" value="${esc(TC.strike)}" placeholder="Strike (blank = ATM)" inputmode="decimal" ${TC.mode==='underlying'?'disabled':''} aria-label="Strike"><button class="btn-xs pri" data-tc="go">${TC.busy?'Loading…':'Show'}</button></div></section>`;
   if(TC.err)return form+`<section class="vx-card"><p class="vx-note">${esc(TC.err)}</p></section>`;if(!d)return form;
   const nxt=d.cycles.find(c=>!c.passed);
-  /* paginated cycle table: opens on the page with the next cycle, ‹ › to move */
+  const stc=nxt?(nxt.strength==='strong'?'b-up':nxt.strength==='medium'?'b-mute':'b-mute'):'b-mute';
+  const chip=(k,v,cls,tip)=>`<span class="rz-k" ${tip?`title="${esc(tip)}"`:''}><small>${k}</small><b class="num ${cls||''}">${v}</b></span>`;
+  const chips=`<div class="rz-chips">${chip('Price',fmtP(d.last))}${chip('Support',d.vibration?fmtP(d.vibration.level):'—','up')}${chip('Resistance',d.nextResistance?fmtP(d.nextResistance.level):'—','down')}${chip('Next cycle',nxt?nxt.time:'—',nxt?(nxt.strength==='strong'?'up':''):'')}${d.chain&&d.chain.maxPain?chip('Max pain',fmtP(d.chain.maxPain),'','Where option buyers lose the most at expiry'):''}${d.chain&&d.chain.maxCallOI?chip('Call wall',fmtP(d.chain.maxCallOI),'down','Highest call OI: likely resistance'):''}${d.chain&&d.chain.maxPutOI?chip('Put wall',fmtP(d.chain.maxPutOI),'up','Highest put OI: likely support'):''}</div>`;
   const all=d.cycles,ps=TC.ps||8,pages=Math.max(1,Math.ceil(all.length/ps));
   if(TC.pg==null){const ni=all.findIndex(c=>!c.passed);TC.pg=ni<0?0:Math.floor(ni/ps)}
   TC.pg=Math.min(TC.pg,pages-1);
   const part=all.slice(TC.pg*ps,TC.pg*ps+ps);
   const pager=all.length>ps?`<div class="tc-pg"><button class="btn-xs" data-tcpg="${TC.pg-1}" ${TC.pg<=0?'disabled':''} aria-label="Previous">‹</button><span>${TC.pg*ps+1}–${TC.pg*ps+part.length} of ${all.length}</span><button class="btn-xs" data-tcpg="${TC.pg+1}" ${TC.pg>=pages-1?'disabled':''} aria-label="Next">›</button></div>`:'';
-  /* price zones as compact chips so cycles + zones fit one screen; the full square-of-9 ladder stays collapsed below */
-  const zc=[['Vibration (sup)',d.vibration?d.vibration.level:null,'up',d.vibration?d.vibration.angle:''],
-            ['Next resistance',d.nextResistance?d.nextResistance.level:null,'down',''],
-            ['Max pain',d.chain?d.chain.maxPain:null,'','Where option buyers lose the most at expiry.'],
-            ['Call wall',d.chain?d.chain.maxCallOI:null,'down','Highest call OI: likely resistance.'],
-            ['Put wall',d.chain?d.chain.maxPutOI:null,'up','Highest put OI: likely support.']];
-  const zones=`<div class="tc-zones">${zc.filter(z=>z[1]!=null).map(([k,v,c,tip])=>`<span class="tc-z" ${tip?`title="${esc(tip)}"`:''}><small>${k}</small><b class="num ${c}">${fmtP(v)}</b></span>`).join('')}</div>`;
-  const cyc=`<section class="vx-card"><h3>Time cycle · ${esc(d.series)}</h3>${nxt?`<p style="margin:0 0 8px">Next: <b>${nxt.time}</b> <span class="tc-${nxt.strength}">${nxt.strength}</span> · last <b class="num">${fmtP(d.last)}</b></p>`:`<p style="margin:0 0 8px">Last <b class="num">${fmtP(d.last)}</b> · prev close <b class="num">${fmtP(d.prevClose)}</b></p>`}
-   <div class="vx-astbl"><table><thead><tr><th>Time</th><th class="num">Price</th><th>Strength</th></tr></thead><tbody>${part.map(c=>`<tr class="${c===nxt?'on':''} ${c.passed?'tc-past':''}"><td>${c.time}</td><td class="num">${c.price!=null?fmtP(c.price):'—'}</td><td title="${esc(c.sources.join(' · '))}"><span class="tc-${c.strength}">${c.strength}</span></td></tr>`).join('')}</tbody></table></div>
-   ${pager}${zones}
-   <details class="vx-ladder"><summary>Square-of-9 ladder · prev close ${fmtP(d.prevClose)} · prev high ${fmtP(d.prevHigh.price)} at ${d.prevHigh.time} · prev low ${fmtP(d.prevLow.price)} at ${d.prevLow.time}</summary>
-    <div class="vx-astbl" style="margin-top:8px"><table><tbody>${d.zones.map(z=>`<tr class="${d.vibration&&z.level===d.vibration.level?'on':''}"><td class="num">${fmtP(z.level)}</td><td><small class="muted">${esc(z.angle)}</small></td></tr>`).join('')}</tbody></table></div>
-    <p class="vx-note">${esc(d.how)}</p></details>
-   <details class="vx-ladder tc-about"><summary>How to read · disclaimer</summary>
-    <p class="vx-note" style="margin-top:6px">Price is the 5-minute close at each cycle time — did price confirm the cycle? Hover a strength for what it was counted from.</p>
-    <p class="vx-note">Traditional Gann technique - a timing guide, not a forecast.</p></details></section>`;
+
+  const cleanZones=(d.zones||[]).map(z=>{
+    const m=(z.angle||'').match(/(\d+)\s*deg\s*(above|below)/i);
+    const deg=m?parseInt(m[1],10):0,isAbove=m?m[2].toLowerCase()==='above':z.level>=d.prevClose;
+    const step=Math.max(1,Math.round(deg/45));
+    const isVib=d.vibration&&Math.abs(z.level-d.vibration.level)<0.01;
+    const isRes=d.nextResistance&&Math.abs(z.level-d.nextResistance.level)<0.01;
+    const diff=((z.level-d.last)/d.last)*100;
+    return {tag:(isAbove?'R':'S')+step,level:z.level,isAbove,isVib,isRes,diff,role:isRes?'Next Resistance':isVib?'Vibration Support':isAbove?'Resistance':'Support'};
+  });
+  const ab=cleanZones.filter(z=>z.isAbove).slice(-4),bl=cleanZones.filter(z=>!z.isAbove).slice(0,4);
+  const dispZones=TC.allLevels?cleanZones:[...ab,...bl];
+
+  const cycRows=part.map(c=>{
+    const isNext=c===nxt;
+    const pVal=c.price!=null?fmtP(c.price):(isNext?(d.nextResistance?fmtP(d.nextResistance.level):fmtP(d.last)):'—');
+    const pBadge=c.price!=null?'<small class="muted">close</small>':(isNext?'<small class="down">target</small>':'');
+    return `<tr class="${isNext?'on':''} ${c.passed?'tc-past':''}"><td><b>${c.time}</b></td><td><span class="tc-${c.strength}">${c.strength}</span></td><td class="num">${pVal} ${pBadge}</td><td><small class="${c.passed?'muted':isNext?'up':''}">${c.passed?'Done':isNext?'Active':'Pending'}</small></td></tr>`;
+  }).join('');
+  const cycTbl=`<div class="vx-astbl"><table><thead><tr><th>Time</th><th>Strength</th><th class="num">Price</th><th>Status</th></tr></thead><tbody>${cycRows}</tbody></table></div>${pager}`;
+
+  const lvlRows=dispZones.map(z=>{
+    const isCur=z.isRes||z.isVib,clsTag=z.isAbove?'down':'up',diffStr=(z.diff>=0?'+':'')+z.diff.toFixed(1)+'%';
+    return `<tr class="${isCur?'on':''}"><td><b class="${clsTag}">${z.tag}</b></td><td class="num"><b>${fmtP(z.level)}</b></td><td><small class="${isCur?(z.isAbove?'down':'up'):'muted'}">${z.role}</small></td><td class="num"><small class="${clsTag}">${diffStr}</small></td></tr>`;
+  }).join('');
+  const toggleBtn=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11.5px"><span class="muted">Prev close: <b class="num">${fmtP(d.prevClose)}</b></span><button class="btn-xs" data-tclvl="${TC.allLevels?'key':'all'}">${TC.allLevels?'Show key 8':'Show all 16'}</button></div>`;
+  const lvlTbl=`<div class="vx-astbl"><table><thead><tr><th>Level</th><th class="num">Price</th><th>Type</th><th class="num">Diff</th></tr></thead><tbody>${lvlRows}</tbody></table></div>${toggleBtn}`;
+
+  const activeTab=TC.tab||'cycles';
+  const seg=`<div class="seg tc-seg" style="display:flex;margin:8px 0 10px"><button class="${activeTab==='cycles'?'on':''}" data-tctab="cycles" style="flex:1">⏳ Cycles (${all.length})</button><button class="${activeTab==='levels'?'on':''}" data-tctab="levels" style="flex:1">🎯 Price Levels (${cleanZones.length})</button></div>`;
+
+  const cyc=`<section class="vx-card"><h3>Time cycle <span class="muted" style="font-weight:400">· ${esc(d.series)}</span></h3>
+   <p class="rz-state" style="margin:0 0 8px"><span class="badge ${stc}">${nxt?'NEXT '+nxt.time:'COMPLETED'}</span> <span class="muted">${nxt?`<b style="text-transform:uppercase">${nxt.strength}</b> cycle · last <b class="num">${fmtP(d.last)}</b>`:`last <b class="num">${fmtP(d.last)}</b> · prev close <b class="num">${fmtP(d.prevClose)}</b>`}</span></p>
+   ${chips}
+   ${seg}
+   ${activeTab==='cycles'?cycTbl:lvlTbl}</section>`;
   return form+cyc}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-tc]');if(!b)return;const root=b.closest('.tc-f')||b.closest('section')||document;const sInp=root.querySelector('#tcSym')||document.getElementById('tcSym'),mSel=root.querySelector('#tcMode')||document.getElementById('tcMode'),stInp=root.querySelector('#tcStrike')||document.getElementById('tcStrike');if(!sInp||!mSel)return;TC._userEdited=true;TC.sym=(sInp.value||'NIFTY').toUpperCase().trim();TC.mode=mSel.value;TC.strike=stInp?stInp.value.trim():'';tcLoad()});
 document.addEventListener('click',e=>{const pg=e.target.closest('[data-tcpg]');if(!pg||pg.disabled)return;TC.pg=Math.max(0,+pg.dataset.tcpg);
   const b=$('#opTc');if(b)b.innerHTML=vxTabCycle();
   if(typeof vdPaint==='function'&&typeof VD!=='undefined'&&VD.tab==='cycle')vdPaint()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-tctab]');if(!b)return;TC.tab=b.dataset.tctab;const b2=$('#opTc');if(b2)b2.innerHTML=vxTabCycle();if(typeof vdPaint==='function'&&typeof VD!=='undefined'&&VD.tab==='cycle')vdPaint()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-tclvl]');if(!b)return;TC.allLevels=(b.dataset.tclvl==='all');const b2=$('#opTc');if(b2)b2.innerHTML=vxTabCycle();if(typeof vdPaint==='function'&&typeof VD!=='undefined'&&VD.tab==='cycle')vdPaint()});
 document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
 
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
@@ -3584,7 +3608,7 @@ function wiNextOpen(){const now=Date.now(),t=wiISO(now),open=Date.parse(t+'T09:1
 function wiLastClose(){const now=Date.now();let t=wiISO(now);if(wiTradingDay(t)&&now>=Date.parse(t+'T15:30:00+05:30'))return Date.parse(t+'T15:30:00+05:30');
   let d=Date.parse(t+'T12:00:00Z');do{d-=86400000}while(!wiTradingDay(new Date(d).toISOString().slice(0,10)));return Date.parse(new Date(d).toISOString().slice(0,10)+'T15:30:00+05:30')}
 function wiTradingDaysLeft(expMs){let n=0,d=Date.parse(wiISO(Date.now())+'T12:00:00Z');const e=wiISO(expMs);for(let k=0;k<400;k++){d+=86400000;const iso=new Date(d).toISOString().slice(0,10);if(iso>e)break;if(wiTradingDay(iso))n++}return n}
-function drawWhatIf(){const box=$('#opxWhatIf');if(!box)return;const c=OPT.chain,sel=OPT.sel,o=OPT.osym;if(!c||!sel||!o){box.innerHTML='';return}
+function drawWhatIf(){const box=$('#opxWhatIf');if(!box)return;if(OPT.wtab&&OPT.wtab!=='order'){box.hidden=true;return}const c=OPT.chain,sel=OPT.sel,o=OPT.osym;if(!c||!sel||!o){box.innerHTML='';return}
   const u=SYM(OPT.sym),S=(u&&u.last>0?u.last:c.spot)||0,K=sel.strike,call=sel.side==='CE',px=o.last||0,exp=wiExpiryMs(c.expiry),now=Date.now(),nxt=wiNextOpen();
   const live=typeof MKT!=='undefined'&&MKT.open,anchor=live?now:Math.min(now,wiLastClose());
   const key=[S,px,K,sel.side,c.expiry,live,Math.floor(now/60000)].join('|');if(box.dataset.k===key)return;box.dataset.k=key;   // re-priced every minute, not only on a price change
@@ -3604,7 +3628,10 @@ setInterval(()=>{try{if(App.view==='options'&&!document.hidden)drawWhatIf()}catc
 function opxTab(t){OPT.mtab=t;const r=$('.opx');if(r)r.dataset.mtab=t;document.querySelectorAll('.opx-mtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='mtab:'+t));
   if(t==='order'||t==='signals'){opxWtab(t==='signals'?'sig':'order')}if(OPT.ochart&&t==='chart')setTimeout(()=>OPT.ochart.req&&OPT.ochart.req(),30);window.scrollTo(0,0)}
 function opxWtab(t){if(t==='read'||t==='signals')t='sig';OPT.wtab=t;document.querySelectorAll('.opx-wtabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='wtab:'+t));
-  const map={order:['#opTrade'],sig:['#opSig']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));if(t==='sig'){drawOptTc();opxStab(OPT.stab||'all')}}
+  const map={order:['#opTrade'],sig:['#opSig']};Object.entries(map).forEach(([k,sels])=>sels.forEach(sel=>{const e=$(sel);if(e)e.hidden=k!==t}));
+  const wi=$('#opxWhatIf');if(wi)wi.hidden=(t!=='order');
+  if(t==='sig'){drawOptTc();opxStab(OPT.stab||'all')}
+  if(t==='order')drawWhatIf()}
 /* Signals sub-tabs (Vedic-page style): all indicators in one, then God's Eye / Time cycle / Z Trend / Hedge / Buy signals */
 const opxSigTabs=()=>`<div class="opx-stabs" role="tablist">${[['all','☰ All indicators'],['ge','👁 God\'s Eye'],['tc','⏳ Time cycle'],['rzt','⚡ Z Trend'],['hedge','🛡 Hedge'],['buy','✚ Buy signals']].map(([k,l])=>`<button role="tab" data-opx="stab:${k}" class="${(OPT.stab||'all')===k?'on':''}">${l}</button>`).join('')}</div>`;
 function opxStab(t){OPT.stab=t;document.querySelectorAll('.opx-stabs [data-opx]').forEach(b=>b.classList.toggle('on',b.dataset.opx==='stab:'+t));
