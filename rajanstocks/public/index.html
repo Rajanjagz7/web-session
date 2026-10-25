@@ -655,7 +655,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261025h"></script>
+<script src="/static/journal.js?v=20261025i"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261025d"></script>
 <script src="/static/observer.js?v=20261025d"></script>
@@ -1516,7 +1516,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025h',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025i',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -2882,13 +2882,11 @@ setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.h
 /* Day Power: Vedic + Gann bias for the next 3 sessions (day_power.py) - every ingredient listed under "How it's worked out" */
 function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&dp.reason?`<section class="vx-card"><h3>Day power</h3><p class="muted">${esc(dp.reason)}</p></section>`:'';
   const d0=dp.days[0].date,d1=dp.days[dp.days.length-1].date,mon=d=>{const x=new Date(d+'T12:00:00Z');return x.getUTCDate()+' '+MON[x.getUTCMonth()]};
-  return`<section class="vx-card vx-dp"><div class="vx-dph"><div><small>DAY POWER · NIFTY 50</small><div class="dp-t">Weekly day power · ${mon(d0)} – ${mon(d1)}</div><p class="muted">Vedic Moon + day-lord + timing, and Gann time cycles, mapped to market bias</p></div></div>
+  return`<section class="vx-card vx-dp"><div class="vx-dph"><div><small>DAY POWER · NIFTY 50</small><div class="dp-t">Weekly day power · ${mon(d0)} - ${mon(d1)}</div><p class="muted">Vedic Moon + day-lord + timing, and Gann time cycles, mapped to market bias</p></div></div>
    <div class="vx-dpg">${dp.days.map(x=>{const col=x.side==='bull'?'bull':x.side==='bear'?'bear':'mix';
      const dots=Array.from({length:5},(_,i)=>`<i class="${i<x.dots?(x.side==='mix'?(i<Math.ceil(x.dots/2)+1?'on bull':'on bear'):'on '+col):''}"></i>`).join('');
      return`<article class="vx-dpc ${col}"><small>${mon(x.date).toUpperCase()}</small><b class="wd">${esc(x.weekday.toUpperCase())}</b>
-       <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p>
-       <details><summary>How it's worked out · score ${x.score>0?'+':''}${x.score}</summary><ul>${x.parts.map(p=>`<li class="${p.pts?'':'vx-dp0'}"><span class="${p.pts>0?'up':p.pts<0?'down':'muted'}">${p.pts>0?'+':''}${p.pts}</span> <b>${esc(p.group)} · ${esc(p.name)}</b> — ${esc(p.why)}${p.pts?'':' <small class="muted">· no effect today</small>'}</li>`).join('')}</ul><p class="muted vx-dpn">+ pushes up · − pushes down · 0 = this factor is neutral today (that is normal - it only counts on certain days)</p></details></article>`}).join('')}</div>
-   <p class="vx-note">${esc(dp.caveat||'')}</p></section>`}
+       <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p></article>`}).join('')}</div></section>`}
 let ASB=null;function asbLoad(){if(ASB!==null)return;ASB=0;fetch('/static/astro_slices_backtest.json?d='+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():null).then(j=>{ASB=j||0;const b=document.getElementById('vxAsAcc');if(b)b.innerHTML=asbHTML()}).catch(()=>{})}
 function asbHTML(){const j=ASB;if(!j||!j.byLabel)return'<span class="muted">Accuracy check runs after market close each weekday.</span>';
   return`Tested on ${j.sessions} sessions (${esc(j.from)} → ${esc(j.to)}): direction right <b>${Math.round((j.directionalHitRate||0)*100)}%</b> of ${j.directionalSlices} up/down slices · Nifty rose in ${Math.round(j.baseRateUp*100)}% of all slices. <details><summary>By projection</summary><ul>${Object.entries(j.byLabel).map(([k,v])=>`<li><b>${esc(k)}</b> · ${v.slices} slices · ${v.rightDirection==null?'no direction':'right '+Math.round(v.rightDirection*100)+'%'} · avg ${v.avgPts>0?'+':''}${v.avgPts} pts · moves ${v.avgAbsPtsPerHour} pts/hr</li>`).join('')}</ul></details>`}
@@ -2970,9 +2968,9 @@ function vxAstroSlices(reportOrSlices){
        <p class="muted" style="margin:2px 0 0">${esc(ds)}</p>
      </div>
      <div>
-       <select class="inp" id="vxAsMthSelect" style="width:auto;padding:5px 12px;font-size:12px;font-weight:600;border-radius:8px" aria-label="Astro Calculation Method">
-         <option value="m2" ${mth==='m2'?'selected':''}>Method 2 (KP Sub-Lord)</option>
-         <option value="m1" ${mth==='m1'?'selected':''}>Method 1 (Standard)</option>
+       <select class="inp" id="vxAsMthSelect" style="width:auto;padding:5px 12px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer" aria-label="Astro Calculation Method">
+         <option value="m1" ${mth==='m1'?'selected':''}>Method 1 (12 Slices - Standard)</option>
+         <option value="m2" ${mth==='m2'?'selected':''}>Method 2 (18 Slices - KP Sub-Lord)</option>
        </select>
      </div>
    </div>
@@ -3128,6 +3126,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-tclvl]');i
 document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
 
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='vxAsMthSelect'){if(typeof VD==='undefined')window.VD={};VD.asmth=e.target.value;try{localStorage.setItem('vx-asmth',VD.asmth)}catch(x){}vdPaint()}});
 document.addEventListener('click',async e=>{const t=e.target.closest('[data-vxsym]');if(!t||VD.busy)return;const sym=t.dataset.vxsym;if(sym===VD.symbol)return;
   VD.symbol=sym;try{localStorage.setItem('vx-symbol',sym)}catch(x){}VD.data=null;VD.err=null;vdPaint();
   await loadVedic(false);vdPaint()});
