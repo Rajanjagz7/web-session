@@ -28,7 +28,7 @@ jobs:
         run: |
           git config user.name "backtest-bot"
           git config user.email "backtest-bot@users.noreply.github.com"
-          git add rajanstocks/static/premium_backtest.json
+          git add rajanstocks/public/static/premium_backtest.json
           git diff --cached --quiet && exit 0
           git commit -m "Premium indicators backtest $(date -u +%F)"
           for i in 1 2 3; do git pull --rebase -q origin rajan-web-session && git push -q origin HEAD:rajan-web-session && break; sleep 5; done
