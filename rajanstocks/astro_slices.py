@@ -139,6 +139,59 @@ def build(session_date, panchang):
             "note": "Astro timing guide, not a forecast. Act only when price and volume confirm."}
 
 
+METHOD2_ANCHOR_DATE = date(2026, 10, 26)
+METHOD2_BASE_SLICES = [
+    {"from": "09:15", "to": "09:22", "a": 9 * 60 + 15, "b": 9 * 60 + 22, "projection": "Sideways/Volatile", "tone": "flat", "why": "KP Sub-Lord: Rahu in Anuradha · early session sideways transition"},
+    {"from": "09:22", "to": "09:51", "a": 9 * 60 + 22, "b": 9 * 60 + 51, "projection": "Volatile Negative", "tone": "down", "why": "KP Sub-Lord: Jupiter in Anuradha · opening pressure & sharp moves"},
+    {"from": "09:51", "to": "10:00", "a": 9 * 60 + 51, "b": 10 * 60 + 0, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Mercury in Jyeshtha · sub-transition 1 (positive bias)"},
+    {"from": "10:00", "to": "10:15", "a": 10 * 60 + 0, "b": 10 * 60 + 15, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Ketu in Jyeshtha · sub-transition 2 (continuation)"},
+    {"from": "10:15", "to": "10:25", "a": 10 * 60 + 15, "b": 10 * 60 + 25, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Venus in Jyeshtha · sub-transition 3 (morning crest)"},
+    {"from": "10:25", "to": "10:52", "a": 10 * 60 + 25, "b": 10 * 60 + 52, "projection": "Sideways/Volatile", "tone": "flat", "why": "KP Sub-Lord: Sun/Moon in Jyeshtha · consolidation before mid-morning"},
+    {"from": "10:52", "to": "11:26", "a": 10 * 60 + 52, "b": 11 * 60 + 26, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Mars/Rahu in Mula · expansion & wide-range oscillation"},
+    {"from": "11:26", "to": "11:55", "a": 11 * 60 + 26, "b": 11 * 60 + 55, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Jupiter/Saturn in Mula · heavy institutional churn"},
+    {"from": "11:55", "to": "12:08", "a": 11 * 60 + 55, "b": 12 * 60 + 8, "projection": "Sideways to Negative", "tone": "down", "why": "KP Sub-Lord: Mercury/Venus in Purva Ashadha · softening midday drift"},
+    {"from": "12:08", "to": "12:43", "a": 12 * 60 + 8, "b": 12 * 60 + 43, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Sun/Moon in Purva Ashadha · European market open cross-waves"},
+    {"from": "12:43", "to": "12:53", "a": 12 * 60 + 43, "b": 12 * 60 + 53, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Mars in Uttara Ashadha · afternoon distribution wave 1"},
+    {"from": "12:53", "to": "13:11", "a": 12 * 60 + 53, "b": 13 * 60 + 11, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Rahu in Uttara Ashadha · afternoon distribution wave 2"},
+    {"from": "13:11", "to": "13:23", "a": 13 * 60 + 11, "b": 13 * 60 + 23, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 3"},
+    {"from": "13:23", "to": "13:55", "a": 13 * 60 + 23, "b": 13 * 60 + 55, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Saturn in Shravana · base building & two-way swings"},
+    {"from": "13:55", "to": "14:23", "a": 13 * 60 + 55, "b": 14 * 60 + 23, "projection": "Sideways to Negative", "tone": "down", "why": "KP Sub-Lord: Mercury/Ketu in Shravana · late shakeout before power hour"},
+    {"from": "14:23", "to": "14:50", "a": 14 * 60 + 23, "b": 14 * 60 + 50, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Venus in Dhanishta · initial closing rally push"},
+    {"from": "14:50", "to": "15:01", "a": 14 * 60 + 50, "b": 15 * 60 + 1, "projection": "Sideways/Volatile", "tone": "flat", "why": "KP Sub-Lord: Sun in Dhanishta · square-off equilibrium"},
+    {"from": "15:01", "to": "15:30", "a": 15 * 60 + 1, "b": 15 * 60 + 30, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Moon in Dhanishta · final market on close (MOC) strength"}
+]
+
+def build_method2(session_date):
+    diff_days = (session_date - METHOD2_ANCHOR_DATE).days
+    if diff_days == 0:
+        slices = list(METHOD2_BASE_SLICES)
+    else:
+        shift_mins = round(diff_days * 3.9333333)
+        slices = []
+        for s in METHOD2_BASE_SLICES:
+            raw_a = s["a"] - shift_mins
+            raw_b = s["b"] - shift_mins
+            start_m = max(OPEN, min(CLOSE, raw_a))
+            end_m = max(OPEN, min(CLOSE, raw_b))
+            if start_m < end_m:
+                slices.append({
+                    "from": VT._hm(start_m),
+                    "to": VT._hm(end_m),
+                    "a": start_m,
+                    "b": end_m,
+                    "projection": s["projection"],
+                    "tone": s["tone"],
+                    "why": s["why"] + (f" (adjusted by {abs(shift_mins)}m sidereal shift)" if shift_mins else "")
+                })
+    return {
+        "available": True,
+        "date": session_date.isoformat(),
+        "slices": slices,
+        "count": len(slices),
+        "method": "Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 18 unmerged time slices.",
+        "note": "KP Ascendant Sub-Lord timing guide. Keeps every Sub-Lord transition as its own row (unmerged)."
+    }
+
 if __name__ == "__main__":
     import sys, vedic_panchang
     d = date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 else date.today()

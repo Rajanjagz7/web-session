@@ -301,34 +301,6 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     now_utc = now_utc or datetime.now(timezone.utc)
     now_ist = now_utc.astimezone(IST)
 
-    panchang = vedic_panchang.compute_panchang(now_utc)
-    rk_start, rk_end = vedic_panchang.rahu_kaal_window(
-        panchang["sunrise_utc"], panchang["sunset_utc"], now_ist.weekday()
-    )
-    rk_start_ist = datetime.fromisoformat(rk_start).astimezone(IST).strftime("%H:%M") if rk_start else None
-    rk_end_ist = datetime.fromisoformat(rk_end).astimezone(IST).strftime("%H:%M") if rk_end else None
-
-    def _mins(hhmm):
-        h, m = hhmm.split(":")
-        return int(h) * 60 + int(m)
-
-    windows = []
-    for w in WATCH_WINDOWS_TEMPLATE:
-        w = dict(w)
-        if w["key"] == "rahu_kaal":
-            w["window_ist"] = f"{rk_start_ist}-{rk_end_ist}" if rk_start_ist else "NOT AVAILABLE"
-        if w["window_ist"] and "-" in w["window_ist"] and w["window_ist"] != "NOT AVAILABLE":
-            a, b = w["window_ist"].split("-")
-            w["start_min"], w["end_min"] = _mins(a), _mins(b)
-            w["in_session"] = w["end_min"] > 555 and w["start_min"] < 930   # overlaps 09:15-15:30
-        else:
-            w["start_min"] = w["end_min"] = None
-            w["in_session"] = False
-        if w["key"] == "rahu_kaal" and not w["in_session"]:
-            w["focus"] = "Outside market hours today - no effect on the session"
-        windows.append(w)
-    windows.sort(key=lambda w: (not w["in_session"], w["start_min"] if w["start_min"] is not None else 9999))
-
     today_iso = now_ist.date().isoformat()
     is_weekday = now_ist.weekday() < 5
     is_weekend = not is_weekday
@@ -358,13 +330,53 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         else "Post-market"
     )
 
-    # Seller / buyer windows for the session this report is for (today, or the next trading day once closed)
+    # Determine target trading session date (today if during/pre-market on a trading day, or next trading day once closed)
     try:
         import vedic_timing
         hol = NSE_HOLIDAYS.get(now_ist.year, {}) | NSE_HOLIDAYS.get(now_ist.year + 1, {})
         sdate = vedic_timing.next_session(now_ist, hol)
         s_open = datetime(sdate.year, sdate.month, sdate.day, 9, 15, tzinfo=IST).astimezone(timezone.utc)
-        s_pan = vedic_panchang.compute_panchang(s_open)
+    except Exception:
+        sdate = now_ist.date()
+        s_open = datetime(sdate.year, sdate.month, sdate.day, 9, 15, tzinfo=IST).astimezone(timezone.utc)
+        hol = {}
+
+    # Use the session date's daylight hours for Panchang & Rahu Kaal when markets are closed
+    is_closed_phase = (session_phase in ("Market closed", "Post-market"))
+    target_utc = s_open if is_closed_phase else now_utc
+    target_ist = target_utc.astimezone(IST)
+
+    panchang = vedic_panchang.compute_panchang(target_utc)
+    rk_start, rk_end = vedic_panchang.rahu_kaal_window(
+        panchang["sunrise_utc"], panchang["sunset_utc"], target_ist.weekday()
+    )
+    rk_start_ist = datetime.fromisoformat(rk_start).astimezone(IST).strftime("%H:%M") if rk_start else None
+    rk_end_ist = datetime.fromisoformat(rk_end).astimezone(IST).strftime("%H:%M") if rk_end else None
+
+    def _mins(hhmm):
+        h, m = hhmm.split(":")
+        return int(h) * 60 + int(m)
+
+    windows = []
+    for w in WATCH_WINDOWS_TEMPLATE:
+        w = dict(w)
+        if w["key"] == "rahu_kaal":
+            w["window_ist"] = f"{rk_start_ist}-{rk_end_ist}" if rk_start_ist else "NOT AVAILABLE"
+        if w["window_ist"] and "-" in w["window_ist"] and w["window_ist"] != "NOT AVAILABLE":
+            a, b = w["window_ist"].split("-")
+            w["start_min"], w["end_min"] = _mins(a), _mins(b)
+            w["in_session"] = w["end_min"] > 555 and w["start_min"] < 930   # overlaps 09:15-15:30
+        else:
+            w["start_min"] = w["end_min"] = None
+            w["in_session"] = False
+        if w["key"] == "rahu_kaal" and not w["in_session"]:
+            w["focus"] = "Outside market hours today - no effect on the session"
+        windows.append(w)
+    windows.sort(key=lambda w: (not w["in_session"], w["start_min"] if w["start_min"] is not None else 9999))
+
+    # Seller / buyer windows for the target session
+    try:
+        s_pan = panchang if is_closed_phase else vedic_panchang.compute_panchang(s_open)
         special_timing = vedic_timing.build(sdate, s_pan, hol)
     except Exception as e:
         s_pan = None
@@ -372,8 +384,10 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     try:                                                     # minute-level astro time slices for the same session
         import astro_slices
         astro_table = astro_slices.build(sdate, s_pan) if s_pan else {"available": False, "reason": "no panchang"}
+        astro_table_m2 = astro_slices.build_method2(sdate)
     except Exception as e:
         astro_table = {"available": False, "reason": f"Astro timings unavailable: {str(e)[:160]}"}
+        astro_table_m2 = {"available": False, "reason": f"Method 2 timings unavailable: {str(e)[:160]}"}
 
     # The three network-bound parts run in parallel, each with a time budget, so one slow source can never
     # push the whole report past the serverless time limit - that part just says it is unavailable.
@@ -513,6 +527,7 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         "watch_windows": windows,
         "special_timing": special_timing,
         "astro_slices": astro_table,
+        "astro_slices_method2": astro_table_m2,
         "day_power": day_power_block,
         "stocks_to_watch": _stw_result(f_stw, _left()),
         "risk_management": RISK_MANAGEMENT,

@@ -2856,17 +2856,95 @@ function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&
 let ASB=null;function asbLoad(){if(ASB!==null)return;ASB=0;fetch('/static/astro_slices_backtest.json?d='+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():null).then(j=>{ASB=j||0;const b=document.getElementById('vxAsAcc');if(b)b.innerHTML=asbHTML()}).catch(()=>{})}
 function asbHTML(){const j=ASB;if(!j||!j.byLabel)return'<span class="muted">Accuracy check runs after market close each weekday.</span>';
   return`Tested on ${j.sessions} sessions (${esc(j.from)} → ${esc(j.to)}): direction right <b>${Math.round((j.directionalHitRate||0)*100)}%</b> of ${j.directionalSlices} up/down slices · Nifty rose in ${Math.round(j.baseRateUp*100)}% of all slices. <details><summary>By projection</summary><ul>${Object.entries(j.byLabel).map(([k,v])=>`<li><b>${esc(k)}</b> · ${v.slices} slices · ${v.rightDirection==null?'no direction':'right '+Math.round(v.rightDirection*100)+'%'} · avg ${v.avgPts>0?'+':''}${v.avgPts} pts · moves ${v.avgAbsPtsPerHour} pts/hr</li>`).join('')}</ul></details>`}
-function vxAstroSlices(t){if(!t||!t.available)return t&&t.reason?`<section class="vx-card"><h3>Astro intraday timings</h3><p class="vx-note">${esc(t.reason)}</p></section>`:'';asbLoad();
+const M2_ANCHOR = '2026-10-26';
+const M2_BASE = [
+  {from:'09:15',to:'09:22',a:555,b:562,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Rahu in Anuradha · early session sideways transition'},
+  {from:'09:22',to:'09:51',a:562,b:591,projection:'Volatile Negative',tone:'down',why:'KP Sub-Lord: Jupiter in Anuradha · opening pressure & sharp moves'},
+  {from:'09:51',to:'10:00',a:591,b:600,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Mercury in Jyeshtha · sub-transition 1 (positive bias)'},
+  {from:'10:00',to:'10:15',a:600,b:615,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Ketu in Jyeshtha · sub-transition 2 (continuation)'},
+  {from:'10:15',to:'10:25',a:615,b:625,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Venus in Jyeshtha · sub-transition 3 (morning crest)'},
+  {from:'10:25',to:'10:52',a:625,b:652,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Sun/Moon in Jyeshtha · consolidation before mid-morning'},
+  {from:'10:52',to:'11:26',a:652,b:686,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Mars/Rahu in Mula · expansion & wide-range oscillation'},
+  {from:'11:26',to:'11:55',a:686,b:715,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Jupiter/Saturn in Mula · heavy institutional churn'},
+  {from:'11:55',to:'12:08',a:715,b:728,projection:'Sideways to Negative',tone:'down',why:'KP Sub-Lord: Mercury/Venus in Purva Ashadha · softening midday drift'},
+  {from:'12:08',to:'12:43',a:728,b:763,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Sun/Moon in Purva Ashadha · European market open cross-waves'},
+  {from:'12:43',to:'12:53',a:763,b:773,projection:'Negative',tone:'down',why:'KP Sub-Lord: Mars in Uttara Ashadha · afternoon distribution wave 1'},
+  {from:'12:53',to:'13:11',a:773,b:791,projection:'Negative',tone:'down',why:'KP Sub-Lord: Rahu in Uttara Ashadha · afternoon distribution wave 2'},
+  {from:'13:11',to:'13:23',a:791,b:803,projection:'Negative',tone:'down',why:'KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 3'},
+  {from:'13:23',to:'13:55',a:803,b:835,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Saturn in Shravana · base building & two-way swings'},
+  {from:'13:55',to:'14:23',a:835,b:863,projection:'Sideways to Negative',tone:'down',why:'KP Sub-Lord: Mercury/Ketu in Shravana · late shakeout before power hour'},
+  {from:'14:23',to:'14:50',a:863,b:890,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Venus in Dhanishta · initial closing rally push'},
+  {from:'14:50',to:'15:01',a:890,b:901,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Sun in Dhanishta · square-off equilibrium'},
+  {from:'15:01',to:'15:30',a:901,b:930,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Moon in Dhanishta · final market on close (MOC) strength'}
+];
+function computeAstroMethod2Slices(dateStr){
+  const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  const anchorDate = new Date('2026-10-26T00:00:00');
+  const diffDays = Math.round((targetDate - anchorDate) / 86400000);
+  const shiftMins = Math.round(diffDays * 3.9333333);
+  const fmtM = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;
+  const slices = [];
+  M2_BASE.forEach(s => {
+    const rawA = s.a - shiftMins;
+    const rawB = s.b - shiftMins;
+    const startM = Math.max(555, Math.min(930, rawA));
+    const endM = Math.max(555, Math.min(930, rawB));
+    if (startM < endM) {
+      slices.push({
+        from: fmtM(startM),
+        to: fmtM(endM),
+        a: startM,
+        b: endM,
+        projection: s.projection,
+        tone: s.tone,
+        why: s.why + (shiftMins ? ` (shifted ${Math.abs(shiftMins)}m sidereal)` : '')
+      });
+    }
+  });
+  return {
+    available: true,
+    date: dateStr || '2026-10-26',
+    count: slices.length,
+    slices: slices,
+    method: 'Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 18 unmerged time slices.',
+    note: 'Trading ideas by Darshan Jain (Method 2). Keeps every KP Sub-Lord transition as its own row (unmerged).'
+  };
+}
+function vxAstroSlices(reportOrSlices){
+  const r = (reportOrSlices && reportOrSlices.header) ? reportOrSlices : null;
+  const mth = (typeof VD !== 'undefined' && VD.asmth) ? VD.asmth : 'm2';
+  let t = null;
+  if (r) {
+    if (mth === 'm2') {
+      t = r.astro_slices_method2 || computeAstroMethod2Slices(r.header && r.header.report_date);
+    } else {
+      t = r.astro_slices;
+    }
+  } else {
+    t = reportOrSlices;
+  }
+  if(!t||!t.available)return t&&t.reason?`<section class="vx-card"><h3>Astro intraday timings</h3><p class="vx-note">${esc(t.reason)}</p></section>`:'';asbLoad();
   const now=vxNowMin(),today=new Date(Date.now()+330*60000).toISOString().slice(0,10)===t.date,d=new Date(t.date+'T00:00:00');
   const ds=d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'2-digit'});
-  return`<section class="vx-card vx-as"><h3>Astro intraday timings · Nifty 50</h3><p class="muted">${esc(ds)} · ${t.count} time slices</p>
+  const whyText = w => Array.isArray(w) ? w.map(esc).join(' · ') : esc(w || '');
+  return`<section class="vx-card vx-as">
+   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+     <div>
+       <h3 style="margin:0">Astro intraday timings · Nifty 50</h3>
+       <p class="muted" style="margin:2px 0 0">${esc(ds)} · ${t.count} time slices · ${mth==='m2'?'<b>Method 2 (18 KP Slices)</b>':'<b>Method 1 (12 Slices)</b>'}</p>
+     </div>
+     <div class="seg seg-sm" style="display:inline-flex">
+       <button class="${mth==='m2'?'on':''}" data-asmth="m2" title="Darshan Jain Method 2 (KP Ascendant Sub-Lord 18 time slices)">Method 2 (18 Slices)</button>
+       <button class="${mth==='m1'?'on':''}" data-asmth="m1" title="Method 1 (Merged Hora + Choghadiya + Lagna 12 slices)">Method 1 (12 Slices)</button>
+     </div>
+   </div>
    <div class="vx-astbl"><table><thead><tr><th>From</th><th>To</th><th>Projection</th></tr></thead><tbody>${t.slices.map(s=>{const on=today&&now>=s.a&&now<s.b;
-     return`<tr class="${on?'on':''}"><td>${s.from}</td><td>${s.to}</td><td><details><summary class="as-${s.tone}">${esc(s.projection)}${on?' <small>· now</small>':''}</summary><small class="muted">${s.why.map(esc).join(' · ')}</small></details></td></tr>`}).join('')}</tbody></table></div>
+     return`<tr class="${on?'on':''}"><td><b>${s.from}</b></td><td><b>${s.to}</b></td><td><details><summary class="as-${s.tone}"><b>${esc(s.projection)}</b>${on?' <small>· now</small>':''}</summary><small class="muted">${whyText(s.why)}</small></details></td></tr>`}).join('')}</tbody></table></div>
    <p class="vx-note">${esc(t.note)} Tap a projection to see why.</p><p class="vx-note" id="vxAsAcc">${asbHTML()}</p></section>`}
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
-    ${vxDayPower(r.day_power)}${vxAstroSlices(r.astro_slices)}
+    ${vxDayPower(r.day_power)}${vxAstroSlices(r)}
     <section class="vx-card"><h3>Special timing</h3>${vxSpecial(r.special_timing)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
   const rows=Object.entries(pl).map(([n,d])=>{const sh=VX_PSHORT[n]||n.slice(0,2),s=Math.floor(d/30)%12;return `<tr><td><span class="vx-dot" style="background:${VX_PCOL[sh]}"></span>${esc(n.replace(' (true node)',''))}</td><td>${VX_RASHI_GLYPH[s]} ${VX_RASHI_SK[s]}</td><td class="num">${vxDeg(d)}</td><td>${VX_NAK[Math.floor(d/(360/27))%27]}</td><td class="num muted">${(+d).toFixed(2)}°</td></tr>`}).join('');
