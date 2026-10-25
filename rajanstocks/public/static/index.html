@@ -623,8 +623,18 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .ot-l{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--text-3)}.ot-l .inp{width:90px;height:36px}
 .ot-q{display:flex;flex-direction:column}.ot-q small{color:var(--text-3);font-size:11px}.ot-q b{font-size:15px}
 .ot-chk{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:12.5px}
-.ot-btns{display:flex;gap:8px}.ot-btns .btn{flex:1;height:40px;font-weight:700}
-.ot-buy{background:var(--up);color:#fff;border-color:var(--up)}.ot-exit{background:var(--down);color:#fff;border-color:var(--down)}.ot-exit:disabled{opacity:.4}
+.ot-btns{display:flex;gap:8px;margin:8px 0}
+.ot-btns .btn{flex:1;height:35px;border-radius:8px;font-size:12.5px;font-weight:600;letter-spacing:.02em;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s ease;cursor:pointer}
+.ot-btns .btn:hover:not(:disabled){transform:translateY(-1px)}
+.ot-buy{background:linear-gradient(180deg,#10b981 0%,#059669 100%)!important;color:#fff!important;border:1px solid #059669!important;box-shadow:0 2px 6px rgba(16,185,129,.22)}
+.ot-buy:hover{background:linear-gradient(180deg,#34d399 0%,#059669 100%)!important;box-shadow:0 4px 12px rgba(16,185,129,.35)}
+.ot-sell{background:linear-gradient(180deg,#f43f5e 0%,#e11d48 100%)!important;color:#fff!important;border:1px solid #e11d48!important;box-shadow:0 2px 6px rgba(244,63,94,.22)}
+.ot-sell:hover{background:linear-gradient(180deg,#fb7185 0%,#e11d48 100%)!important;box-shadow:0 4px 12px rgba(244,63,94,.35)}
+.ot-exit{background:var(--panel-2)!important;color:var(--text-2)!important;border:1px solid var(--line)!important}
+.ot-exit:not(:disabled){color:var(--down)!important;border-color:rgba(244,63,94,.32)!important;background:rgba(244,63,94,.08)!important}
+.ot-exit:not(:disabled):hover{background:var(--down)!important;color:#fff!important;border-color:var(--down)!important;box-shadow:0 3px 8px rgba(244,63,94,.3)}
+.ot-exit:disabled{opacity:.35;cursor:not-allowed}
+.ot-btns .pref{box-shadow:0 0 0 2px var(--brand),0 4px 12px rgba(42,120,214,.3)!important}
 .ot-pos{margin:10px 0 4px;font-size:12.5px}
 @media (max-width:900px){.jr-kpis{grid-template-columns:repeat(2,1fr)}.jr-d{grid-template-columns:1fr 1fr}}
 @media (max-width:600px){.jr-d{grid-template-columns:1fr}.jr-kpis .kpi b{font-size:17px}}
@@ -1003,7 +1013,8 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
   .opx-pt .jr-px{width:100%;min-width:0}.opx-pt .jr-tsl{justify-content:flex-start;width:100%;gap:3px}.opx-pt .jr-tsl .jr-px{flex:1 1 0;min-width:34px;padding:0 4px}.opx-pt .jr-tsl .jr-u{flex:none;width:38px}.opx-pt td.pt-x .btn-xs{height:28px}}
 .opx-pt td{padding:6px 8px;border-top:1px solid var(--line);white-space:nowrap;vertical-align:middle}.opx-pt .jr-px{width:78px;height:28px;text-align:right}.opx-pt .jr-tsl{display:flex;gap:4px;justify-content:flex-end}.opx-pt .jr-u{width:46px;height:28px;padding:0 4px}
 .opx-pn{cursor:pointer;margin-right:6px}.opx-pn:hover{color:var(--brand);text-decoration:underline}
-.opx-close{color:var(--down);border-color:color-mix(in srgb,var(--down) 50%,transparent)}.opx-close:hover{background:var(--down);color:#fff}
+.opx-close{display:inline-flex;align-items:center;justify-content:center;height:24px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:600;color:var(--down);background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.28);transition:all .15s ease;cursor:pointer}
+.opx-close:hover{background:var(--down);color:#fff;border-color:var(--down);box-shadow:0 2px 6px rgba(244,63,94,.3)}
 @media (max-width:760px){.opx-ohl{display:flex;margin:4px 0 0;gap:8px;font-size:11px;flex-wrap:wrap}.opx-sw{margin:6px 0;order:3;width:100%;justify-content:space-between}.opt-h{flex-wrap:wrap}}
 /* mobile: cards never wider than the screen - long contract names and button rows wrap */
 .pk-grid{grid-template-columns:repeat(auto-fill,minmax(min(310px,100%),1fr))}.pk{min-width:0;overflow-wrap:anywhere}.pk>*{min-width:0}
@@ -3059,7 +3070,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
     }
 
     return`<article class="pk">
-     <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · Major Benchmark Index</small></div>
+     <div class="pk-h"><div class="pk-t"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><b>${esc(p.s)}</b><span class="badge b-up" style="font-size:10px;padding:2px 7px;font-weight:700">Index · ${p.strength||80}%</span></div><small>${esc(p.n)} · Major Benchmark Index</small></div>
       <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
      <div class="pk-sig"><span class="badge ${isPut?'b-down':'b-up'}">${esc(optSignal)}</span><div class="bar"><i style="width:${p.strength||80}%;background:${isPut?'var(--down)':'var(--up)'}"></i></div><small class="muted">Strength ${p.strength||80}</small></div>
      <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
@@ -3080,15 +3091,17 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
   const hp=PK_HZ[App.pk.hz]&&p.plans?p.plans[PK_HZ[App.pk.hz][0]]:null,hs=hp&&hp.side!=='WAIT'?hp.side:null;   // a chosen horizon decides the direction shown
   const L=hs?hs==='BUY':p.signal!=='SELL';p=hs?Object.assign({},p,{signal:hs}):p;
   const cash=p.universe==='cash';
+  const sVal=p.strength||0;
+  const strBadge=sVal>=75?`<span class="badge b-up" style="font-size:10px;padding:2px 7px;font-weight:700">Strong · ${sVal}%</span>`:sVal>=65?`<span class="badge" style="font-size:10px;padding:2px 7px;font-weight:600;background:var(--panel-2);color:var(--text-2);border:1px solid var(--line)">Solid · ${sVal}%</span>`:`<span class="badge b-down" style="font-size:10px;padding:2px 7px;font-weight:600;opacity:.9" title="Setup under 65% strength — weaker setup">Weak · ${sVal}%</span>`;
   return`<article class="pk">
-   <div class="pk-h"><div class="pk-t"><b>${esc(p.s)}</b><small>${esc(p.n)} · ${esc(p.sec)}${cash?' · <span class="ipf-tag main">CASH</span>':''}${p.x?` · <span class="badge b-up">${p.x}× 52WL</span>`:''}</small></div>
+   <div class="pk-h"><div class="pk-t"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><b>${esc(p.s)}</b>${strBadge}</div><small>${esc(p.n)} · ${esc(p.sec)}${cash?' · <span class="ipf-tag main">CASH</span>':''}${p.x?` · <span class="badge b-up">${p.x}× 52WL</span>`:''}</small></div>
     <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
    <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
    <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
    <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':cash?L?'<b>Buy (cash)</b> with the plan&rsquo;s stop and targets':'<b>Sell (cash)</b> with the plan&rsquo;s stop and targets':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
    ${pkPlans(p)}
    <ul class="pk-why">${p.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>No strong trend, volume or range signal today</li>'}</ul>
-   <div class="pk-f"><span class="muted">R:R ${p.rr}</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button>${cash?'':` <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button>`} <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}">${L?'Buy':'Sell'}</button></span></div>
+   <div class="pk-f"><span class="muted">R:R ${p.rr}</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button>${cash?'':` <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button>`} <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}" style="${L?'background:linear-gradient(180deg,#10b981 0%,#059669 100%);color:#fff;border-color:#059669':'background:linear-gradient(180deg,#f43f5e 0%,#e11d48 100%);color:#fff;border-color:#e11d48'};border-radius:6px;font-weight:600;padding:3px 10px">${L?'Buy':'Sell'}</button></span></div>
   </article>`}
 /* per-horizon plan: Intraday (today, square off 15:15) · Swing (days) · Positional (weeks) - each with its own stop / targets */
 const PK_HZ={INTRA:['intraday','Intraday'],SWING:['swing','Swing'],POS:['positional','Positional']};
@@ -3166,6 +3179,9 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
     if(f.mkt==='FNO')l=l.filter(p=>p.universe!=='cash');else if(f.mkt==='CASH')l=l.filter(p=>p.universe==='cash');
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
+    if(f.str==='STRONG')l=l.filter(p=>p.kind==='index'||(p.strength||0)>=65);
+    else if(f.str==='WEAK')l=l.filter(p=>p.kind!=='index'&&(p.strength||0)<65);
+    else if(f.str==='HIGH')l=l.filter(p=>p.kind==='index'||(p.strength||0)>=75);
     const SORTS={strength:(a,b)=>(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
     
     // Sort indices strictly to the top
@@ -3181,7 +3197,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
     const pager=pages>1?`<div class="pager"><button class="btn-xs" data-pkpage="${f.page-1}" ${f.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===f.page?'pri':''}" data-pkpage="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-pkpage="${f.page+1}" ${f.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
-    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map((p,i)=>((f.sort||'strength')==='strength'&&p.kind!=='index'&&(p.strength||0)<65&&(i===0?(f.page===0||(l[f.page*size-1]||{}).strength>=65||(l[f.page*size-1]||{}).kind==='index'):!(part[i-1].kind!=='index'&&(part[i-1].strength||0)<65))?'<div class="pk-div">Below 65% strength · weaker setups</div>':'')+pickCard(p)).join('')}</div>${pager}`:(window._pkCashLoading?'<div class="empty">Loading whole-market cash stocks…</div>':(f.mkt==='CASH'?'<div class="empty">The whole-market cash scan progresses through the trading day — no qualifying cash names yet. Check back in a bit.</div>':'<div class="empty">No instruments match this filter right now.</div>'))}
+    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map(p=>pickCard(p)).join('')}</div>${pager}`:(window._pkCashLoading?'<div class="empty">Loading whole-market cash stocks…</div>':(f.mkt==='CASH'?'<div class="empty">The whole-market cash scan progresses through the trading day — no qualifying cash names yet. Check back in a bit.</div>':'<div class="empty">No instruments match this filter right now.</div>'))}
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
@@ -3189,8 +3205,8 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    <div class="ixs">${idxHtml}</div>
    <div id="pkGodseye" class="pk-ge"></div>
-   <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div></div>
-   <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div><div class="chips">${chips([['ALL','All strengths'],['STRONG','Strong (≥65%)'],['WEAK','Weaker (<65%)']],f.str||'ALL','str')}</div></div>
+   <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All strengths</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong setups (≥65%)</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High conviction (≥75%)</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker setups (&lt;65%)</option></select><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    
    ${body}
    <p class="disc">Automated screen of NSE-listed instruments, refreshed through the trading day. This is a screening aid, not investment advice — trades here are paper trades only.</p>
@@ -3650,7 +3666,6 @@ function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
      <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['sig','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${(OPT.wtab==='read'||OPT.wtab==='signals'?'sig':OPT.wtab)===k?'on':''}">${l}</button>`).join('')}</div>
        <div id="opTrade" class="opx-pane"></div><div class="opx-pane" id="opSig">${opxSigTabs()}<div class="opx-spane" id="opAll" hidden><div id="opRead"></div><div id="opStrat"></div></div><div class="opx-spane" id="opGe"></div><div class="opx-spane" id="opTc" hidden></div><div class="opx-spane" id="opRzt" hidden></div><div class="opx-spane" id="opHedge" hidden></div><div class="opx-spane" id="opBuyList" hidden></div></div></div>
-     <div class="opx-card opx-wi" id="opxWhatIf"></div>
      <div class="opx-card opx-pos" id="opxPos"></div>`;
     OPT.shell=true;
     OPT.ochart=new Chart($('#ochart'),{onTool:()=>{},onLegend:(uid,a)=>{const x=OPT.ochart.ind.findIndex(i=>i.uid===uid);if(x<0)return;if(a==='hide'){OPT.ochart.ind[x].hidden=!OPT.ochart.ind[x].hidden;OPT.ochart.lgDirty=true;OPT.ochart.req()}else if(a==='rm'){OPT.ochart.ind.splice(x,1);OPT.ochart.indChanged();drawOptChips();saveOptInds()}}});
@@ -4127,7 +4142,7 @@ async function refreshGlobalChart(){const s=App.sym;if(!s.tv||Date.now()-gRefres
   try{const r=await api(candleURL(s,App.tf));if(r.bars&&r.bars.length&&App.sym===s){const k=s.s+'|'+App.tf.k;CACHE[k]=r.bars;CACHE[k]._ts=Date.now();chart.setData(r.bars,s,App.tf,true);syncGlobalSym();updatePlan()}}catch(e){gRefreshTs=Date.now()-45000}}   /* a failed history refresh retries in ~15s instead of freezing the chart for a minute */
 document.addEventListener('click',e=>{const g=e.target.closest('[data-gl]');if(g){openGlobal(g.dataset.gl);return}
   const p=e.target.closest('[data-pkpage]');if(p&&!p.disabled){App.pk.page=+p.dataset.pkpage;renderPicks();window.scrollTo({top:0,behavior:'smooth'})}});
-document.addEventListener('change',e=>{if(e.target.id==='pkSort'){App.pk.sort=e.target.value;App.pk.page=0;renderPicks()}else if(e.target.id==='pkSize'){App.pk.size=+e.target.value;App.pk.page=0;renderPicks()}});
+document.addEventListener('change',e=>{if(e.target.id==='pkStr'){App.pk.str=e.target.value;App.pk.page=0;renderPicks()}else if(e.target.id==='pkSort'){App.pk.sort=e.target.value;App.pk.page=0;renderPicks()}else if(e.target.id==='pkSize'){App.pk.size=+e.target.value;App.pk.page=0;renderPicks()}});
 document.addEventListener('input',e=>{if(e.target.id==='pkQ'){App.pk.q=e.target.value;App.pk.page=0;renderPicks();const q=$('#pkQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}});
 
 /* ---- live news bar above the header ---- */
@@ -4240,8 +4255,14 @@ function drawOptTrade(){const box=$('#opTrade');if(!box||!OPT.osym)return;const 
    <div class="ot-type"><div class="seg" role="group" aria-label="Order type">${['market','limit'].map(t=>`<button type="button" class="${(OPT.otype||'market')===t?'on':''}" data-optype="${t}">${t==='market'?'Market':'Limit'}</button>`).join('')}</div>
      ${(OPT.otype||'market')==='limit'?`<label class="ot-l">Limit price<input class="inp" id="opLmt" type="number" step="0.05" min="0.05" inputmode="decimal" value="${OPT.lmt&&OPT.lmtFor===OPT.osym.s?OPT.lmt:fmtP(OPT.osym.last).replace(/,/g,'')}"></label><span class="muted">Buy fills when the premium trades at or below it · sell at or above. Good for the day.</span>`:'<span class="muted">Fills now: buy at the ask, sell at the bid.</span>'}</div>
    <label class="ot-chk"><input type="checkbox" id="opAtt" ${OPT.att===false?'':'checked'}> Attach stop-loss and target <span class="muted">(buy: from the trade plan · sell: stop +30% / target −50% of the premium)</span></label>
-   <div class="ot-btns"><button class="btn ot-buy ${OPT.tkSide==='buy'?'pref':''}" id="opBuy">Buy</button><button class="btn ot-sell ${OPT.tkSide==='sell'?'pref':''}" id="opSell">Sell (write)</button><button class="btn ot-exit" id="opExit">Exit position</button></div><div class="ot-pos" id="opPos"></div><div class="ot-pend" id="opPend"></div>
-   <p class="muted" style="font-size:11.5px">Paper trade — no real money. Buys fill at the ask, sells at the bid. Charges and margin are estimates. <b>Selling (writing) options can lose far more than the premium received.</b></p>`;updOptTrade()}
+   <div class="ot-btns">
+     <button class="btn ot-buy ${OPT.tkSide==='buy'?'pref':''}" id="opBuy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg> Buy</button>
+     <button class="btn ot-sell ${OPT.tkSide==='sell'?'pref':''}" id="opSell"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m19 12-7 7-7-7"/><path d="M12 5v14"/></svg> Sell (write)</button>
+     <button class="btn ot-exit" id="opExit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Exit</button>
+   </div>
+   <div class="ot-pos" id="opPos"></div><div class="ot-pend" id="opPend"></div>
+   <p class="muted" style="font-size:11.5px;margin-bottom:8px">Paper trade — no real money. Buys fill at the ask, sells at the bid. Charges and margin are estimates. <b>Selling (writing) options can lose far more than the premium received.</b></p>
+   <div class="opx-wi" id="opxWhatIf" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px"></div>`;updOptTrade();drawWhatIf()}
 function updOptTrade(){const o=OPT.osym;if(!o||!$('#opQty'))return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1,qty=lots*lot,px=o.ask>0?o.ask:o.last,ch=calcCharges('option','buy',qty*px).total,p=posOf(o.s);
   $('#opQty').textContent=qn(qty);$('#opPx').textContent=fmtP(px);$('#opCost').textContent=money(qty*px,0)+' · '+money(ch,0);
   {const bp=o.bid>0?o.bid:o.last,bEl=$('#opBidPx'),mEl=$('#opMargin'),spot=(OPT.chain&&OPT.chain.spot)||0;if(bEl)bEl.textContent=fmtP(bp);if(mEl)mEl.textContent=money(qty*Math.max(0.12*spot,bp),0)}
