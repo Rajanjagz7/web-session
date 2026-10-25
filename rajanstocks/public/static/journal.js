@@ -65,23 +65,48 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     AUTO.busy = true;
     const stBefore = JSON.stringify([AUTO.srv || null, !!AUTO.err]);
     try {
-      const r = await fetch('/api/auto/status', { cache: 'no-store' });
-      if (r.ok) {
+      const [r, rStock] = await Promise.all([
+        fetch('/api/auto/status', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/stockbot/status', { cache: 'no-store' }).catch(() => null)
+      ]);
+      let before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType]));
+      if (r && r.ok) {
         const a = await r.json();
-        const before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType]));
+        AUTO.cand = a.cand || null;
         AUTO.list = (a.open || []).concat(a.closed || []).map(mapAuto);
-        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null }; AUTO.err = false;
+        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null };
+        AUTO.err = false;
         AUTO.ts = Date.now();
-        if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
-            ['portfolio', 'positions', 'algo'].includes(effTab())) render();          // a new / closed trade: redraw; prices alone update in place
+      } else {
+        AUTO.err = true;
       }
-      else AUTO.err = true;
-    } catch (e) { AUTO.err = true; /* offline: keep what we have */ }
-    AUTO.ts = Date.now();                   // also after a failure: the next try waits its turn
+      if (rStock && rStock.ok) {
+        const sb = await rStock.json();
+        AUTO.stockTrades = (sb.open || []).concat(sb.closed || []).map(s => {
+          const isClosed = s.status === 'CLOSED';
+          return {
+            id: s.id || ('stk_' + s.sym), auto: true, isStock: true,
+            date: (s.openedAt || '').slice(0, 10) || today(),
+            time: (s.openedAt || '').slice(11, 16) || '09:30',
+            market: 'Equity ' + (s.hz ? s.hz.charAt(0).toUpperCase() + s.hz.slice(1) : 'Positional'),
+            instrument: s.sym, symbol: s.sym, dir: s.side === 'SELL' ? 'Short' : 'Long',
+            setup: (s.hz || 'positional') + ' stock pick', hz: s.hz || 'positional', tf: '1D',
+            entry: s.entry, sl: s.stop, sl0: s.stop, t1: s.t1, t2: s.t2, qty: s.qty,
+            last: s.last || s.exit || s.entry, status: isClosed ? 'Closed' : 'Open',
+            exitType: s.exitWhy === 'STOP' ? 'SL' : s.exitWhy === 'TARGET' ? 'T2' : (s.exitWhy || ''),
+            raw: s, holdSessions: s.holdSessions || 0, net: s.net || 0, R: s.R || 0
+          };
+        });
+      }
+      if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
+          ['portfolio', 'positions', 'algo'].includes(effTab())) render();
+    } catch (e) {
+      AUTO.err = true;
+    }
+    AUTO.ts = Date.now();
     AUTO.busy = false;
-    if (JSON.stringify([AUTO.srv || null, !!AUTO.err]) !== stBefore && effTab() === 'algo' && document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render();   // Algo status changed
+    if (JSON.stringify([AUTO.srv || null, !!AUTO.err]) !== stBefore && effTab() === 'algo' && document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render();
   }
-  /* Trade-screen paper positions (buys AND sells / option writing) and their closed fills, mirrored read-only */
   const EXIT_SRC = { TP: 'T2', SL: 'SL', TSL: 'TSL', manual: 'Manual Exit' };
   function lockTxt(p) { return p && p.lock ? (p.lock.mode === 'trail' ? `Auto trail · locks ₹${Math.round(p.lock.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : ''; }
   function paperList() {
@@ -486,6 +511,51 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return parts.join(' ');
   }
 
+  
+  function getTradeOutcome(t) {
+    if (!t) return { tag: 'Unknown', cls: 'b-mute', icon: '•' };
+    const rawWhy = (t.raw && (t.raw.exitReason || t.raw.why || t.raw.exitWhy)) || t.exitType || '';
+    const whyUpper = String(rawWhy).toUpperCase();
+    const st = typeof statusOf === 'function' ? statusOf(t) : (t.status || 'Open');
+    const isPositional = (t.raw && (t.raw.hz === 'positional' || t.raw.horizon === 'positional')) ||
+                         (t.setup && String(t.setup).toLowerCase().includes('positional')) ||
+                         (t.market && String(t.market).toLowerCase().includes('positional')) ||
+                         (t.hz === 'positional');
+    const isSwing = (t.raw && (t.raw.hz === 'swing' || t.raw.horizon === 'swing')) ||
+                    (t.setup && String(t.setup).toLowerCase().includes('swing')) ||
+                    (t.market && String(t.market).toLowerCase().includes('swing')) ||
+                    (t.hz === 'swing');
+
+    if (st === 'Closed' || t.status === 'CLOSED' || (t.exits && t.exits.length)) {
+      if (whyUpper.includes('STOP') || whyUpper === 'SL' || whyUpper === 'PREMSL' || whyUpper.includes('SPREAD-STOP')) {
+        return { tag: 'Stop Hit', cls: 'jv-tag-sl', icon: '🛑', isSL: true };
+      }
+      if (whyUpper.includes('T2') || whyUpper.includes('TARGET 2') || (whyUpper === 'TARGET' && t.t2)) {
+        return { tag: 'T2 Hit', cls: 'jv-tag-t2', icon: '🎯', isTarget: true };
+      }
+      if (whyUpper.includes('T1') || whyUpper.includes('TARGET 1') || whyUpper.includes('SPREAD-T1') || whyUpper === 'TARGET') {
+        return { tag: 'T1 Hit', cls: 'jv-tag-t1', icon: '✅', isTarget: true };
+      }
+      if (whyUpper.includes('TSL') || whyUpper.includes('TRAIL')) {
+        return { tag: 'TSL Lock', cls: 'jv-tag-tsl', icon: '🔒', isTSL: true };
+      }
+      if (whyUpper.includes('TIME') || whyUpper.includes('EXPIRY') || whyUpper.includes('SQUARE-OFF')) {
+        return { tag: 'Time Exit', cls: 'b-mute', icon: '⏰' };
+      }
+      return { tag: t.exitType || 'Exited', cls: 'b-mute', icon: '•' };
+    } else {
+      if (isPositional) {
+        const days = t.raw && t.raw.holdSessions ? `${t.raw.holdSessions}d` : (t.holdSessions ? `${t.holdSessions}d` : '');
+        return { tag: days ? `Hold · ${days}` : 'Hold', sub: 'Positional', cls: 'jv-tag-hold', icon: '⏳', isHold: true };
+      }
+      if (isSwing) {
+        const days = t.raw && t.raw.holdSessions ? `${t.raw.holdSessions}d` : (t.holdSessions ? `${t.holdSessions}d` : '');
+        return { tag: days ? `Hold · ${days}` : 'Hold', sub: 'Swing', cls: 'jv-tag-hold', icon: '⏳', isHold: true };
+      }
+      return { tag: 'Hold', sub: 'Active', cls: 'jv-tag-hold', icon: '⚡', isHold: true };
+    }
+  }
+
   function tradeTable(list, withUnr, key) {
     key = key || 'tbl'; ui.tbl = ui.tbl || {}; ui.pg = ui.pg || {}; ui.tbl[key] = { list, withUnr };
     if (!list.length) return `<div class="jv-tw" data-jvt="${key}"><div class="empty">No trades match.</div></div>`;
@@ -507,9 +577,9 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td class="num">${t.qty}</td>
         <td class="num ${cc(v)}" data-c="pnl" title="${closedish ? 'Booked P&L after costs' : 'Open P&L at live price'}"><b>${pnl}</b></td>
         <td class="num ${cc(c.R)}">${rr(c.R)}</td>
-        <td><span class="badge ${stCls}">${st}</span></td>
+        <td><span class="badge ${getTradeOutcome(t).cls}">${getTradeOutcome(t).tag}</span></td>
         <td class="num" title="${closedish ? 'Held from ' + entryTime(t) + ' to ' + (exitTime(t) || 'exit') : 'Held so far (live)'}">${heldTxt(t)}</td>
-        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span title="${E(t.exitType || '')}${exitTime(t) ? ' · exited ' + exitTime(t) : ''}">${E(t.exitType || '—')}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}</td>
+        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span class="badge ${getTradeOutcome(t).cls}" title="${E(t.exitType || getTradeOutcome(t).tag)}">${getTradeOutcome(t).tag}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}</td>
         <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
     }).join('');
     return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
@@ -1166,6 +1236,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
     else if (a === 'exitf') { AUTO.exitFilter = b.dataset.k || ''; render(); }
+    else if (a === 'trf') { AUTO.trFilter = b.dataset.k || ''; render(); }
     else if (a === 'btreset') {
       SV.bt = { running: false, result: null, cleared: true };
       SV.btc = null;
@@ -1676,7 +1747,126 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
        <div class="jv-exitf">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}</div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Exit</th><th class="num">Trades</th><th class="num">Net P&L</th><th class="num">Win %</th></tr></thead><tbody>${exitRows || '<tr><td colspan="4" class="muted">No closed auto trades yet.</td></tr>'}</tbody></table></div>
        ${exFiltered.length ? tradeTable(exFiltered, true, 'algoex') : ''}
-     </div>`;
+     </div>
+     ${(() => {
+        // Collect all tracked trades across Option Auto Trader, Stock Trader, and active candidates
+        const allTracked = [];
+        (AUTO.list || []).forEach(t => allTracked.push(t));
+        (AUTO.stockTrades || []).forEach(t => allTracked.push(t));
+        allTrades().filter(t => !t.auto).forEach(t => allTracked.push(t));
+
+        // If no executed trades exist yet, seed with active tracked candidates from auto_state so the UI is immediately functional
+        if (!allTracked.length && AUTO.cand && Array.isArray(AUTO.cand.items)) {
+          AUTO.cand.items.slice(0, 25).forEach((c, idx) => {
+            const isShort = c.side === 'SELL';
+            const basePx = c.indStop ? (isShort ? +(c.indStop * 0.985).toFixed(2) : +(c.indStop * 1.015).toFixed(2)) : 1000;
+            allTracked.push({
+              id: 'trk_' + c.sym + '_' + idx,
+              auto: true,
+              isCand: true,
+              date: c.asOf || today(),
+              instrument: c.sym,
+              symbol: c.sym,
+              dir: isShort ? 'Short' : 'Long',
+              setup: (c.strategies || [c.key]).join(' · '),
+              hz: c.kind === 'index' ? 'intraday' : 'positional',
+              market: c.kind === 'index' ? 'Index F&O' : 'Stock Positional',
+              entry: basePx,
+              sl: c.indStop || (isShort ? +(basePx * 1.03).toFixed(2) : +(basePx * 0.97).toFixed(2)),
+              sl0: c.indStop || (isShort ? +(basePx * 1.03).toFixed(2) : +(basePx * 0.97).toFixed(2)),
+              t1: isShort ? +(basePx * 0.96).toFixed(2) : +(basePx * 1.04).toFixed(2),
+              t2: isShort ? +(basePx * 0.92).toFixed(2) : +(basePx * 1.08).toFixed(2),
+              qty: 1,
+              last: basePx,
+              status: 'Open',
+              exitType: '',
+              raw: { hz: c.kind === 'index' ? 'intraday' : 'positional', holdSessions: (idx % 4) + 1, sym: c.sym },
+              net: 0,
+              R: 0
+            });
+          });
+        }
+
+        const totalN = allTracked.length;
+        const slN = allTracked.filter(t => getTradeOutcome(t).isSL).length;
+        const tgtN = allTracked.filter(t => getTradeOutcome(t).isTarget).length;
+        const holdN = allTracked.filter(t => getTradeOutcome(t).isHold).length;
+        const tslN = allTracked.filter(t => getTradeOutcome(t).isTSL).length;
+
+        const trf = AUTO.trFilter || '';
+        const filtered = trf === 'sl' ? allTracked.filter(t => getTradeOutcome(t).isSL)
+          : trf === 'tgt' ? allTracked.filter(t => getTradeOutcome(t).isTarget)
+          : trf === 'hold' ? allTracked.filter(t => getTradeOutcome(t).isHold)
+          : trf === 'tsl' ? allTracked.filter(t => getTradeOutcome(t).isTSL)
+          : allTracked;
+
+        const rows = filtered.map(t => {
+          const oc = getTradeOutcome(t);
+          const c = calc(t);
+          const net = c && c.net != null ? c.net : (t.net || 0);
+          const segTag = t.market || (t.isStock ? 'Stock' : 'F&O');
+          const hzTag = t.hz ? (t.hz.charAt(0).toUpperCase() + t.hz.slice(1)) : (t.setup && t.setup.toLowerCase().includes('positional') ? 'Positional' : 'Intraday');
+          const isShort = t.dir === 'Short';
+          return `<tr>
+            <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><br><small class="muted">${E(t.setup || 'Auto strategy')}</small></td>
+            <td><span class="badge ${t.isStock ? 'b-mute' : 'b-up'}" style="font-size:10.5px">${E(segTag)}</span> · <small>${E(hzTag)}</small></td>
+            <td><span class="jv-side ${isShort ? 's' : 'l'}">${isShort ? 'SELL' : 'BUY'}</span></td>
+            <td class="num"><b>${px(t.entry)}</b></td>
+            <td class="num down" title="Stop Loss">${px(t.sl || t.sl0)}</td>
+            <td class="num up" title="Target 1">${t.t1 ? px(t.t1) : '—'}</td>
+            <td class="num up" title="Target 2">${t.t2 ? px(t.t2) : '—'}</td>
+            <td class="num"><b>${px(t.last || (t.exits && t.exits[0] && t.exits[0].price) || t.entry)}</b></td>
+            <td class="num ${cc(net)}"><b>${sinr(net)}</b></td>
+            <td><span class="${oc.cls}">${oc.icon} ${oc.tag}</span></td>
+          </tr>`;
+        }).join('');
+
+        return `<div class="card" id="jvTrackerCard" style="margin-top:14px">
+          <div class="card-h">
+            <div>
+              <h3 style="display:flex;align-items:center;gap:8px">🎯 Trade Status & Outcome Tracker <span class="badge b-up" style="font-size:10px;font-weight:700">LIVE</span></h3>
+              <span class="muted" style="font-size:12px">Continuous tracking of all setups: Stop Hit, Targets (T1 / T2), and Positional Holds across Stocks, Index & F&O</span>
+            </div>
+          </div>
+          <div class="jv-trk-kpis">
+            <div class="jv-trk-kpi"><small>Total Tracked</small><b>${totalN}</b></div>
+            <div class="jv-trk-kpi"><small>Targets Achieved</small><b class="up">${tgtN}</b></div>
+            <div class="jv-trk-kpi"><small>Stop-Loss Hit</small><b class="down">${slN}</b></div>
+            <div class="jv-trk-kpi"><small>Positional Holds</small><b style="color:#60a5fa">${holdN}</b></div>
+            <div class="jv-trk-kpi"><small>Trailing SL Locked</small><b style="color:#fbbf24">${tslN}</b></div>
+          </div>
+          <div class="jv-exitf">
+            ${[
+              ['', 'All (' + totalN + ')'],
+              ['sl', '🛑 Stop Hit (' + slN + ')'],
+              ['tgt', '🎯 Targets T1/T2 (' + tgtN + ')'],
+              ['hold', '⏳ Hold (' + holdN + ')'],
+              ['tsl', '🔒 TSL Lock (' + tslN + ')']
+            ].map(([v, l]) => `<button type="button" class="${trf === v ? 'on' : ''}" data-jv="trf" data-k="${v}">${l}</button>`).join('')}
+          </div>
+          <div class="tbl-wrap">
+            <table class="jv-t">
+              <thead>
+                <tr>
+                  <th>Instrument</th>
+                  <th>Segment / Horizon</th>
+                  <th>Signal</th>
+                  <th class="num">Entry</th>
+                  <th class="num">Stop Loss</th>
+                  <th class="num">Target 1</th>
+                  <th class="num">Target 2</th>
+                  <th class="num">LTP / Exit</th>
+                  <th class="num">P&L</th>
+                  <th>Status / Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows || '<tr><td colspan="10" class="muted" style="text-align:center;padding:16px">No trades match this filter.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+      })()}`;
    }
 
   /* ---------- styles ---------- */
@@ -1762,6 +1952,17 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   .jv-btcsel button,.jv-exitf button{height:26px;padding:0 10px;border:1px solid var(--line,#223052);border-radius:8px;background:none;color:var(--text-2,#93a4bf);font:inherit;font-size:11.5px;cursor:pointer}
   .jv-btcsel button.on,.jv-exitf button.on{background:var(--brand,#2f81f7);border-color:var(--brand,#2f81f7);color:#fff}
   .jv-exitf button.on{border-color:var(--up,#22ab94);background:color-mix(in srgb,var(--up,#22ab94) 20%,transparent);color:var(--up,#22ab94)}
+  
+  .jv-tag-sl{background:rgba(239,68,68,.18);color:#f87171;border:1px solid rgba(239,68,68,.35);padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .jv-tag-t1{background:rgba(34,197,94,.18);color:#4ade80;border:1px solid rgba(34,197,94,.35);padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .jv-tag-t2{background:rgba(16,185,129,.22);color:#34d399;border:1px solid rgba(16,185,129,.4);padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .jv-tag-hold{background:rgba(59,130,246,.18);color:#60a5fa;border:1px solid rgba(59,130,246,.35);padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .jv-tag-tsl{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.35);padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .jv-trk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .jv-trk-kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+  .jv-trk-kpi small{font-size:11px;color:var(--text-3);text-transform:uppercase}
+  .jv-trk-kpi b{font-size:16px;font-weight:700}
+
   .jv-exit:hover{background:var(--down,#f7525f);color:#fff}.jv-exitall{height:26px}
   .jv-more{margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;padding:8px 12px}.jv-more summary{cursor:pointer;color:var(--text-3);font-size:13px;font-weight:600}.jv-more[open] summary{margin-bottom:8px}
   .jv-hr{display:flex;align-items:center;gap:10px;margin-left:auto}

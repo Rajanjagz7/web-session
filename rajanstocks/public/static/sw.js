@@ -1,5 +1,5 @@
 /* Service worker: shows push notifications (also when the app is closed) and handles taps. */
-const SHELL = 'algo-shell-v5';
+const SHELL = 'algo-shell-v6';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(['/', '/static/journal.js', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png'])).catch(() => {}));
   self.skipWaiting();

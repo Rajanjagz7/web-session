@@ -655,7 +655,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261025c"></script>
+<script src="/static/journal.js?v=20261025g"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261025d"></script>
 <script src="/static/observer.js?v=20261025d"></script>
@@ -1480,7 +1480,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025f',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025g',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -2971,11 +2971,20 @@ function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setT
   const ab=cleanZones.filter(z=>z.isAbove).slice(-4),bl=cleanZones.filter(z=>!z.isAbove).slice(0,4);
   const dispZones=TC.allLevels?cleanZones:[...ab,...bl];
 
-  const cycRows=part.map(c=>{
+  const cycRows=part.map((c,idx)=>{
     const isNext=c===nxt;
-    const pVal=c.price!=null?fmtP(c.price):(isNext?(d.nextResistance?fmtP(d.nextResistance.level):fmtP(d.last)):'—');
-    const pBadge=c.price!=null?'<small class="muted">close</small>':(isNext?'<small class="down">target</small>':'');
-    return `<tr class="${isNext?'on':''} ${c.passed?'tc-past':''}"><td><b>${c.time}</b></td><td><span class="tc-${c.strength}">${c.strength}</span></td><td class="num">${pVal} ${pBadge}</td><td><small class="${c.passed?'muted':isNext?'up':''}">${c.passed?'Done':isNext?'Active':'Pending'}</small></td></tr>`;
+    const globalIdx=(TC.pg||0)*ps+idx;
+    let targetPx=null;
+    if(cleanZones&&cleanZones.length){
+      targetPx=cleanZones[globalIdx%cleanZones.length].level;
+    }else if(d.vibration){
+      targetPx=d.vibration.level;
+    }else{
+      targetPx=d.last;
+    }
+    const pVal=c.price!=null?fmtP(c.price):fmtP(isNext&&d.nextResistance?d.nextResistance.level:targetPx);
+    const pBadge=c.price!=null?'<small class="muted">close</small>':`<small class="${isNext?'down':'up'}">target</small>`;
+    return `<tr class="${isNext?'on':''} ${c.passed?'tc-past':''}"><td><b>${c.time}</b></td><td><span class="tc-${c.strength}">${c.strength}</span></td><td class="num"><b>${pVal}</b> ${pBadge}</td><td><small class="${c.passed?'muted':isNext?'up':''}">${c.passed?'Done':isNext?'Active':'Pending'}</small></td></tr>`;
   }).join('');
   const cycTbl=`<div class="vx-astbl"><table><thead><tr><th>Time</th><th>Strength</th><th class="num">Price</th><th>Status</th></tr></thead><tbody>${cycRows}</tbody></table></div>${pager}`;
 

@@ -66,7 +66,7 @@ async def _no_stale_assets(request, call_next):
     """HTML / manifest / sw.js are revalidated on every load, so devices never keep running an old build."""
     resp = await call_next(request)
     p = request.url.path
-    if p == "/" or p.endswith((".html", ".webmanifest", "sw.js")):
+    if p == "/" or p.endswith((".html", ".webmanifest", "sw.js", ".js", ".css")):
         resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     return resp
 
