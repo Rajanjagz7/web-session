@@ -67,7 +67,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(png|svg|ico))",
+      "source": "/:path*.(png|svg|ico)",
       "headers": [
         {
           "key": "Cache-Control",
