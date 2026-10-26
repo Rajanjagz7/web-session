@@ -4674,13 +4674,18 @@ addEventListener('offline',()=>{NET.ok=false;netBanner()});
 addEventListener('online',()=>{NET.ok=true;netBanner();toast('Back online — refreshing prices','ok');try{pollQuotes();loadPicks(false)}catch(e){}});
 document.addEventListener('click',e=>{if(e.target.id==='netRetry'){NET.ok=navigator.onLine!==false;netBanner();try{pollQuotes()}catch(x){}}});
 async function pollQuotes(){if(pollBusy)return;pollBusy=true;
-  try{const r=await api(quotesURL());if(!NET.ok){NET.ok=true;netBanner()}MKT.open=r.marketOpen;MKT.asOf=r.asOf;MKT.err=null;MKT.stale=!!r.stale;MKT.staleAt=r.quotesAsOf||null;
-    for(const q of r.quotes){const s=SYM(q.s);if(!s||!(q.last>0))continue;const pv=s.last;
+  try{let url=quotesURL(),r;
+    try{r=await api(url)}catch(e1){if(url!=='/api/m/quotes'&&!(e1&&e1.name==='TypeError'))r=await api('/api/m/quotes');else throw e1}   // one retry on the full-list call (its own cache key) before calling it a feed failure
+    if(!r||!Array.isArray(r.quotes))throw new Error('quotes: bad response');
+    if(!NET.ok){NET.ok=true;netBanner()}MKT.open=r.marketOpen;MKT.asOf=r.asOf;MKT.err=null;MKT.fails=0;MKT.stale=!!r.stale;MKT.staleAt=r.quotesAsOf||null;
+    for(const q of r.quotes){try{const s=SYM(q.s);if(!s||!(q.last>0))continue;const pv=s.last;
       s.last=q.last;s.p=q.last;s.prev=q.prev>0?q.prev:(s.prev||q.last);s.hi=q.high||q.last;s.lo=q.low||q.last;s.open=q.open;s.yh=q.yh||s.yh;s.yl=q.yl||s.yl;
       const dv=Math.max(0,q.vol-(s.dvol||0));s.dvol=q.vol;s.turn=q.vol*q.last;s.bid=q.bid;s.ask=q.ask;s.vb=Math.max(200,(q.vol||0)/375);
       if(pv&&pv!==s.last){trig(s,pv);if(s===App.sym){App.tape.unshift({sym:s.s,p:s.last,q:Math.max(1,dv),up:s.last>=pv,t:Date.now()});App.tape.length=Math.min(App.tape.length,60)}}}
+      catch(eq){console.warn('quote update',q&&q.s,eq)}}                     // one bad symbol / trigger must not take the whole feed down
     firstQuotes=true}
-  catch(e){MKT.err=e;if(e&&(e.name==='TypeError'||navigator.onLine===false)){NET.ok=false;netBanner()}console.warn('quotes',e)}
+  catch(e){MKT.fails=(MKT.fails||0)+1;if(MKT.fails>=2||!firstQuotes)MKT.err=e;   // a single blip keeps the last prices; "No feed" only after 2 failures in a row
+    if(e&&(e.name==='TypeError'||navigator.onLine===false)){NET.ok=false;netBanner()}console.warn('quotes',e)}
   pollBusy=false;setStatus();uiRefresh()}
 function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='options')optTick();
@@ -4695,7 +4700,7 @@ setInterval(()=>{try{if(App.view==='trade'&&App.sym&&App.sym.tv&&!document.hidde
 function dockCheck(){const d=document.getElementById('tradeDock');if(!d)return;const seg=document.querySelector('#v-trade.on .side-seg');let vis=false;
   if(seg&&seg.offsetParent){const r=seg.getBoundingClientRect();vis=r.bottom>0&&r.top<innerHeight-60}d.classList.toggle('gone',vis)}   /* one Buy/Sell at a time: hide the dock while the order ticket's own Buy/Sell is on screen */
 addEventListener('scroll',dockCheck,{passive:true,capture:true});addEventListener('resize',dockCheck);setInterval(dockCheck,800);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
-function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:(MKT.err||MKT.stale)?20000:MKT.open?5000:60000))}
+function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:MKT.err?10000:MKT.stale?20000:MKT.fails?4000:MKT.open?5000:60000))}
 /* Auto cache-clear: /api/cache-version flips twice a day (before market open, after market close).
    When it changes, drop every cache this origin holds and reload once so nobody is ever stuck
    on a stale build across those boundaries. */
