@@ -313,15 +313,17 @@ def fill_slots(st, today, already):
             st["log"].append({"at": _now().isoformat(), "msg": f"index screen failed: {str(e)[:80]}"})
     if need["stock"] > 0:
         try:
-            # every F&O stock with listed options (~218), same engine + cache as the Picks page - not just the 20
-            # backtest symbols. Open = High / Open = Low screens on any of them can now fill a stock slot.
-            picks = [p for p in market_api.picks().get("picks", []) if p.get("s") not in INDEX_SYMS]
-            ranked = sorted([p for p in picks if p["signal"] in ("BUY", "SELL") and p["s"] not in used and p.get("strength", 0) >= 50],
-                            key=lambda p: (-(p.get("strength") or 0), -(p.get("volx") or 0)))
-            for p in ranked[:need["stock"]]:
-                out.append({"key": "stock-screen", "sym": p["s"], "side": p["signal"], "kind": "stock", "variant": "fixed", "filter": "none",
-                            "score": (p.get("strength") or 0) / 100, "rank": 1 + (p.get("strength") or 0) / 100, "agree": 1,
-                            "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
+            # the morning shortlist (morning_picks.py, same ranking as the Picks screen's `top`): strength >= 75 with good risk/reward first
+            # (+ Open = Low / High agreeing), then Open = Low BUY / Open = High SELL, then fill-up - 10 to 15 stock trades a day in all
+            import morning_picks
+            took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
+            left = morning_picks.MAX_PICKS - took
+            picks = [p for p in market_api.picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
+            for p in [x for x in morning_picks.select(picks) if x["s"] not in used][:max(0, min(need["stock"], left))]:
+                out.append({"key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
+                            "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
+                            "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
+                            "source": f"morning shortlist · tier {p['tier']} · {p['why']}", "label": "morning shortlist"})
         except Exception as e:
             st["log"].append({"at": _now().isoformat(), "msg": f"stock screen failed: {str(e)[:80]}"})
     return out[:room]

@@ -1352,6 +1352,8 @@ def _pick(sym, q, rows):
         "entry": round(entry, 2), "stop": round(stop, 2),
         "target": round(t1, 2), "target2": round(t2, 2),
         "rr": 1.5, "risk": round(risk, 2),
+        "open": round(op, 2), "high": round(hi, 2), "low": round(lo, 2),                     # today's range: the Open = Low / Open = High screens read these
+        "hi20": round(max(r["high"] for r in rows[-21:-1]), 2), "lo20": round(min(r["low"] for r in rows[-21:-1]), 2),   # last 20 completed sessions: how much room is left to run
         "rsi": round(rsi, 1) if rsi is not None else None,
         "volx": round(volx, 2), "atr": round(atr, 2), "reasons": reasons,
         "spark": [round(c, 2) for c in closes[-20:]],
@@ -1789,6 +1791,20 @@ def _inject_cash_seed_if_needed(data):
     return data
 
 
+def _add_shortlist(v):
+    """`top`: the 10-15 stock trades to act on first (morning_picks.py). Added on read, so cached payloads from before this existed get it too."""
+    try:
+        import morning_picks
+        top = morning_picks.select([r for r in v.get("picks") or [] if r.get("universe") != "cash"])
+        v["top"] = [{k: r.get(k) for k in ("s", "n", "sec", "ltp", "chg", "signal", "strength", "tier", "side", "why", "room", "rank", "entry", "stop", "target", "target2",
+                                           "risk", "rr", "volx", "rsi", "open", "high", "low")} for r in top]
+        v["topSummary"] = morning_picks.summary(top)
+    except Exception as e:
+        print(f"[picks] shortlist failed: {e}")
+        v.setdefault("top", [])
+    return v
+
+
 @router.get("/picks")
 def picks(refresh: bool = False, response: Response = None):
     if response and not refresh:
@@ -1800,6 +1816,7 @@ def picks(refresh: bool = False, response: Response = None):
             v.pop("coverage", None)
             v.pop("bhav_diag", None)
             _inject_cash_seed_if_needed(v)
+            _add_shortlist(v)
         return v
     if os.environ.get("VERCEL"):
         # serverless freezes background threads after the response: build inline within the 30s cap
