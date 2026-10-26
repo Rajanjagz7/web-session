@@ -75,12 +75,6 @@
   }
   function panel(title, key, body, cls) { return `<section class="ge-p ${cls || ''}"><h3>${E(title)}${key ? tip(key) : ''}</h3>${body}</section>`; }
 
-  function pThroughput(t) {
-    if (!t) return panel('Signal Throughput', 'throughput', `<p class="ge-na">N/A</p>`);
-    const r = 34, C = 2 * Math.PI * r, f = t.pct / 100;
-    return panel('Signal Throughput', 'throughput', `<div class="ge-ring"><svg viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="${r}" class="bg"/><circle cx="42" cy="42" r="${r}" class="fg" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}"/></svg><b class="num">${t.pct}%</b></div>
-      <p class="ge-sub">${t.ok} of ${t.total} signals fresh · ${(t.ms / 1000).toFixed(1)} s</p><p class="ge-sub">Processing load <b>${E(t.load)}</b></p>`);
-  }
   function pOptionsOI(o) {
     if (!o) return panel('Options OI', 'pcr', `<p class="ge-na">Option chain unavailable</p>`);
     return panel('Options OI · NIFTY', 'pcr', `<div class="ge-row"><span>Call OI</span>${bar(o.callPct, 'down')}<b class="num">${isN(o.callPct) ? o.callPct + '%' : NA}</b></div>
@@ -94,11 +88,6 @@
       <div class="ge-row"><span>OI change (call)</span><b class="num ${cc(-o.callOIChg)}">${sg(o.callOIChg / 1e5, 1)} L</b></div>
       <div class="ge-row"><span>OI change (put)</span><b class="num ${cc(o.putOIChg)}">${sg(o.putOIChg / 1e5, 1)} L</b></div>
       <p class="ge-sub">${E(o.expiry)} expiry · ${n0(o.callOI / 1e5)} L calls · ${n0(o.putOI / 1e5)} L puts</p>`);
-  }
-  function pFeeds(f) {
-    const st = s => s === 'OK' ? 'up' : s === 'Backup' || s === 'Behind' ? 'warn' : 'down';
-    return panel('Data feeds (node activity)', null, (f || []).map(x => `<div class="ge-feed"><i class="${st(x.state)}"></i><span>${E(x.name)}<small>${E(x.detail || '')}</small></span><b class="${st(x.state)}">${E(x.state)}</b></div>`).join('') +
-      `<p class="ge-sub">Observer active: <b class="${G.err ? 'down' : 'up'}">${G.err ? 'No' : 'Yes'}</b></p>`);
   }
   function pRetail(p) {
     const r = p && p.retail;
@@ -118,27 +107,27 @@
   }
 
   function outlookBlock(o, x, opt) {
-    if (!o) return `<section class="ge-out"><h3>Next-day & expiry read-out</h3><p class="ge-na">Not enough inputs yet.</p></section>`;
-    const pos = (o.score + 10) / 20 * 100;
-    return `<section class="ge-out ${lab(o.label)}">
-      <div class="ge-oh"><div><small>Next trading day</small><h3>${E(o.label)} <span class="num">${sg(o.score)}</span>${tip('outlook')}</h3>
-        <p class="ge-sub">Confidence <b>${E(o.confidence)}</b> · ${o.agree} of ${o.of} inputs agree</p></div>
-        <div class="ge-meter" aria-label="Score ${sg(o.score)} on -10 to +10"><i style="left:${pos}%"></i><span>−10</span><span>0</span><span>+10</span></div></div>
-      <div class="ge-parts">${o.parts.map(p => `<div class="ge-part"><span>${E(p.name)}</span><i class="ge-pb"><b class="${p.pts >= 0 ? 'up' : 'down'}" style="width:${Math.min(50, Math.abs(p.pts) / 3 * 50)}%;${p.pts >= 0 ? 'left:50%' : 'right:50%'}"></b></i><em class="num ${cc(p.pts)}">${sg(p.pts)}</em><small>${E(p.why)}</small></div>`).join('')}</div>
-      ${x ? `<div class="ge-exp"><h4>Expiry ${E(dShort(x.expiry))}${isN(x.daysLeft) ? ` · ${x.daysLeft === 0 ? 'today' : x.daysLeft + ' session' + (x.daysLeft > 1 ? 's' : '') + ' left'}` : ''}${tip('expected')}</h4>
-        <ul>${x.lines.map(l => `<li>${E(l)}</li>`).join('')}</ul>
-        ${opt ? `<div class="ge-lv"><span>Put wall<b class="num up">${n0(opt.putWall)}</b></span><span>Max pain<b class="num">${n0(opt.maxPain)}</b></span><span>Spot<b class="num">${n2(opt.spot, 1)}</b></span><span>Call wall<b class="num down">${n0(opt.callWall)}</b></span></div>` : ''}</div>` : ''}
+    if (!o) return `<section class="ge-out"><p class="ge-na">Next-day read-out: not enough inputs yet.</p></section>`;
+    const pos = (o.score + 10) / 20 * 100, open = !!G.outOpen;
+    const left = x && isN(x.daysLeft) ? (x.daysLeft === 0 ? 'today' : x.daysLeft + ' left') : '';
+    return `<section class="ge-out ge-outc ${lab(o.label)}">
+      <div class="ge-oc">
+        <div class="ge-oc-a"><small>Next day</small><b class="ge-oc-l">${E(o.label)} <span class="num">${sg(o.score)}</span></b>${tip('outlook')}
+          <i class="ge-meter ge-meter-s" aria-label="Score ${sg(o.score)} on -10 to +10"><i style="left:${pos}%"></i></i><span class="ge-oc-c">${E(o.confidence)} · ${o.agree}/${o.of} agree</span></div>
+        ${x && opt ? `<div class="ge-oc-b"><small>Expiry ${E(dShort(x.expiry))}${left ? ' · ' + left : ''}</small>
+          <span>Range <b class="num">${opt.range ? n0(opt.range[0]) + '–' + n0(opt.range[1]) : NA}</b></span><span>Put wall <b class="num up">${n0(opt.putWall)}</b></span><span>Max pain <b class="num">${n0(opt.maxPain)}</b></span><span>Call wall <b class="num down">${n0(opt.callWall)}</b></span></div>` : ''}
+        <button type="button" class="ge-oc-t" data-geout="1" aria-expanded="${open}">${open ? 'Hide details ▴' : 'Why ▾'}</button>
+      </div>
+      <div class="ge-chips">${o.parts.map(p => `<span class="ge-chip ${cc(p.pts)}" title="${E(p.why)}">${E(p.name)} <b class="num">${sg(p.pts)}</b></span>`).join('')}</div>
+      ${open ? `<div class="ge-parts">${o.parts.map(p => `<div class="ge-part"><span>${E(p.name)}</span><i class="ge-pb"><b class="${p.pts >= 0 ? 'up' : 'down'}" style="width:${Math.min(50, Math.abs(p.pts) / 3 * 50)}%;${p.pts >= 0 ? 'left:50%' : 'right:50%'}"></b></i><em class="num ${cc(p.pts)}">${sg(p.pts)}</em><small>${E(p.why)}</small></div>`).join('')}</div>
+        ${x ? `<div class="ge-exp"><h4>Expiry ${E(dShort(x.expiry))}${tip('expected')}</h4><ul>${x.lines.map(l => `<li>${E(l)}</li>`).join('')}</ul></div>` : ''}` : ''}
     </section>`;
   }
 
   function overview(d) {
-    const cards = d.cards || [];
     return `${outlookBlock(d.outlook, d.expiry, d.options)}
-      <div class="ge-grid3">
-        <div class="ge-col">${pThroughput(d.throughput)}${pOptionsOI(d.options)}${pPCR(d.options)}</div>
-        <div class="ge-cards">${cards.map(card).join('')}</div>
-        <div class="ge-col">${pFeeds(d.feeds)}${pRetail(d.positioning)}${pInst(d.positioning)}</div>
-      </div>`;
+      <div class="ge-cards ge-cards-w">${(d.cards || []).map(card).join('')}</div>
+      <div class="ge-grid4">${pOptionsOI(d.options)}${pPCR(d.options)}${pRetail(d.positioning)}${pInst(d.positioning)}</div>`;
   }
 
   function fiiTab(d) {
@@ -250,6 +239,7 @@
     if (cl && (cl.tagName === 'BUTTON' || t === cl)) { G.open = null; return paint(); }   // the backdrop itself or a close button - not every button inside the drawer
     if (q('.ge-det')) { const ch = q('[data-gechart]'); if (ch) openChart(ch.dataset.gechart); return; }
     const c = q('[data-gecard]'); if (c) { G.open = c.dataset.gecard; return paint(); }
+    if (q('[data-geout]')) { G.outOpen = !G.outOpen; return paint(); }
     const tb = q('[data-getab]'); if (tb) { G.tab = tb.dataset.getab; SS('ge-tab', G.tab); return paint(); }
     if (q('[data-gerefresh]')) return load(true);
     const ex = q('[data-geexp]'); if (ex) return loadOpt(ex.dataset.geexp);
@@ -289,7 +279,7 @@
   .ge-pill i{width:8px;height:8px;border-radius:50%;background:var(--text-3)}.ge-pill.on{color:var(--up)}.ge-pill.on i{background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 30%,transparent)}
   .ge-pill.stale{color:var(--warn,#f5b942)}.ge-pill.stale i{background:var(--warn,#f5b942)}.ge-pill.off{color:var(--down)}.ge-pill.off i{background:var(--down)}
   .ge-ref{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:16px}
-  .ge-tick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding:2px 0 8px;margin-bottom:6px}
+  .ge-tick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 8px;margin-bottom:6px}
   .ge-tk{flex:0 0 auto;display:flex;gap:8px;align-items:baseline;padding:7px 11px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:12.5px;white-space:nowrap}
   .ge-tk b{font-size:11.5px;letter-spacing:.04em}
   .ge-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:4px 0 12px;border-bottom:1px solid var(--line)}
@@ -363,6 +353,17 @@
   .ge-det .ge-spark{height:120px;margin:10px 0}.ge-kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0}.ge-kv small{display:block;font-size:10.5px;color:var(--text-3)}
   .ge-play{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}.ge-play.bull{border-color:color-mix(in srgb,var(--up) 50%,var(--line))}.ge-play.bear{border-color:color-mix(in srgb,var(--down) 50%,var(--line))}
   .ge-play b{display:block}.ge-play span{font-size:12px;color:var(--text-2)}.ge-dact{display:flex;gap:8px;margin-top:12px}
+  .ge-outc{padding:10px 14px}.ge-oc{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap}
+  .ge-oc-a,.ge-oc-b{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font-size:12.5px}.ge-oc small{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3)}
+  .ge-oc-l{font-size:17px}.ge-out.bull .ge-oc-l{color:var(--up)}.ge-out.bear .ge-oc-l{color:var(--down)}.ge-oc-c{font-size:11.5px;color:var(--text-3)}
+  .ge-meter-s{display:inline-block;flex:0 0 110px;min-width:110px;height:6px;margin:0}.ge-meter-s i{width:11px;height:11px;margin:-5.5px 0 0 -5.5px}
+  .ge-oc-b b{font-size:13px}.ge-oc-t{margin-left:auto;border:1px solid var(--line);background:var(--panel);color:var(--text-2);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .ge-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ge-chip{font-size:11.5px;padding:3px 8px;border-radius:12px;background:var(--panel-2,rgba(255,255,255,.06));color:var(--text-2)}
+  .ge-chip.up b{color:var(--up)}.ge-chip.down b{color:var(--down)}
+  .ge-cards-w{margin-bottom:12px}.ge-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  @media (max-width:1100px){.ge-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .ge-tick::-webkit-scrollbar{display:none}
+  @media (max-width:640px){.ge-grid4{grid-template-columns:1fr}.ge-oc-t{margin-left:0}.ge-chips{display:none}}   /* phones: the chips are in 'Why' */
   body.ge-noscroll{overflow:hidden}
   .ge-strip{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;margin:6px 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);cursor:pointer;text-align:left}
   .ge-strip:hover{border-color:#22d3ee}.ge-strip-h{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12.5px;letter-spacing:.06em;color:#22d3ee;flex:0 0 auto}.ge-strip .ge-eye{width:26px;height:16px;color:#22d3ee}
