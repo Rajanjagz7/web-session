@@ -614,6 +614,7 @@ SPREAD_STOP_X, SPREAD_T1_KEEP = 2.0, 0.5     # exit when the spread is worth 2x 
 def _expected_move(sym, sessions, spot):
     """Daily expected move from India VIX (same math as the Hedged Seller card)."""
     try:
+        import market_api
         k = market_api._key("INDIAVIX")
         vix = _last(_quotes({k}).get(k)) or 15.0
     except Exception:

@@ -2045,6 +2045,9 @@ def quick_screen(symbols, deadline_s=12):
         return []
     qs = up._full_quotes(list(keymap))
     end = time.time() + deadline_s
+    fno_syms = set(PICK_INDICES) | {s for s, _, _ in STOCKS}     # these three used to be undefined here: every symbol that produced a pick
+    extra_done = set()                                          # raised NameError, so the index call/put screen for the auto trader never returned
+    qs_vol = {keymap[k]: (_num(q.get("volume")) or _num((q.get("ohlc") or {}).get("volume"))) for k, q in qs.items() if k in keymap}
 
     @bg
     def one(item):

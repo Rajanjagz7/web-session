@@ -266,7 +266,8 @@ def test_other_screens_show_live_data(app):
     prices = app.ev("[...document.querySelectorAll('[data-px]')].slice(0, 20).map(e => e.textContent.trim())")
     assert sum(1 for p in prices if p and p != "—") >= 10, "markets list shows no prices"
     app.go("vedic", 5000)
-    assert "Tithi" in app.ev("document.querySelector('.view.on').innerText") or "Panchang" in app.ev("document.querySelector('.view.on').innerText")
+    vedic_text = app.ev("document.querySelector('.view.on').innerText").lower()   # labels are upper-cased by CSS
+    assert "tithi" in vedic_text or "panchang" in vedic_text
     app.go("ipo", 4000)
     assert app.ev("document.querySelectorAll('.ipf-card').length") > 0
     app.go("journal", 1500)
