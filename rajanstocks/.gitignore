@@ -19,3 +19,4 @@ auto_state.json
 
 # App datastore dumps - contain live cookies/tokens, never commit
 backup/CS3_Backup_*.txt
+stockbot_state.json

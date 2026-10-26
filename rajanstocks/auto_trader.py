@@ -83,10 +83,10 @@ def _load(cached=False):
             st["trades"] = [t for t in st["trades"] if not nse_calendar.holiday(t.get("date"))]
             st["log"].append({"at": _now().isoformat(), "msg": f"Voided {len(bad)} paper trade(s) opened on an NSE holiday ({nse_calendar.holiday(bad[0]['date'])}) - prices were stale"})
             st["_dirty"] = True
-        # Explicitly remove trade IDs 27, 1004, 1009
-        removed_ids = (27, 1004, 1009)
+        # Explicitly remove trade IDs 27, 1004, 1009 (dated: later trades reusing those numbers are kept)
+        from common import is_removed_trade
         pre_cnt = len(st["trades"])
-        st["trades"] = [t for t in st["trades"] if not any(str(t.get("id", "")).endswith(f"-{k}") or str(t.get("id", "")) == str(k) or str(t.get("id", "")).endswith(f"-{k}-W") for k in removed_ids)]
+        st["trades"] = [t for t in st["trades"] if not is_removed_trade(t)]
         if len(st["trades"]) != pre_cnt:
             st["_dirty"] = True
         st["fillNext"], st["fillBackoff"] = d.get("fillNext") or 0, d.get("fillBackoff") or 0

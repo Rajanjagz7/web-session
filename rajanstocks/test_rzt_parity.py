@@ -7,6 +7,7 @@ momentum bars, zones and state. Exit 0 = parity holds.
 Run directly (python test_rzt_parity.py) or via test_indicators.py::test_rzt_chart_parity.
 """
 import json
+import os
 import re
 import subprocess
 import sys

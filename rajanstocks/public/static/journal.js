@@ -25,12 +25,15 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
     let T = load(KEY, []);
   const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
+  const REMOVED_UNTIL = '2026-10-26';
   const isRemovedId = t => {
     if (!t) return false;
     const rawId = String(t.id || '');
-    if (REMOVED_IDS.has(rawId)) return true;
     const m = rawId.match(/\d+/g);                 // A-1023-27-W -> 27 (shortId is declared later, so not used here)
-    return !!(m && REMOVED_IDS.has(m[m.length - 1]));
+    if (!REMOVED_IDS.has(rawId) && !(m && REMOVED_IDS.has(m[m.length - 1]))) return false;
+    const e = rawId.match(/(?<!\d)(20\d{2})-?(\d{2})-?(\d{2})(?!\d)/);     // dated: a later trade that reuses the number is real
+    const day = String(t.date || t.day || '') || (e ? e[1] + '-' + e[2] + '-' + e[3] : '');
+    return !day || day <= REMOVED_UNTIL;
   };
   // One-off purge of the removed trade IDs from this browser's stored journal / paper data
   (function purgeRemovedIds() {
