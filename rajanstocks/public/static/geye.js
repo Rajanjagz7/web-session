@@ -57,10 +57,6 @@
     const s = G.err && !d ? ['Unavailable', 'off'] : stale ? ['Stale', 'stale'] : typeof MKT !== 'undefined' && MKT.stale ? ['Delayed', 'stale'] : open ? ['Market Live', 'on'] : ['Market Closed', 'closed'];
     return `<span class="ge-pill ${s[1]}"><i></i>${s[0]}</span>`;
   }
-  function ticker(cards) {
-    return `<div class="ge-tick" role="list">${cards.map(c => `<button type="button" class="ge-tk" role="listitem" data-gecard="${E(c.key)}"><b>${E(c.name || c.key)}</b>
-      <span class="num">${isN(c.price) ? n2(c.price, c.price >= 1000 ? 1 : 2) : NA}</span><span class="num ${cc(c.chgPct)}">${pc(c.chgPct)}</span></button>`).join('')}</div>`;
-  }
   function card(c) {
     if (c.pending) return `<article class="ge-card ge-skel"><div class="ge-cn">${E(c.name || c.key)}</div><small>Loading…</small></article>`;
     if (c.error || !isN(c.score)) return `<article class="ge-card"><div class="ge-cn">${E(c.name || c.key)}</div><div class="ge-cs">—</div><div class="ge-cl">UNAVAILABLE</div><small class="muted">${E(c.error || 'no data')}</small></article>`;
@@ -126,8 +122,79 @@
 
   function overview(d) {
     return `${outlookBlock(d.outlook, d.expiry, d.options)}
-      <div class="ge-cards ge-cards-w">${(d.cards || []).map(card).join('')}</div>
-      <div class="ge-grid4">${pOptionsOI(d.options)}${pPCR(d.options)}${pRetail(d.positioning)}${pInst(d.positioning)}</div>`;
+      <div class="ge-cards ge-cards-w">${(d.cards || []).map(card).join('')}</div>`;
+  }
+  const GLOBAL_KEYS = ['GOLD', 'SILVER', 'CRUDEOIL', 'BITCOIN', 'NASDAQ', 'DJI', 'GLOBALRISK'];
+  function retailTab(d) {
+    const r = d.positioning && d.positioning.retail, o = d.options;
+    const mood = r && r.skew ? `<section class="ge-p ge-moodp ${lab(r.skew)}"><small>Retail mood</small><b class="ge-oc-l">${E(r.skew)}</b><span class="muted">${isN(r.futLongPct) ? 'Retail index futures ' + r.futLongPct + '% long' : ''}</span></section>` : '';
+    return `${mood}<div class="ge-grid4">${pRetail(d.positioning)}${pPCR(o)}${pOptionsOI(o)}</div>`;
+  }
+  function fnoTab(d) {
+    return `<div class="ge-grid4">${pInst(d.positioning)}${pOptionsOI(d.options)}${pPCR(d.options)}</div>${optTab(d)}`;
+  }
+  function globalTab(d) {
+    const l = (d.cards || []).filter(c => GLOBAL_KEYS.includes(c.key));
+    return l.length ? `<div class="ge-cards ge-cards-w">${l.map(card).join('')}</div>` : '<section class="ge-p"><p class="ge-na">Global markets unavailable right now.</p></section>';
+  }
+  /* day / 20-day range with the price marker - from the cards' own detail block (no extra request) */
+  function rangeBar(lo, hi, px, label) {
+    if (![lo, hi, px].every(isN) || hi <= lo) return `<div class="ge-rg"><small>${label}</small>${NA}</div>`;
+    const at = Math.max(0, Math.min(100, (px - lo) / (hi - lo) * 100));
+    return `<div class="ge-rg"><small>${label}</small><span class="num">${n2(lo, lo >= 1000 ? 0 : 2)}</span><i class="ge-rgb"><b style="left:${at.toFixed(1)}%"></b></i><span class="num">${n2(hi, hi >= 1000 ? 0 : 2)}</span></div>`;
+  }
+  function rangeTab(d) {
+    const o = d.options, x = d.expiry;
+    const exp = o && o.range ? `<section class="ge-p"><h3>NIFTY expiry range ${tip('expected')}</h3>
+      <div class="ge-rg2"><span>Expected <b class="num">${n0(o.range[0])} – ${n0(o.range[1])}</b></span><span>Put wall <b class="num up">${n0(o.putWall)}</b></span><span>Max pain <b class="num">${n0(o.maxPain)}</b></span><span>Call wall <b class="num down">${n0(o.callWall)}</b></span><span>Spot <b class="num">${n0(o.spot)}</b></span></div>
+      ${rangeBar(o.putWall, o.callWall, o.spot, 'Walls')}${x ? `<p class="ge-sub">Expiry ${E(dShort(x.expiry))} · ${E(x.daysLeft === 0 ? 'today' : x.daysLeft + ' day(s) left')}</p>` : ''}</section>` : '';
+    const rows = (d.cards || []).filter(c => c.detail && isN(c.price)).map(c => {
+      const t = c.detail;
+      return `<div class="ge-rr" data-gecard="${E(c.key)}" tabindex="0" role="button"><div class="ge-rn"><b>${E(c.name)}</b><span class="num ${cc(c.chgPct)}">${pc(c.chgPct)}</span></div>
+        ${rangeBar(t.dayLow, t.dayHigh, c.price, 'Day')}${rangeBar(t.low20, t.high20, c.price, '20 days')}</div>`;
+    }).join('');
+    return `${exp}<section class="ge-p"><h3>Where price sits in its range</h3><div class="ge-rrs">${rows || '<p class="ge-na">No range data yet.</p>'}</div></section>`;
+  }
+
+  /* stock quotes for Movers / Watchlist / Fallen Stocks - one cached request for the F&O stocks the app already lists */
+  const MQ = { rows: [], ts: 0, busy: false, err: null };
+  const stockSyms = () => { try { return SYMS.filter(s => s.cls === 'Stocks').map(s => s.s); } catch (e) { return []; } };
+  async function loadMQ(force) {
+    if (MQ.busy || (!force && Date.now() - MQ.ts < 45e3)) return;
+    const syms = stockSyms().slice(0, 240); if (!syms.length) return;
+    MQ.busy = true;
+    try {
+      const r = await fetch('/api/m/quotes?symbols=' + encodeURIComponent(syms.join(',')));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json(); MQ.rows = (j.quotes || []).filter(q => q.last > 0 && q.prev > 0); MQ.ts = Date.now(); MQ.err = null;
+    } catch (e) { MQ.err = String(e.message || e); }
+    MQ.busy = false; if (['movers', 'watch', 'fallen'].includes(G.tab)) paint();
+  }
+  const nameOf = sym => { try { const x = SYMS.find(s => s.s === sym); return x ? x.n : ''; } catch (e) { return ''; } };
+  const qrow = (q, extra) => `<button type="button" class="ge-qr" data-sym="${E(q.s)}"><span class="ge-qn"><b>${E(q.s)}</b><small>${E(nameOf(q.s))}</small></span><span class="num">${n2(q.last)}</span>${extra}</button>`;
+  const chgOf = q => (q.last / q.prev - 1) * 100;
+  function moversTab() {
+    if (!MQ.rows.length) return `<section class="ge-p"><p class="muted">${MQ.err ? 'Quotes unavailable: ' + E(MQ.err) : 'Loading stock prices…'}</p></section>`;
+    const by = MQ.rows.slice().sort((a, b) => chgOf(b) - chgOf(a));
+    const list = (arr, cls) => arr.map(q => qrow(q, `<span class="ge-badge ${cls} num">${pc(chgOf(q))}</span>`)).join('');
+    return `<div class="ge-grid2"><section class="ge-p"><h3>Top gainers</h3>${list(by.slice(0, 10), 'bull')}</section><section class="ge-p"><h3>Top losers</h3>${list(by.slice(-10).reverse(), 'bear')}</section></div>
+      <p class="ge-sub">${MQ.rows.length} F&amp;O stocks · change vs previous close</p>`;
+  }
+  function watchTab() {
+    let w = []; try { w = Array.from(App.watch || []); } catch (e) { }
+    const items = w.map(sym => {
+      const q = MQ.rows.find(x => x.s === sym); if (q) return { n: sym, px: q.last, chg: chgOf(q), sym };
+      const s = (typeof SYMS !== 'undefined') && SYMS.find(x => x.s === sym);
+      return s && s.last > 0 ? { n: sym, px: s.last, chg: s.prev > 0 ? (s.last / s.prev - 1) * 100 : null, sym } : null;
+    }).filter(Boolean);
+    if (!items.length) return `<section class="ge-p"><p class="muted">Your watchlist is empty. Add symbols from the chart screen's watchlist and they show here.</p></section>`;
+    return `<div class="ge-cards ge-cards-w">${items.map(i => `<article class="ge-card ${i.chg > 0 ? 'bull' : i.chg < 0 ? 'bear' : 'neu'}" data-sym="${E(i.sym)}" tabindex="0" role="button"><div class="ge-cn">${E(i.n)}</div><div class="ge-cs num">${n2(i.px)}</div><div class="ge-cl">${isN(i.chg) ? (i.chg >= 0 ? 'UP ' : 'DOWN ') + n2(Math.abs(i.chg)) + '%' : ''}</div><div class="ge-more">Open chart →</div></article>`).join('')}</div>`;
+  }
+  function fallenTab() {
+    if (!MQ.rows.length) return `<section class="ge-p"><p class="muted">${MQ.err ? 'Quotes unavailable: ' + E(MQ.err) : 'Loading stock prices…'}</p></section>`;
+    const f = MQ.rows.filter(q => q.yh > 0).map(q => Object.assign({ off: (q.last / q.yh - 1) * 100 }, q)).sort((a, b) => a.off - b.off).slice(0, 24);
+    return `<section class="ge-p"><h3>Fallen stocks <small class="muted">· furthest below the 52-week high</small></h3>
+      ${f.map(q => qrow(q, `<span class="num muted ge-yh">52W high ${n2(q.yh)}</span><span class="ge-badge bear num">${pc(q.off)}</span>`)).join('')}</section>`;
   }
 
   function fiiTab(d) {
@@ -201,16 +268,16 @@
   function paint() {
     const el = host(); if (!el) return;
     const d = G.data;
-    const tabs = [['overview', 'Overview'], ['fii', 'FII / DII'], ['options', 'Options & Expiry'], ['signals', 'Signals']];
+    const tabs = [['overview', 'Sentiment'], ['retail', 'Retail Mood'], ['fno', 'F&O Watch'], ['fii', 'FII / DII'], ['movers', 'Movers'], ['range', 'Range'], ['global', 'Global'], ['watch', 'Watchlist'], ['fallen', 'Fallen Stocks'], ['signals', 'Signals']];
     let body;
     if (!d) body = G.err ? `<div class="ge-p"><p class="ge-na">God's Eye is unavailable: ${E(G.err)}</p><button class="btn" data-gerefresh="1">Retry</button></div>`
       : `<div class="ge-cards">${'<article class="ge-card ge-skel"></article>'.repeat(10)}</div><p class="muted">Reading markets, FII / DII and option data…</p>`;
-    else body = ({ overview, fii: fiiTab, options: optTab, signals: sigTab }[G.tab] || overview)(d);
+    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab }[G.tab] || overview)(d);
+    if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
       <div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
-        <div><h1>THE GOD'S EYE <span>– OBSERVER</span></h1><p>FII / DII · positioning · options · signals</p></div></div>
+        <div><h1>GOD'S EYE <span>– The Observer</span></h1><p>Sentiment · retail mood · F&amp;O · movers · range · global</p></div></div>
         <div class="ge-st">${status()}<span class="ge-upd">${G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : ''}</span><button type="button" class="ge-ref" data-gerefresh="1" aria-label="Refresh" ${G.busy ? 'disabled' : ''}>↻</button></div></div>
-      ${d ? ticker(d.cards || []) : ''}
       ${G.err && d ? `<p class="ge-warn">Last refresh failed (${E(G.err)}) - showing data from ${E(IST(d.asOf))}.</p>` : ''}
       <div class="ge-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>
       ${body}
@@ -220,15 +287,13 @@
   }
   window.renderGodsEyeTab = function () { paint(); if (!G.data || Date.now() - G.ts > 60e3) load(false); };
   /* Picks shows a one-line summary only - the full God's Eye lives in its own tab (no duplicate screen) */
-  window.geStrip = function (el) {
-    if (!el) return;
-    const draw = items => {
-      const list = (items || []).filter(c => isN(c.score));
-      el.innerHTML = `<button type="button" class="ge-strip" data-geopen="1" aria-label="Open God's Eye"><span class="ge-strip-h"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/></svg>GOD'S EYE</span>
-        <span class="ge-strip-l">${list.length ? list.map(c => `<span class="${lab(c.label)}"><b>${E(c.name)}</b> <em class="num">${sg(c.score)}</em></span>`).join('') : '<span class="muted">Loading…</span>'}</span><span class="ge-strip-go">Open ›</span></button>`;
-    };
+  window.geTags = function (root) {
+    if (!root) return;
+    const draw = items => (items || []).filter(c => isN(c.score)).forEach(c => root.querySelectorAll(`[data-getag="${c.key}"]`).forEach(el => {
+      el.className = 'ge-tag ' + lab(c.label); el.innerHTML = `God's Eye <b class="num">${sg(c.score)}</b> ${E(c.label.charAt(0) + c.label.slice(1).toLowerCase())}`;
+    }));
     draw(G.data && G.data.cards);
-    if (!G.data || Date.now() - G.ts > 300e3) fetch('/api/observer').then(r => r.ok ? r.json() : null).then(d => { if (d && d.items && document.body.contains(el)) draw((G.data && G.data.cards) || d.items); }).catch(() => { });
+    if (!G.data || Date.now() - G.ts > 300e3) fetch('/api/observer').then(r => r.ok ? r.json() : null).then(d => { if (d && d.items && document.body.contains(root)) draw((G.data && G.data.cards) || d.items); }).catch(() => { });
   };
   document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') go('godseye'); });
 
@@ -279,12 +344,21 @@
   .ge-pill i{width:8px;height:8px;border-radius:50%;background:var(--text-3)}.ge-pill.on{color:var(--up)}.ge-pill.on i{background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 30%,transparent)}
   .ge-pill.stale{color:var(--warn,#f5b942)}.ge-pill.stale i{background:var(--warn,#f5b942)}.ge-pill.off{color:var(--down)}.ge-pill.off i{background:var(--down)}
   .ge-ref{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:16px}
-  .ge-tick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 8px;margin-bottom:6px}
-  .ge-tk{flex:0 0 auto;display:flex;gap:8px;align-items:baseline;padding:7px 11px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:12.5px;white-space:nowrap}
-  .ge-tk b{font-size:11.5px;letter-spacing:.04em}
-  .ge-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:4px 0 12px;border-bottom:1px solid var(--line)}
-  .ge-tabs button{flex:0 0 auto;padding:9px 14px;border:0;background:none;color:var(--text-2,inherit);font-weight:600;font-size:13.5px;cursor:pointer;border-bottom:2px solid transparent}
-  .ge-tabs button.on{color:var(--text);border-bottom-color:var(--ge-cy)}
+  .ge-tag{display:block;margin-top:4px;font-size:11px;font-weight:600;color:var(--text-3)}.ge-tag b{font-size:12px}.ge-tag.bull,.ge-tag.bull b{color:var(--up)}.ge-tag.bear,.ge-tag.bear b{color:var(--down)}
+  .ge-tabs{display:flex;flex-wrap:wrap;gap:6px 4px;margin:4px 0 14px}
+  .ge-tabs button{flex:0 0 auto;padding:7px 13px;border:1px solid transparent;border-radius:999px;background:none;color:var(--text-2,inherit);font-weight:700;font-size:13.5px;cursor:pointer}
+  .ge-tabs button:hover{color:var(--text);background:var(--panel)}
+  @media(max-width:560px){.ge-tabs{gap:4px 2px}.ge-tabs button{padding:6px 9px;font-size:12.5px}}
+  .ge-tabs button.on{color:var(--text);background:var(--panel);border-color:var(--ge-cy);box-shadow:0 0 0 1px var(--ge-cy) inset}
+  .ge-moodp{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;border-left:3px solid var(--text-3)}.ge-moodp.bull{border-left-color:var(--up)}.ge-moodp.bear{border-left-color:var(--down)}
+  .ge-qr{display:flex;align-items:center;gap:10px;width:100%;padding:8px 2px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--text);cursor:pointer;text-align:left;font-size:13.5px}
+  .ge-qr:last-child{border-bottom:0}.ge-qn{flex:1;min-width:0;display:flex;flex-direction:column}.ge-qn small{color:var(--text-3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ge-yh{font-size:11.5px}
+  .ge-rrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .ge-rr{padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--panel)}.ge-rn{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px}
+  .ge-rg{display:flex;align-items:center;gap:8px;font-size:11.5px;margin:4px 0}.ge-rg small{width:48px;color:var(--text-3)}.ge-rg .num{white-space:nowrap}
+  .ge-rgb{position:relative;flex:1;height:6px;border-radius:3px;background:var(--line);min-width:40px}.ge-rgb b{position:absolute;top:-3px;width:3px;height:12px;border-radius:2px;background:var(--ge-cy,#4ea1ff);transform:translateX(-50%)}
+  .ge-rg2{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;margin-bottom:8px}.ge-rg2 b{margin-left:5px}
   .ge-grid3{display:grid;grid-template-columns:230px minmax(0,1fr) 250px;gap:12px;align-items:start}
   .ge-col{display:flex;flex-direction:column;gap:12px;min-width:0}
   .ge-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;min-width:0}
@@ -362,13 +436,8 @@
   .ge-chip.up b{color:var(--up)}.ge-chip.down b{color:var(--down)}
   .ge-cards-w{margin-bottom:12px}.ge-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   @media (max-width:1100px){.ge-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  .ge-tick::-webkit-scrollbar{display:none}
   @media (max-width:640px){.ge-grid4{grid-template-columns:1fr}.ge-oc-t{margin-left:0}.ge-chips{display:none}}   /* phones: the chips are in 'Why' */
   body.ge-noscroll{overflow:hidden}
-  .ge-strip{display:flex;align-items:center;gap:12px;width:100%;padding:10px 14px;margin:6px 0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);cursor:pointer;text-align:left}
-  .ge-strip:hover{border-color:#22d3ee}.ge-strip-h{display:flex;align-items:center;gap:6px;font-weight:800;font-size:12.5px;letter-spacing:.06em;color:#22d3ee;flex:0 0 auto}.ge-strip .ge-eye{width:26px;height:16px;color:#22d3ee}
-  .ge-strip-l{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;flex:1;font-size:12px}.ge-strip-l span{white-space:nowrap}.ge-strip-l em{font-style:normal;font-weight:700}
-  .ge-strip-l .bull em{color:var(--up)}.ge-strip-l .bear em{color:var(--down)}.ge-strip-go{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--brand)}
   .ge .up{color:var(--up)}.ge .down{color:var(--down)}.ge .bull{}.ge b.bull,.ge-sub b.bull{color:var(--up)}.ge b.bear,.ge-sub b.bear{color:var(--down)}
   @media (max-width:1280px){.ge-grid3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ge-cards{grid-column:1/-1;order:-1}.ge-cards{grid-template-columns:repeat(5,minmax(0,1fr))}}
   @media (max-width:900px){.ge-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.ge-parts{grid-template-columns:1fr}}

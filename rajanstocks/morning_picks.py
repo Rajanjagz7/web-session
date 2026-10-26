@@ -88,6 +88,18 @@ def classify(p):
     return None
 
 
+def eagle(p):
+    """Eagle Trades: strength >= 75 AND Open = Low (BUY) / Open = High (SELL) agreeing with the Picks signal. No risk/reward gate and no cap on how
+    many a day: on 212 F&O stocks the room-to-run gate left ~1 trade a day and did not improve accuracy (docs/EAGLE_TRADES_BACKTEST.md).
+    Returns a classify()-shaped dict or None."""
+    sig = p.get("signal")
+    strength = p.get("strength") or 0
+    ol, oh = open_flags(p)
+    if strength >= STRENGTH_MIN and ((ol and sig == "BUY") or (oh and sig == "SELL")):
+        return {"tier": 1, "side": sig, "both": True, "why": f"strength {strength:.0f}% + Open = {'Low' if sig == 'BUY' else 'High'}"}
+    return None
+
+
 def select(picks, min_n=MIN_PICKS, max_n=MAX_PICKS, stocks_only=True):
     """Ranked shortlist of Picks rows: [{**pick, tier, side, rank, why}]. Tier 3 only fills up to `min_n`."""
     rows = []

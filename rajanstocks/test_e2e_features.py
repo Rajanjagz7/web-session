@@ -102,14 +102,16 @@ def test_global_futures_tiles_open_a_chart(app, tile):
     app.page.wait_for_function("App.view === 'trade' && App.sym && App.sym.tv && (CACHE[App.sym.s + '|' + App.tf.k] || []).length > 20", timeout=90000)
 
 
-def test_picks_shows_one_line_gods_eye_strip(app):
-    # the full God's Eye lives in its own tab - Picks only shows a one-line summary that opens it
+def test_picks_shows_the_indices_once_with_the_gods_eye_score(app):
+    # one block, not two: each index tile carries its God's Eye score, and one button opens the full tab
     app.open("picks")
-    app.page.wait_for_selector("#pkGodseye .ge-strip", timeout=90000)
-    assert not app.ev("!!document.querySelector('#pkGodseye .ob-grid')"), "Picks still renders the full God's Eye grid"
-    app.ev("document.querySelector('#pkGodseye .ge-strip').click()")
+    app.page.wait_for_selector(".ixs [data-getag=\"NIFTY\"].ge-tag", timeout=90000)
+    assert not app.ev("!!document.querySelector('#pkGodseye, .ge-strip, .ob-grid')"), "Picks still shows a separate God's Eye block"
+    assert app.ev("document.querySelectorAll('#v-picks .ixs .ix').length") >= 3
+    app.ev("document.querySelector('#v-picks [data-geopen]').click()")
     app.page.wait_for_function("App.view === 'godseye'", timeout=10000)
-    app.no_overflow("Picks God's Eye strip")
+    assert not app.ev("!!document.querySelector('#v-godseye .ge-tick')"), "God's Eye repeats the indices as a ticker above the cards"
+    app.no_overflow("Picks indices + God's Eye")
 
 
 def test_journal_exit_buttons_stay_on_screen_on_phones(app):
@@ -130,7 +132,7 @@ def test_gods_eye_tab_shows_flows_positioning_and_outlook(app):
     assert app.ev("App.view") == "godseye"
     assert app.ev("!!document.querySelector('#v-godseye .ge-out')"), "next-day / expiry read-out missing"
     assert not app.ev("/Signal Throughput|Data feeds/.test(document.querySelector('#v-godseye').innerText)"), "throughput / data-feed panels should be hidden"
-    for tab, marker in (("fii", "FII / DII cash market"), ("options", "levels"), ("signals", "Instrument"), ("overview", "Next day")):
+    for tab, marker in (("fii", "FII / DII cash market"), ("fno", "levels"), ("signals", "Instrument"), ("overview", "Next day")):
         app.ev(f"document.querySelector('[data-getab=\"{tab}\"]').click()")
         app.page.wait_for_timeout(700)
         assert marker.lower() in app.ev("document.querySelector('#v-godseye').innerText").lower(), f"{tab} tab did not render"

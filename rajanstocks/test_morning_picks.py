@@ -111,3 +111,65 @@ def test_fill_slots_passes_the_shortlist_stop_to_the_trade(monkeypatch):
     st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
     c = auto_trader.fill_slots(st, "2026-10-27", [])[0]
     assert c["indStop"] == 97.0 and c["side"] == "BUY"
+
+
+def _eagle_pick(s, strength=85, **kw):
+    return pick(s, strength=strength, op=100.0, lo=100.0, hi=101.0, ltp=100.6, stop=97.6, **kw)
+
+
+def test_eagle_is_strength_75_with_open_equals_low_or_high_agreeing():
+    assert mp.eagle(_eagle_pick("E"))["side"] == "BUY"
+    sell = pick("S", signal="SELL", strength=85, op=100.0, hi=100.0, lo=99.0, ltp=99.4, stop=102.4)
+    assert mp.eagle(sell)["side"] == "SELL"
+    assert mp.eagle(_eagle_pick("W", strength=70)) is None                         # open = low but not strong enough
+    assert mp.eagle(pick("P", strength=100)) is None                               # strong but price has already traded below the open
+    assert mp.eagle(_eagle_pick("N", signal="NEUTRAL", strength=25)) is None
+    assert mp.eagle(_eagle_pick("R", hi20=100.8))["side"] == "BUY"                  # no risk/reward gate: a 20-day high right above price does not block it
+    assert mp.eagle(pick("X", signal="SELL", strength=90, op=100.0, lo=100.0, ltp=100.5)) is None   # open = low but the screen says SELL
+
+
+def test_eagle_cands_have_no_cap_are_tagged_and_ranked_first(monkeypatch):
+    import market_api
+    from datetime import datetime
+    picks = [_eagle_pick(f"E{i}", sec=f"s{i % 3}") for i in range(30)] + [pick("PLAIN", strength=100)]
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": picks})
+    monkeypatch.setattr(auto_trader, "_now", lambda: datetime(2026, 10, 27, 9, 35, tzinfo=auto_trader.IST))
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [{"date": "2026-10-27", "sym": "E0", "status": "OPEN"}], "log": []}
+    out = auto_trader.eagle_cands(st, "2026-10-27")
+    assert len(out) == 29 and "E0" not in {c["sym"] for c in out}                  # all 30 qualify, minus the one already held; no 15-cap, no sector cap
+    assert all(c["key"] == "Eagle Trades" and c["source"] == "Eagle Trades" and c["rank"] >= 20 for c in out)
+    assert "PLAIN" not in {c["sym"] for c in out}
+
+
+def test_eagle_only_scans_in_the_opening_hour(monkeypatch):
+    import market_api
+    from datetime import datetime
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("E")]})
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    for hh, mm, n in ((9, 15, 0), (9, 20, 1), (10, 30, 1), (10, 31, 0), (14, 0, 0)):
+        monkeypatch.setattr(auto_trader, "_now", lambda hh=hh, mm=mm: datetime(2026, 10, 27, hh, mm, tzinfo=auto_trader.IST))
+        assert len(auto_trader.eagle_cands(st, "2026-10-27")) == n, (hh, mm)
+
+
+def test_a_cycle_enters_eagle_trades_first_and_drops_duplicates(monkeypatch):
+    import market_api
+    import nse_calendar
+    import rzt
+    from datetime import datetime
+    now = datetime(2026, 10, 27, 9, 36, tzinfo=auto_trader.IST)
+    monkeypatch.setattr(auto_trader, "_now", lambda: now)
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
+    monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
+    monkeypatch.setattr(auto_trader, "_save", lambda s: None)
+    monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))
+    monkeypatch.setattr(auto_trader, "_timecycle_cands", lambda n: [])
+    monkeypatch.setattr(rzt, "intraday_cands", lambda: [])
+    dup = {"key": "morning-pick", "sym": "EAG", "side": "BUY", "kind": "stock", "score": 0.5, "rank": 11.0}
+    other = {"key": "morning-pick", "sym": "OTH", "side": "SELL", "kind": "stock", "score": 0.5, "rank": 5.0}
+    monkeypatch.setattr(auto_trader, "fill_slots", lambda s, t, already: [dup, other])
+    rep = auto_trader._run_cycle(now, False, True)
+    got = [(e["sym"], e["strategy"]) for e in rep["entered"]]
+    assert got == [("EAG", "Eagle Trades"), ("OTH", "morning-pick")]               # Eagle first; the duplicate morning-pick for EAG is gone
+    assert "1 Eagle trade(s)" in rep["note"]

@@ -329,6 +329,33 @@ def fill_slots(st, today, already):
     return out[:room]
 
 
+EAGLE = "Eagle Trades"                    # the strategy name shown in the Journal (its "By strategy / setup" table groups on it)
+EAGLE_FROM, EAGLE_TO = 9 * 60 + 20, 10 * 60 + 30     # the screen is read in the opening hour (backtested at 09:20-10:15)
+
+
+def eagle_cands(st, today, taken=()):
+    """Eagle Trades: strength >= 75, good risk/reward, and Open = Low (BUY) / Open = High (SELL) - every F&O stock that qualifies, no daily cap.
+    Scanned on every cycle (not on the 10-minute screen timer) because Open = Low / High only holds until price breaks the open."""
+    import market_api
+    import morning_picks
+    now_m = _mins(_now())
+    if not (EAGLE_FROM <= now_m <= EAGLE_TO):
+        return []
+    used = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today} | set(taken)
+    out = []
+    for p in market_api.picks().get("picks", []):
+        if p.get("kind") == "index" or p.get("universe") == "cash" or p.get("s") in used:
+            continue
+        c = morning_picks.eagle(p)
+        if not c:
+            continue
+        out.append({"key": EAGLE, "sym": p["s"], "side": c["side"], "kind": "stock", "variant": "fixed", "filter": "none",
+                    "score": (p.get("strength") or 0) / 100, "rank": 20 + (p.get("strength") or 0) / 100, "agree": 1,
+                    "indStop": round(p["ltp"] - (1 if c["side"] == "BUY" else -1) * morning_picks.swing_risk(p, c["side"]), 2),   # the pick's own stop, as in the backtest (still capped at 30% of the premium)
+                    "source": EAGLE, "why": c["why"], "label": EAGLE})
+    return sorted(out, key=lambda c: -c["rank"])
+
+
 def x_stop(rows):
     return rows[-1].get("stop") if rows else None
 
@@ -584,7 +611,7 @@ def open_trade(st, c, today):
         "stopU": round(stop_u, 2), "targetU": round(target_u, 2) if target_u is not None else None, "riskU": round(risk_u, 2),
         "variant": variant, "filter": c.get("filter", "none"), "bestU": round(entry_u, 2), "mode": c.get("label", ""),
         "initialRisk": round(min(lots * per_lot, lots * ct["lot"] * ct["premium"]), 0), "riskBudget": round(budget, 0),
-        "strategy": c["key"], "agree": c.get("agree", 1),
+        "strategy": c["key"], "agree": c.get("agree", 1), **({"why": c["why"]} if c.get("why") else {}),
         "screenAgrees": c.get("screenAgrees"), "indicators": c.get("strategies") or [c["key"]],
         "source": c.get("source", f"{c.get('agree', 1)} indicator(s) agree" if c.get("strategies") else "strategy signal"), "status": "OPEN", "last": round(ct["premium"], 2),
         "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
@@ -1020,7 +1047,16 @@ def _run_cycle(now, force, dry):
             # No limit on the day - only the opening burst is capped: in the first minute of the entry window (09:15) at most
             # `openBurstCap` (12) entries are taken (paired hedge legs -W belong to their entry and do not count). Best-ranked
             # first; the rest are picked up by the following cycles as normal.
-            entries = sorted(chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
+            try:
+                eagles = eagle_cands(st, today, {c["sym"] for c in chosen + filled if c.get("key") == EAGLE})
+            except Exception as e:
+                eagles = []
+                st["log"].append({"at": now.isoformat(), "msg": f"eagle scan failed: {str(e)[:80]}"})
+            if eagles:
+                have = {c["sym"] for c in eagles}
+                chosen, filled = [c for c in chosen if c["sym"] not in have], [c for c in filled if c["sym"] not in have]
+                rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
+            entries = sorted(eagles + chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
             slots = len(entries)
             if not force and _mins(now) <= _hm(cfg["windowStart"]):
                 burst = int(cfg.get("openBurstCap") or 12)
