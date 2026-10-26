@@ -2398,7 +2398,7 @@ const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000
   mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
-async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path+' '+r.status);return r.json()}
+async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok){const e=new Error(path+' '+r.status);e.status=r.status;try{const j=await r.json();if(j&&typeof j.detail==='string')e.detail=j.detail}catch(x){}throw e}return r.json()}
 const STORE='rs-paper-v1';
 function savePaper(){try{localStorage.setItem(STORE,JSON.stringify({cash:App.cash,positions:App.positions,orders:App.orders,history:App.history.slice(-200),alerts:App.alerts,meta:App.meta,watch:[...App.watch],oid:OID}))}catch(e){}}
 function loadPaper(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(!d)return;App.cash=d.cash;App.positions=d.positions||[];App.orders=d.orders||[];App.history=d.history||[];App.alerts=d.alerts||[];App.meta=d.meta||{};if(d.watch)App.watch=new Set(d.watch);OID=Math.max(OID,d.oid||0)}catch(e){}}
@@ -3064,7 +3064,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
    <details class="vx-disc"><summary>Disclaimer</summary><p><b>Informational and educational only. Not financial advice.</b> ${esc(r.disclaimer)} Gann levels, planetary price lines and time cycles are traditional techniques, not validated predictors.</p></details>
   </div>`}
 const TC={sym:'NIFTY',mode:'underlying',strike:'',d:null,err:'',busy:false,_userEdited:false,tab:'cycles',allLevels:false};
-async function tcLoad(){TC.busy=true;TC.err='';if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q);TC.pg=null}catch(e){TC.d=null;TC.err=(e&&e.message)||'Time cycle unavailable'}TC.busy=false;if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc()}
+async function tcLoad(){TC.busy=true;TC.err='';if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc();try{const q=new URLSearchParams({symbol:TC.sym,mode:TC.mode});if(TC.mode!=='underlying'&&TC.strike)q.set('strike',TC.strike);TC.d=await api('/api/vedic/timecycle?'+q);TC.pg=null}catch(e){TC.d=null;TC.err=(e&&(e.detail||e.message))||'Time cycle unavailable'}TC.busy=false;if(typeof vdPaint==='function'&&VD.tab==='cycle')vdPaint();if(typeof drawOptTc==='function')drawOptTc()}
 function vxTabCycle(){const d=TC.d,nowM=vxNowMin();if(!d&&!TC.busy&&!TC.err)setTimeout(tcLoad,0);
   const form=`<section class="vx-card"><h3>Time cycle</h3><p class="muted" style="margin:0 0 8px">Gann time cycles and price vibration zones for any index or F&amp;O stock, or its option premium.</p>
    <div class="tc-f"><input class="inp" id="tcSym" value="${esc(TC.sym)}" placeholder="NIFTY, BANKNIFTY, SENSEX, RELIANCE…" aria-label="Index or stock"><select class="inp" id="tcMode" aria-label="Series">${[['underlying','Index / stock price'],['ce','Call premium (CE)'],['pe','Put premium (PE)']].map(([k,l])=>`<option value="${k}" ${TC.mode===k?'selected':''}>${l}</option>`).join('')}</select>

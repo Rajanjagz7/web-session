@@ -59,6 +59,8 @@ def timecycle(symbol: str = "NIFTY", mode: str = "underlying", strike: str = "")
         r = time_cycle.build(symbol, mode, strike or None)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    except time_cycle.Unavailable as e:              # upstream candles missing right now: retryable, not a client error
+        raise HTTPException(503, f"Time cycle unavailable: {str(e)[:160]}")
     except Exception as e:
         raise HTTPException(502, f"Time cycle unavailable: {str(e)[:160]}")
     if len(_tc) > 300:

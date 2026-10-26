@@ -1017,7 +1017,7 @@ def _run_cycle(now, force, dry):
             for c in chosen + filled:
                 if dry:
                     rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"],
-                                           "rank": round(c["rank"], 2), "source": c.get("source") or c.get("label") or ""})
+                                           "rank": round(c.get("rank", c.get("score") or 0), 2), "source": c.get("source") or c.get("label") or ""})   # Z Trend / time-cycle / filled candidates carry a score but no rank
                     continue
                 try:
                     # Enforce timing rule: BUY trades execute starting at 9:15 AM; SELL trades held until 9:20 AM

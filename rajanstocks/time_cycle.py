@@ -12,6 +12,7 @@ Price zones:
 Traditional Gann technique - a timing guide, not a validated forecast. Act only when price confirms at the time.
 """
 import math
+import time
 from datetime import datetime, timedelta
 
 import market_api
@@ -23,12 +24,25 @@ COUNTS = (15, 30, 45, 60, 90, 120, 135, 180, 225, 270, 315, 360)
 MAJOR = {90, 180, 360}
 
 
+class Unavailable(Exception):
+    """Upstream data (candles) is missing right now - transient, NOT a bad request."""
+
+
 def _hm(m):
     return f"{int(m) // 60:02d}:{int(m) % 60:02d}"
 
 
 def _bars(symbol="", ikey=""):
-    r = market_api.candles(symbol=symbol, ikey=ikey, tf="5m", frm="", to="", recent=5) or {}
+    r = {}
+    for attempt in range(2):                         # an empty answer is usually a one-off upstream hiccup / rate limit
+        try:
+            r = market_api.candles(symbol=symbol, ikey=ikey, tf="5m", frm="", to="", recent=5) or {}
+        except Exception:
+            r = {}
+        if r.get("bars"):
+            break
+        if attempt == 0:
+            time.sleep(0.8)
     out = {}
     for b in r.get("bars") or []:
         t = datetime.fromtimestamp(b["t"] / 1000, IST)
@@ -82,14 +96,14 @@ def build(symbol, mode="underlying", strike=None):
         ikey, label = leg["key"], f"{sym} {row['strike']:.0f} {mode.upper()} ({ch.get('expiry')})"
     days = _bars(symbol="" if ikey else sym, ikey=ikey)
     if not days:
-        raise ValueError(f"no intraday candles for {label} (illiquid or not traded yet) - try a strike closer to the money")
+        raise Unavailable(f"no intraday candles for {label} (illiquid or not traded yet) - try a strike closer to the money")
     dates = sorted(days)
     now = datetime.now(IST)
     today = now.date().isoformat()
     cur = days.get(today) or []
     prev = days[dates[-1]] if dates[-1] != today else (days[dates[-2]] if len(dates) > 1 else [])
     if not prev:
-        raise ValueError("no previous session")
+        raise Unavailable("no previous session candles yet")
 
     hits = []                                         # (minute today, source, count)
     for n in COUNTS:
