@@ -136,7 +136,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     });
     return out;
   }
-  const allTrades = () => T.concat(AUTO.list, paperList());
+  const allTrades = () => T.concat(AUTO.list, (AUTO.stockTrades || []), paperList());
   async function jpost(url, body) {
     try {
       const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
@@ -160,7 +160,24 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const dirOf = t => (t.dir === 'Short' ? -1 : 1);
   const persist = () => save(KEY, T);
   const persistS = () => save(SKEY, S);
-  const live = sym => { try { if (typeof SYM !== 'function') return null; const s = SYM(String(sym || '')) || SYM(String(sym || '').toUpperCase()); return s && s.last > 0 ? s.last : null; } catch (e) { return null; } };
+  const live = sym => {
+    try {
+      if (!sym) return null;
+      if (typeof SYM === 'function') {
+        const s = SYM(String(sym)) || SYM(String(sym).toUpperCase());
+        if (s && s.last > 0) return s.last;
+      }
+      if (typeof App !== 'undefined' && Array.isArray(App.positions)) {
+        const p = App.positions.find(x => x.sym === sym);
+        if (p) {
+          const s = typeof SYM === 'function' && SYM(p.sym);
+          if (s && s.last > 0) return s.last;
+          if (typeof p.last === 'number' && p.last > 0) return p.last;
+        }
+      }
+      return null;
+    } catch (e) { return null; }
+  };
   const nextId = () => 'TR-' + String(T.reduce((m, t) => Math.max(m, parseInt(String(t.id).slice(3), 10) || 0), 0) + 1).padStart(4, '0');
 
   /* ---------- calculation engine (BRD section 7) ---------- */
@@ -183,6 +200,13 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   }
   function unrealised(t) {
     if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') return null;
+    if (t.isStock) {
+      const l = live(t.symbol || t.instrument);
+      if (l != null && t.entry > 0) {
+        return +(dirOf(t) * (l - t.entry) * (t.qty || 1) * units(t)).toFixed(2);
+      }
+      return typeof t.unrl === 'number' ? t.unrl : (t.raw && typeof t.raw.unrealised === 'number' ? t.raw.unrealised : null);
+    }
     if (t.auto) return typeof t.unrl === 'number' ? t.unrl : (t.raw && typeof t.raw.unrealised === 'number' ? t.raw.unrealised : null);
     const l = live(t.symbol || t.instrument); if (l == null) return null;
     const rem = t.qty - exitedQty(t);
@@ -301,10 +325,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   /* Live P&L: equity and P&L include open positions (marked to market), and the
      overview refreshes on its own while it is on screen. */
   function liveTotals(day) {
-    const autoReal = AUTO.list.concat(paperList().filter(t => t.status === 'Closed')).reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
+    const autoReal = AUTO.list.concat((AUTO.stockTrades || []).filter(t => t.status === 'Closed'), paperList().filter(t => t.status === 'Closed')).reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
     const booked = realised() + autoReal;
     const unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
-    const autoToday = AUTO.list.concat(paperList()).reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
+    const autoToday = AUTO.list.concat((AUTO.stockTrades || []), paperList()).reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
     return { booked, unr, autoToday, eq: S.capital + booked + unr };
   }
   /* Capital in use: buys (premium / share value paid), margin blocked for sells (options: max(12% of the underlying, premium)
@@ -350,13 +374,13 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function kpiBlock(m, ds, day) {
     const L = liveTotals(day), todayBooked = ds.pnl + L.autoToday, todayAll = todayBooked + L.unr;
     const openN = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length;
-    return `      ${kpi('Trades', String(ds.entries + AUTO.list.filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.filter(t => t.date === day).length, '', 'Manual entries used today out of your daily limit, plus automated entries')}
+    return `      ${kpi("Today's P&L", sinr(todayAll), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll), "Today's net P&L across all closed and open positions")}
+      ${kpi('Total Booked', sinr(L.booked), m.n + ' closed trades', cc(L.booked), 'Cumulative net P&L of all closed trades all-time')}
+      ${kpi('Trades Today', String(ds.entries + AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length, '', 'Entries taken today')}
       ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Win rate of closed trades, with average win and average loss')}
-      ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R (multiples of initial risk)')}
-      ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss. Above 1.5 is healthy')}
-      ${kpi('Max DD', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '', 'Maximum drawdown: largest fall from an equity peak')}
-      ${kpi('T1 hit', (m.t1 * 100).toFixed(0) + '%', 'T2 ' + (m.t2 * 100).toFixed(0) + '% · T3 ' + (m.t3 * 100).toFixed(0) + '%', '', 'Share of closed trades that reached target 1, 2 and 3')}
-      ${kpi('Exits', `${m.slExits}/${m.tslExits}/${m.beExits}`, 'SL / TSL / BE', '', 'How trades ended: stop-loss, trailing stop-loss, breakeven')}`;
+      ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R')}
+      ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss')}
+      ${kpi('Max DD', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '', 'Maximum drawdown from equity peak')}`;
   }
   function refreshLive() {
     const host = document.getElementById('v-journal');
@@ -373,8 +397,21 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (o) {
       const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed' && sideOk(t)), ids = open.map(t => t.id).join(',');
       if (o.dataset.ids === ids && o.querySelector('table')) {
-        open.forEach(t => { const r = o.querySelector(`tr[data-id="${CSS.escape(String(t.id))}"] [data-c="pnl"]`); if (!r) return;
-          const u = unrealised(t), v = u == null ? '—' : sinr(u); if (r.textContent !== v) { r.innerHTML = `<b>${v}</b>`; r.className = 'num ' + cc(u || 0); } });
+        open.forEach(t => {
+          const r = o.querySelector(`tr[data-id="${CSS.escape(String(t.id))}"]`);
+          if (!r) return;
+          const pnlCell = r.querySelector('[data-c="pnl"]');
+          const curCell = r.querySelector('[data-c="cur"]');
+          const u = unrealised(t), v = u == null ? '—' : sinr(u);
+          if (pnlCell && pnlCell.textContent !== v) {
+            pnlCell.innerHTML = `<b>${v}</b>`;
+            pnlCell.className = 'num ' + cc(u || 0);
+          }
+          if (curCell) {
+            const cp = px(curPx(t));
+            if (curCell.textContent !== cp) curCell.innerHTML = `<b>${cp}</b>`;
+          }
+        });
       } else {
         const w = o.querySelector('.tbl-wrap,.jv-tw,[style*="overflow"]') || o.firstElementChild, x = w ? w.scrollLeft : 0;
         o.innerHTML = tradeTable(open, true, 'open'); o.dataset.ids = ids;
@@ -389,7 +426,19 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (a.length !== b.length) { host.innerHTML = html; return; }
     for (let i = 0; i < b.length; i++) if (a[i].innerHTML !== b[i].innerHTML) { a[i].innerHTML = b[i].innerHTML; a[i].className = b[i].className; a[i].title = b[i].title; }
   }
-  function curPx(t) { return t.auto ? ((t.raw && t.raw.last) || t.entry) : (live(t.symbol || t.instrument) || t.entry); }
+  function curPx(t) {
+    if (t.isStock) {
+      const l = live(t.symbol || t.instrument);
+      if (l != null && l > 0) return l;
+      return (t.raw && t.raw.last) || t.last || t.entry;
+    }
+    if (t.auto) {
+      const l = live(t.symbol);
+      if (l != null && l > 0) return l;
+      return (t.raw && t.raw.last) || t.entry;
+    }
+    return live(t.symbol || t.instrument) || (t.raw && t.raw.last) || t.entry;
+  }
   function liveCap() { const el = document.getElementById('jvCap'); if (!el) { capUse(); return; } const t = document.createElement('div'); t.innerHTML = capCard(); const n = t.firstElementChild; if (n && n.innerHTML !== el.innerHTML) el.innerHTML = n.innerHTML; }
   function livePositions() {
     const tb = document.getElementById('jvPosOpen'); if (!tb) return false;
@@ -576,6 +625,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small title="${E(tips)}">${E(t.setup || '')}</small></td>
         <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'SELL' : 'BUY'}</span></td>
         <td class="num">${px(t.entry)}</td>
+        <td class="num" data-c="cur" title="${closedish ? 'Exit price' : 'Last traded price (live)'}"><b>${px(curPx(t))}</b></td>
         <td class="num" title="${t.sl !== t.sl0 ? 'Initial SL ' + px(t.sl0) + ' · ' : ''}Trailing: ${E(t.tsl || 'off')}">${px(t.sl)}${t.sl !== t.sl0 ? ' <small class="up">↑</small>' : ''}</td>
         <td class="num jv-tg" title="Targets T1 / T2 / T3">${[t.t1, t.t2, t.t3].map(x => x ? px(x) : '–').join(' · ')}</td>
         <td class="num">${t.qty}</td>
@@ -586,7 +636,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span class="badge ${getTradeOutcome(t).cls}" title="${E(t.exitType || getTradeOutcome(t).tag)}">${getTradeOutcome(t).tag}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}</td>
         <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
     }).join('');
-    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
+    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('LTP', 'Last traded price (live)', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
   }
 
   function viewNew() {
@@ -1157,18 +1207,23 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
   /* ---------- summary strip: the same headline numbers at the top of every tab ---------- */
   function topStrip() {
-    const all = allTrades(), m = metrics(all), day = today();
-    const autoNet = AUTO.list.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
-    const unr = all.reduce((a, t) => a + (unrealised(t) || 0), 0);
+    const all = allTrades(), m = metrics(all), day = today(), ds = dayStats(day);
+    const LT = liveTotals(day);
+    const todayBooked = ds.pnl + LT.autoToday;
+    const unr = LT.unr;
+    const todayTotal = todayBooked + unr;
+    const totalBooked = LT.booked;
+    const totalEquity = LT.eq;
     const open = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
-    const openAuto = open.filter(t => t.auto).length, ds = dayStats(day), autoToday = AUTO.list.filter(t => t.date === day).length;
+    const openAuto = open.filter(t => t.auto).length;
+    const autoToday = AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length;
     return `<div class="jv-kpis jv-top" aria-label="Journal summary">
-      ${kpi('Equity', inr(equity() + autoNet + unr, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', cc(autoNet + realised() + unr), 'Capital + booked P&L + open P&L at live prices')}
-      ${kpi('Closed P&L', sinr(m.net), m.n + ' trades', cc(m.net), 'Net P&L of closed trades only')}
-      ${kpi('Open', open.length, openAuto + ' auto · ' + (open.length - openAuto) + ' manual', '', 'Open positions')}
-      ${kpi('Today', (ds.entries + autoToday) + '', 'manual ' + ds.entries + ' · auto ' + autoToday, '', 'Entries taken today against your limits')}
-      ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'PF ' + (m.pf === Infinity ? '∞' : m.pf.toFixed(2)), '', 'Win rate and profit factor')}
-      ${kpi('Exp.', rr(m.expR), 'DD ' + inr(m.maxDD, 0), cc(m.expR), 'Expectancy in R, and maximum drawdown')}
+      ${kpi('Total Equity', inr(totalEquity, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', cc(totalBooked + unr), 'Total portfolio equity: Capital (₹10 L) + Total Booked P&L + Open Unrealized P&L')}
+      ${kpi("Today's P&L", sinr(todayTotal), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(unr), cc(todayTotal), "Today's net P&L across all closed and open positions for the current session")}
+      ${kpi('Total Booked P&L', sinr(totalBooked), m.n + ' closed trades', cc(totalBooked), 'All-time cumulative net P&L of all closed trades across the journal')}
+      ${kpi('Open Positions', open.length, openAuto + ' auto · ' + (open.length - openAuto) + ' manual', '', 'Current active open positions')}
+      ${kpi('Win Rate', (m.winRate * 100).toFixed(0) + '%', 'PF ' + (m.pf === Infinity ? '∞' : m.pf.toFixed(2)), '', 'Win rate and profit factor across closed trades')}
+      ${kpi('Max DD', inr(m.maxDD, 0), 'exp ' + rr(m.expR), m.maxDD > 0 ? 'down' : '', 'Maximum drawdown from equity peak')}
     </div>`;
   }
 
@@ -1524,7 +1579,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
    function positionTable(trades) {
      if (!trades.length) return '<div class="empty">No positions</div>';
-     const headers = ['Symbol', 'Side', 'Entry · in', 'SL', 'TSL', 'Target', 'R:R', 'Current', 'P&L', 'Held', 'Exit'];
+     const headers = ['Symbol', 'Side', 'Entry · in', 'SL', 'TSL', 'Target', 'R:R', 'LTP (₹)', 'P&L', 'Held', 'Exit'];
      const rows = trades.map(t => {
        const c = calc(t);
        const status = statusOf(t);
