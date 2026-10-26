@@ -61,7 +61,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return t;
   }
   async function syncAuto(force) {
-    if (AUTO.busy || (!force && Date.now() - AUTO.ts < 60000)) return;
+    if (AUTO.busy || (!force && Date.now() - AUTO.ts < 10000)) return;
     AUTO.busy = true;
     const stBefore = JSON.stringify([AUTO.srv || null, !!AUTO.err]);
     try {
@@ -69,7 +69,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         fetch('/api/auto/status', { cache: 'no-store' }).catch(() => null),
         fetch('/api/stockbot/status', { cache: 'no-store' }).catch(() => null)
       ]);
-      let before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType]));
+      let before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType, x.entry, (x.raw && x.raw.last) || x.entry, x.unrl]));
+      let beforeStock = JSON.stringify((AUTO.stockTrades || []).map(x => [x.id, x.status, x.last, x.unrealised]));
       if (r && r.ok) {
         const a = await r.json();
         AUTO.cand = a.cand || null;
@@ -98,8 +99,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
           };
         });
       }
-      if (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType])) !== before && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
-          ['portfolio', 'positions', 'algo'].includes(effTab())) render();
+      const changed = (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType, x.entry, (x.raw && x.raw.last) || x.entry, x.unrl])) !== before) ||
+                      (JSON.stringify((AUTO.stockTrades || []).map(x => [x.id, x.status, x.last, x.unrealised])) !== beforeStock);
+      if (changed && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
+          ['portfolio', 'positions', 'algo', 'stocks'].includes(effTab())) render();
     } catch (e) {
       AUTO.err = true;
     }
@@ -180,7 +183,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   }
   function unrealised(t) {
     if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') return null;
-    if (t.auto) return typeof t.unrl === 'number' ? t.unrl : null;          // option P&L comes from the server's live option price
+    if (t.auto) return typeof t.unrl === 'number' ? t.unrl : (t.raw && typeof t.raw.unrealised === 'number' ? t.raw.unrealised : null);
     const l = live(t.symbol || t.instrument); if (l == null) return null;
     const rem = t.qty - exitedQty(t);
     return dirOf(t) * (l - t.entry) * rem * units(t);
@@ -358,7 +361,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   function refreshLive() {
     const host = document.getElementById('v-journal');
     if (!host || !host.offsetParent || document.querySelector('.modal-bg') || document.hidden) return;
-    if (ui.tab === 'positions') { liveCap(); if (!livePositions()) render(); return; }   // prices / P&L update in place; redraw only when positions change
+    if (ui.tab === 'positions') { liveCap(); if (!livePositions()) render(); return; }
+    if (ui.tab === 'algo' || ui.tab === 'stocks') { liveCap(); return; }
     if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
     liveCap();
@@ -2012,7 +2016,7 @@ function lastDayStats(currentDay) {
     return { day: lastD, pnl: dayTotals[lastD] || 0 };
   }
 
-  window.JV = { cap: () => capUse(), render, sync: syncAuto, trades: () => T, settings: () => S, calc, validate,
+  window.JV = { cap: () => capUse(), render, sync: syncAuto, refreshLive, trades: () => T, settings: () => S, calc, validate,
     /* live portfolio for the header: capital + booked + open (marked to market) */
           totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday, last = lastDayStats(d);
       return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayBooked + L.unr, todayBooked, lastDay: last.day, lastDayPnl: last.pnl, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };

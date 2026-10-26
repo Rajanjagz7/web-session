@@ -891,6 +891,7 @@ def _reversed(t, today):
 
 
 def run_cycle(force=False, dry=False):
+    run_cycle._last_ran = time.time()
     now = _now()
     if not force and not dry:                       # closed market: no lock, no state read - zero Upstash commands
         import nse_calendar
@@ -1011,6 +1012,11 @@ def _run_cycle(now, force, dry):
                                            "rank": round(c["rank"], 2), "source": c.get("source") or c.get("label") or ""})
                     continue
                 try:
+                    # Enforce timing rule: BUY trades execute starting at 9:15 AM; SELL trades held until 9:20 AM
+                    is_sell = (c.get("key") == "rzt-hedge" or c.get("action") == "SELL" or c.get("pos") == "short")
+                    if is_sell and _mins(now) < SELL_FROM and not force:
+                        st["log"].append({"at": now.isoformat(), "msg": f"holding {c['sym']} SELL trade until 09:20"})
+                        continue
                     if c.get("key") == "rzt-hedge":
                         t = _open_rzt_hedge(st, c, today)      # Z Trend flip as a hedged credit spread (its own notify)
                     else:
@@ -1156,6 +1162,14 @@ def status():
         mark_open_positions()
     except Exception as e:                                 # a failed mark must never break the status screen
         print(f"[auto] mark-to-market failed: {e}")
+    now = _now()
+    try:
+        import nse_calendar
+        if nse_calendar.session_open(now) and time.time() - getattr(run_cycle, "_last_ran", 0) >= 180:
+            run_cycle._last_ran = time.time()
+            run_cycle()
+    except Exception as e:
+        print(f"[auto] status cycle trigger failed: {e}")
     st = _load(cached=True)                                    # read-only screen: a 30 s old copy is fine
     if st.get("_dirty"):
         with _lock:

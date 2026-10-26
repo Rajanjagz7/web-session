@@ -191,7 +191,19 @@ def api_cron_morning_refresh():
     except Exception as exc:
         summary["liveWarmup"] = {"status": "failed", "error": str(exc)}
 
+    try:
+        import auto_trader
+        summary["autoCycle"] = auto_trader.run_cycle()
+    except Exception as exc:
+        summary["autoCycle"] = {"error": str(exc)}
+
     return summary
+
+
+@app.api_route("/api/cron/auto-cycle", methods=["GET", "POST"])
+def api_cron_auto_cycle():
+    import auto_trader
+    return auto_trader.run_cycle()
 
 
 @app.get("/api/cron/weekly-cleanup")

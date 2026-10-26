@@ -345,6 +345,11 @@ def cron(authorization: str = Header(default="")):
     secret = os.environ.get("CRON_SECRET")
     if secret and authorization != f"Bearer {secret}":
         raise HTTPException(401, "Unauthorized")
+    try:
+        import auto_trader
+        auto_trader.run_cycle()
+    except Exception as e:
+        print(f"[cron] auto_trader cycle failed: {e}")
     return run_cycle()
 
 

@@ -37,7 +37,7 @@ FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__
 HZ = ("intraday", "swing", "positional")
 CFG = {"capital": 1000000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
        "maxOpen": {"intraday": 6, "swing": 10, "positional": 10}, "maxSessions": {"swing": 15, "positional": 40},
-       "windowStart": "09:20", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
+       "windowStart": "09:15", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
 _lock = threading.Lock()
 
 
@@ -279,6 +279,9 @@ def enter(st, now):
             if room <= 0:
                 break
             pl = p["plans"][hz]
+            # Rule: BUY trades execute starting at 9:15 AM; SELL trades held until 9:20 AM
+            if pl.get("side") == "SELL" and m < 9 * 60 + 20:
+                continue
             x = q.get(p["s"]) or {}
             px = float(x.get("last") or 0)
             if px <= 0:

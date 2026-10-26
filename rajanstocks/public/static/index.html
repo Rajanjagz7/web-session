@@ -655,7 +655,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261025j"></script>
+<script src="/static/journal.js?v=20261026a"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261025d"></script>
 <script src="/static/observer.js?v=20261025d"></script>
@@ -1516,7 +1516,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261025j',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026a',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -2581,8 +2581,17 @@ function renderTools(){$('#tools').innerHTML=TOOLS.map(([k,l])=>`<button class="
   `<span class="sep"></span><button class="ibtn ${chart.hideDraw?'on':''}" data-act="hidedraw" title="Hide drawings" aria-label="Hide drawings">${I(chart.hideDraw?'eyeoff':'eye')}</button><button class="ibtn" data-act="cleardraw" title="Remove all drawings" aria-label="Remove all drawings">${I('trash')}</button>`;
   const hint={trend:'Click two points to draw a trend line',hline:'Click to place a horizontal line',rect:'Click two corners',fib:'Click swing high, then swing low',measure:'Click start and end to measure'}[chart.tool];
   $('#hint').textContent=hint?hint+' · Esc to cancel':'';$('#hint').classList.toggle('show',!!hint)}
-function switchSym(k){App.span=null;App.sym=SYM(k);App.tk.price='';App.tk.tpPx='';App.tk.slPx='';chart.drawings=[];chart.sel=-1;loadChart(false);renderSymbar();renderToolbar();renderWatchlist();renderTicket();buildBook();if(App.view!=='trade')go('trade');liveUpdate();$('#v-trade').classList.remove('wl-open');renderIndPanels();
-  const ri=$('#rInd');if(ri&&!ri.hidden)renderTradeIndAll()}
+function switchSym(k){k=String(k||'').trim().toUpperCase();App.span=null;let s=SYM(k);
+  if(!s){const isI=['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX'].includes(k)||k.includes('NIFTY')||k.includes('SENSEX');
+    s={s:k,n:k,sec:isI?'Index':'Stocks',cls:isI?'Indices':'Stocks',last:0,prev:0,dp:2,qdp:0,p:0,hi:0,lo:0,open:0,dvol:0,turn:0,bid:0,ask:0,unit:isI?'units':'shares'};SYMS.push(s)}
+  if(s.last<=0&&App.picks&&Array.isArray(App.picks.picks)){const pk=App.picks.picks.find(p=>p.s===k);
+    if(pk&&pk.ltp>0){s.last=pk.ltp;s.p=pk.ltp;s.prev=pk.prev||pk.ltp/(1+(pk.chg||0)/100);s.open=pk.open||s.open||pk.ltp;s.hi=pk.hi||pk.high||s.hi||pk.ltp;s.lo=pk.lo||pk.low||s.lo||pk.ltp}}
+  App.sym=s;App.tk.price=s.last>0?s.last.toFixed(s.dp):'';App.tk.tpPx='';App.tk.slPx='';chart.drawings=[];chart.sel=-1;loadChart(false);renderSymbar();renderToolbar();renderWatchlist();renderTicket();buildBook();
+  if(App.view!=='trade')go('trade');liveUpdate();$('#v-trade').classList.remove('wl-open');renderIndPanels();
+  const ri=$('#rInd');if(ri&&!ri.hidden)renderTradeIndAll();
+  api('/api/m/quotes?symbols='+encodeURIComponent(k)).then(r=>{if(r&&Array.isArray(r.quotes)){for(const q of r.quotes){if(q.s===k&&q.last>0){
+    s.last=q.last;s.p=q.last;s.prev=q.prev>0?q.prev:(s.prev||q.last);s.hi=q.high||s.hi||q.last;s.lo=q.low||s.lo||q.last;s.open=q.open||s.open||q.last;s.dvol=q.vol||0;s.bid=q.bid||0;s.ask=q.ask||0;
+    sbFill(s);liveUpdate();calcTicket();setChartLines()}}}}).catch(()=>{});pollQuotes()}
 function setChartLines(){const s=App.sym,ls=[],p=posOf(s.s);
   if(p){const pnl=p.q*(s.last-p.avg);ls.push({price:p.avg,label:`${p.q>0?'LONG':'SHORT'} ${qfmt(Math.abs(p.q),s)}  ${smoney(pnl)}`,color:T.s[0],dash:[1,0]});
     if(p.tp)ls.push({price:p.tp,label:'TP '+fmtP(p.tp,s.dp),color:T.up,drag:1,set:v=>p.tp=v,kind:'tp'});
@@ -4287,6 +4296,7 @@ function quotesURL(){POLLN++;const heavy=App.view==='markets'||App.view==='picks
   if(App.sym&&!App.sym.tv&&!App.sym.ikey)set.add(App.sym.s);
   App.watch.forEach(s=>set.add(s));App.positions.forEach(p=>set.add(p.sym));App.alerts.forEach(a=>{if(a.on)set.add(a.sym)});
   if(typeof OPT!=='undefined'&&OPT.sym)set.add(OPT.sym);
+  if(window.JV&&typeof window.JV.trades==='function'){try{window.JV.trades().forEach(t=>{if(t.status==='Open'||(t.status!=='Closed'&&t.status!=='Planned')){const sym=t.instrument||t.symbol;if(sym&&!sym.includes(' '))set.add(String(sym).trim().toUpperCase())}})}catch(e){}}
   return'/api/m/quotes?symbols='+encodeURIComponent([...set].filter(s=>SYMS.some(x=>x.s===s)||(EXTRA[s]&&EXTRA[s].xstk)).join(','))}
 
 
@@ -4675,6 +4685,7 @@ async function pollQuotes(){if(pollBusy)return;pollBusy=true;
   pollBusy=false;setStatus();uiRefresh()}
 function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='options')optTick();
+  if(App.view==='journal'&&window.JV){try{if(window.JV.refreshLive)window.JV.refreshLive();else window.JV.render()}catch(e){}}
   if(App.view==='trade'&&App.sym.tv){loadGlobal();refreshGlobalChart()}   /* live price every ~3 s; history reload separately */
   if(App.view==='markets')loadGlobal();
   if(App.view==='daily'&&Date.now()-(DAILY.ts||0)>(MKT.open?60000:600000)){DAILY.ts=Date.now();loadDaily(false)}
