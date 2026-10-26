@@ -214,3 +214,11 @@ def api_cron_weekly_cleanup():
     except Exception:
         pass
     return {"status": "ok", "cacheFilesRemoved": shared_cache.sweep(), "ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+@app.get("/{full_path:path}")
+def spa_fallback(full_path: str):
+    """Fallback route for single-page app routes so direct links and reloads never 404."""
+    if full_path.startswith("api/") or full_path.startswith("static/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    return FileResponse(_get_public_or_static("index.html"))
+

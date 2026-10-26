@@ -1516,7 +1516,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026b',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026c',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -4706,10 +4706,20 @@ async function checkCacheVersion(){
   if(!last){try{localStorage.setItem('cacheVer',version)}catch(e){}return}
   if(last===version)return;
   try{localStorage.setItem('cacheVer',version)}catch(e){}
-  try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}
-  try{const reg=await navigator.serviceWorker.getRegistration();reg&&reg.update()}catch(e){}
-  toast('Updating to the latest version…','ok');
-  setTimeout(()=>location.reload(),1200)}
+  showUpdatePill()}
+function showUpdatePill(){
+  let p=document.getElementById('appUpdatePill');
+  if(!p){
+    p=document.createElement('div');p.id='appUpdatePill';
+    p.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--brand,#2563eb);color:#fff;padding:8px 18px;border-radius:20px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.4);cursor:pointer';
+    p.innerHTML='<span style="display:inline-block;width:10px;height:10px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span> New release ready · tap to update';
+    p.onclick=()=>{
+      p.innerHTML='Updating to latest version…';
+      try{navigator.serviceWorker&&navigator.serviceWorker.getRegistration().then(reg=>reg&&reg.update())}catch(e){}
+      setTimeout(()=>location.reload(),400);
+    };
+    document.body.appendChild(p);
+  }}
 /* This project's Vercel plan can't run a 5-min cron (tried - it rejected the whole deploy), so an
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
