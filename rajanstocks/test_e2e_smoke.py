@@ -119,8 +119,8 @@ def app(request, server, browser):
 def test_every_screen_opens_clean_and_fits_the_screen(app):
     app.open("picks")
     # "trade" is the option-chain Trade screen (the old full-chart screen only opens for symbols without options)
-    for v, shown in [("picks", "picks"), ("trade", "options"), ("markets", "markets"), ("ipo", "ipo"), ("journal", "journal"), ("indicators", "indicators"),
-                     ("vedic", "vedic"), ("options", "options"), ("portfolio", "portfolio"), ("orders", "orders"), ("alerts", "alerts"), ("daily", "daily"), ("stocks", "markets")]:
+    for v, shown in [("picks", "picks"), ("trade", "options"), ("markets", "godseye"), ("ipo", "ipo"), ("journal", "journal"), ("indicators", "indicators"),
+                     ("vedic", "vedic"), ("options", "options"), ("portfolio", "portfolio"), ("orders", "orders"), ("alerts", "alerts"), ("daily", "daily"), ("stocks", "godseye")]:
         app.go(v, 1800)
         assert app.ev("document.querySelector('.view.on') && document.querySelector('.view.on').id") == "v-" + shown, f"{v} did not open {shown}"
         try:                                            # slow screens (Vedic computes on first open) get up to 20 s to fill in
@@ -262,12 +262,12 @@ def test_indicator_screen_headlines_equal_the_api(app):
 
 
 def test_other_screens_show_live_data(app):
-    app.open("markets")
-    app.page.wait_for_selector(".sb-row", state="attached", timeout=30000)
+    app.open("markets")   # the old Markets screen now opens God's Eye > Markets > All stocks
+    app.page.wait_for_selector("#geSL .sb-row", state="attached", timeout=30000)
     app.page.wait_for_timeout(2500)
-    rows = app.ev("document.querySelectorAll('.sb-row').length")
+    rows = app.ev("document.querySelectorAll('#geSL .sb-row').length")
     assert rows >= 10
-    prices = app.ev("[...document.querySelectorAll('[data-px]')].slice(0, 20).map(e => e.textContent.trim())")
+    prices = app.ev("[...document.querySelectorAll('#geSL .sb-row:not(.sb-head) .c-ltp')].slice(0, 20).map(e => e.textContent.trim())")
     assert sum(1 for p in prices if p and p != "—") >= 10, "markets list shows no prices"
     app.go("vedic", 5000)
     vedic_text = app.ev("document.querySelector('.view.on').innerText").lower()   # labels are upper-cased by CSS

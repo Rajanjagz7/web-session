@@ -41,7 +41,7 @@
       if (!d || !Array.isArray(d.cards)) throw new Error('bad response');
       G.data = d; G.ts = Date.now(); SS('ge-cache', d);
     } catch (e) { if (my === G.seq) G.err = e.message || 'network error'; }
-    if (my === G.seq) { G.busy = false; paint(); }
+    if (my === G.seq) { G.busy = false; paint('data'); }
   }
   async function loadOpt(exp) {
     G.optExp = exp; G.opt = 'loading'; paint();
@@ -128,7 +128,6 @@
     return `${outlookBlock(d.outlook, d.expiry, d.options)}
       <div class="ge-cards ge-cards-w">${(d.cards || []).map(card).join('')}</div>`;
   }
-  const GLOBAL_KEYS = ['GOLD', 'SILVER', 'CRUDEOIL', 'BITCOIN', 'NASDAQ', 'DJI', 'GLOBALRISK'];
   function retailTab(d) {
     const r = d.positioning && d.positioning.retail, o = d.options;
     const mood = r && r.skew ? `<section class="ge-p ge-moodp ${lab(r.skew)}"><small>Retail mood</small><b class="ge-oc-l">${E(r.skew)}</b><span class="muted">${isN(r.futLongPct) ? 'Retail index futures ' + r.futLongPct + '% long' : ''}</span></section>` : '';
@@ -137,10 +136,16 @@
   function fnoTab(d) {
     return `<div class="ge-grid4">${pInst(d.positioning)}${pOptionsOI(d.options)}${pPCR(d.options)}</div>${optTab(d)}`;
   }
-  function globalTab(d) {
-    const l = (d.cards || []).filter(c => GLOBAL_KEYS.includes(c.key));
-    return l.length ? `<div class="ge-cards ge-cards-w">${l.map(card).join('')}</div>` : '<section class="ge-p"><p class="ge-na">Global markets unavailable right now.</p></section>';
+  function globalTab() {
+    let strip = '';                                    // the live futures / indices strip from the old Markets screen: every tile opens its chart
+    try { if (typeof glHTML === 'function') strip = glHTML(); if (typeof GL !== 'undefined' && !GL.items && typeof loadGlobal === 'function') loadGlobal(true); } catch (e) { }
+    return (strip || '<section class="ge-p"><p class="ge-na">Global markets unavailable right now.</p></section>')
+      + `<p class="ge-sub">Bullish / bearish read for Gold, Silver, Crude, Bitcoin, Nasdaq, Dow and global risk: <button type="button" class="btn-xs" data-getab="overview" data-gegrp="home">Overview ›</button></p>`;
   }
+  /* the full NSE stock list (search, index constituents, multibaggers) - the old Markets screen's screener, mounted here */
+  function stocklistTab() { return '<div id="geSL" class="ge-sl"></div>'; }
+  window.geNeedsGlobal = () => !!host() && G.tab === 'global';
+  window.geOpenTab = (tab, sub) => { G.tab = tab; if (sub) G.slTab = sub; const g = GROUPS.find(x => x.tabs.some(t => t[0] === tab)); if (g) { LAST_SUB[g.key] = tab; SS('ge-last', LAST_SUB); } SS('ge-tab', G.tab); };
   /* day / 20-day range with the price marker - from the cards' own detail block (no extra request) */
   function rangeBar(lo, hi, px, label) {
     if (![lo, hi, px].every(isN) || hi <= lo) return `<div class="ge-rg"><small>${label}</small>${NA}</div>`;
@@ -177,12 +182,22 @@
   const nameOf = sym => { try { const x = SYMS.find(s => s.s === sym); return x ? x.n : ''; } catch (e) { return ''; } };
   const qrow = (q, extra) => `<button type="button" class="ge-qr" data-sym="${E(q.s)}"><span class="ge-qn"><b>${E(q.s)}</b><small>${E(nameOf(q.s))}</small></span><span class="num">${n2(q.last)}</span>${extra}</button>`;
   const chgOf = q => (q.last / q.prev - 1) * 100;
+  const MV_PG = { g: 0, l: 0, a: 0 }, MV_SIZE = 10;
   function moversTab() {
-    if (!MQ.rows.length) return `<section class="ge-p"><p class="muted">${MQ.err ? 'Quotes unavailable: ' + E(MQ.err) : 'Loading stock prices…'}</p></section>`;
-    const by = MQ.rows.slice().sort((a, b) => chgOf(b) - chgOf(a));
-    const list = (arr, cls) => arr.map(q => qrow(q, `<span class="ge-badge ${cls} num">${pc(chgOf(q))}</span>`)).join('');
-    return `<div class="ge-grid2"><section class="ge-p"><h3>Top gainers</h3>${list(by.slice(0, 10), 'bull')}</section><section class="ge-p"><h3>Top losers</h3>${list(by.slice(-10).reverse(), 'bear')}</section></div>
-      <p class="ge-sub">${MQ.rows.length} F&amp;O stocks · change vs previous close</p>`;
+    let st = []; try { st = SYMS.filter(s => s.cls === 'Stocks' && s.last > 0 && s.prev > 0); } catch (e) { }
+    if (st.length < 20) st = MQ.rows;                  // live app quotes first, the God's Eye fetch until they arrive
+    if (!st.length) return `<section class="ge-p"><p class="muted">${MQ.err ? 'Quotes unavailable: ' + E(MQ.err) : 'Loading stock prices…'}</p></section>`;
+    const L = { g: st.filter(q => chgOf(q) > 0).sort((a, b) => chgOf(b) - chgOf(a)), l: st.filter(q => chgOf(q) < 0).sort((a, b) => chgOf(a) - chgOf(b)) };
+    if (st.some(q => q.turn > 0)) L.a = st.slice().sort((a, b) => (b.turn || 0) - (a.turn || 0));
+    const T = { g: 'Top gainers', l: 'Top losers', a: 'Most active' };
+    const box = id => {
+      const l = L[id], pages = Math.max(1, Math.ceil(l.length / MV_SIZE)), pg = MV_PG[id] = Math.min(MV_PG[id] || 0, pages - 1);
+      const rows = l.slice(pg * MV_SIZE, pg * MV_SIZE + MV_SIZE).map((q, i) => `<button type="button" class="ge-qr" data-sym="${E(q.s)}"><span class="ge-qn"><b>${pg * MV_SIZE + i + 1}. ${E(q.s)}</b><small>${E(nameOf(q.s))}</small></span><span class="num" data-px="${E(q.s)}">${n2(q.last)}</span><span class="ge-badge ${chgOf(q) >= 0 ? 'bull' : 'bear'} num" data-chg="${E(q.s)}">${pc(chgOf(q))}</span></button>`).join('');
+      return `<section class="ge-p"><h3>${T[id]} <small class="muted">· ${l.length} stocks</small></h3>${rows || '<p class="ge-na">None right now</p>'}
+        ${pages > 1 ? `<div class="ge-mvpg"><button type="button" class="btn-xs" data-gemvp="${id}:${pg - 1}" ${pg <= 0 ? 'disabled' : ''}>‹ Prev</button><span class="muted">${pg + 1} / ${pages}</span><button type="button" class="btn-xs" data-gemvp="${id}:${pg + 1}" ${pg >= pages - 1 ? 'disabled' : ''}>Next ›</button></div>` : ''}</section>`;
+    };
+    return `<div class="ge-grid3">${Object.keys(L).map(box).join('')}</div>
+      <p class="ge-sub">${st.length} stocks · change vs previous close${L.a ? ' · most active by turnover' : ''}</p>`;
   }
   function watchTab() {
     let w = []; try { w = Array.from(App.watch || []); } catch (e) { }
@@ -336,34 +351,6 @@
       <p class="ge-sub">Price-based score; no P/E, ROCE or supplier data. Data as of ${E(IST(G.sec.asOf))}. Informational only.</p></div></div>`;
   }
 
-  /* ---------- Today's picks (the Picks screen's own data - App.picks - with its 10-15 shortlist) ---------- */
-  let pkLoading = false;
-  function picksTab() {
-    const P = typeof App !== 'undefined' ? App.picks : null;
-    if (!P || !Array.isArray(P.picks)) {
-      if (!pkLoading && typeof loadPicks === 'function') { pkLoading = true; Promise.resolve(loadPicks(false)).catch(() => { }).finally(() => { pkLoading = false; if (host() && G.tab === 'picks') paint(); }); }
-      return `<section class="ge-p"><p class="muted">Loading today's picks…</p></section>`;
-    }
-    const live = s_ => { try { const x = SYM(s_); return x && x.last > 0 ? x : null; } catch (e) { return null; } };
-    const px = r => { const x = live(r.s); return x ? x.last : r.ltp; };
-    const ch = r => { const x = live(r.s); return x && x.prev > 0 ? (x.last / x.prev - 1) * 100 : r.chg; };
-    const top = Array.isArray(P.top) ? P.top : [];
-    const all = P.picks.filter(r => r.kind !== 'index');
-    const buys = all.filter(r => r.signal === 'BUY').sort((a, b) => (b.strength || 0) - (a.strength || 0));
-    const sells = all.filter(r => r.signal === 'SELL').sort((a, b) => (b.strength || 0) - (a.strength || 0));
-    const sum = P.topSummary || {};
-    const row = (r, side) => `<button type="button" class="ge-pk" data-gepick="${E(r.s)}"><span class="ge-qn"><b>${E(r.s)}</b><small>${E(r.why || r.n || '')}</small></span>
-      <span class="ge-badge ${side === 'SELL' ? 'bear' : 'bull'}">${E(side)}${isN(r.strength) ? ' ' + Math.round(r.strength) + '%' : ''}</span>
-      <span class="ge-pkp"><b class="num">${n2(px(r))}</b><small class="num ${cc(ch(r))}">${pc(ch(r))}</small></span>
-      ${isN(r.entry) ? `<span class="ge-pkl num"><small>Entry</small>${n2(r.entry)}<small>Stop</small><em class="down">${n2(r.stop)}</em><small>Target</small><em class="up">${n2(r.target)}</em></span>` : ''}</button>`;
-    return `<div class="ge-sum4"><div><small>Shortlist</small><b class="num">${top.length}</b></div><div><small>Tier 1 · strong</small><b class="num">${sum.tier1 ?? '—'}</b></div><div><small>Buy ideas</small><b class="num up">${buys.length}</b></div><div><small>Sell ideas</small><b class="num down">${sells.length}</b></div></div>
-      <section class="ge-p"><h3>Today's shortlist <small class="muted">· strength ≥ 75 and Open = Low / High first, good risk : reward only</small></h3>
-        ${top.length ? top.map(r => row(r, r.side || r.signal)).join('') : '<p class="ge-na">No stock passes the shortlist rules right now.</p>'}</section>
-      <div class="ge-grid2"><section class="ge-p"><h3>Strongest buys</h3>${buys.slice(0, 8).map(r => row(r, 'BUY')).join('') || '<p class="ge-na">None</p>'}</section>
-        <section class="ge-p"><h3>Strongest sells</h3>${sells.slice(0, 8).map(r => row(r, 'SELL')).join('') || '<p class="ge-na">None</p>'}</section></div>
-      <p class="ge-sub">Same screen as Picks, updated ${P.asOf ? E(IST(P.asOf)) : ''}. <button type="button" class="btn-xs" data-gegopicks="1">Open the Picks screen ›</button></p>`;
-  }
-
   const CHART = { NIFTY: ['sym', 'NIFTY'], SENSEX: ['sym', 'SENSEX'], BANKNIFTY: ['sym', 'BANKNIFTY'], GOLD: ['gl', 'COMEX:GC1!'], SILVER: ['gl', 'COMEX:SI1!'], CRUDEOIL: ['gl', 'NYMEX:CL1!'], BITCOIN: ['gl', 'BITSTAMP:BTCUSD'], NASDAQ: ['gl', 'NASDAQ:NDX'], DJI: ['gl', 'DJ:DJI'], GLOBALRISK: ['gl', 'CBOE:VIX'] };
   function detail() {
     const c = ((G.data && G.data.cards) || []).find(x => x.key === G.open); if (!c) return '';
@@ -389,19 +376,21 @@
     { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood']] },
     { key: 'opt', label: 'Options & Expiry', tabs: [['fno', 'Options & Expiry']] },
     { key: 'stocks', label: 'Signals', tabs: [['signals', 'Signals'], ['sectors', 'Sectors'], ['movers', 'Movers'], ['fallen', 'Fallen'], ['watch', 'Watchlist']] },
-    { key: 'world', label: 'Markets', tabs: [['range', 'Range'], ['global', 'Global']] },
+    { key: 'world', label: 'Markets', tabs: [['global', 'Global'], ['stocklist', 'All stocks'], ['range', 'Range']] },
   ];
   const LAST_SUB = LS('ge-last', {});                  // a main tab reopens on the sub-tab used last
   function host() { return typeof App !== 'undefined' && App.view === 'godseye' ? document.getElementById('v-godseye') : null; }
-  function paint() {
+  function paint(reason) {
     const el = host(); if (!el) return;
+    if (reason === 'data' && G.tab === 'stocklist' && document.getElementById('geSL')) { const u = el.querySelector('.ge-upd'); if (u && G.data) u.textContent = 'Updated ' + IST(G.data.asOf); return; }
+    if (G.tab === 'picks') G.tab = 'overview';         // Today's Picks is its own screen (#v-picks); here it means Overview
     const d = G.data;
     const grp = GROUPS.find(g => g.tabs.some(t => t[0] === G.tab)) || GROUPS[0];
     if (!grp.tabs.some(t => t[0] === G.tab)) G.tab = grp.tabs[0][0];
     let body;
     if (!d) body = G.err ? `<div class="ge-p"><p class="ge-na">God's Eye is unavailable: ${E(G.err)}</p><button class="btn" data-gerefresh="1">Retry</button></div>`
       : `<div class="ge-cards">${'<article class="ge-card ge-skel"></article>'.repeat(10)}</div><p class="muted">Reading markets, FII / DII and option data…</p>`;
-    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, picks: picksTab }[G.tab] || overview)(d);
+    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, stocklist: stocklistTab }[G.tab] || overview)(d);
     if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
       <div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
@@ -414,6 +403,7 @@
       <p class="ge-disc">Informational only - built from public NSE data, broker quotes and rule-based scores; not a forecast or investment advice.</p>
       ${G.open ? detail() : G.stock ? stockDetail() : ''}</div>`;
     document.body.classList.toggle('ge-noscroll', !!(G.open || G.stock));
+    if (G.tab === 'stocklist' && window.SB) { try { SB.page(document.getElementById('geSL'), G.slTab || undefined); G.slTab = null; } catch (e) { } }
   }
   window.renderGodsEyeTab = function () { paint(); if (!G.data || Date.now() - G.ts > 60e3) load(false); };
   /* Picks shows a one-line summary only - the full God's Eye lives in its own tab (no duplicate screen) */
@@ -425,7 +415,16 @@
     draw(G.data && G.data.cards);
     if (!G.data || Date.now() - G.ts > 300e3) fetch('/api/observer').then(r => r.ok ? r.json() : null).then(d => { if (d && d.items && document.body.contains(root)) draw((G.data && G.data.cards) || d.items); }).catch(() => { });
   };
-  document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') go('godseye'); });
+  document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') { G.tab = 'overview'; SS('ge-tab', G.tab); go('godseye'); } });
+  /* Today's Picks = the Picks screen under the same God's Eye tab bar; the other tabs go back to #v-godseye */
+  window.geTabsHTML = () => `<div class="ge ge-pkbar"><div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g.key === 'picks'}" class="${g.key === 'picks' ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div></div>`;
+  window.geHome = () => G.tab === 'picks' ? 'picks' : 'godseye';
+  document.addEventListener('click', e => {
+    const tb = e.target.closest('#v-picks .ge-pkbar [data-gegrp]'); if (!tb || typeof go !== 'function') return;
+    const g = GROUPS.find(x => x.key === tb.dataset.gegrp); if (!g) return;
+    G.tab = LAST_SUB[g.key] && g.tabs.some(t => t[0] === LAST_SUB[g.key]) ? LAST_SUB[g.key] : g.tabs[0][0];
+    SS('ge-tab', G.tab); go(G.tab === 'picks' ? 'picks' : 'godseye');
+  });
 
   document.addEventListener('click', e => {
     if (!e.target.closest('#v-godseye')) return;
@@ -446,11 +445,13 @@
     if (q('[data-gesecretry]')) return loadSec(true);
     const c = q('[data-gecard]'); if (c) { G.open = c.dataset.gecard; return paint(); }
     if (q('[data-geout]')) { G.outOpen = !G.outOpen; return paint(); }
+    const mp = q('[data-gemvp]'); if (mp && !mp.disabled) { const [id, pg] = mp.dataset.gemvp.split(':'); MV_PG[id] = +pg; return paint(); }
     const tb = q('[data-getab]'); if (tb) {
       const g = tb.dataset.gegrp ? GROUPS.find(x => x.key === tb.dataset.gegrp) : null;
       G.tab = g && LAST_SUB[g.key] && g.tabs.some(t => t[0] === LAST_SUB[g.key]) ? LAST_SUB[g.key] : tb.dataset.getab;
       const gg = GROUPS.find(x => x.tabs.some(t => t[0] === G.tab)); if (gg) { LAST_SUB[gg.key] = G.tab; SS('ge-last', LAST_SUB); }
-      SS('ge-tab', G.tab); return paint();
+      SS('ge-tab', G.tab); if (G.tab === 'picks' && typeof go === 'function') return go('picks');
+      return paint();
     }
     const pk = q('[data-gepick]'); if (pk && typeof switchSym === 'function') { switchSym(pk.dataset.gepick); return; }
     if (q('[data-gegopicks]') && typeof go === 'function') { go('picks'); return; }
@@ -596,6 +597,9 @@
   .ge-cards-w{margin-bottom:12px}.ge-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
   @media (max-width:1100px){.ge-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media (max-width:640px){.ge-grid4{grid-template-columns:1fr}.ge-oc-t{margin-left:0}.ge-chips{display:none}}   /* phones: the chips are in 'Why' */
+  .ge-sl{min-height:300px}.ge.ge-pkbar{padding-bottom:0}.ge-pkbar .ge-tabs{margin:0 0 10px}.ge-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.ge-grid3 .ge-qr{grid-template-columns:minmax(0,1fr) auto auto}
+  .ge-mvpg{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}
+  @media (max-width:980px){.ge-grid3{grid-template-columns:1fr}}.ge .gl-wrap{margin-bottom:12px}
   body.ge-noscroll{overflow:hidden}
   /* terminal look from the UI kit: mono numbers, accent bar on cards, corner bracket on panels */
   .ge .ge-cs,.ge .ge-big,.ge-sum4 b,.ge-stand em,.ge-dn1,.ge-ring b{font-family:'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.5px}

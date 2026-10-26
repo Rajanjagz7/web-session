@@ -96,10 +96,35 @@ def test_nse_futures_open_as_charts_on_the_trade_screen(app):
 
 @pytest.mark.parametrize("tile", ["NSEIX:NIFTY1!", "CBOT_MINI:YM1!", "COMEX:SI1!", "NYMEX:CL1!"])
 def test_global_futures_tiles_open_a_chart(app, tile):
-    app.open("markets")
+    app.open("godseye")   # the global strip lives in God's Eye > Markets > Global
+    app.ev("geOpenTab('global'); go('godseye')")
     app.page.wait_for_function(f"document.querySelector('#glStrip [data-gl=\"{tile}\"]')", timeout=60000)
     app.ev(f"document.querySelector('#glStrip [data-gl=\"{tile}\"]').click()")
     app.page.wait_for_function("App.view === 'trade' && App.sym && App.sym.tv && (CACHE[App.sym.s + '|' + App.tf.k] || []).length > 20", timeout=90000)
+
+
+def test_home_is_gods_eye_with_todays_picks_as_its_tab(app):
+    app.open("godseye")
+    app.ev("localStorage.setItem('ge-tab', JSON.stringify('overview'))")
+    app.page.goto(app.page.url.split("#")[0])
+    app.page.wait_for_function("!document.getElementById('boot') && App.view === 'godseye'", timeout=120000)
+    assert app.ev("VIEWS[0][0]") == "godseye" and not app.ev("VIEWS.some(v => v[0] === 'picks' || v[0] === 'markets')")
+    app.ev("document.querySelector('#v-godseye .ge-tabs [data-gegrp=\"picks\"]').click()")
+    app.page.wait_for_function("App.view === 'picks' && document.querySelector('#v-picks .ge-pkbar button.on[data-gegrp=\"picks\"]')", timeout=30000)
+    assert app.ev("!!document.querySelector('#v-picks .filters') && !!document.querySelector('#v-picks .nws')"), "Today's Picks lost its filters or news"
+    assert app.ev("document.querySelectorAll('#v-picks .ixs .ix').length") >= 5
+    app.no_overflow("God's Eye > Today's Picks")
+    app.ev("document.querySelector('#v-picks .ge-pkbar [data-gegrp=\"money\"]').click()")
+    app.page.wait_for_function("App.view === 'godseye' && /FII/.test(document.querySelector('#v-godseye .ge-tabs button.on').textContent)", timeout=30000)
+
+
+def test_picks_index_futures_open_the_future_on_trade(app):
+    app.open("picks")
+    app.page.wait_for_selector('#pkFut [data-pkfut^="NIFTY|"]', timeout=60000)
+    assert app.ev("document.querySelectorAll('#pkFut .pkf-c').length") >= 2
+    app.ev("document.querySelector('#pkFut [data-pkfut^=\"NIFTY|\"]').click()")
+    app.page.wait_for_function("App.view === 'options' && OPT.sym === 'NIFTY' && OPT.sel && OPT.sel.fut", timeout=60000)
+    app.no_overflow("Picks index futures")
 
 
 def test_picks_shows_the_indices_once_with_the_gods_eye_score(app):
@@ -108,7 +133,7 @@ def test_picks_shows_the_indices_once_with_the_gods_eye_score(app):
     app.page.wait_for_selector(".ixs [data-getag=\"NIFTY\"].ge-tag", timeout=90000)
     assert not app.ev("!!document.querySelector('#pkGodseye, .ge-strip, .ob-grid')"), "Picks still shows a separate God's Eye block"
     assert app.ev("document.querySelectorAll('#v-picks .ixs .ix').length") >= 3
-    app.ev("document.querySelector('#v-picks [data-geopen]').click()")
+    app.ev("document.querySelector('#v-picks .ge-pkbar [data-gegrp=\"home\"]').click()")   # the tab bar's Overview, not a second button
     app.page.wait_for_function("App.view === 'godseye'", timeout=10000)
     assert not app.ev("!!document.querySelector('#v-godseye .ge-tick')"), "God's Eye repeats the indices as a ticker above the cards"
     app.no_overflow("Picks indices + God's Eye")

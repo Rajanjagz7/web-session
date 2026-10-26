@@ -890,6 +890,55 @@ def oquote(keys: str):
     return {"quotes": out, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat()}
 
 
+BOARD_FUT = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"]
+
+
+@router.get("/futures/board")
+def futures_board():
+    """Index futures for the Picks screen: near and next month of each index with price, change, basis to spot and OI change.
+    One quote request for every contract and spot together (cached 4 s while the market is open)."""
+    def build():
+        up = nse_service.upstox
+        plan, keys = [], []
+        for und in BOARD_FUT:
+            try:
+                cons = up.futures_for(und)[:2]
+                spot_key = _key(und)
+            except Exception:
+                continue
+            if cons:
+                plan.append((und, spot_key, cons))
+                keys += [spot_key] + [c["key"] for c in cons]
+        raw = up._full_quotes(keys) if keys else {}
+        q = lambda k: raw.get(k) or {}
+        items = []
+        for und, sk, cons in plan:
+            spot = _num(q(sk).get("last_price"))
+            rows = []
+            for c in cons:
+                r = q(c["key"])
+                last = _num(r.get("last_price"))
+                if not last:
+                    continue
+                prev = _num(r.get("prev_close_price")) or (last - _num(r.get("net_change")))
+                oi, oi0 = _num(r.get("oi")), _num(r.get("previous_oi"))
+                rows.append({"key": c["key"], "label": c["label"], "expiry": c["expiry"], "lot": c["lot"], "last": last,
+                             "chgPct": round((last / prev - 1) * 100, 2) if prev else None,
+                             "basis": round(last - spot, 2) if spot else None, "basisPct": round((last / spot - 1) * 100, 3) if spot else None,
+                             "oi": oi, "oiChgPct": round((oi / oi0 - 1) * 100, 2) if oi and oi0 else None,
+                             "vol": _num(r.get("volume"))})
+            if rows:
+                items.append({"und": und, "spot": spot, "contracts": rows})
+        if not items:
+            raise RuntimeError("no futures quotes")
+        return items
+    try:
+        items = _cached("futboard", 4 if market_open() else 120, lambda: _shared("futboard", 4 if market_open() else 120, build))
+    except Exception as e:
+        raise HTTPException(503, f"Futures are temporarily unavailable: {str(e)[:140]}")
+    return {"items": items, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat()}
+
+
 @router.get("/futures")
 def futures(symbol: str = "NIFTY"):
     """Futures contracts (all listed expiries, nearest first) of an index / F&O stock with their live quotes - the Trade screen opens

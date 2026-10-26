@@ -363,7 +363,14 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
 #boot small{color:var(--text-3)}.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand);animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
 .nav .ni{display:none}.nav .more{display:none}
 .ixs-h{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 8px}.ixs-h b{font-size:13px;color:var(--text-2)}
-.ixs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.pkf{margin:-2px 0 12px}.pkf-h{display:flex;align-items:baseline;gap:10px;margin:0 2px 8px}.pkf-h b{font-size:13px;color:var(--text-2)}.pkf-h small{font-size:11.5px}
+.pkf-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.pkf-c{display:flex;flex-direction:column;gap:4px;text-align:left;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--text);cursor:pointer}
+.pkf-c:hover{border-color:var(--brand)}.pkf-t{display:flex;justify-content:space-between;align-items:baseline}.pkf-t b{font-size:12.5px}.pkf-t small{font-size:11px;color:var(--text-3)}
+.pkf-p{display:flex;align-items:baseline;gap:8px}.pkf-p b{font-size:16px}.pkf-p span{font-size:12px}.pkf-p .up,.pkf-m .up{color:var(--up)}.pkf-p .down,.pkf-m .down{color:var(--down)}
+.pkf-m{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11px;color:var(--text-3)}
+@media (max-width:760px){.pkf-g{grid-template-columns:repeat(2,1fr)}.pkf-p b{font-size:15px}}
+.ixs{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px}
 .ix{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
 .ix small{color:var(--text-3);font-size:11.5px}.ix b{font-size:16px}
 .pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
@@ -386,12 +393,12 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   .live{display:flex;align-items:center;gap:6px}.live #liveTxt{display:inline-block;font-size:11px;font-weight:600}
   .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);background:var(--panel);border-top:1px solid var(--line);justify-content:space-around;overflow:visible;flex:none}
   .nav button{flex:1;height:100%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;border-radius:10px}
-  .nav .ni{display:block}.nav .sec{display:none}.nav .more{display:flex}
+  .nav .ni{display:block}.nav .nav-sub{display:none}.nav .sec{display:none}.nav .more{display:flex}
   .here{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;font-size:15px}.hdr .brand .txt{display:none}
   .here b{font-weight:700;color:var(--text)}.here-sep{color:var(--text-3)}.here-sub{color:var(--text-2);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis}.here-i{display:none}
   .nav button.on{background:var(--brand-2);color:var(--brand);box-shadow:none}.nav button.on:hover{background:var(--brand-2);color:var(--brand)}
   .nav button.on::after{content:'';position:absolute;left:30%;right:30%;top:0;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}.nav button{position:relative}
-  .ixs{grid-template-columns:1fr 1fr}.pk-grid{grid-template-columns:1fr}
+  .ixs{grid-template-columns:repeat(3,1fr);gap:8px}.ixs .ix{padding:8px 9px}.pk-grid{grid-template-columns:1fr}
   html,body{overflow-x:hidden}
   .toolbar{flex-wrap:wrap;overflow:visible;gap:6px}.toolbar [data-act="log"],.toolbar [data-act="shot"],.toolbar [data-act="focus"],.toolbar .sep{display:none}
   .symbar{flex-wrap:wrap;gap:4px 16px;overflow:visible;padding:8px 12px}.symbar>div:first-child,.sb-px{flex:1 1 100%}.sb-px b{font-size:22px}
@@ -661,7 +668,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
-<script src="/static/geye.js?v=20261027d"></script>
+<script src="/static/geye.js?v=20261027g"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1069,7 +1076,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 <body>
 <div class="newsbar" id="newsBar" hidden></div>
 <header class="hdr">
-  <div class="brand" data-view="picks" title="Go to Picks"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
+  <div class="brand" data-view="godseye" title="Go to God's Eye"><span class="logo" id="logoI"></span><span class="txt">Rajan Algo</span></div>
   <div class="here" id="here" aria-live="polite"></div>
   <nav class="nav" id="nav"></nav>
   <button class="search-btn" id="searchBtn" aria-label="Search symbols"><span id="searchI"></span><span>Search symbols</span><kbd>/</kbd></button>
@@ -1111,7 +1118,6 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
     </aside>
       <div class="tdock" id="tradeDock" role="group" aria-label="Quick order"><button type="button" class="buy" data-act="dockbuy">Buy</button><button type="button" class="sell" data-act="docksell">Sell</button></div>
   </section>
-  <section class="view" id="v-markets"></section>
   <section class="view" id="v-portfolio"></section>
   <section class="view" id="v-journal"></section>
   <section class="view" id="v-orders"></section>
@@ -1120,6 +1126,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
   <section class="view" id="v-vedic"></section>
   <section class="view" id="v-ipo"></section>
   <section class="view" id="v-mobile"></section>
+  <section class="view" id="v-markets"></section>
   <section class="view" id="v-godseye"></section>
 </main>
 <div id="boot"><div class="spin"></div><b>Rajan Algo</b><small>Loading live NSE data…</small></div>
@@ -2464,13 +2471,13 @@ $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.classNa
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['options','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['godseye',"God's Eye"],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
-   const PRIMARY=['picks','options','markets','ipo','godseye'];
+const VIEWS=[['godseye',"God's Eye"],['options','Trade'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
+   const PRIMARY=['godseye','options','ipo','journal'];
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
-const SUBVIEWS={trade:['options','Chart'],mobile:['options',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
+const SUBVIEWS={trade:['options','Chart'],mobile:['options',''],stocks:['godseye','Stocks'],picks:['godseye',"Today's Picks"],daily:['godseye','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
 const viewLabel=k=>(VIEWS.find(x=>x[0]===k)||[k,k])[1];
-const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'),['godseye']);
+const KNOWN_VIEWS=VIEWS.map(v=>v[0]).concat(Object.keys(SUBVIEWS).filter(k=>k!=='mobile'),['godseye','markets']);   /* old #markets links still land on God's Eye > Markets */
 function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view),sub=App.view==='ipo'&&window.ipfSubLabel?ipfSubLabel():(SUBVIEWS[App.view]||[])[1]||'';el.innerHTML=`<span class="here-i">${NAVI[k]?I(NAVI[k],15):''}</span><b>${esc(viewLabel(k))}</b>${sub?`<span class="here-sep">›</span><span class="here-sub">${esc(sub)}</span>`:''}`;el.title='You are in '+viewLabel(k)+(sub?' › '+sub:'');document.title=(sub?sub+' · ':'')+viewLabel(k)+' · Rajan Algo'}
 /* Header index strip: Nifty, Bank Nifty, Sensex, VIX with live change; click opens the chart. */
 /* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
@@ -2512,7 +2519,8 @@ function closeOverlays(){
   try{const w=$('#v-trade');w&&w.classList.remove('wl-open')}catch(e){}
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
-function go(v){if(v==='stocks')v='markets';   /* old #stocks links / bookmarks: there is no separate Stocks screen any more (it used to leave a blank page) */
+function go(v){if(v==='stocks'||v==='markets'){v='godseye';if(window.geOpenTab)geOpenTab('stocklist')}   /* the Markets screen now lives in God's Eye > Markets (no duplicate screen) */
+     /* old #stocks links / bookmarks: there is no separate Stocks screen any more (it used to leave a blank page) */
   /* the old full-chart Trade screen (Order / Indicators panel) is retired: any stock or index with options opens the clean Trade screen */
   if(v==='trade'||v==='mobile'){const sy=App.sym&&App.sym.s;if(sy&&typeof optUnderlyings==='function'&&optUnderlyings().some(x=>x.s===sy)){if(OPT.sym!==sy){OPT.sym=sy;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null}v='options'}}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
   ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodsEyeTab&&renderGodsEyeTab()})[v]?.();liveUpdate();window.scrollTo(0,0)}
@@ -2732,6 +2740,7 @@ function bindAlertForm(){const hint=()=>{const s=SYM($('#alSym').value),c=$('#al
 /* ======================= Other views ======================= */
 function pageHead(t,p,extra=''){return`<div class="page-h"><div style="flex:1"><h1>${t}</h1><p>${p}</p></div>${extra}</div>`}
 const MK_KEY_IDX=['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','INDIAVIX'];
+
 function renderMarkets(){
   const idx=MK_KEY_IDX.map(k=>SYM(k)).filter(Boolean);
   const idxRows=idx.map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${s.last>=s.prev?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('');
@@ -3283,6 +3292,20 @@ function mountOverview(){const host=$('#ovChart');if(!host)return;const s=SYM(OV
   c.bw=Math.max(1.2,(host.clientWidth-54)/Math.min(Math.max(d.length,2),n));c.end=d.length-1;c.req()}
 document.addEventListener('click',e=>{const a=e.target.closest('[data-ovs],[data-ovr]');if(!a)return;
   if(a.dataset.ovs)OV.sym=a.dataset.ovs;else OV.rng=+a.dataset.ovr;renderPicks()});
+/* ---- Index futures on Picks: near / next month with change, basis to spot and OI change; tap opens the contract's chart ---- */
+const PKF={d:null,ts:0,busy:false};
+async function loadPkFut(force){if(PKF.busy||(!force&&Date.now()-PKF.ts<(MKT.open?15000:120000)))return;PKF.busy=true;
+  try{PKF.d=await api('/api/m/futures/board');PKF.ts=Date.now()}catch(e){if(!PKF.d)PKF.err=true}PKF.busy=false;if(App.view==='picks')drawPkFut(true)}
+function drawPkFut(noLoad){const el=$('#pkFut');if(!el)return;if(!noLoad)loadPkFut(false);const d=PKF.d;
+  if(!d||!d.items){el.innerHTML=PKF.err?'':'<div class="pkf-h"><b>Index futures</b><small class="muted">Loading…</small></div>';return}
+  const sgn=v=>v==null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(2);
+  el.innerHTML=`<div class="pkf-h"><b>Index futures</b><small class="muted">near · next month · basis = future − spot</small></div><div class="pkf-g">${d.items.map(i=>{const n=i.contracts[0],x=i.contracts[1];
+    return`<button class="pkf-c" data-pkfut="${esc(i.und)}|${esc(n.key)}"><span class="pkf-t"><b>${esc(i.und)}</b><small>${esc(fmtExp(n.expiry))}</small></span>
+      <span class="pkf-p"><b class="num">${fmtP(n.last)}</b><span class="num ${n.chgPct>=0?'up':'down'}">${sgn(n.chgPct)}%</span></span>
+      <span class="pkf-m"><small>Basis <b class="num ${n.basis>=0?'up':'down'}">${sgn(n.basis)}</b></small><small>OI <b class="num ${n.oiChgPct>=0?'up':'down'}">${n.oiChgPct==null?'—':sgn(n.oiChgPct)+'%'}</b></small>${x?`<small>${esc(fmtExp(x.expiry))} <b class="num">${fmtP(x.last)}</b></small>`:''}</span></button>`}).join('')}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pkfut]');if(!b)return;const p=b.dataset.pkfut,i=p.indexOf('|'),und=p.slice(0,i),key=p.slice(i+1);
+  OPT.sym=und;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.pendingFut=key;go('options')});
+setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadPkFut(false)}catch(e){}},15000);
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
     window._pkCashLoading=true;
@@ -3296,7 +3319,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     .finally(()=>{window._pkCashLoading=false;});
   }
   (P&&P.picks||[]).forEach(p=>{if(!SYM(p.s))SYMS.push({s:p.s,n:p.n||p.s,cls:p.kind==='index'?'Index':'Stocks',last:p.ltp||0,prev:p.prev||(p.ltp||0)/(1+(p.chg||0)/100),dp:2});});   // payload symbols the NAME map lacks (new indices, cash names): price/chg render and charts switch
-  const idx=['NIFTY','BANKNIFTY','SENSEX','FINNIFTY'].map(k=>SYM(k)).filter(Boolean);
+  const idx=MK_KEY_IDX.map(k=>SYM(k)).filter(Boolean);   /* the old Markets screen's key indices, shown once here */
   const idxHtml=idx.map(s=>`<button class="ix" data-sym="${esc(s.s)}"><small>${esc(s.n)}</small><b class="num" data-px="${esc(s.s)}"></b><span class="num" data-chg="${esc(s.s)}"></span><span data-getag="${esc(s.s)}"></span></button>`).join('');
   let body;
   if(!P)body='<div class="empty">Screening liquid NSE F&O stocks on live data…</div>';
@@ -3336,15 +3359,16 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
   const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc(newsTime(n.pubDate))}</small></a>`).join(''):'';
-  el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
-   <div class="ixs-h"><b>Indices</b><button class="btn-xs" data-geopen="1">God's Eye ›</button></div>
+  el.innerHTML=`<div class="page">${window.geTabsHTML?geTabsHTML():''}${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
+   <div class="ixs-h"><b>Indices</b></div>
    <div class="ixs">${idxHtml}</div>
+   <div id="pkFut" class="pkf"></div>
    <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['TOP','Top 10-15'],['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div><div class="chips">${chips([['ALL','All strengths'],['STRONG','Strong (≥65%)'],['WEAK','Weaker (<65%)']],f.str||'ALL','str')}</div></div>
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All strengths</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong setups (≥65%)</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High conviction (≥75%)</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker setups (&lt;65%)</option></select><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    
    ${body}
    <p class="disc">Automated screen of NSE-listed instruments, refreshed through the trading day. This is a screening aid, not investment advice — trades here are paper trades only.</p>
-   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();if(window.geTags)geTags(el)}
+   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();if(window.geTags)geTags(el);drawPkFut()}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 
@@ -3741,6 +3765,7 @@ async function loadFuts(sym){OPT.futs=OPT.futs||{};if(OPT.futs[sym]!==undefined|
   OPT._futLd=null;if(App.view==='options')drawFutBar()}
 function drawFutBar(){const el=$('#opxFut');if(!el)return;const L=OPT.futs&&OPT.futs[OPT.sym];
   if(L===undefined){loadFuts(OPT.sym);el.innerHTML='';return}
+  if(OPT.pendingFut&&L.some(c=>c.key===OPT.pendingFut)){const k=OPT.pendingFut;OPT.pendingFut=null;setTimeout(()=>selectFuture(k),0)}
   el.innerHTML=L.length?`<span class="opx-lbl">Futures</span><div class="opx-expc">${L.map(c=>`<button class="opx-chip ${OPT.sel&&OPT.sel.fut&&OPT.sel.key===c.key?'on':''}" data-opx="fut:${c.key}" title="${esc(c.label)}">${fmtExp(c.expiry)}</button>`).join('')}</div>`:''}
 function selectFuture(key){const L=(OPT.futs&&OPT.futs[OPT.sym])||[],c=L.find(x=>x.key===key);if(!c)return;
   const label=`${OPT.sym} FUT ${fmtExp(c.expiry)}`;
@@ -4313,7 +4338,7 @@ function renderNewsBar(){const bar=$('#newsBar');if(!bar)return;const items=(App
 let POLLN=0;
 /* Fast poll: only what is on screen (current symbol, watchlist, open positions, alerts, main indices) every second;
    the full F&O list refreshes every few seconds (every poll on Markets / Picks, which show many stocks). */
-function quotesURL(){POLLN++;const heavy=App.view==='markets'||App.view==='picks'||App.view==='daily';
+function quotesURL(){POLLN++;const heavy=App.view==='godseye'||App.view==='picks'||App.view==='daily';
   if(!firstQuotes||POLLN%(heavy?3:10)===1)return'/api/m/quotes';
   const set=new Set(['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','INDIAVIX']);
   if(App.sym&&!App.sym.tv&&!App.sym.ikey)set.add(App.sym.s);
@@ -4716,7 +4741,7 @@ function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='options')optTick();
   if(App.view==='journal'&&window.JV){try{if(window.JV.refreshLive)window.JV.refreshLive();else window.JV.render()}catch(e){}}
   if(App.view==='trade'&&App.sym.tv){loadGlobal();refreshGlobalChart()}   /* live price every ~3 s; history reload separately */
-  if(App.view==='markets')loadGlobal();
+  if(App.view==='godseye'&&window.geNeedsGlobal&&geNeedsGlobal())loadGlobal();
   if(App.view==='daily'&&Date.now()-(DAILY.ts||0)>(MKT.open?60000:600000)){DAILY.ts=Date.now();loadDaily(false)}
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
@@ -4828,7 +4853,7 @@ async function ensureX(sym,name,isIdx){sym=String(sym||'').trim().toUpperCase();
   try{const r=await api('/api/m/quotes?symbols='+encodeURIComponent(sym)),q=(r.quotes||[]).find(x=>x.s===sym);
     if(q&&q.last>0)Object.assign(e,{last:q.last,p:q.last,prev:q.prev>0?q.prev:q.last,hi:q.high||q.last,lo:q.low||q.last,open:q.open||q.last,yh:q.yh||e.yh,yl:q.yl||e.yl})}catch(_){}
   return e}
-SB.init({get:p=>api(p),goTab:(tab)=>{go('markets');if(tab)SB.page($('#mkStockList'),tab)},
+SB.init({get:p=>api(p),goTab:(tab)=>{if(window.geOpenTab)geOpenTab('stocklist',tab);go('godseye')},
   async trade(sym,name,side,idx){const e=await ensureX(sym,name,idx);if(!(e.last>0)){toast('No live price for '+sym+' right now','bad');return}App.tk.side=side==='SELL'?'sell':'buy';App.tk.type='market';switchSym(sym)},
   async chart(sym,name,idx){const e=await ensureX(sym,name,idx);if(!(e.last>0)){toast('No live price for '+sym+' right now','bad');return}switchSym(sym)},
   async alert(sym,name,idx){const e=await ensureX(sym,name,idx);if(!(e.last>0)){toast('No live price for '+sym+' right now','bad');return}
@@ -4884,7 +4909,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   try{await Promise.race([loadUniverse(),new Promise(r=>setTimeout(r,10000))])}catch(e){}
   try{await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])])}catch(e){}
   loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
-  const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:'picks');
+  const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:(window.geHome?geHome():'godseye'));   /* home = God's Eye (or its Today's Picks tab, if that was open last) */
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}});
   let _rszT;window.addEventListener('resize',()=>{clearTimeout(_rszT);_rszT=setTimeout(()=>{try{if(App.view==='options'&&OPT.chain)drawChain()}catch(e){}},250)})})();
