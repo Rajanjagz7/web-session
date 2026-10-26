@@ -522,6 +522,170 @@ def options(symbol: str = "NIFTY", expiry: str = ""):
     return options_view(symbol.upper().strip(), expiry)
 
 
+# ---------------------------------------------------------------- sectors & stocks (Nifty 500, by NSE industry)
+RULES["opportunity"] = ("Opportunity score (0-100, price-based - no fundamentals or relationship data are used): 1-month return rank in the "
+                        "Nifty 500 (25), 1-month return vs its own sector (15), trend - above its 20-session average and up over 5 sessions (15), "
+                        "place in the 52-week range (15), volume vs its 20-session average (10), Picks strength (20; re-weighted when the "
+                        "stock is not in Picks). Missing parts are left out and the rest re-weighted, never counted as zero.")
+RULES["breadth"] = "Breadth = share of the sector's stocks trading above their own 20-session average close."
+_sec = {"t": 0, "data": None}
+
+
+def _pctile(vals):
+    """value -> percentile rank 0..1 within the list."""
+    import bisect
+    xs = sorted(v for v in vals if v is not None)
+    n = len(xs)
+    if n < 2:
+        return lambda v: 0.5
+    return lambda v: None if v is None else bisect.bisect_left(xs, v) / (n - 1)
+
+
+def _median(xs):
+    xs = sorted(x for x in xs if x is not None)
+    if not xs:
+        return None
+    m = len(xs) // 2
+    return round(xs[m] if len(xs) % 2 else (xs[m - 1] + xs[m]) / 2, 2)
+
+
+def _opportunity(r, r20, sec_med20):
+    parts = []
+    if r["ret20"] is not None:
+        parts.append(("1-month return rank", 25, r20(r["ret20"])))
+        m = sec_med20.get(r["sec"])
+        if m is not None:
+            parts.append(("vs sector (1 month)", 15, max(0.0, min(1.0, 0.5 + (r["ret20"] - m) / 20))))
+    if r["aboveAvg"] is not None and r["ret5"] is not None:
+        parts.append(("trend", 15, (0.6 if r["aboveAvg"] else 0) + (0.4 if r["ret5"] > 0 else 0)))
+    if r["rangePos"] is not None:
+        rp = r["rangePos"] / 100
+        parts.append(("52-week range", 15, rp if rp <= 0.95 else 0.8))      # at the very top = extended: a little less
+    if r["volx"] is not None:
+        parts.append(("volume", 10, max(0.0, min(1.0, (r["volx"] - 0.5) / 1.5))))
+    if r["strength"] is not None:
+        parts.append(("Picks strength", 20, r["strength"] / 100))
+    w = sum(p[1] for p in parts)
+    if w < 40:                                  # too little to score honestly
+        return None, []
+    return round(sum(p[1] * p[2] for p in parts) / w * 100), [{"name": n_, "weight": round(wt / w * 100), "value": round(v * 100)} for n_, wt, v in parts]
+
+
+def sectors_build():
+    import equity_bhav
+    import stocks_api
+    uni = stocks_api._constituents("nifty500")
+    q = stocks_api._quote_rows([u["s"] for u in uni])
+    try:
+        days = equity_bhav.load_days()
+    except Exception:
+        days = {}
+    dates = sorted(days)[-25:]
+    picks = {}
+    try:                                         # only what is already cached - never start a Picks build from here
+        import market_api
+        cached = shared_cache.get("picks|" + date.today().isoformat()) or market_api._PK.get("data") or {}
+        for p in cached.get("picks") or []:
+            picks[p["s"]] = p
+    except Exception:
+        pass
+    today = _now().date().isoformat()
+    rows = []
+    for u in uni:
+        s, qq = u["s"], q.get(u["s"])
+        if not qq or not qq.get("last"):
+            continue
+        last, prev = qq["last"], qq["prev"]
+        closes = [days[d][s]["close"] for d in dates if s in days[d] and days[d][s].get("close")]
+        vols = [days[d][s]["volume"] for d in dates if s in days[d] and days[d][s].get("volume")]
+        if len(closes) < 6 and (picks.get(s) or {}).get("spark"):
+            closes = list(picks[s]["spark"])
+        if closes and today not in dates and abs(closes[-1] - last) / last > 0.0005:
+            closes = closes + [last]                    # today's live price as the newest close
+        ret5 = round((last / closes[-6] - 1) * 100, 2) if len(closes) >= 6 and closes[-6] else None
+        ret20 = round((last / closes[-21] - 1) * 100, 2) if len(closes) >= 21 and closes[-21] else None
+        avg20 = sum(closes[-21:-1]) / len(closes[-21:-1]) if len(closes) >= 11 else None
+        vavg = sum(vols[-20:]) / len(vols[-20:]) if len(vols) >= 10 else None
+        yh, yl = qq.get("yh") or None, qq.get("yl") or None
+        pk = picks.get(s) or {}
+        rows.append({"s": s, "n": u["n"], "sec": u["industry"] or "Other", "last": last, "chg": round((last / prev - 1) * 100, 2) if prev else None,
+                     "ret5": ret5, "ret20": ret20, "aboveAvg": (last > avg20) if avg20 else None,
+                     "volx": round(qq["vol"] / vavg, 2) if vavg and qq.get("vol") else None,
+                     "yh": yh, "yl": yl, "fromHigh": round((last / yh - 1) * 100, 1) if yh else None,
+                     "rangePos": round((last - yl) / (yh - yl) * 100) if yh and yl and yh > yl else None,
+                     "signal": pk.get("signal"), "strength": pk.get("strength"), "rsi": pk.get("rsi"),
+                     "fno": bool(pk) and pk.get("universe") != "cash"})
+    r20 = _pctile([r["ret20"] for r in rows])
+    by_sec = {}
+    for r in rows:
+        by_sec.setdefault(r["sec"], []).append(r)
+    sec_med20 = {k: _median([x["ret20"] for x in v]) for k, v in by_sec.items()}
+    for r in rows:
+        r["opp"], r["oppParts"] = _opportunity(r, r20, sec_med20)
+    sectors = []
+    for k, v in by_sec.items():
+        known = [x for x in v if x["chg"] is not None]
+        ab = [x for x in v if x["aboveAvg"] is not None]
+        top = sorted([x for x in v if x["opp"] is not None], key=lambda x: -x["opp"])
+        sectors.append({"sec": k, "count": len(v), "share": round(len(v) / len(rows) * 100, 1),
+                        "adv": sum(1 for x in known if x["chg"] > 0), "dec": sum(1 for x in known if x["chg"] < 0),
+                        "chg": _median([x["chg"] for x in v]), "ret20": sec_med20.get(k),
+                        "breadth": round(sum(1 for x in ab if x["aboveAvg"]) / len(ab) * 100) if ab else None,
+                        "opp": _median([x["opp"] for x in v]), "top": [x["s"] for x in top[:5]],
+                        "best": max(known, key=lambda x: x["chg"])["s"] if known else None,
+                        "worst": min(known, key=lambda x: x["chg"])["s"] if known else None,
+                        "bull": sum(1 for x in v if x["signal"] == "BUY"), "bear": sum(1 for x in v if x["signal"] == "SELL")})
+    sectors.sort(key=lambda x: -x["count"])
+    scored = [r for r in rows if r["opp"] is not None]
+    best_sec = max([x for x in sectors if x["ret20"] is not None and x["count"] >= 5], key=lambda x: x["ret20"], default=None)
+    lead = max(scored, key=lambda r: r["opp"])["s"] if scored else None
+    brk = [r for r in rows if r["fromHigh"] is not None and r["fromHigh"] >= -2 and (r["volx"] or 0) >= 1.5 and r["s"] != lead]
+    dip = [r for r in rows if r["ret20"] is not None and r["ret20"] <= -10 and r["aboveAvg"] is False and (r["rangePos"] or 0) >= 25]
+    stand = []
+    if scored:
+        t = max(scored, key=lambda r: r["opp"])
+        stand.append({"key": "opp", "title": "Highest Opportunity Score", "s": t["s"], "n": t["n"], "sec": t["sec"], "value": f"{t['opp']}/100",
+                      "why": "best mix of 1-month strength, trend, 52-week position and volume in the Nifty 500"})
+    if best_sec:
+        stand.append({"key": "sector", "title": "Strongest sector (1 month)", "sec": best_sec["sec"], "value": f"{best_sec['ret20']:+.1f}%",
+                      "why": f"median stock {best_sec['ret20']:+.1f}% in a month · {best_sec['breadth']}% above their 20-session average"})
+    if brk:
+        t = max(brk, key=lambda r: r["volx"] or 0)
+        stand.append({"key": "breakout", "title": "Breakout with volume", "s": t["s"], "n": t["n"], "sec": t["sec"], "value": f"{t['volx']}x vol",
+                      "why": f"within {abs(t['fromHigh'])}% of its 52-week high on {t['volx']}x its usual volume"})
+    if dip:
+        t = min(dip, key=lambda r: r["ret20"])
+        stand.append({"key": "pullback", "title": "Deepest pullback (mid-range)", "s": t["s"], "n": t["n"], "sec": t["sec"], "value": f"{t['ret20']:+.1f}%",
+                      "why": "fell the most in a month but still well above its 52-week low - a watch, not a signal"})
+    known = [r for r in rows if r["chg"] is not None]
+    ab = [r for r in rows if r["aboveAvg"] is not None]
+    return {"asOf": _now().isoformat(timespec="seconds"), "universe": "Nifty 500", "count": len(rows),
+            "adv": sum(1 for r in known if r["chg"] > 0), "dec": sum(1 for r in known if r["chg"] < 0),
+            "breadth": round(sum(1 for r in ab if r["aboveAvg"]) / len(ab) * 100) if ab else None,
+            "historyDays": len(dates), "sectors": sectors, "stocks": rows, "standouts": stand,
+            "rules": {"opportunity": RULES["opportunity"], "breadth": RULES["breadth"]},
+            "note": "Sector = NSE industry classification of the Nifty 500. Opportunity scores use prices only (no P/E, ROCE or supplier data)."}
+
+
+@router.get("/sectors")
+def sectors(refresh: bool = False):
+    import market_api
+    ttl = 120 if market_api.market_open() else 900
+    with _lock:
+        if not refresh and _sec["data"] and time.time() - _sec["t"] < ttl:
+            return _sec["data"]
+    got = None if refresh else shared_cache.get("ge:sec")
+    if got and time.time() - got.get("_t", 0) < ttl:
+        d = got
+    else:
+        d = sectors_build()
+        d["_t"] = time.time()
+        shared_cache.set("ge:sec", d, ttl)
+    with _lock:
+        _sec.update(t=time.time(), data=d)
+    return d
+
+
 if __name__ == "__main__":
     if "--update" in sys.argv:
         r = update(write_file=True)

@@ -6,7 +6,7 @@
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LS = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const SS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
-  const G = { data: LS('ge-cache', null), busy: false, err: null, ts: 0, seq: 0, tab: LS('ge-tab', 'overview'), open: null, sort: 'score', filt: 'ALL', opt: null, optExp: '' };
+  const G = { data: LS('ge-cache', null), busy: false, err: null, ts: 0, seq: 0, tab: LS('ge-tab', 'overview'), open: null, sort: 'score', filt: 'ALL', opt: null, optExp: '', sec: null, secBusy: false, secErr: null, secTs: 0, secSel: null, sigSec: LS('ge-sigsec', 'ALL'), sq: '', ssort: 'opp', slim: 25, stock: null };
   const NA = '<span class="ge-na" title="Not available right now">N/A</span>';
   const isN = v => v != null && isFinite(v);
   const n0 = v => isN(v) ? Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : NA;
@@ -56,6 +56,10 @@
     const stale = d && Date.now() - Date.parse(d.asOf) > (open ? 10 * 60e3 : 6 * 3600e3);
     const s = G.err && !d ? ['Unavailable', 'off'] : stale ? ['Stale', 'stale'] : typeof MKT !== 'undefined' && MKT.stale ? ['Delayed', 'stale'] : open ? ['Market Live', 'on'] : ['Market Closed', 'closed'];
     return `<span class="ge-pill ${s[1]}"><i></i>${s[0]}</span>`;
+  }
+  function ticker(cards) {
+    const l = (cards || []).filter(c => isN(c.price));
+    return l.length ? `<div class="ge-tick" role="list" aria-label="Markets">${l.map(c => `<button type="button" class="ge-tk" role="listitem" data-gecard="${E(c.key)}"><b>${E(c.name || c.key)}</b><span class="num">${n2(c.price, c.price >= 1000 ? 1 : 2)}</span><span class="num ${cc(c.chgPct)}">${pc(c.chgPct)}</span></button>`).join('')}</div>` : '';
   }
   function card(c) {
     if (c.pending) return `<article class="ge-card ge-skel"><div class="ge-cn">${E(c.name || c.key)}</div><small>Loading…</small></article>`;
@@ -242,7 +246,122 @@
       <section class="ge-p"><div class="ge-tw"><table class="ge-t ge-sig"><thead><tr><th>Instrument</th><th class="r">Score</th><th>Signal</th><th class="r">Price</th><th class="r">Change</th><th>Action</th></tr></thead><tbody>
       ${list.map(c => `<tr data-gecard="${E(c.key)}" tabindex="0"><td><b>${E(c.name)}</b>${c.divergence ? ' <small class="' + (c.divergence === 'BULLISH' ? 'up' : 'down') + '">⚡ div</small>' : ''}</td><td class="r num ${cc(c.score)}"><b>${sg(c.score)}</b></td>
         <td><span class="ge-badge ${lab(c.label)}">${E(c.label)}</span></td><td class="r num">${isN(c.price) ? n2(c.price, c.price >= 1000 ? 1 : 2) : NA}</td><td class="r num ${cc(c.chgPct)}">${pc(c.chgPct)}</td><td>${c.action ? E(c.action.label) : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No instruments match.</td></tr>'}
-      </tbody></table></div></section>`;
+      </tbody></table></div></section>${stocksBlock()}`;
+  }
+
+  /* ---------- sectors & stocks (Nifty 500 by NSE industry, /api/ge/sectors) ---------- */
+  async function loadSec(force) {
+    if (G.secBusy || (!force && G.sec && Date.now() - G.secTs < 90e3)) return;
+    G.secBusy = true; G.secErr = null;
+    try {
+      const r = await fetch('/api/ge/sectors' + (force ? '?refresh=true' : ''), { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json(); if (!d || !Array.isArray(d.stocks)) throw new Error('bad response');
+      G.sec = d; G.secTs = Date.now(); if (!G.secSel && d.sectors.length) G.secSel = d.sectors[0].sec;
+    } catch (e) { G.secErr = e.message || 'network error'; }
+    G.secBusy = false; if (host() && ['signals', 'sectors'].includes(G.tab)) paint();
+  }
+  const SEC_COL = ['#22d3ee', '#3b82f6', '#a855f7', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#84cc16', '#06b6d4', '#f97316', '#6366f1', '#14b8a6', '#eab308', '#8b5cf6', '#0ea5e9', '#d946ef', '#22c55e', '#fb7185', '#94a3b8', '#64748b'];
+  const secCol = name => { const i = ((G.sec && G.sec.sectors) || []).findIndex(x => x.sec === name); return SEC_COL[(i < 0 ? 0 : i) % SEC_COL.length]; };
+  const secOrNote = () => G.sec ? '' : `<section class="ge-p"><p class="muted">${G.secErr ? 'Sector data unavailable: ' + E(G.secErr) + ' <button type="button" class="btn-xs" data-gesecretry="1">Retry</button>' : 'Loading Nifty 500 stocks by sector…'}</p></section>`;
+  const oppB = v => isN(v) ? `<span class="ge-opp ${v >= 70 ? 'hi' : v >= 45 ? 'mid' : 'lo'}"><i style="width:${v}%"></i><b class="num">${v}</b></span>` : NA;
+  const rangeMini = r => isN(r.rangePos) ? `<i class="ge-rgm" title="52-week range: ${n2(r.yl)} – ${n2(r.yh)}"><b style="left:${r.rangePos}%"></b></i>` : NA;
+  function stockRows() {
+    const d = G.sec, q = G.sq.trim().toUpperCase();
+    const l = d.stocks.filter(r => (G.sigSec === 'ALL' || r.sec === G.sigSec) && (!q || r.s.includes(q) || String(r.n).toUpperCase().includes(q)));
+    const key = { opp: r => -(r.opp ?? -1), chg: r => -(r.chg ?? -99), ret20: r => -(r.ret20 ?? -99), volx: r => -(r.volx ?? -1), name: r => r.s }[G.ssort] || (r => -(r.opp ?? -1));
+    return l.slice().sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
+  }
+  function stockTable() {
+    const l = stockRows(), shown = l.slice(0, G.slim), all = G.sigSec === 'ALL';
+    return `<div class="ge-tw ge-stw"><table class="ge-t ge-stk"><thead><tr><th>Stock</th>${all ? '<th>Sector</th>' : ''}<th class="r">Price</th><th class="r">Day</th><th class="r">1M</th><th>52W</th><th class="r">Vol x</th><th>Signal</th><th>Opportunity${tip('opportunity')}</th></tr></thead><tbody>
+      ${shown.map(r => `<tr data-gestock="${E(r.s)}" tabindex="0"><td><b>${E(r.s)}</b><small>${E(r.n)}</small></td>${all ? `<td class="ge-sc"><i style="background:${secCol(r.sec)}"></i>${E(r.sec)}</td>` : ''}
+        <td class="r num">${n2(r.last)}</td><td class="r num ${cc(r.chg)}">${pc(r.chg)}</td><td class="r num ${cc(r.ret20)}">${pc(r.ret20)}</td><td>${rangeMini(r)}</td>
+        <td class="r num">${isN(r.volx) ? r.volx.toFixed(1) + 'x' : NA}</td><td>${r.signal && r.signal !== 'NEUTRAL' ? `<span class="ge-badge ${r.signal === 'BUY' ? 'bull' : 'bear'}">${E(r.signal)}${isN(r.strength) ? ' ' + Math.round(r.strength) + '%' : ''}</span>` : '<span class="muted">—</span>'}</td><td>${oppB(r.opp)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">No stocks match.</td></tr>'}
+      </tbody></table></div>
+      <div class="ge-more2"><span class="muted">${shown.length} of ${l.length} stocks</span>${l.length > shown.length ? '<button type="button" class="btn-xs" data-gemore="1">Show 25 more</button>' : ''}</div>`;
+  }
+  function stocksBlock() {
+    if (!G.sec) { loadSec(false); return secOrNote(); }
+    const d = G.sec, secs = d.sectors;
+    return `<section class="ge-p ge-stocks"><h3>Stocks by sector · ${E(d.universe)} <small class="muted">${d.count} stocks · ${d.adv} up / ${d.dec} down</small></h3>
+      <div class="ge-secchips" role="group" aria-label="Sector"><button type="button" class="${G.sigSec === 'ALL' ? 'on' : ''}" data-gessec="ALL">All <small>${d.count}</small></button>${secs.map(x => `<button type="button" class="${G.sigSec === x.sec ? 'on' : ''}" data-gessec="${E(x.sec)}"><i style="background:${secCol(x.sec)}"></i>${E(x.sec)} <small class="${cc(x.chg)}">${pc(x.chg)}</small></button>`).join('')}</div>
+      <div class="ge-stools"><input class="inp" id="geSq" placeholder="Search stock" value="${E(G.sq)}" aria-label="Search stock">
+        <select class="inp" id="geSsort" aria-label="Sort">${[['opp', 'Opportunity'], ['chg', 'Day change'], ['ret20', '1-month return'], ['volx', 'Volume surge'], ['name', 'A to Z']].map(([k, l]) => `<option value="${k}" ${G.ssort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div id="geStk">${stockTable()}</div></section>`;
+  }
+  function donut(secs, sel) {
+    const tot = secs.reduce((a, x) => a + x.count, 0) || 1, R = 70, r = 46, C = 90;
+    let a0 = -Math.PI / 2;
+    const p = (rad, ang) => `${(C + rad * Math.cos(ang)).toFixed(2)},${(C + rad * Math.sin(ang)).toFixed(2)}`;
+    const arcs = secs.map(x => {
+      const a1 = a0 + x.count / tot * Math.PI * 2, big = a1 - a0 > Math.PI ? 1 : 0, rr = x.sec === sel ? R + 6 : R;
+      const d = `M${p(rr, a0)}A${rr},${rr} 0 ${big} 1 ${p(rr, a1)}L${p(r, a1)}A${r},${r} 0 ${big} 0 ${p(r, a0)}Z`;
+      a0 = a1;
+      return `<path d="${d}" fill="${secCol(x.sec)}" opacity="${!sel || x.sec === sel ? 1 : .45}" data-gesec="${E(x.sec)}" tabindex="0" role="button" aria-label="${E(x.sec)}: ${x.count} companies"><title>${E(x.sec)} · ${x.count}</title></path>`;
+    }).join('');
+    const s = secs.find(x => x.sec === sel);
+    return `<svg viewBox="0 0 180 180" class="ge-donut">${arcs}<text x="90" y="88" text-anchor="middle" class="ge-dn1">${s ? s.count : tot}</text><text x="90" y="105" text-anchor="middle" class="ge-dn2">${s ? s.share + '% of ' + tot : 'companies'}</text></svg>`;
+  }
+  function secTab() {
+    if (!G.sec) { loadSec(false); return secOrNote(); }
+    const d = G.sec, secs = d.sectors, s = secs.find(x => x.sec === G.secSel) || secs[0];
+    const byS = sym => d.stocks.find(r => r.s === sym);
+    const stand = (d.standouts || []).map(x => `<button type="button" class="ge-stand" ${x.s ? `data-gestock="${E(x.s)}"` : `data-gesec="${E(x.sec)}"`}><small>${E(x.title)}</small><b>${E(x.s || x.sec)}</b>${x.n ? `<span class="muted">${E(x.n)}</span>` : ''}<em class="num">${E(x.value)}</em><span class="ge-sub">${E(x.why)}</span></button>`).join('');
+    return `<div class="ge-sum4"><div><small>Companies</small><b class="num">${d.count}</b></div><div><small>Sectors</small><b class="num">${secs.length}</b></div><div><small>Up / down today</small><b class="num"><span class="up">${d.adv}</span> / <span class="down">${d.dec}</span></b></div><div><small>Breadth${tip('breadth')}</small><b class="num">${isN(d.breadth) ? d.breadth + '%' : NA}</b></div></div>
+      <div class="ge-secgrid"><section class="ge-p"><h3>Sector distribution</h3><div class="ge-dwrap">${donut(secs, s && s.sec)}
+          <div class="ge-leg">${secs.map(x => `<button type="button" class="${s && x.sec === s.sec ? 'on' : ''}" data-gesec="${E(x.sec)}"><i style="background:${secCol(x.sec)}"></i><span>${E(x.sec)}</span><b class="num">${x.count}</b><em class="num ${cc(x.chg)}">${pc(x.chg)}</em></button>`).join('')}</div></div></section>
+        ${s ? `<section class="ge-p ge-secd"><h3><i class="ge-dot" style="background:${secCol(s.sec)}"></i>${E(s.sec)}</h3>
+          <div class="ge-kv"><div><small>Companies</small><b class="num">${s.count} <small class="muted">${s.share}%</small></b></div><div><small>Today (median)</small><b class="num ${cc(s.chg)}">${pc(s.chg)}</b></div><div><small>1 month (median)</small><b class="num ${cc(s.ret20)}">${pc(s.ret20)}</b></div>
+            <div><small>Breadth</small><b class="num">${isN(s.breadth) ? s.breadth + '%' : NA}</b></div><div><small>Up / down</small><b class="num"><span class="up">${s.adv}</span> / <span class="down">${s.dec}</span></b></div><div><small>Opportunity (median)</small><b class="num">${isN(s.opp) ? Math.round(s.opp) : NA}</b></div></div>
+          <h4>Top opportunities</h4>${s.top.map(byS).filter(Boolean).map(r => `<button type="button" class="ge-qr" data-gestock="${E(r.s)}"><span class="ge-qn"><b>${E(r.s)}</b><small>${E(r.n)}</small></span><span class="num ${cc(r.ret20)}">${pc(r.ret20)} 1M</span>${oppB(r.opp)}</button>`).join('') || '<p class="ge-na">No scored stocks.</p>'}
+          <div class="ge-lv"><span>Best today<b>${E(s.best || '—')}</b></span><span>Worst today<b>${E(s.worst || '—')}</b></span>${s.bull || s.bear ? `<span>Picks signals<b><span class="up">${s.bull} buy</span> · <span class="down">${s.bear} sell</span></b></span>` : ''}</div>
+          <button type="button" class="btn-xs" data-geseestocks="${E(s.sec)}">See all ${s.count} stocks →</button></section>` : ''}</div>
+      <h3 class="ge-h3">Standouts right now</h3><div class="ge-stands">${stand || '<p class="ge-na">No standouts yet.</p>'}</div>
+      <p class="ge-sub">${E(d.note)} Data as of ${E(IST(d.asOf))} · ${d.historyDays} sessions of history.</p>`;
+  }
+  function stockDetail() {
+    const r = G.sec && G.sec.stocks.find(x => x.s === G.stock); if (!r) return '';
+    const sec = G.sec.sectors.find(x => x.sec === r.sec);
+    return `<div class="ge-dbg" data-geclose="1"><div class="ge-det" role="dialog" aria-modal="true" aria-label="${E(r.s)} details">
+      <div class="ge-dh"><div><small><i class="ge-dot" style="background:${secCol(r.sec)}"></i>${E(r.sec)}${r.fno ? ' · F&amp;O' : ''}</small><h3>${E(r.s)}</h3><p class="muted">${E(r.n)}</p>
+        <p class="num"><b>${n2(r.last)}</b> <span class="${cc(r.chg)}">${pc(r.chg)}</span></p></div><button type="button" class="ge-x" data-geclose="1" aria-label="Close">×</button></div>
+      <div class="ge-kv"><div><small>5 sessions</small><b class="num ${cc(r.ret5)}">${pc(r.ret5)}</b></div><div><small>1 month</small><b class="num ${cc(r.ret20)}">${pc(r.ret20)}</b></div><div><small>Sector 1M (median)</small><b class="num ${cc(sec && sec.ret20)}">${pc(sec && sec.ret20)}</b></div>
+        <div><small>From 52W high</small><b class="num ${cc(r.fromHigh)}">${isN(r.fromHigh) ? sg(r.fromHigh) + '%' : NA}</b></div><div><small>Volume vs usual</small><b class="num">${isN(r.volx) ? r.volx.toFixed(2) + 'x' : NA}</b></div><div><small>Above 20-day avg</small><b>${r.aboveAvg == null ? NA : r.aboveAvg ? 'Yes' : 'No'}</b></div></div>
+      ${rangeBar(r.yl, r.yh, r.last, '52 weeks')}
+      ${r.signal ? `<div class="ge-play ${r.signal === 'BUY' ? 'bull' : r.signal === 'SELL' ? 'bear' : ''}"><b>Picks: ${E(r.signal)}${isN(r.strength) ? ' · strength ' + Math.round(r.strength) + '%' : ''}</b><span>${isN(r.rsi) ? 'RSI ' + r.rsi : ''}</span></div>` : ''}
+      <h4>Opportunity ${isN(r.opp) ? r.opp + '/100' : 'N/A'}${tip('opportunity')}</h4>
+      ${(r.oppParts || []).map(q => `<div class="ge-row"><span>${E(q.name)} <small class="muted">${q.weight}%</small></span>${bar(q.value, q.value >= 50 ? 'up' : 'down')}<b class="num">${q.value}</b></div>`).join('') || '<p class="ge-na">Not enough data to score.</p>'}
+      <div class="ge-dact"><button type="button" class="btn pri" data-gestkchart="${E(r.s)}">Open chart</button>${r.fno ? `<button type="button" class="btn" data-gestkopt="${E(r.s)}">Option chain</button>` : ''}<button type="button" class="btn" data-geclose="1">Close</button></div>
+      <p class="ge-sub">Price-based score; no P/E, ROCE or supplier data. Data as of ${E(IST(G.sec.asOf))}. Informational only.</p></div></div>`;
+  }
+
+  /* ---------- Today's picks (the Picks screen's own data - App.picks - with its 10-15 shortlist) ---------- */
+  let pkLoading = false;
+  function picksTab() {
+    const P = typeof App !== 'undefined' ? App.picks : null;
+    if (!P || !Array.isArray(P.picks)) {
+      if (!pkLoading && typeof loadPicks === 'function') { pkLoading = true; Promise.resolve(loadPicks(false)).catch(() => { }).finally(() => { pkLoading = false; if (host() && G.tab === 'picks') paint(); }); }
+      return `<section class="ge-p"><p class="muted">Loading today's picks…</p></section>`;
+    }
+    const live = s_ => { try { const x = SYM(s_); return x && x.last > 0 ? x : null; } catch (e) { return null; } };
+    const px = r => { const x = live(r.s); return x ? x.last : r.ltp; };
+    const ch = r => { const x = live(r.s); return x && x.prev > 0 ? (x.last / x.prev - 1) * 100 : r.chg; };
+    const top = Array.isArray(P.top) ? P.top : [];
+    const all = P.picks.filter(r => r.kind !== 'index');
+    const buys = all.filter(r => r.signal === 'BUY').sort((a, b) => (b.strength || 0) - (a.strength || 0));
+    const sells = all.filter(r => r.signal === 'SELL').sort((a, b) => (b.strength || 0) - (a.strength || 0));
+    const sum = P.topSummary || {};
+    const row = (r, side) => `<button type="button" class="ge-pk" data-gepick="${E(r.s)}"><span class="ge-qn"><b>${E(r.s)}</b><small>${E(r.why || r.n || '')}</small></span>
+      <span class="ge-badge ${side === 'SELL' ? 'bear' : 'bull'}">${E(side)}${isN(r.strength) ? ' ' + Math.round(r.strength) + '%' : ''}</span>
+      <span class="ge-pkp"><b class="num">${n2(px(r))}</b><small class="num ${cc(ch(r))}">${pc(ch(r))}</small></span>
+      ${isN(r.entry) ? `<span class="ge-pkl num"><small>Entry</small>${n2(r.entry)}<small>Stop</small><em class="down">${n2(r.stop)}</em><small>Target</small><em class="up">${n2(r.target)}</em></span>` : ''}</button>`;
+    return `<div class="ge-sum4"><div><small>Shortlist</small><b class="num">${top.length}</b></div><div><small>Tier 1 · strong</small><b class="num">${sum.tier1 ?? '—'}</b></div><div><small>Buy ideas</small><b class="num up">${buys.length}</b></div><div><small>Sell ideas</small><b class="num down">${sells.length}</b></div></div>
+      <section class="ge-p"><h3>Today's shortlist <small class="muted">· strength ≥ 75 and Open = Low / High first, good risk : reward only</small></h3>
+        ${top.length ? top.map(r => row(r, r.side || r.signal)).join('') : '<p class="ge-na">No stock passes the shortlist rules right now.</p>'}</section>
+      <div class="ge-grid2"><section class="ge-p"><h3>Strongest buys</h3>${buys.slice(0, 8).map(r => row(r, 'BUY')).join('') || '<p class="ge-na">None</p>'}</section>
+        <section class="ge-p"><h3>Strongest sells</h3>${sells.slice(0, 8).map(r => row(r, 'SELL')).join('') || '<p class="ge-na">None</p>'}</section></div>
+      <p class="ge-sub">Same screen as Picks, updated ${P.asOf ? E(IST(P.asOf)) : ''}. <button type="button" class="btn-xs" data-gegopicks="1">Open the Picks screen ›</button></p>`;
   }
 
   const CHART = { NIFTY: ['sym', 'NIFTY'], SENSEX: ['sym', 'SENSEX'], BANKNIFTY: ['sym', 'BANKNIFTY'], GOLD: ['gl', 'COMEX:GC1!'], SILVER: ['gl', 'COMEX:SI1!'], CRUDEOIL: ['gl', 'NYMEX:CL1!'], BITCOIN: ['gl', 'BITSTAMP:BTCUSD'], NASDAQ: ['gl', 'NASDAQ:NDX'], DJI: ['gl', 'DJ:DJI'], GLOBALRISK: ['gl', 'CBOE:VIX'] };
@@ -264,26 +383,37 @@
   }
 
   /* ---------- page ---------- */
+  const GROUPS = [
+    { key: 'home', label: 'Overview', tabs: [['overview', 'Overview']] },
+    { key: 'picks', label: "Today's Picks", tabs: [['picks', "Today's Picks"]] },
+    { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood']] },
+    { key: 'opt', label: 'Options & Expiry', tabs: [['fno', 'Options & Expiry']] },
+    { key: 'stocks', label: 'Signals', tabs: [['signals', 'Signals'], ['sectors', 'Sectors'], ['movers', 'Movers'], ['fallen', 'Fallen'], ['watch', 'Watchlist']] },
+    { key: 'world', label: 'Markets', tabs: [['range', 'Range'], ['global', 'Global']] },
+  ];
+  const LAST_SUB = LS('ge-last', {});                  // a main tab reopens on the sub-tab used last
   function host() { return typeof App !== 'undefined' && App.view === 'godseye' ? document.getElementById('v-godseye') : null; }
   function paint() {
     const el = host(); if (!el) return;
     const d = G.data;
-    const tabs = [['overview', 'Sentiment'], ['retail', 'Retail Mood'], ['fno', 'F&O Watch'], ['fii', 'FII / DII'], ['movers', 'Movers'], ['range', 'Range'], ['global', 'Global'], ['watch', 'Watchlist'], ['fallen', 'Fallen Stocks'], ['signals', 'Signals']];
+    const grp = GROUPS.find(g => g.tabs.some(t => t[0] === G.tab)) || GROUPS[0];
+    if (!grp.tabs.some(t => t[0] === G.tab)) G.tab = grp.tabs[0][0];
     let body;
     if (!d) body = G.err ? `<div class="ge-p"><p class="ge-na">God's Eye is unavailable: ${E(G.err)}</p><button class="btn" data-gerefresh="1">Retry</button></div>`
       : `<div class="ge-cards">${'<article class="ge-card ge-skel"></article>'.repeat(10)}</div><p class="muted">Reading markets, FII / DII and option data…</p>`;
-    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab }[G.tab] || overview)(d);
+    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, picks: picksTab }[G.tab] || overview)(d);
     if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
       <div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
-        <div><h1>GOD'S EYE <span>– The Observer</span></h1><p>Sentiment · retail mood · F&amp;O · movers · range · global</p></div></div>
+        <div><h1>GOD'S EYE <span>– The Observer</span></h1><p>Overview · today's picks · FII / DII · options &amp; expiry · signals &amp; sectors · markets</p></div></div>
         <div class="ge-st">${status()}<span class="ge-upd">${G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : ''}</span><button type="button" class="ge-ref" data-gerefresh="1" aria-label="Refresh" ${G.busy ? 'disabled' : ''}>↻</button></div></div>
       ${G.err && d ? `<p class="ge-warn">Last refresh failed (${E(G.err)}) - showing data from ${E(IST(d.asOf))}.</p>` : ''}
-      <div class="ge-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>
+      <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div>
+      ${grp.tabs.length > 1 ? `<div class="ge-sub2" role="tablist">${grp.tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>` : ''}
       ${body}
       <p class="ge-disc">Informational only - built from public NSE data, broker quotes and rule-based scores; not a forecast or investment advice.</p>
-      ${G.open ? detail() : ''}</div>`;
-    document.body.classList.toggle('ge-noscroll', !!G.open);
+      ${G.open ? detail() : G.stock ? stockDetail() : ''}</div>`;
+    document.body.classList.toggle('ge-noscroll', !!(G.open || G.stock));
   }
   window.renderGodsEyeTab = function () { paint(); if (!G.data || Date.now() - G.ts > 60e3) load(false); };
   /* Picks shows a one-line summary only - the full God's Eye lives in its own tab (no duplicate screen) */
@@ -301,21 +431,49 @@
     if (!e.target.closest('#v-godseye')) return;
     const t = e.target, q = s => t.closest(s);
     const cl = q('[data-geclose]');
-    if (cl && (cl.tagName === 'BUTTON' || t === cl)) { G.open = null; return paint(); }   // the backdrop itself or a close button - not every button inside the drawer
-    if (q('.ge-det')) { const ch = q('[data-gechart]'); if (ch) openChart(ch.dataset.gechart); return; }
+    if (cl && (cl.tagName === 'BUTTON' || t === cl)) { G.open = null; G.stock = null; return paint(); }   // the backdrop itself or a close button - not every button inside the drawer
+    if (q('.ge-det')) {
+      const ch = q('[data-gechart]'); if (ch) openChart(ch.dataset.gechart);
+      const sc = q('[data-gestkchart]'); if (sc && typeof switchSym === 'function') { G.stock = null; document.body.classList.remove('ge-noscroll'); switchSym(sc.dataset.gestkchart); }
+      const so = q('[data-gestkopt]'); if (so && typeof go === 'function') { G.stock = null; document.body.classList.remove('ge-noscroll'); try { OPT.sym = so.dataset.gestkopt; OPT.expiry = ''; OPT.chain = null; OPT.sel = null; OPT.osym = null; } catch (x) { } go('options'); }
+      return;
+    }
+    const st = q('[data-gestock]'); if (st) { G.stock = st.dataset.gestock; return paint(); }
+    const sx = q('[data-gesec]'); if (sx) { G.secSel = sx.dataset.gesec; return paint(); }
+    const ss = q('[data-gessec]'); if (ss) { G.sigSec = ss.dataset.gessec; G.slim = 25; SS('ge-sigsec', G.sigSec); return paint(); }
+    const see = q('[data-geseestocks]'); if (see) { G.sigSec = see.dataset.geseestocks; G.slim = 25; G.tab = 'signals'; LAST_SUB.stocks = 'signals'; SS('ge-last', LAST_SUB); SS('ge-tab', G.tab); SS('ge-sigsec', G.sigSec); paint(); const b = document.querySelector('.ge-stocks'); if (b) b.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (q('[data-gemore]')) { G.slim += 25; const h = document.getElementById('geStk'); if (h) h.innerHTML = stockTable(); return; }
+    if (q('[data-gesecretry]')) return loadSec(true);
     const c = q('[data-gecard]'); if (c) { G.open = c.dataset.gecard; return paint(); }
     if (q('[data-geout]')) { G.outOpen = !G.outOpen; return paint(); }
-    const tb = q('[data-getab]'); if (tb) { G.tab = tb.dataset.getab; SS('ge-tab', G.tab); return paint(); }
-    if (q('[data-gerefresh]')) return load(true);
+    const tb = q('[data-getab]'); if (tb) {
+      const g = tb.dataset.gegrp ? GROUPS.find(x => x.key === tb.dataset.gegrp) : null;
+      G.tab = g && LAST_SUB[g.key] && g.tabs.some(t => t[0] === LAST_SUB[g.key]) ? LAST_SUB[g.key] : tb.dataset.getab;
+      const gg = GROUPS.find(x => x.tabs.some(t => t[0] === G.tab)); if (gg) { LAST_SUB[gg.key] = G.tab; SS('ge-last', LAST_SUB); }
+      SS('ge-tab', G.tab); return paint();
+    }
+    const pk = q('[data-gepick]'); if (pk && typeof switchSym === 'function') { switchSym(pk.dataset.gepick); return; }
+    if (q('[data-gegopicks]') && typeof go === 'function') { go('picks'); return; }
+    if (q('[data-gerefresh]')) { if (['signals', 'sectors'].includes(G.tab)) loadSec(true); if (G.tab === 'picks' && typeof loadPicks === 'function') Promise.resolve(loadPicks(true)).finally(() => paint()); return load(true); }
     const ex = q('[data-geexp]'); if (ex) return loadOpt(ex.dataset.geexp);
     const f = q('[data-gefilt]'); if (f) { G.filt = f.dataset.gefilt; return paint(); }
     const s = q('[data-gesort]'); if (s) { G.sort = s.dataset.gesort; return paint(); }
     if (q('[data-gechain]') && typeof go === 'function') { try { OPT.sym = 'NIFTY'; OPT.expiry = G.optExp || ''; OPT.chain = null; OPT.sel = null; OPT.osym = null; } catch (x) { } go('options'); }
     const tp = q('[data-getip]'); if (tp && typeof toast === 'function') toast(tp.title, 'info');
   });
+  let sqT = 0;
+  document.addEventListener('input', e => {
+    if (e.target.id === 'geSq') { G.sq = e.target.value; G.slim = 25; clearTimeout(sqT); sqT = setTimeout(() => { const h = document.getElementById('geStk'); if (h) h.innerHTML = stockTable(); }, 150); }
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id === 'geSsort') { G.ssort = e.target.value; G.slim = 25; const h = document.getElementById('geStk'); if (h) h.innerHTML = stockTable(); }
+  });
   document.addEventListener('keydown', e => {
     if (!host()) return;
-    if (e.key === 'Escape' && G.open) { G.open = null; paint(); }
+    if (e.key === 'Escape' && (G.open || G.stock)) { G.open = null; G.stock = null; paint(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('#v-godseye [data-gestock],#v-godseye path[data-gesec]') && !G.open && !G.stock) {
+      e.preventDefault(); const tt = e.target.closest('[data-gestock],[data-gesec]'); if (tt.dataset.gestock) G.stock = tt.dataset.gestock; else G.secSel = tt.dataset.gesec; paint(); return;
+    }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('#v-godseye [data-gecard]') && !G.open) { e.preventDefault(); G.open = e.target.closest('[data-gecard]').dataset.gecard; paint(); }
   });
   function openChart(key) {
@@ -331,6 +489,7 @@
     if (!host() || document.hidden || G.busy) return;
     const open = typeof MKT !== 'undefined' && MKT.open;
     if (Date.now() - G.ts > (open ? 60e3 : 300e3)) load(false);
+    if (['signals', 'sectors'].includes(G.tab) && Date.now() - G.secTs > (open ? 120e3 : 900e3)) loadSec(false);
   }, 15e3);
 
   const css = `
@@ -438,6 +597,61 @@
   @media (max-width:1100px){.ge-grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media (max-width:640px){.ge-grid4{grid-template-columns:1fr}.ge-oc-t{margin-left:0}.ge-chips{display:none}}   /* phones: the chips are in 'Why' */
   body.ge-noscroll{overflow:hidden}
+  /* terminal look from the UI kit: mono numbers, accent bar on cards, corner bracket on panels */
+  .ge .ge-cs,.ge .ge-big,.ge-sum4 b,.ge-stand em,.ge-dn1,.ge-ring b{font-family:'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.5px}
+  .ge-card{border-top-width:1px;overflow:hidden}.ge-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--text-3)}
+  .ge-card.bull::before{background:var(--up)}.ge-card.bear::before{background:var(--down)}.ge-card.bear{border-color:color-mix(in srgb,var(--down) 45%,var(--line))}.ge-card.bull{border-color:color-mix(in srgb,var(--up) 40%,var(--line))}
+  .ge-p{position:relative}.ge-p::before{content:'';position:absolute;left:-1px;top:-1px;width:12px;height:12px;border-left:2px solid var(--ge-cy);border-top:2px solid var(--ge-cy);border-top-left-radius:12px;opacity:.8;pointer-events:none}
+  .ge-p h3{text-transform:uppercase;letter-spacing:.06em;font-size:11.5px;color:var(--text-2,inherit)}
+  .ge-tick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 8px;margin-bottom:4px}.ge-tick::-webkit-scrollbar{display:none}
+  .ge-tk{flex:0 0 auto;display:flex;gap:8px;align-items:baseline;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:12px;white-space:nowrap}
+  .ge-tk b{font-size:11px;letter-spacing:.04em}
+  /* light theme: same layout, darker accent so cyan text keeps its contrast on white */
+  :root[data-theme="light"] .ge{--ge-cy:#0e7490}
+  :root[data-theme="light"] .ge-card.bull{background:linear-gradient(180deg,color-mix(in srgb,var(--up) 7%,var(--panel)),var(--panel))}
+  :root[data-theme="light"] .ge-card.bear{background:linear-gradient(180deg,color-mix(in srgb,var(--down) 7%,var(--panel)),var(--panel))}
+  :root[data-theme="light"] .ge-dbg{background:rgba(15,23,42,.35)}
+  :root[data-theme="light"] .ge-det{background:var(--panel);box-shadow:-12px 0 40px rgba(15,23,42,.18)}
+  :root[data-theme="light"] .ge-out{background:linear-gradient(135deg,color-mix(in srgb,var(--ge-cy) 6%,var(--panel)),var(--panel))}
+  .ge-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:8px}.ge-tabs::-webkit-scrollbar{display:none}
+  .ge-sub2{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding-bottom:2px;border-bottom:1px solid var(--line)}.ge-sub2::-webkit-scrollbar{display:none}
+  .ge-sub2 button{flex:0 0 auto;padding:7px 12px;border:0;background:none;color:var(--text-2,inherit);font-weight:600;font-size:13px;cursor:pointer;border-bottom:2px solid transparent}
+  .ge-sub2 button.on{color:var(--text);border-bottom-color:var(--ge-cy)}
+  .ge-pk{display:grid;grid-template-columns:minmax(0,1fr) auto 92px minmax(0,1.3fr);gap:10px;align-items:center;width:100%;padding:8px 2px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--text);cursor:pointer;text-align:left;font-size:13px}
+  .ge-pk:last-child{border-bottom:0}.ge-pk:hover{background:var(--panel-2)}
+  .ge-pkp{display:flex;flex-direction:column;align-items:flex-end}.ge-pkp small{font-size:11px}
+  .ge-pkl{display:flex;flex-wrap:wrap;gap:2px 6px;align-items:baseline;justify-content:flex-end;font-size:12px}.ge-pkl small{font-size:10px;color:var(--text-3)}.ge-pkl em{font-style:normal}
+  .ge-grid2 .ge-pk{grid-template-columns:minmax(0,1fr) auto 88px}.ge-grid2 .ge-pkl{display:none}
+  @media (max-width:640px){.ge-tabs{flex-wrap:wrap}.ge-pk{grid-template-columns:minmax(0,1fr) auto 80px}.ge-pkl{grid-column:1/-1;justify-content:flex-start}.ge-tabs button{padding:6px 11px}}
+  .ge-stocks{margin-top:12px}.ge-stocks h3 small{font-weight:500;margin-left:6px}
+  .ge-secchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:8px}.ge-secchips::-webkit-scrollbar{display:none}
+  .ge-secchips button{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text-2,inherit);font-size:12px;cursor:pointer;white-space:nowrap}
+  .ge-secchips button.on{border-color:var(--ge-cy);color:var(--text);box-shadow:0 0 0 1px var(--ge-cy) inset}.ge-secchips i,.ge-sc i,.ge-leg i,.ge-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .ge-dot{margin-right:6px}.ge-secchips small{font-size:11px;color:var(--text-3)}.ge-secchips small.up{color:var(--up)}.ge-secchips small.down{color:var(--down)}
+  .ge-stools{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}.ge-stools .inp{flex:1 1 180px;max-width:320px}.ge-stools select.inp{flex:0 1 180px}
+  .ge-stk td{vertical-align:middle}.ge-stk td small{display:block;font-size:10.5px;color:var(--text-3);max-width:190px;overflow:hidden;text-overflow:ellipsis}
+  .ge-stk tr[data-gestock]{cursor:pointer}.ge-stk tr[data-gestock]:hover td{background:var(--panel-2)}
+  .ge-stk th:first-child,.ge-stk td:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
+  .ge-sc{font-size:11.5px;color:var(--text-2);white-space:nowrap}.ge-sc i{margin-right:5px}
+  .ge-rgm{position:relative;display:inline-block;width:64px;height:5px;border-radius:3px;background:var(--line);vertical-align:middle}.ge-rgm b{position:absolute;top:-3px;width:3px;height:11px;border-radius:2px;background:var(--ge-cy);transform:translateX(-50%)}
+  .ge-opp{position:relative;display:inline-flex;align-items:center;width:74px;height:18px;border-radius:5px;background:var(--panel-2,rgba(255,255,255,.06));overflow:hidden}
+  .ge-opp i{position:absolute;left:0;top:0;bottom:0;opacity:.35}.ge-opp b{position:relative;margin-left:auto;margin-right:6px;font-size:11.5px}
+  .ge-opp.hi i{background:var(--up)}.ge-opp.mid i{background:var(--warn,#f5b942)}.ge-opp.lo i{background:var(--down)}
+  .ge-more2{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px}
+  .ge-sum4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}.ge-sum4>div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .ge-sum4 small{display:flex;align-items:center;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}.ge-sum4 b{font-size:22px;color:var(--ge-cy)}
+  .ge-secgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
+  .ge-dwrap{display:flex;gap:14px;align-items:flex-start}.ge-donut{width:200px;height:200px;flex:0 0 200px}.ge-donut path{cursor:pointer;stroke:var(--panel);stroke-width:1}
+  .ge-dn1{font-size:26px;font-weight:800;fill:var(--text)}.ge-dn2{font-size:10px;fill:var(--text-3)}
+  .ge-leg{flex:1;min-width:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px 10px;max-height:330px;overflow-y:auto}
+  .ge-leg button{display:grid;grid-template-columns:10px 1fr auto auto;gap:6px;align-items:center;padding:4px 6px;border:0;border-radius:6px;background:none;color:var(--text-2,inherit);font-size:12px;cursor:pointer;text-align:left}
+  .ge-leg button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ge-leg button.on{background:var(--panel-2)}.ge-leg em{font-style:normal;font-size:11px}
+  .ge-secd h3{font-size:15px}.ge-secd h4,.ge-det h4{margin:12px 0 4px;font-size:12.5px;display:flex;align-items:center;gap:4px}.ge-secd .btn-xs{margin-top:10px}
+  .ge-h3{font-size:14px;margin:4px 2px 8px}.ge-stands{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:8px}
+  .ge-stand{display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--ge-cy) 8%,var(--panel)),var(--panel));color:var(--text);cursor:pointer}
+  .ge-stand small{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ge-cy)}.ge-stand b{font-size:16px}.ge-stand em{font-style:normal;font-size:20px;font-weight:800}.ge-stand .muted{font-size:11.5px}
+  @media (max-width:1100px){.ge-stands{grid-template-columns:repeat(2,minmax(0,1fr))}.ge-secgrid{grid-template-columns:1fr}}
+  @media (max-width:640px){.ge-sum4{grid-template-columns:repeat(2,minmax(0,1fr))}.ge-sum4 b{font-size:18px}.ge-dwrap{flex-direction:column;align-items:center}.ge-donut{width:180px;height:180px;flex-basis:auto}.ge-leg{width:100%;grid-template-columns:1fr 1fr;max-height:none}.ge-stands{grid-template-columns:1fr}.ge-stools .inp,.ge-stools select.inp{max-width:none}}
   .ge .up{color:var(--up)}.ge .down{color:var(--down)}.ge .bull{}.ge b.bull,.ge-sub b.bull{color:var(--up)}.ge b.bear,.ge-sub b.bear{color:var(--down)}
   @media (max-width:1280px){.ge-grid3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ge-cards{grid-column:1/-1;order:-1}.ge-cards{grid-template-columns:repeat(5,minmax(0,1fr))}}
   @media (max-width:900px){.ge-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.ge-parts{grid-template-columns:1fr}}

@@ -132,7 +132,7 @@ def test_gods_eye_tab_shows_flows_positioning_and_outlook(app):
     assert app.ev("App.view") == "godseye"
     assert app.ev("!!document.querySelector('#v-godseye .ge-out')"), "next-day / expiry read-out missing"
     assert not app.ev("/Signal Throughput|Data feeds/.test(document.querySelector('#v-godseye').innerText)"), "throughput / data-feed panels should be hidden"
-    for tab, marker in (("fii", "FII / DII cash market"), ("fno", "levels"), ("signals", "Instrument"), ("overview", "Next day")):
+    for tab, marker in (("fii", "FII / DII cash market"), ("fno", "levels"), ("signals", "Stocks by sector"), ("overview", "Next day")):
         app.ev(f"document.querySelector('[data-getab=\"{tab}\"]').click()")
         app.page.wait_for_timeout(700)
         assert marker.lower() in app.ev("document.querySelector('#v-godseye').innerText").lower(), f"{tab} tab did not render"
