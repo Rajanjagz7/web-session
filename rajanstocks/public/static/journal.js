@@ -24,65 +24,32 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
     let T = load(KEY, []);
-const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
+  const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
   const isRemovedId = t => {
     if (!t) return false;
     const rawId = String(t.id || '');
     if (REMOVED_IDS.has(rawId)) return true;
-    const m = rawId.match(/\d+/g);
-    if (m && REMOVED_IDS.has(m[m.length - 1])) return true;
-    return false;
+    const m = rawId.match(/\d+/g);                 // A-1023-27-W -> 27 (shortId is declared later, so not used here)
+    return !!(m && REMOVED_IDS.has(m[m.length - 1]));
   };
-  // Auto-purge the glitched top manual entry of 2.5 lakhs requested by user
-  (function purgeTopManualGlitch() {
-    const PURGE_KEY = 'rj-purge-top-manual-250k-v3';
-    if (!localStorage.getItem(PURGE_KEY)) {
-      try {
-        let rawT = load(KEY, []);
-        if (rawT && rawT.length) {
-          const idx = rawT.findIndex(t => !t.auto);
-          if (idx >= 0) {
-            rawT.splice(idx, 1);
-            save(KEY, rawT);
-            T = rawT;
-          }
-        }
-        try {
-          let pt = JSON.parse(localStorage.getItem('mer-trades') || '[]');
-          if (pt && pt.length) {
-            const idx = pt.findIndex(x => (Math.abs((x.price || x.avgBefore || 0) * (x.qty || x.closeQty || 1)) >= 150000) || pt.indexOf(x) === 0);
-            if (idx >= 0) { pt.splice(idx, 1); localStorage.setItem('mer-trades', JSON.stringify(pt)); if (typeof App !== 'undefined') App.trades = pt; }
-          }
-        } catch(e) {}
-        try {
-          let pp = JSON.parse(localStorage.getItem('mer-paper') || '[]');
-          if (pp && pp.length) {
-            const idx = pp.findIndex(x => (Math.abs((x.avg || 0) * (x.q || 1)) >= 150000) || pp.indexOf(x) === 0);
-            if (idx >= 0) { pp.splice(idx, 1); localStorage.setItem('mer-paper', JSON.stringify(pp)); if (typeof App !== 'undefined') App.positions = pp; }
-          }
-        } catch(e) {}
-        try {
-          if (rawT && rawT.length) {
-            rawT = rawT.filter(t => !isRemovedId(t));
-            save(KEY, rawT);
-            T = rawT;
-          }
-          let pt = JSON.parse(localStorage.getItem('mer-trades') || '[]');
-          if (pt && pt.length) {
-            pt = pt.filter(t => !isRemovedId(t));
-            localStorage.setItem('mer-trades', JSON.stringify(pt));
-            if (typeof App !== 'undefined') App.trades = pt;
-          }
-          let pp = JSON.parse(localStorage.getItem('mer-paper') || '[]');
-          if (pp && pp.length) {
-            pp = pp.filter(p => !isRemovedId(p) && !isRemovedId({ id: p.sym }));
-            localStorage.setItem('mer-paper', JSON.stringify(pp));
-            if (typeof App !== 'undefined') App.positions = pp;
-          }
-        } catch(e) {}
-        localStorage.setItem(PURGE_KEY, 'done');
-      } catch(e) {}
-    }
+  // One-off purge of the removed trade IDs from this browser's stored journal / paper data
+  (function purgeRemovedIds() {
+    const PURGE_KEY = 'rj-purge-removed-ids-v1';
+    try {
+      if (localStorage.getItem(PURGE_KEY)) return;
+      T = T.filter(t => !isRemovedId(t));
+      save(KEY, T);
+      const strip = (k, fn) => {
+        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        if (!Array.isArray(arr) || !arr.length) return null;
+        const out = arr.filter(fn);
+        localStorage.setItem(k, JSON.stringify(out));
+        return out;
+      };
+      const pt = strip('mer-trades', t => !isRemovedId(t));
+      if (pt && typeof App !== 'undefined') App.trades = pt;
+      localStorage.setItem(PURGE_KEY, 'done');
+    } catch (e) { }
   })();
   /* Automated trades (server side) are mirrored into the journal with every field filled in: plan, indicator evidence,
      exit, costs, R multiple and review. They are read-only and do not count toward the manual 5-a-day / loss limits. */
@@ -212,15 +179,6 @@ const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-100
     });
     return out;
   }
-  const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
-  const isRemovedId = t => {
-    if (!t) return false;
-    const rawId = String(t.id || '');
-    const sid = String(typeof shortId === 'function' ? shortId(t) : (rawId.match(/\d+/g) || [''])[0] || '');
-    if (REMOVED_IDS.has(sid) || REMOVED_IDS.has(rawId)) return true;
-    if (rawId.endsWith('-27') || rawId.endsWith('-1004') || rawId.endsWith('-1009') || rawId.endsWith('-27-W')) return true;
-    return false;
-  };
   const allTrades = () => T.concat(AUTO.list, (AUTO.stockTrades || []), paperList()).filter(t => !isRemovedId(t));
   async function jpost(url, body) {
     try {
