@@ -102,15 +102,14 @@ def test_global_futures_tiles_open_a_chart(app, tile):
     app.page.wait_for_function("App.view === 'trade' && App.sym && App.sym.tv && (CACHE[App.sym.s + '|' + App.tf.k] || []).length > 20", timeout=90000)
 
 
-def test_godseye_details_card_is_compact(app):
+def test_picks_shows_one_line_gods_eye_strip(app):
+    # the full God's Eye lives in its own tab - Picks only shows a one-line summary that opens it
     app.open("picks")
-    app.page.wait_for_function("document.querySelector('.ob-card[data-ob]')", timeout=90000)
-    app.ev("document.querySelector('.ob-card[data-ob]').click()")
-    app.page.wait_for_selector(".ob-card.open", timeout=10000)
-    h = app.ev("document.querySelector('.ob-card.open').getBoundingClientRect().height")
-    limit = 480 if app.kind == "web" else 700
-    assert h < limit, f"opened God's Eye card is {h:.0f}px tall (limit {limit})"
-    app.no_overflow("God's Eye details")
+    app.page.wait_for_selector("#pkGodseye .ge-strip", timeout=90000)
+    assert not app.ev("!!document.querySelector('#pkGodseye .ob-grid')"), "Picks still renders the full God's Eye grid"
+    app.ev("document.querySelector('#pkGodseye .ge-strip').click()")
+    app.page.wait_for_function("App.view === 'godseye'", timeout=10000)
+    app.no_overflow("Picks God's Eye strip")
 
 
 def test_journal_exit_buttons_stay_on_screen_on_phones(app):
@@ -123,3 +122,21 @@ def test_journal_exit_buttons_stay_on_screen_on_phones(app):
     boxes = app.ev("() => [...document.querySelectorAll('#v-journal .jv-exit')].filter(b => b.offsetParent).map(b => { const r = b.getBoundingClientRect(); return [r.left, r.right]; })")
     assert boxes, "no Exit buttons rendered"
     assert all(0 <= l and r <= 390 for l, r in boxes), f"Exit buttons off screen: {boxes}"
+
+
+def test_gods_eye_tab_shows_flows_positioning_and_outlook(app):
+    app.open("godseye")
+    app.page.wait_for_function("document.querySelectorAll('#v-godseye .ge-card[data-gecard]').length >= 8", timeout=120000)
+    assert app.ev("App.view") == "godseye"
+    assert app.ev("!!document.querySelector('#v-godseye .ge-out')"), "next-day / expiry read-out missing"
+    for tab, marker in (("fii", "FII / DII cash market"), ("options", "levels"), ("signals", "Instrument"), ("overview", "Next trading day")):
+        app.ev(f"document.querySelector('[data-getab=\"{tab}\"]').click()")
+        app.page.wait_for_timeout(700)
+        assert marker.lower() in app.ev("document.querySelector('#v-godseye').innerText").lower(), f"{tab} tab did not render"
+        app.no_overflow("God's Eye " + tab)
+    app.ev("document.querySelector('#v-godseye .ge-card[data-gecard]').click()")
+    app.page.wait_for_selector(".ge-det", timeout=5000)
+    app.ev("document.querySelector('.ge-det .ge-x').click()")
+    app.page.wait_for_timeout(300)
+    assert not app.ev("!!document.querySelector('.ge-det')"), "details drawer did not close"
+    app.check_clean()

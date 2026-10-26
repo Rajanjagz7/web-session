@@ -658,8 +658,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script id="scrJV" src="/static/journal.js?v=20261026w"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261025d"></script>
+<script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
+<script src="/static/geye.js?v=20261026c"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2462,8 +2463,8 @@ $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.classNa
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['options','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
-   const PRIMARY=['picks','options','markets','ipo'];
+const VIEWS=[['picks','Picks'],['options','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['godseye',"God's Eye"],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
+   const PRIMARY=['picks','options','markets','ipo','godseye'];
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
 const SUBVIEWS={trade:['options','Chart'],mobile:['options',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
@@ -2511,10 +2512,9 @@ function closeOverlays(){
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
 function go(v){if(v==='stocks')v='markets';   /* old #stocks links / bookmarks: there is no separate Stocks screen any more (it used to leave a blank page) */
-  if(v==='godseye'){v='picks';setTimeout(()=>{const g=$('#pkGodseye');if(g)g.scrollIntoView({behavior:'smooth',block:'start'})},300)}
   /* the old full-chart Trade screen (Order / Indicators panel) is retired: any stock or index with options opens the clean Trade screen */
   if(v==='trade'||v==='mobile'){const sy=App.sym&&App.sym.s;if(sy&&typeof optUnderlyings==='function'&&optUnderlyings().some(x=>x.s===sy)){if(OPT.sym!==sy){OPT.sym=sy;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null}v='options'}}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
-  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodseye&&renderGodseye()})[v]?.();liveUpdate();window.scrollTo(0,0)}
+  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodsEyeTab&&renderGodsEyeTab()})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
 /* ======================= Trade view ======================= */
@@ -3343,7 +3343,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    
    ${body}
    <p class="disc">Automated screen of NSE-listed instruments, refreshed through the trading day. This is a screening aid, not investment advice — trades here are paper trades only.</p>
-   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
+   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.geStrip)geStrip(h);else if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 

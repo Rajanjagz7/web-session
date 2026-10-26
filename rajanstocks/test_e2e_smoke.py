@@ -123,6 +123,10 @@ def test_every_screen_opens_clean_and_fits_the_screen(app):
                      ("vedic", "vedic"), ("options", "options"), ("portfolio", "portfolio"), ("orders", "orders"), ("alerts", "alerts"), ("daily", "daily"), ("stocks", "markets")]:
         app.go(v, 1800)
         assert app.ev("document.querySelector('.view.on') && document.querySelector('.view.on').id") == "v-" + shown, f"{v} did not open {shown}"
+        try:                                            # slow screens (Vedic computes on first open) get up to 20 s to fill in
+            app.page.wait_for_function("document.querySelector('.view.on') && document.querySelector('.view.on').innerText.length > 120", timeout=20000)
+        except Exception:
+            pass
         text = app.ev("document.querySelector('.view.on').innerText.length")
         assert text > 120, f"{v} looks empty ({text} characters)"
         app.no_overflow(v)

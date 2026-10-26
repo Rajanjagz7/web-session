@@ -137,7 +137,7 @@
   function host() {
     if (typeof App === 'undefined') return null;
     if (App.view === 'picks') return window.obsMount ? null : document.getElementById('pkGodseye');   // the Observer owns Picks - never paint a second board (or its sheet) over it
-    if (App.view === 'godseye') return document.getElementById('v-godseye');
+    if (App.view === 'godseye') return null;                 // the God's Eye tab (geye.js) owns #v-godseye
     return null;
   }
   function paint() {

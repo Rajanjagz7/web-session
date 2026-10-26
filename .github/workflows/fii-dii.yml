@@ -1,0 +1,27 @@
+name: FII DII daily data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 13 * * 1-5"      # 18:45 IST - NSE FII/DII cash provisional figures are out
+    - cron: "45 14 * * 1-5"      # 20:15 IST - participant-wise F&O open interest is out
+permissions:
+  contents: write
+concurrency: { group: fii-dii, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r rajanstocks/requirements.txt
+      - run: cd rajanstocks && python gods_eye_tab.py --update
+      - name: Commit result
+        run: |
+          git config user.name "backtest-bot"
+          git config user.email "backtest-bot@users.noreply.github.com"
+          git add rajanstocks/public/static/fii_dii.json
+          git diff --cached --quiet && exit 0
+          git commit -m "FII/DII data $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase -q origin rajan-web-session && git push -q origin HEAD:rajan-web-session && break; sleep 5; done

@@ -658,8 +658,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 </style>
 <script id="scrJV" src="/static/journal.js?v=20261026w"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261025d"></script>
+<script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
+<script src="/static/geye.js?v=20261026c"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2397,7 +2398,7 @@ function countdown(ms){if(ms<0)ms=0;const s=Math.floor(ms/1000),h=Math.floor(s/3
 /* ======================= App state ======================= */
 const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000000,positions:[],orders:[],history:[],alerts:[],notes:[],unread:0,
   btab:'positions',book:'book',tape:[],tk:{side:'buy',type:'market',qty:10,price:'',tp:false,tpPx:'',sl:false,slPx:'',tsl:false,tslV:'',tslU:'pct',tif:'Day'},
-  mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'ALL',kind:'ALL',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
+  mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'TOP',kind:'ALL',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
 async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok){const e=new Error(path+' '+r.status);e.status=r.status;try{const j=await r.json();if(j&&typeof j.detail==='string')e.detail=j.detail}catch(x){}throw e}return r.json()}
@@ -2462,8 +2463,8 @@ $$('[data-dpnl]').forEach(e=>{const v=dayPnl();e.textContent=smoney(v);e.classNa
 function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in oklab, ${c>=0?'var(--up)':'var(--down)'} ${Math.round(18+k*62)}%, var(--panel-2))`}
 
 /* ======================= Header / nav ======================= */
-const VIEWS=[['picks','Picks'],['options','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
-   const PRIMARY=['picks','options','markets','ipo'];
+const VIEWS=[['picks','Picks'],['options','Trade'],['markets','Markets'],['ipo','IPO & Funds'],['godseye',"God's Eye"],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
+   const PRIMARY=['picks','options','markets','ipo','godseye'];
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
 const SUBVIEWS={trade:['options','Chart'],mobile:['options',''],stocks:['markets','Stocks'],daily:['picks','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
@@ -2511,10 +2512,9 @@ function closeOverlays(){
   try{if(typeof mob!=='undefined')mob.sheet=false}catch(e){}
   document.querySelectorAll('.sheet-bg').forEach(n=>n.remove())}
 function go(v){if(v==='stocks')v='markets';   /* old #stocks links / bookmarks: there is no separate Stocks screen any more (it used to leave a blank page) */
-  if(v==='godseye'){v='picks';setTimeout(()=>{const g=$('#pkGodseye');if(g)g.scrollIntoView({behavior:'smooth',block:'start'})},300)}
   /* the old full-chart Trade screen (Order / Indicators panel) is retired: any stock or index with options opens the clean Trade screen */
   if(v==='trade'||v==='mobile'){const sy=App.sym&&App.sym.s;if(sy&&typeof optUnderlyings==='function'&&optUnderlyings().some(x=>x.s===sy)){if(OPT.sym!==sy){OPT.sym=sy;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null}v='options'}}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
-  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodseye&&renderGodseye()})[v]?.();liveUpdate();window.scrollTo(0,0)}
+  ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodsEyeTab&&renderGodsEyeTab()})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
 /* ======================= Trade view ======================= */
@@ -3308,7 +3308,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
         if(!x)return f.sig==='BUY'?p.signal==='BUY'&&p[hzKey]==='Bullish':f.sig==='SELL'?p.signal==='SELL'&&p[hzKey]==='Bearish':p[hzKey]!=='Neutral';
         if(f.sig==='EVERY')return true;if(x.side==='WAIT')return false;if(x.ok===false)return false;if(x.ok===undefined&&p[hzKey]==='Neutral')return false;   // each horizon's own entry test
         return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})}
-    else{const allP=P.picks||[],pBuys=allP.filter(p=>p.signal==='BUY'),pSells=allP.filter(p=>p.signal==='SELL');if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=allP.slice();else l=pBuys.concat(pSells);}
+    else{const allP=P.picks||[],pBuys=allP.filter(p=>p.signal==='BUY'),pSells=allP.filter(p=>p.signal==='SELL');if(f.sig==='TOP'){const by=new Map(allP.map(x=>[x.s,x]));l=(P.top||[]).map(t=>{const b=by.get(t.s)||{};return {...b,...t,kind:'stock',universe:'fno',signal:t.side,plans:null,reasons:[t.why].concat(b.reasons||[])}})}else if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=allP.slice();else l=pBuys.concat(pSells);}
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
     if(f.mkt==='FNO')l=l.filter(p=>p.universe!=='cash');else if(f.mkt==='CASH')l=l.filter(p=>p.universe==='cash');
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
@@ -3318,7 +3318,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     const SORTS={strength:(a,b)=>(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
     
     // Sort indices strictly to the top
-    l.sort((a,b)=>{
+    if(f.sig!=='TOP')l.sort((a,b)=>{
       const aIsIdx=a.kind==='index'?0:1;
       const bIsIdx=b.kind==='index'?0:1;
       if(aIsIdx!==bIsIdx)return aIsIdx-bIsIdx;
@@ -3330,7 +3330,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
     const pager=pages>1?`<div class="pager"><button class="btn-xs" data-pkpage="${f.page-1}" ${f.page<=0?'disabled':''}>‹ Prev</button>${nums.map(i=>i<0?'<span class="muted">…</span>':`<button class="btn-xs ${i===f.page?'pri':''}" data-pkpage="${i}">${i+1}</button>`).join('')}<button class="btn-xs" data-pkpage="${f.page+1}" ${f.page>=pages-1?'disabled':''}>Next ›</button></div>`:'';
-    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map(p=>pickCard(p)).join('')}</div>${pager}`:(window._pkCashLoading?'<div class="empty">Loading whole-market cash stocks…</div>':(f.mkt==='CASH'?'<div class="empty">The whole-market cash scan progresses through the trading day — no qualifying cash names yet. Check back in a bit.</div>':'<div class="empty">No instruments match this filter right now.</div>'))}
+    body=l.length?`<p class="pk-meta muted">${l.length} instrument${l.length===1?'':'s'}${f.sig==='EVERY'?' screened':''} · showing ${f.page*size+1}–${f.page*size+part.length}</p><div class="pk-grid">${part.map(p=>pickCard(p)).join('')}</div>${pager}`:(window._pkCashLoading?'<div class="empty">Loading whole-market cash stocks…</div>':(f.mkt==='CASH'?'<div class="empty">The whole-market cash scan progresses through the trading day — no qualifying cash names yet. Check back in a bit.</div>':(f.sig==='TOP'?'<div class="empty">No stock passes the strength + risk/reward filter right now. Try “All ideas”.</div>':'<div class="empty">No instruments match this filter right now.</div>')))}
   const chips=(arr,cur,key)=>arr.map(([k,t])=>`<button class="chip ${cur===k?'on':''}" data-pkf="${key}:${k}">${t}</button>`).join('');
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
@@ -3338,12 +3338,12 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   el.innerHTML=`<div class="page">${pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    <div class="ixs">${idxHtml}</div>
    <div id="pkGodseye" class="pk-ge"></div>
-   <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div><div class="chips">${chips([['ALL','All strengths'],['STRONG','Strong (≥65%)'],['WEAK','Weaker (<65%)']],f.str||'ALL','str')}</div></div>
+   <div class="filters"><div class="chips">${chips([['ALL','Stocks + Index'],['STOCK','Stocks'],['INDEX','Index']],f.kind,'kind')}</div><div class="chips">${chips([['TOP','Top 10-15'],['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div><div class="chips">${chips([['ALL','Any horizon'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div><div class="chips">${chips([['ALL','All markets'],['FNO','F&O (options)'],['CASH','Cash (non-F&O)']],f.mkt,'mkt')}</div><div class="chips">${chips([['ALL','All strengths'],['STRONG','Strong (≥65%)'],['WEAK','Weaker (<65%)']],f.str||'ALL','str')}</div></div>
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All strengths</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong setups (≥65%)</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High conviction (≥75%)</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker setups (&lt;65%)</option></select><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    
    ${body}
    <p class="disc">Automated screen of NSE-listed instruments, refreshed through the trading day. This is a screening aid, not investment advice — trades here are paper trades only.</p>
-   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
+   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();{const h=document.getElementById('pkGodseye');if(h&&window.geStrip)geStrip(h);else if(h&&window.obsMount)obsMount(h);else if(window.renderGodseye)renderGodseye()}}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 

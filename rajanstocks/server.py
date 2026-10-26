@@ -60,6 +60,8 @@ import expiry_book  # noqa: E402
 app.include_router(expiry_book.router)
 import stock_trader  # noqa: E402
 app.include_router(stock_trader.router)
+import gods_eye_tab
+app.include_router(gods_eye_tab.router)
 
 @app.middleware("http")
 async def _no_stale_assets(request, call_next):
