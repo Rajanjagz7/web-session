@@ -14,7 +14,7 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader'], ['new', '+ Log trade']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader']];
    const GROUPS = {};
    const TAB_TIPS = { new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
@@ -23,7 +23,39 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
-  let T = load(KEY, []);
+    let T = load(KEY, []);
+  // Auto-purge the glitched top manual entry of 2.5 lakhs requested by user
+  (function purgeTopManualGlitch() {
+    const PURGE_KEY = 'rj-purge-top-manual-250k-v3';
+    if (!localStorage.getItem(PURGE_KEY)) {
+      try {
+        let rawT = load(KEY, []);
+        if (rawT && rawT.length) {
+          const idx = rawT.findIndex(t => !t.auto);
+          if (idx >= 0) {
+            rawT.splice(idx, 1);
+            save(KEY, rawT);
+            T = rawT;
+          }
+        }
+        try {
+          let pt = JSON.parse(localStorage.getItem('mer-trades') || '[]');
+          if (pt && pt.length) {
+            const idx = pt.findIndex(x => (Math.abs((x.price || x.avgBefore || 0) * (x.qty || x.closeQty || 1)) >= 150000) || pt.indexOf(x) === 0);
+            if (idx >= 0) { pt.splice(idx, 1); localStorage.setItem('mer-trades', JSON.stringify(pt)); if (typeof App !== 'undefined') App.trades = pt; }
+          }
+        } catch(e) {}
+        try {
+          let pp = JSON.parse(localStorage.getItem('mer-paper') || '[]');
+          if (pp && pp.length) {
+            const idx = pp.findIndex(x => (Math.abs((x.avg || 0) * (x.q || 1)) >= 150000) || pp.indexOf(x) === 0);
+            if (idx >= 0) { pp.splice(idx, 1); localStorage.setItem('mer-paper', JSON.stringify(pp)); if (typeof App !== 'undefined') App.positions = pp; }
+          }
+        } catch(e) {}
+        localStorage.setItem(PURGE_KEY, 'done');
+      } catch(e) {}
+    }
+  })();
   /* Automated trades (server side) are mirrored into the journal with every field filled in: plan, indicator evidence,
      exit, costs, R multiple and review. They are read-only and do not count toward the manual 5-a-day / loss limits. */
   const AUTO = { list: [], ts: 0, busy: false };
@@ -120,7 +152,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       if (!p || !p.q) return;
       const L = p.q > 0, m = (App.meta || {})[p.sym] || {}, sg = sigOf(m);
       const isOpt = /\b(CE|PE)\b/.test(p.sym) || (m && m.cls === 'Options');
-      const mult = (m && m.lot) || 1;
+      const mult = 1; // paper positions from Trade screen are already scaled in exact unit quantities
       const tAtStr = p.t ? istTime(new Date(p.t)) : istTime(new Date());
       out.push({
         id: 'P|' + p.sym, paper: true, symbol: p.sym, instrument: m.und || p.sym, dir: L ? 'Long' : 'Short', entry: p.avg, qty: Math.abs(p.q), mult,
@@ -135,7 +167,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       const m = x.meta || (App.meta || {})[x.sym] || {};
       const ty = EXIT_SRC[x.src] || (x.src === 'manual' ? 'Manual Exit' : x.src) || 'Manual Exit', sg = sigOf(m);
       const isOpt = x.kind === 'option' || /\b(CE|PE)\b/.test(x.sym) || (m && m.cls === 'Options');
-      const mult = (m && m.lot) || (App.meta && App.meta[x.sym] && App.meta[x.sym].lot) || 1;
+      const mult = 1; // paper trades from Trade screen are already in exact unit quantities
       const entryPx = x.avgBefore > 0 ? x.avgBefore : (x.price || 0);
       const qtyVal = x.closeQty > 0 ? x.closeQty : (x.qty || 1);
       const dirVal = x.side === 'sell' ? 'Long' : 'Short';
@@ -666,7 +698,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         <td class="num ${cc(c.R)}">${rr(c.R)}</td>
         <td><span class="badge ${getTradeOutcome(t).cls}">${getTradeOutcome(t).tag}</span></td>
         <td class="num" title="${closedish ? 'Held from ' + entryTime(t) + ' to ' + (exitTime(t) || 'exit') : 'Held so far (live)'}">${heldTxt(t)}</td>
-        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span class="badge ${getTradeOutcome(t).cls}" title="${E(t.exitType || getTradeOutcome(t).tag)}">${getTradeOutcome(t).tag}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}</td>
+        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span class="badge ${getTradeOutcome(t).cls}" title="${E(t.exitType || getTradeOutcome(t).tag)}">${getTradeOutcome(t).tag}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}${!t.auto ? `<button class="btn-xs down" data-jv="deltrade" data-id="${E(t.id)}" title="Delete manual entry" style="margin-left:4px;padding:1px 5px;font-size:11px">✕</button>` : ''}</td>
         <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
     }).join('');
     return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('LTP', 'Last traded price (live)', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
@@ -825,7 +857,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     </div>`;
     const foot = t.auto ? ((st !== 'Closed' ? `<button class="btn pri" data-jv="autoexit" data-id="${t.id}">Exit now</button><button class="btn" data-jv="autotsl" data-id="${t.id}">Set TSL</button><button class="btn" data-jv="autostop" data-id="${t.id}">Move stop</button>` : '') + '<button class="btn" data-jv="cancelmodal">Close</button>') : ((t.status === 'Planned' ? `<button class="btn pri" data-jv="enterplan" data-id="${t.id}">Record entry now</button><button class="btn" data-jv="cancelplan" data-id="${t.id}">Cancel plan</button>` :
       st !== 'Closed' && t.status !== 'Cancelled' ? `<button class="btn" data-jv="movesl" data-id="${t.id}">Move stop</button><button class="btn" data-jv="settsl" data-id="${t.id}">Set TSL</button><button class="btn" data-jv="mktexit" data-id="${t.id}">Exit at market</button><button class="btn pri" data-jv="addexit" data-id="${t.id}">Add exit</button>` : '') +
-      `<button class="btn" data-jv="savereview" data-id="${t.id}">Save review</button>`);
+      `<button class="btn" data-jv="savereview" data-id="${t.id}">Save review</button><button class="btn down" data-jv="deltrade" data-id="${t.id}" style="margin-left:auto">Delete entry</button>`);
     window.modal ? window.modal(`#${shortId(t)} · ${E(t.symbol || t.instrument)} ${t.dir}`, body, { foot, wide: true }) : alert('Detail unavailable');
   }
 
@@ -1269,7 +1301,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const el = document.getElementById('v-journal'); if (!el) return;
     syncAuto(false);
     applyManualTsl();
-    const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}<div class="jv-head-actions"><button class="btn btn-sm pri" data-jv="tab" data-k="new" style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>+ Log Manual Trade</button></div></div>`;
+    const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
     const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, stocks: () => sbCard(), new: viewNew };
@@ -1313,6 +1345,26 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'settsl') setManualTsl(id);
     else if (a === 'mktexit') marketExit(id);
     else if (a === 'paperexit') { const sym = String(id).replace(/^P\|/, ''); if (typeof closePos === 'function') { closePos(sym, 'manual'); setTimeout(render, 120); } }
+    else if (a === 'deltrade') {
+      if (confirm('Delete this trade entry from your journal?')) {
+        T = T.filter(x => x.id !== id);
+        persist();
+        if (typeof App !== 'undefined') {
+          if (App.trades) {
+            App.trades = App.trades.filter(x => x.id !== id && ('PT|' + x.id) !== id);
+            try { localStorage.setItem('mer-trades', JSON.stringify(App.trades)); } catch(e) {}
+          }
+          if (App.positions) {
+            const cleanSym = String(id).replace(/^P\|/, '');
+            App.positions = App.positions.filter(p => p.sym !== cleanSym && ('P|' + p.sym) !== id);
+            try { localStorage.setItem('mer-paper', JSON.stringify(App.positions)); } catch(e) {}
+          }
+        }
+        if (window.closeModal) window.closeModal();
+        render();
+        toast_('Entry removed', 'ok');
+      }
+    }
     else if (a === 'movesl') moveSL(id);
     else if (a === 'savereview') saveReview(id);
     else if (a === 'enterplan') { const t = T.find(x => x.id === id); if (t) { ui.draft = Object.assign({}, t, { instrument: t.instrument, why: t.why, entry: t.entry, sl: t.sl0 }); T = T.filter(x => x.id !== id); persist(); window.closeModal && window.closeModal(); ui.tab = 'new'; render(); } }
