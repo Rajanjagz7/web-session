@@ -89,12 +89,6 @@ def _load(cached=False):
         st["trades"] = [t for t in st["trades"] if not any(str(t.get("id", "")).endswith(f"-{k}") or str(t.get("id", "")) == str(k) or str(t.get("id", "")).endswith(f"-{k}-W") for k in removed_ids)]
         if len(st["trades"]) != pre_cnt:
             st["_dirty"] = True
-        # Explicitly remove trade IDs 27, 1004, 1009
-        removed_ids = (27, 1004, 1009)
-        pre_cnt = len(st["trades"])
-        st["trades"] = [t for t in st["trades"] if not any(str(t.get("id", "")).endswith(f"-{k}") or str(t.get("id", "")) == str(k) or str(t.get("id", "")).endswith(f"-{k}-W") for k in removed_ids)]
-        if len(st["trades"]) != pre_cnt:
-            st["_dirty"] = True
         st["fillNext"], st["fillBackoff"] = d.get("fillNext") or 0, d.get("fillBackoff") or 0
         if d.get("resetAt"):
             st["resetAt"] = d["resetAt"]
@@ -863,8 +857,8 @@ LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 2500.0, 3500.0, 0.4
 
 
 def _profit_lock(t, px):
-    """Auto profit lock on the option premium: at Rs 1,500 open profit the premium stop moves to entry + charges
-    (breakeven); from Rs 2,000 it trails, keeping 50% of the best profit seen (60% from Rs 4,000, 70% from Rs 6,000).
+    """Auto profit lock on the option premium: at Rs 2,500 open profit the premium stop moves to entry + charges
+    (breakeven); from Rs 3,500 it trails, keeping 40% of the best profit seen (50% from Rs 6,000, 65% from Rs 10,000).
     Only ever tightens."""
     qty = (t.get("lots") or 0) * (t.get("lot") or 0)
     if not (px and px > 0 and qty > 0):

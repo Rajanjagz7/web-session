@@ -11,8 +11,8 @@ Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
     or when the plan's stop is more than 12% away.
 Exits:
   * stop, or Target 2; when Target 1 is reached the stop moves to the entry (breakeven).
-  * auto profit lock on every trade (same as the option book): at Rs 1,500 open profit the stop moves to entry +
-    charges; from Rs 2,000 it trails, keeping 50% of the best profit seen (60% from Rs 4,000, 70% from Rs 6,000).
+  * auto profit lock on every trade (same as the option book): at Rs 2,500 open profit the stop moves to entry +
+    charges; from Rs 3,500 it trails, keeping 40% of the best profit seen (50% from Rs 6,000, 65% from Rs 10,000).
   * intraday: at 15:15 a BUY still far from its stop (>= 0.5R, no SL/target hit) is carried as swing; the rest square off. swing: after 15 sessions. positional: after 40 sessions.
   * costs 0.1% of the turnover (both legs).
 State is kept in Upstash (same store as the option auto trader). It runs after every option auto-trader cycle and whenever its
@@ -180,9 +180,9 @@ LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 2500.0, 3500.0, 0.4
 
 
 def _profit_lock(st, t, now):
-    """Auto stop lock on stock trades, same rule as the option book: at Rs 1,500 open profit the stop moves to
-    entry + charges (breakeven); from Rs 2,000 it trails, keeping 50% of the best profit seen (60% from Rs 4,000,
-    70% from Rs 6,000). Only ever tightens."""
+    """Auto stop lock on stock trades, same rule as the option book: at Rs 2,500 open profit the stop moves to
+    entry + charges (breakeven); from Rs 3,500 it trails, keeping 40% of the best profit seen (50% from Rs 6,000,
+    65% from Rs 10,000). Only ever tightens."""
     pnl = float(t.get("unrealised") or 0)
     qty = t.get("qty") or 0
     if not (pnl and qty > 0):
