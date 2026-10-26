@@ -25,7 +25,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
     let T = load(KEY, []);
   const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
-  const REMOVED_UNTIL = '2026-10-26';
+  const REMOVED_UNTIL = '2026-10-25';                    // untimed trades dated on/before this day
+  const REMOVED_BEFORE_MS = Date.parse('2026-10-26T13:30:00+05:30');   // removal was requested ~13:26 IST: anything created after is real
   const isRemovedId = t => {
     if (!t) return false;
     const rawId = String(t.id || '');
@@ -33,6 +34,8 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const m = rawId.match(/\d+/g);                 // A-1023-27-W -> 27 (shortId is declared later, so not used here)
     if (!REMOVED_IDS.has(rawId) && !(m && REMOVED_IDS.has(m[m.length - 1]))) return false;
     const e = rawId.match(/(?<!\d)(20\d{2})-?(\d{2})-?(\d{2})(?!\d)/);     // dated: a later trade that reuses the number is real
+    const ts = t.ts || (t.at ? Date.parse(t.at) : NaN);
+    if (isFinite(ts)) return ts < REMOVED_BEFORE_MS;
     const day = String(t.date || t.day || '') || (e ? e[1] + '-' + e[2] + '-' + e[3] : '');
     return !day || day <= REMOVED_UNTIL;
   };
@@ -182,7 +185,7 @@ function paperList() {
       const dirVal = x.side === 'sell' ? 'Long' : 'Short';
       const tAtStr = x.t ? istTime(new Date(x.t)) : '';
       out.push({
-        id: 'PT|' + x.id, paper: true, symbol: x.sym, instrument: x.und || m.und || x.sym, dir: dirVal, entry: entryPx, qty: qtyVal, mult,
+        id: 'PT|' + x.id, ts: x.t, paper: true, symbol: x.sym, instrument: x.und || m.und || x.sym, dir: dirVal, entry: entryPx, qty: qtyVal, mult,
         sl: null, sl0: entryPx, initRisk: 0, status: 'Closed', date: x.day || istDay(x.t || Date.now()), time: tAtStr,
         market: x.kind === 'option' ? 'Options' : paperMarket(x.sym, m),
         sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
@@ -605,7 +608,8 @@ function paperList() {
     return { part, bar };
   }
   /* ---------- trade timestamps: when it was taken, when it exited, how long it was held ---------- */
-  const shortId = t => { const m = String(t.id || '').match(/\d+/g); return m ? m[m.length - 1] : String(t.id || ''); };   // A-1023-43-W -> 43: the number only, the A/T/M tag already says the source
+  /* open paper position ids embed the contract (strike / expiry day), so those show their entry time instead */
+  const shortId = t => { const pid = String(t.id || ''); if (pid.startsWith('P|')) return (t.time || '').replace(':', '') || pid.slice(2, 6); const m = pid.match(/\d+/g); return m ? m[m.length - 1] : String(t.id || ''); };   // A-1023-43-W -> 43: the number only, the A/T/M tag already says the source
   function tStart(t) {
     if (t.openedAt || t.created) { const d = new Date(t.openedAt || t.created); if (isFinite(d)) return d; }
     if (t.date && t.time) { const d = new Date(t.date + 'T' + t.time + ':00+05:30'); if (isFinite(d)) return d; }

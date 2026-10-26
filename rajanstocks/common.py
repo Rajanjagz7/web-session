@@ -39,7 +39,8 @@ def record_key(record):
 
 
 REMOVED_TRADE_NUMBERS = ("27", "1004", "1009")
-REMOVED_TRADES_UNTIL = "2026-10-26"            # the removed trades are from on/before this day; later trades reusing a number are real
+REMOVED_TRADES_UNTIL = "2026-10-25"            # untimed trades dated on/before this day
+REMOVED_TRADES_BEFORE = "2026-10-26T13:30:00+05:30"   # the removal was requested at ~13:26 IST; anything opened after is real
 
 
 def is_removed_trade(t):
@@ -51,5 +52,8 @@ def is_removed_trade(t):
     if tid not in REMOVED_TRADE_NUMBERS and not (nums and nums[-1] in REMOVED_TRADE_NUMBERS):
         return False
     m = re.search(r"(?<!\d)(20\d{2})-?(\d{2})-?(\d{2})(?!\d)", tid)
+    ts = str(t.get("openedAt") or t.get("at") or "")
+    if ts:
+        return ts < REMOVED_TRADES_BEFORE                  # same +05:30 offset, so ISO strings compare chronologically
     day = str(t.get("date") or "") or (f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else "")
     return not day or day <= REMOVED_TRADES_UNTIL

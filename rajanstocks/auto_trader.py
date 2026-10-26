@@ -41,7 +41,7 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True}
+               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
@@ -1014,10 +1014,24 @@ def _run_cycle(now, force, dry):
                 filled = fill_slots(st, today, chosen)
                 if any("rate-limiting" in (l.get("msg") or "") or "budget" in (l.get("msg") or "") for l in st["log"][-2:]):
                     st["fillBackoff"] = time.time() + 600        # Upstox pushed back: leave it alone for 10 minutes
-            for c in chosen + filled:
+            # No limit on the day - only the opening burst is capped: in the first minute of the entry window (09:15) at most
+            # `openBurstCap` (12) entries are taken (paired hedge legs -W belong to their entry and do not count). Best-ranked
+            # first; the rest are picked up by the following cycles as normal.
+            entries = sorted(chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
+            slots = len(entries)
+            if not force and _mins(now) <= _hm(cfg["windowStart"]):
+                burst = int(cfg.get("openBurstCap") or 12)
+                slots = max(0, burst - sum(1 for t in todays if not str(t.get("id", "")).endswith("-W")))
+                if len(entries) > slots:
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"opening-minute cap {burst}: {len(entries) - slots} candidate(s) wait for the next cycle"
+            taken = 0
+            for c in entries:
+                if taken >= slots:
+                    break
                 if dry:
                     rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"],
                                            "rank": round(c.get("rank", c.get("score") or 0), 2), "source": c.get("source") or c.get("label") or ""})   # Z Trend / time-cycle / filled candidates carry a score but no rank
+                    taken += 1
                     continue
                 try:
                     # Enforce timing rule: BUY trades execute starting at 9:15 AM; SELL trades held until 9:20 AM
@@ -1031,6 +1045,7 @@ def _run_cycle(now, force, dry):
                         t = open_trade(st, c, today)
                         _notify(t)
                     rep["entered"].append(t["id"])
+                    taken += 1
                 except Exception as e:
                     st["log"].append({"at": now.isoformat(), "msg": f"skip {c['sym']}: {str(e)[:80]}"})
         if not dry:
