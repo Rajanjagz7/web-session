@@ -26,7 +26,7 @@
     const pts = v.map((x, i) => `${(i / (v.length - 1) * (w - 4) + 2).toFixed(1)},${(h - 3 - (x - lo) / r * (h - 6)).toFixed(1)}`).join(' ');
     return `<svg class="ge-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
   }
-  const colOf = l => l === 'BULLISH' ? 'var(--up,#22ab94)' : l === 'BEARISH' ? 'var(--down,#f7525f)' : 'var(--text-3,#8a93a6)';
+  const colOf = l => l === 'BULLISH' ? 'var(--up,#22ab94)' : l === 'BEARISH' ? 'var(--down,#f7525f)' : 'var(--text-2,#c3cad6)';
   const bar = (pct, cls) => `<i class="ge-bar"><b class="${cls || ''}" style="width:${isN(pct) ? Math.max(0, Math.min(100, pct)) : 0}%"></b></i>`;
 
   /* ---------- data ---------- */
@@ -399,9 +399,7 @@
     else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, stocklist: stocklistTab }[G.tab] || overview)(d);
     if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
-      <div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
-        <div><h1>GOD'S EYE <span>– The Observer</span></h1></div></div>
-        <div class="ge-st">${status()}<span class="ge-upd">${G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : ''}</span><button type="button" class="ge-ref" data-gerefresh="1" aria-label="Refresh" ${G.busy ? 'disabled' : ''}>↻</button></div></div>
+      ${headHTML(G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : '', 'data-gerefresh="1"', G.busy)}
       ${G.err && d ? `<p class="ge-warn">Last refresh failed (${E(G.err)}) - showing data from ${E(IST(d.asOf))}.</p>` : ''}
       <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div>
       ${grp.tabs.length > 1 ? `<div class="ge-sub2" role="tablist">${grp.tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>` : ''}
@@ -423,7 +421,13 @@
   };
   document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') { G.tab = 'overview'; SS('ge-tab', G.tab); go('godseye'); } });
   /* Today's Picks = the Picks screen under the same God's Eye tab bar; the other tabs go back to #v-godseye */
-  window.geTabsHTML = () => `<div class="ge ge-pkbar"><div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g.key === 'picks'}" class="${g.key === 'picks' ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div></div>`;
+  /* one header for every God's Eye screen, Today's Picks included (its ↻ refreshes the picks) */
+  function headHTML(upd, refAttr, busy) {
+    return `<div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
+        <div><h1><b class="ge-gt">GOD'S EYE</b> <span>– The Observer</span></h1></div></div>
+        <div class="ge-st">${status()}<span class="ge-upd">${upd}</span><button type="button" class="ge-ref" ${refAttr} aria-label="Refresh" title="Refresh" ${busy ? 'disabled' : ''}>↻</button></div></div>`;
+  }
+  window.geTabsHTML = (o = {}) => `<div class="ge ge-pkbar">${headHTML(E(o.upd || ''), 'data-act="rpicks"', o.busy)}<div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g.key === 'picks'}" class="${g.key === 'picks' ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div></div>`;
   window.geHome = () => G.tab === 'picks' ? 'picks' : 'godseye';
   document.addEventListener('click', e => {
     const tb = e.target.closest('#v-picks .ge-pkbar [data-gegrp]'); if (!tb || typeof go !== 'function') return;
@@ -603,6 +607,34 @@
     .ge-tst td{padding:0;border:0;text-align:left!important;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;justify-self:stretch!important;font-size:13px}.ge-tst td:first-child{grid-column:1/-1}
     .ge-tst td[data-l]::before{content:attr(data-l);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);font-family:Inter,system-ui,sans-serif}}
   :root[data-theme="light"] .ge{--ge-fii:#2563eb;--ge-dii:#d97706}
+  /* ---- Observer look (UI mockup): gradient title, glass signal cards with corner brackets and a glow by signal ---- */
+  .ge-brand h1{font-size:34px;font-weight:800;letter-spacing:.01em;background:none;color:inherit}
+  .ge-brand h1 .ge-gt{font-weight:800;background:linear-gradient(90deg,#22d3ee 0%,#a78bfa 55%,#4ade80 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .ge-brand h1 span{font-size:22px;font-weight:600;background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .ge-eye{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--ge-cy) 60%,transparent))}
+  .ge-pill{border-radius:999px;padding:6px 14px;font-weight:700}.ge-pill.on{border:1.5px solid #22c55e;color:#4ade80;box-shadow:0 0 14px rgba(34,197,94,.25)}
+  .ge .ge-card{--gc:148,163,184;padding:14px 16px 12px;border:1.5px solid rgba(var(--gc),.38);border-radius:14px;
+    background:linear-gradient(160deg,rgba(var(--gc),.10),rgba(var(--gc),.02) 60%),var(--panel);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 22px rgba(0,0,0,.28);transition:transform .15s,box-shadow .15s,border-color .15s}
+  .ge .ge-card.bear{--gc:239,68,68;border-color:rgba(var(--gc),.75);box-shadow:0 0 18px rgba(var(--gc),.22),inset 0 0 28px rgba(var(--gc),.10)}
+  .ge .ge-card.bull{--gc:34,197,94;border-color:rgba(var(--gc),.7);box-shadow:0 0 18px rgba(var(--gc),.2),inset 0 0 28px rgba(var(--gc),.09)}
+  .ge .ge-card::before,.ge .ge-card::after{content:'';position:absolute;width:13px;height:13px;pointer-events:none;background:none;border-color:rgba(226,232,240,.65);border-style:solid;border-width:0}
+  .ge .ge-card::before,.ge .ge-card.bull::before,.ge .ge-card.bear::before{left:9px;top:9px;bottom:auto;background:none;border-left-width:2px;border-top-width:2px;border-top-left-radius:3px}
+  .ge .ge-card::after{right:9px;bottom:9px;border-right-width:2px;border-bottom-width:2px;border-bottom-right-radius:3px}
+  .ge .ge-card:hover{transform:translateY(-2px);border-color:var(--ge-cy);box-shadow:0 0 22px color-mix(in srgb,var(--ge-cy) 30%,transparent)}
+  .ge .ge-cn{font-size:14px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-top:4px}
+  .ge .ge-cs{font-family:'DM Mono',ui-monospace,Menlo,Consolas,monospace;font-size:32px;font-weight:700;line-height:1.05;letter-spacing:-1px;margin-top:4px;color:var(--text)}
+  .ge .ge-cl{font-size:13.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-2)}
+  .ge .ge-card.bear .ge-cs,.ge .ge-card.bear .ge-cl{color:#f87171}.ge .ge-card.bull .ge-cs,.ge .ge-card.bull .ge-cl{color:#4ade80}
+  .ge .ge-cd.bull{color:#4ade80;font-weight:700}.ge .ge-cd.bear{color:#f87171;font-weight:700}
+  .ge .ge-more{color:#93c5fd;font-size:12.5px;margin-top:2px}
+  @media (max-width:640px){.ge-brand h1{font-size:24px}.ge-brand h1 span{font-size:15px}.ge .ge-cs{font-size:26px}.ge .ge-card{padding:12px 12px 10px}.ge .ge-cn{font-size:12.5px}.ge .ge-cl{font-size:12px}}
+  :root[data-theme="light"] .ge .ge-card{box-shadow:0 4px 14px rgba(15,23,42,.08)}
+  :root[data-theme="light"] .ge .ge-card::before,:root[data-theme="light"] .ge .ge-card::after{border-color:rgba(15,23,42,.35)}
+  :root[data-theme="light"] .ge .ge-card.bear{box-shadow:0 0 14px rgba(239,68,68,.15)}:root[data-theme="light"] .ge .ge-card.bull{box-shadow:0 0 14px rgba(34,197,94,.15)}
+  :root[data-theme="light"] .ge .ge-card.bear .ge-cs,:root[data-theme="light"] .ge .ge-card.bear .ge-cl{color:#dc2626}:root[data-theme="light"] .ge .ge-card.bull .ge-cs,:root[data-theme="light"] .ge .ge-card.bull .ge-cl{color:#16a34a}
+  :root[data-theme="light"] .ge .ge-more{color:#2563eb}:root[data-theme="light"] .ge-brand h1 .ge-gt{background-image:linear-gradient(90deg,#0891b2,#7c3aed 55%,#16a34a)}:root[data-theme="light"] .ge-brand h1 span{background-image:linear-gradient(90deg,#0891b2,#7c3aed)}
+  :root[data-theme="light"] .ge-pill.on{color:#15803d}
   .ge-seg{display:inline-flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}.ge-seg button{padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text-2,inherit);font-size:12.5px;cursor:pointer}
   .ge-seg button.on{background:var(--brand);border-color:var(--brand);color:#fff}.ge-bar2{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .ge-sched,.ge-disc{font-size:11.5px;color:var(--text-3);margin:10px 2px}.ge-warn{font-size:12px;color:var(--warn,#f5b942);margin:0 0 8px}
