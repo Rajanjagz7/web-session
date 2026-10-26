@@ -85,6 +85,25 @@ def fetch_cash():
     return out if out.get("fii") and out.get("dii") and out.get("date") else None
 
 
+MC_URL = "https://www.moneycontrol.com/markets/fii-dii-data/"
+
+
+def fetch_cash_history():
+    """Last ~30 sessions of FII / DII cash-market NET (Rs crore) from moneycontrol's FII/DII page - NSE only publishes the latest day,
+    so this fills the 5 / 20-day history. Net only (no gross buy / sell); NSE's own rows are never overwritten by these."""
+    import re
+    r = requests.get(MC_URL, headers={**UA, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}, timeout=20)
+    r.raise_for_status()
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r.text, re.S)
+    rows = (((json.loads(m.group(1)) if m else {}).get("props") or {}).get("pageProps") or {}).get("FiiDiiData", {}).get("fiiDiiData") or []
+    out = []
+    for x in rows:
+        f, d = _num(x.get("fiiCM")), _num(x.get("diiCM"))
+        if x.get("date") and f is not None and d is not None:
+            out.append({"date": x["date"], "fii": {"buy": None, "sell": None, "net": f}, "dii": {"buy": None, "sell": None, "net": d}, "src": "moneycontrol"})
+    return out
+
+
 PART_COLS = ["futIdxL", "futIdxS", "futStkL", "futStkS", "ceIdxL", "peIdxL", "ceIdxS", "peIdxS",
              "ceStkL", "peStkL", "ceStkS", "peStkS", "totL", "totS"]
 
@@ -147,6 +166,15 @@ def update(write_file=False, budget=None):
             notes.append("cash " + c["date"])
     except Exception as e:
         notes.append(f"cash failed: {str(e)[:80]}")
+    have_cash = {c["date"] for c in cash}
+    if len([d for d in _trading_days_back(20) if d.isoformat() not in have_cash]) > 1 and not (t_end and time.time() > t_end):
+        try:                                     # history gaps (first run, missed days): backfill net flows, keep NSE rows as they are
+            added = [c for c in fetch_cash_history() if c["date"] not in have_cash]
+            cash.extend(added)
+            if added:
+                notes.append(f"cash history +{len(added)}")
+        except Exception as e:
+            notes.append(f"cash history failed: {str(e)[:80]}")
     for d in sorted(_trading_days_back(8 if oi else 25)):
         if d.isoformat() in have_oi:
             continue
@@ -271,6 +299,7 @@ def cash_flows(h):
             "combined": round((last["fii"]["net"] or 0) + (last["dii"]["net"] or 0), 2),
             "fii5": tail(5, "fii"), "dii5": tail(5, "dii"), "fii20": tail(20, "fii"), "dii20": tail(20, "dii"),
             "fiiStreak": {"days": streak, "side": "buying" if sign else "selling"}, "sessions": len(cash),
+            "backfilled": sum(1 for c in cash[-20:] if c.get("src")),
             "days": [{"date": c["date"], "fii": c["fii"]["net"], "dii": c["dii"]["net"]} for c in cash[-20:]]}
 
 

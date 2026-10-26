@@ -220,18 +220,24 @@
     const c = d.cash, p = d.positioning;
     const flows = c ? (() => {
       const days = c.days || [], m = Math.max(1, ...days.map(x => Math.max(Math.abs(x.fii || 0), Math.abs(x.dii || 0))));
+      const tile = (k, name, x, d5, d20) => `<div class="ge-ct ${x.net >= 0 ? 'bull' : 'bear'}">
+          <div class="ge-ct-h"><span class="ge-key ${k}"></span><b>${name}</b><em class="ge-badge ${x.net >= 0 ? 'bull' : 'bear'}">${x.net >= 0 ? 'Net buyer' : 'Net seller'}</em></div>
+          <div class="ge-ct-n num ${cc(x.net)}">${cr(x.net)}</div>
+          ${isN(x.buy) ? `<div class="ge-ct-bs num">Buy ${n0(x.buy)} · Sell ${n0(x.sell)}</div>` : ''}
+          <div class="ge-ct-p"><span>5 days<b class="num ${cc(d5)}">${cr(d5)}</b></span><span>20 days<b class="num ${cc(d20)}">${cr(d20)}</b></span></div></div>`;
+      const bar = (k, v, side) => `<i class="${k}" style="height:${(side > 0 ? v > 0 : v < 0) ? Math.max(2, Math.abs(v) / m * 100).toFixed(1) : 0}%"></i>`;
+      const last = days[days.length - 1];
       return `<section class="ge-p"><h3>FII / DII cash market · ${E(dShort(c.date))}${tip('cash')}</h3>
-        <div class="ge-tw"><table class="ge-t"><thead><tr><th></th><th class="r">Buy</th><th class="r">Sell</th><th class="r">Net</th><th class="r">5 days</th><th class="r">20 days</th></tr></thead><tbody>
-          <tr><td><b>FII / FPI</b></td><td class="r num">${n0(c.fii.buy)}</td><td class="r num">${n0(c.fii.sell)}</td><td class="r num ${cc(c.fii.net)}"><b>${cr(c.fii.net)}</b></td><td class="r num ${cc(c.fii5)}">${cr(c.fii5)}</td><td class="r num ${cc(c.fii20)}">${cr(c.fii20)}</td></tr>
-          <tr><td><b>DII</b></td><td class="r num">${n0(c.dii.buy)}</td><td class="r num">${n0(c.dii.sell)}</td><td class="r num ${cc(c.dii.net)}"><b>${cr(c.dii.net)}</b></td><td class="r num ${cc(c.dii5)}">${cr(c.dii5)}</td><td class="r num ${cc(c.dii20)}">${cr(c.dii20)}</td></tr>
-          <tr><td>Combined</td><td></td><td></td><td class="r num ${cc(c.combined)}"><b>${cr(c.combined)}</b></td><td colspan="2" class="r muted">FII ${E(c.fiiStreak.side)} ${c.fiiStreak.days} day${c.fiiStreak.days > 1 ? 's' : ''} in a row</td></tr>
-        </tbody></table></div>
-        <div class="ge-flows" aria-label="FII and DII net, last ${days.length} sessions">${days.map(x => `<div class="ge-fd" title="${E(x.date)} · FII ${cr(x.fii)} · DII ${cr(x.dii)}"><i class="f ${x.fii >= 0 ? 'up' : 'down'}" style="height:${Math.abs(x.fii || 0) / m * 100}%"></i><i class="d ${x.dii >= 0 ? 'up' : 'down'}" style="height:${Math.abs(x.dii || 0) / m * 100}%"></i><small>${E(dShort(x.date))}</small></div>`).join('')}</div>
-        <p class="ge-sub"><span class="ge-key f"></span>FII <span class="ge-key d"></span>DII · Rs crore, NSE provisional · ${c.sessions} session${c.sessions === 1 ? '' : 's'} stored so far (one is added every trading day; 5 / 20-day totals appear once there are enough)</p></section>`;
+        <div class="ge-cash2">${tile('f', 'FII / FPI', c.fii, c.fii5, c.fii20)}${tile('d', 'DII', c.dii, c.dii5, c.dii20)}</div>
+        <div class="ge-comb"><span>Combined today <b class="num ${cc(c.combined)}">${cr(c.combined)}</b></span><span class="muted">FII ${E(c.fiiStreak.side)} ${c.fiiStreak.days} day${c.fiiStreak.days > 1 ? 's' : ''} in a row</span></div>
+        ${days.length ? `<div class="ge-fl" role="img" aria-label="FII and DII net flows, last ${days.length} sessions">
+          <div class="ge-fl-c">${days.map((x, i) => `<div class="ge-fl-d${i === days.length - 1 ? ' on' : ''}" title="${E(dShort(x.date))} · FII ${cr(x.fii)} · DII ${cr(x.dii)}"><div class="ge-fl-u">${bar('f', x.fii, 1)}${bar('d', x.dii, 1)}</div><div class="ge-fl-l">${bar('f', x.fii, -1)}${bar('d', x.dii, -1)}</div></div>`).join('')}</div>
+          <div class="ge-fl-x"><small>${E(dShort(days[0].date))}</small><small>Buying ↑ · selling ↓ · scale ±${n0(m)} cr</small><small>${E(dShort(last.date))}</small></div></div>` : ''}
+        <p class="ge-sub"><span class="ge-key f"></span>FII <span class="ge-key d"></span>DII · Rs crore · today NSE provisional${c.backfilled ? ', earlier sessions net flows via moneycontrol' : ''} · ${days.length} sessions</p></section>`;
     })() : `<section class="ge-p"><h3>FII / DII cash market</h3><p class="ge-na">N/A - not published yet</p></section>`;
     const parts = p ? `<section class="ge-p"><h3>Participant positioning · index F&O · ${E(dShort(p.date))}${tip('fiiFutures')}</h3>
-      <div class="ge-tw"><table class="ge-t"><thead><tr><th>Who</th><th class="r">Fut long %</th><th class="r">Fut net</th><th class="r">Δ vs ${E(dShort(p.prevDate || ''))}</th><th class="r">Call net</th><th class="r">Put net</th></tr></thead><tbody>
-      ${p.participants.map(x => `<tr><td><b>${E(x.who)}</b></td><td class="r num">${isN(x.futLongPct) ? x.futLongPct + '%' : NA}</td><td class="r num ${cc(x.futNet)}">${sg(x.futNet, 0)}</td><td class="r num ${cc(x.futNetChg)}">${sg(x.futNetChg, 0)}</td><td class="r num ${cc(x.callNet)}">${sg(x.callNet, 0)}</td><td class="r num ${cc(x.putNet)}">${sg(x.putNet, 0)}</td></tr>`).join('')}
+      <div class="ge-tw"><table class="ge-t ge-tst"><thead><tr><th>Who</th><th class="r">Fut long %</th><th class="r">Fut net</th><th class="r">Δ vs ${E(dShort(p.prevDate || ''))}</th><th class="r">Call net</th><th class="r">Put net</th></tr></thead><tbody>
+      ${p.participants.map(x => `<tr><td><b>${E(x.who)}</b></td><td class="r num" data-l="Fut long">${isN(x.futLongPct) ? x.futLongPct + '%' : NA}</td><td class="r num ${cc(x.futNet)}" data-l="Fut net">${sg(x.futNet, 0)}</td><td class="r num ${cc(x.futNetChg)}" data-l="Δ day">${sg(x.futNetChg, 0)}</td><td class="r num ${cc(x.callNet)}" data-l="Call net">${sg(x.callNet, 0)}</td><td class="r num ${cc(x.putNet)}" data-l="Put net">${sg(x.putNet, 0)}</td></tr>`).join('')}
       </tbody></table></div>
       <div class="ge-2"><div><small>FII index-futures long % · 20 sessions</small>${spark((p.series || []).map(x => x.fiiLongPct), 300, 60, 'var(--brand,#2f81f7)')}</div>
         <div><small>Retail index-futures long % · 20 sessions</small>${spark((p.series || []).map(x => x.clientLongPct), 300, 60, 'var(--warn,#f5b942)')}</div></div>
@@ -260,7 +266,7 @@
       <div class="ge-seg">${[['score', 'By score'], ['name', 'By name']].map(([k, l]) => `<button type="button" class="${G.sort === k ? 'on' : ''}" data-gesort="${k}">${l}</button>`).join('')}</div></div>
       <section class="ge-p"><div class="ge-tw"><table class="ge-t ge-sig"><thead><tr><th>Instrument</th><th class="r">Score</th><th>Signal</th><th class="r">Price</th><th class="r">Change</th><th>Action</th></tr></thead><tbody>
       ${list.map(c => `<tr data-gecard="${E(c.key)}" tabindex="0"><td><b>${E(c.name)}</b>${c.divergence ? ' <small class="' + (c.divergence === 'BULLISH' ? 'up' : 'down') + '">⚡ div</small>' : ''}</td><td class="r num ${cc(c.score)}"><b>${sg(c.score)}</b></td>
-        <td><span class="ge-badge ${lab(c.label)}">${E(c.label)}</span></td><td class="r num">${isN(c.price) ? n2(c.price, c.price >= 1000 ? 1 : 2) : NA}</td><td class="r num ${cc(c.chgPct)}">${pc(c.chgPct)}</td><td>${c.action ? E(c.action.label) : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No instruments match.</td></tr>'}
+        <td><span class="ge-badge ${lab(c.label)}">${E(c.label)}</span></td><td class="r num">${isN(c.price) ? n2(c.price, c.price >= 1000 ? 1 : 2) : NA}</td><td class="r num ${cc(c.chgPct)}">${pc(c.chgPct)}</td><td>${c.action ? `<span class="ge-badge ge-act ${c.action.side === 'BUY' ? 'bull' : c.action.side === 'SELL' ? 'bear' : 'neu'}">${c.action.side === 'BUY' ? '▲ ' : c.action.side === 'SELL' ? '▼ ' : ''}${E(c.action.label)}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No instruments match.</td></tr>'}
       </tbody></table></div></section>${stocksBlock()}`;
   }
 
@@ -394,7 +400,7 @@
     if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
       <div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
-        <div><h1>GOD'S EYE <span>– The Observer</span></h1><p>Overview · today's picks · FII / DII · options &amp; expiry · signals &amp; sectors · markets</p></div></div>
+        <div><h1>GOD'S EYE <span>– The Observer</span></h1></div></div>
         <div class="ge-st">${status()}<span class="ge-upd">${G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : ''}</span><button type="button" class="ge-ref" data-gerefresh="1" aria-label="Refresh" ${G.busy ? 'disabled' : ''}>↻</button></div></div>
       ${G.err && d ? `<p class="ge-warn">Last refresh failed (${E(G.err)}) - showing data from ${E(IST(d.asOf))}.</p>` : ''}
       <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div>
@@ -572,11 +578,31 @@
   .ge-lv{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:6px}.ge-lv span{font-size:11px;color:var(--text-3)}.ge-lv b{display:block;font-size:15px;color:var(--text)}.ge-lv b.up{color:var(--up)}.ge-lv b.down{color:var(--down)}
   .ge-tw{overflow-x:auto}.ge-t{width:100%;border-collapse:collapse;font-size:12.5px}.ge-t th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
   .ge-t td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}.ge-t .r{text-align:right}.ge-sig tr[data-gecard]{cursor:pointer}.ge-sig tr[data-gecard]:hover{background:var(--panel-2)}
-  .ge-flows{display:flex;gap:3px;align-items:flex-end;height:110px;margin-top:12px;overflow-x:auto}
-  .ge-fd{flex:1 0 22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr auto;gap:1px;align-items:end;height:100%}
-  .ge-fd i{display:block;border-radius:2px 2px 0 0;min-height:1px}.ge-fd i.f.up{background:var(--brand)}.ge-fd i.f.down{background:color-mix(in srgb,var(--brand) 45%,var(--down))}
-  .ge-fd i.d.up{background:var(--ge-cy)}.ge-fd i.d.down{background:color-mix(in srgb,var(--ge-cy) 40%,var(--down))}.ge-fd small{grid-column:1/-1;font-size:9px;color:var(--text-3);text-align:center;white-space:nowrap}
-  .ge-key{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 8px;vertical-align:-1px}.ge-key.f{background:var(--brand)}.ge-key.d{background:var(--ge-cy)}
+  /* FII / DII cash: two tiles + a buying-up / selling-down bar chart (FII blue, DII amber) */
+  .ge{--ge-fii:#4f8dff;--ge-dii:#f5a524}
+  .ge-cash2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .ge-ct{position:relative;padding:12px 12px 10px 15px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2,var(--panel));overflow:hidden;min-width:0}
+  .ge-ct::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--up)}.ge-ct.bear::before{background:var(--down)}
+  .ge-ct-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ge-ct-h b{font-size:13px}.ge-ct-h .ge-key{margin:0}.ge-ct-h em{margin-left:auto;font-style:normal}
+  .ge-ct-n{font-family:'DM Mono',ui-monospace,Menlo,Consolas,monospace;font-size:24px;font-weight:700;letter-spacing:-.5px;margin:8px 0 2px}
+  .ge-ct-bs{font-size:11.5px;color:var(--text-3)}
+  .ge-ct-p{display:flex;gap:14px;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);font-size:11px;color:var(--text-3)}
+  .ge-ct-p span{display:flex;flex-direction:column;gap:1px}.ge-ct-p b{font-size:13px;font-family:'DM Mono',ui-monospace,Menlo,Consolas,monospace}
+  .ge-comb{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;margin:10px 2px 4px;font-size:12.5px}
+  .ge-fl{margin-top:10px}.ge-fl-c{display:flex;gap:2px;height:150px}
+  .ge-fl-d{flex:1 1 0;min-width:0;display:flex;flex-direction:column;border-radius:4px}.ge-fl-d.on{background:color-mix(in srgb,var(--ge-cy) 9%,transparent)}
+  .ge-fl-u,.ge-fl-l{flex:1;display:flex;justify-content:center;gap:2px}.ge-fl-u{align-items:flex-end;border-bottom:1px solid var(--text-3)}.ge-fl-l{align-items:flex-start}
+  .ge-fl-d i{display:block;width:min(9px,40%)}.ge-fl-u i{border-radius:3px 3px 0 0}.ge-fl-l i{border-radius:0 0 3px 3px}
+  .ge-fl-d i.f{background:var(--ge-fii)}.ge-fl-d i.d{background:var(--ge-dii)}
+  .ge-fl-x{display:flex;justify-content:space-between;gap:8px;margin-top:4px;font-size:10.5px;color:var(--text-3)}
+  .ge-key{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 8px;vertical-align:-1px}.ge-key.f{background:var(--ge-fii)}.ge-key.d{background:var(--ge-dii)}
+  .ge-ct-p b,.ge-ct-n{white-space:nowrap}
+  @media (max-width:640px){.ge-ct{padding:10px 9px 9px 12px}.ge-ct-n{font-size:19px}.ge-ct-h b{flex:1 0 calc(100% - 20px)}.ge-ct-h em{margin-left:0}
+    .ge-ct-bs{font-size:10.5px}.ge-ct-p{gap:10px}.ge-ct-p b{font-size:11.5px;letter-spacing:-.3px}.ge-fl-c{height:120px;gap:1px}.ge-fl-x small:nth-child(2){display:none}
+    .ge-tst thead{display:none}.ge-tst,.ge-tst tbody{display:block}.ge-tst tr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 8px;padding:9px 2px;border-bottom:1px solid var(--line)}
+    .ge-tst td{padding:0;border:0;text-align:left!important;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;justify-self:stretch!important;font-size:13px}.ge-tst td:first-child{grid-column:1/-1}
+    .ge-tst td[data-l]::before{content:attr(data-l);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);font-family:Inter,system-ui,sans-serif}}
+  :root[data-theme="light"] .ge{--ge-fii:#2563eb;--ge-dii:#d97706}
   .ge-seg{display:inline-flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}.ge-seg button{padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text-2,inherit);font-size:12.5px;cursor:pointer}
   .ge-seg button.on{background:var(--brand);border-color:var(--brand);color:#fff}.ge-bar2{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .ge-sched,.ge-disc{font-size:11.5px;color:var(--text-3);margin:10px 2px}.ge-warn{font-size:12px;color:var(--warn,#f5b942);margin:0 0 8px}
@@ -586,7 +612,9 @@
   .ge-x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:20px;cursor:pointer}
   .ge-det .ge-spark{height:120px;margin:10px 0}.ge-kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0}.ge-kv small{display:block;font-size:10.5px;color:var(--text-3)}
   .ge-play{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}.ge-play.bull{border-color:color-mix(in srgb,var(--up) 50%,var(--line))}.ge-play.bear{border-color:color-mix(in srgb,var(--down) 50%,var(--line))}
-  .ge-play b{display:block}.ge-play span{font-size:12px;color:var(--text-2)}.ge-dact{display:flex;gap:8px;margin-top:12px}
+  .ge-play b{display:block}.ge-play span{font-size:12px;color:var(--text-2)}
+  .ge-play.bull{background:color-mix(in srgb,var(--up) 8%,transparent)}.ge-play.bull b{color:var(--up)}.ge-play.bear{background:color-mix(in srgb,var(--down) 8%,transparent)}.ge-play.bear b{color:var(--down)}
+  .ge-p .ge-badge.ge-act,.ge-ct-h .ge-badge{margin-top:0;white-space:nowrap}.ge-badge.ge-act{border:1px solid currentColor;font-size:10.5px}.ge-dact{display:flex;gap:8px;margin-top:12px}
   .ge-outc{padding:10px 14px}.ge-oc{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap}
   .ge-oc-a,.ge-oc-b{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font-size:12.5px}.ge-oc small{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3)}
   .ge-oc-l{font-size:17px}.ge-out.bull .ge-oc-l{color:var(--up)}.ge-out.bear .ge-oc-l{color:var(--down)}.ge-oc-c{font-size:11.5px;color:var(--text-3)}
