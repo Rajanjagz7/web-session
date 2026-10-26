@@ -92,8 +92,21 @@ def index():
     return FileResponse(_get_public_or_static("index.html"))
 
 
-if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+try:
+    if os.path.isdir(STATIC_DIR):
+        app.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="static")
+except Exception:
+    pass
+
+
+@app.get("/static/{file_path:path}")
+def serve_static_fallback(file_path: str):
+    for candidate_dir in [STATIC_DIR, PUBLIC_DIR, os.path.join(PUBLIC_DIR, "static"), os.path.join(BASE_DIR, "static")]:
+        p = os.path.join(candidate_dir, file_path)
+        if os.path.exists(p) and os.path.isfile(p):
+            mt = "application/javascript" if file_path.endswith(".js") else "text/css" if file_path.endswith(".css") else None
+            return FileResponse(p, media_type=mt)
+    raise HTTPException(status_code=404, detail="File not found")
 
 
 @app.get("/sw.js")

@@ -147,13 +147,11 @@ METHOD2_BASE_SLICES = [
     {"from": "10:00", "to": "10:15", "a": 10 * 60 + 0, "b": 10 * 60 + 15, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Ketu in Jyeshtha · sub-transition 2 (continuation)"},
     {"from": "10:15", "to": "10:25", "a": 10 * 60 + 15, "b": 10 * 60 + 25, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Venus in Jyeshtha · sub-transition 3 (morning crest)"},
     {"from": "10:25", "to": "10:52", "a": 10 * 60 + 25, "b": 10 * 60 + 52, "projection": "Sideways/Volatile", "tone": "flat", "why": "KP Sub-Lord: Sun/Moon in Jyeshtha · consolidation before mid-morning"},
-    {"from": "10:52", "to": "11:26", "a": 10 * 60 + 52, "b": 11 * 60 + 26, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Mars/Rahu in Mula · expansion & wide-range oscillation"},
-    {"from": "11:26", "to": "11:55", "a": 11 * 60 + 26, "b": 11 * 60 + 55, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Jupiter/Saturn in Mula · heavy institutional churn"},
+    {"from": "10:52", "to": "11:55", "a": 10 * 60 + 52, "b": 11 * 60 + 55, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Mars/Rahu & Jupiter/Saturn in Mula · wide-range oscillation & institutional churn"},
     {"from": "11:55", "to": "12:08", "a": 11 * 60 + 55, "b": 12 * 60 + 8, "projection": "Sideways to Negative", "tone": "down", "why": "KP Sub-Lord: Mercury/Venus in Purva Ashadha · softening midday drift"},
     {"from": "12:08", "to": "12:43", "a": 12 * 60 + 8, "b": 12 * 60 + 43, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Sun/Moon in Purva Ashadha · European market open cross-waves"},
-    {"from": "12:43", "to": "12:53", "a": 12 * 60 + 43, "b": 12 * 60 + 53, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Mars in Uttara Ashadha · afternoon distribution wave 1"},
-    {"from": "12:53", "to": "13:11", "a": 12 * 60 + 53, "b": 13 * 60 + 11, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Rahu in Uttara Ashadha · afternoon distribution wave 2"},
-    {"from": "13:11", "to": "13:23", "a": 13 * 60 + 11, "b": 13 * 60 + 23, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 3"},
+    {"from": "12:43", "to": "13:11", "a": 12 * 60 + 43, "b": 13 * 60 + 11, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Mars & Rahu in Uttara Ashadha · afternoon distribution wave"},
+    {"from": "13:11", "to": "13:23", "a": 13 * 60 + 11, "b": 13 * 60 + 23, "projection": "Negative", "tone": "down", "why": "KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 2"},
     {"from": "13:23", "to": "13:55", "a": 13 * 60 + 23, "b": 13 * 60 + 55, "projection": "Volatile", "tone": "flat", "why": "KP Sub-Lord: Saturn in Shravana · base building & two-way swings"},
     {"from": "13:55", "to": "14:23", "a": 13 * 60 + 55, "b": 14 * 60 + 23, "projection": "Sideways to Negative", "tone": "down", "why": "KP Sub-Lord: Mercury/Ketu in Shravana · late shakeout before power hour"},
     {"from": "14:23", "to": "14:50", "a": 14 * 60 + 23, "b": 14 * 60 + 50, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Venus in Dhanishta · initial closing rally push"},
@@ -188,8 +186,8 @@ def build_method2(session_date):
         "date": session_date.isoformat(),
         "slices": slices,
         "count": len(slices),
-        "method": "Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 18 unmerged time slices.",
-        "note": "KP Ascendant Sub-Lord timing guide. Keeps every Sub-Lord transition as its own row (unmerged)."
+        "method": "Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 16 time slices.",
+        "note": "KP Ascendant Sub-Lord timing guide. Keeps every Sub-Lord transition as its own row (curated 16 slices)."
     }
 
 if __name__ == "__main__":

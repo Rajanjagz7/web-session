@@ -1596,7 +1596,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
      const sw = `<div class="jv-pos-bar">${sideBar(allOpen.concat(closedAll))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>`;
      const openCard = `<div class="card"><div class="card-h"><h3>Current Positions (${open.length})</h3></div>
        <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(part.map(t => t.id).join(','))}">${open.length ? positionTable(part) : `<div class="empty">No open ${ui.side === 'buy' ? 'buy ' : ui.side === 'sell' ? 'sell ' : ''}positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div>`}</div>${bar}
-       <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹1,500 open profit the stop moves to cost + charges; from ₹2,000 it trails, keeping 50% of the best profit.</p></div>`;
+       <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹2,500 open profit the stop moves to cost + charges; from ₹3,500 it trails with breathing room (keeping 40%–65% of the best profit).</p></div>`;
      const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
      return sw + sigCard + openCard + closedCard;
    }

@@ -2,10 +2,10 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest?v=20261026n">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20261026n">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=20261026n">
+<link rel="apple-touch-icon" href="/icon-192.png?v=20261026n">
 <meta name="theme-color" content="#4f46e5">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0E14">
@@ -655,7 +655,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script src="/static/journal.js?v=20261026c"></script>
+<script id="scrJV" src="/static/journal.js?v=20261026n"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261025d"></script>
 <script src="/static/observer.js?v=20261025d"></script>
@@ -1516,7 +1516,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026c',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026n',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -2907,13 +2907,11 @@ const M2_BASE = [
   {from:'10:00',to:'10:15',a:600,b:615,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Ketu in Jyeshtha · sub-transition 2 (continuation)'},
   {from:'10:15',to:'10:25',a:615,b:625,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Venus in Jyeshtha · sub-transition 3 (morning crest)'},
   {from:'10:25',to:'10:52',a:625,b:652,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Sun/Moon in Jyeshtha · consolidation before mid-morning'},
-  {from:'10:52',to:'11:26',a:652,b:686,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Mars/Rahu in Mula · expansion & wide-range oscillation'},
-  {from:'11:26',to:'11:55',a:686,b:715,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Jupiter/Saturn in Mula · heavy institutional churn'},
+  {from:'10:52',to:'11:55',a:652,b:715,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Mars/Rahu & Jupiter/Saturn in Mula · wide-range oscillation & institutional churn'},
   {from:'11:55',to:'12:08',a:715,b:728,projection:'Sideways to Negative',tone:'down',why:'KP Sub-Lord: Mercury/Venus in Purva Ashadha · softening midday drift'},
   {from:'12:08',to:'12:43',a:728,b:763,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Sun/Moon in Purva Ashadha · European market open cross-waves'},
-  {from:'12:43',to:'12:53',a:763,b:773,projection:'Negative',tone:'down',why:'KP Sub-Lord: Mars in Uttara Ashadha · afternoon distribution wave 1'},
-  {from:'12:53',to:'13:11',a:773,b:791,projection:'Negative',tone:'down',why:'KP Sub-Lord: Rahu in Uttara Ashadha · afternoon distribution wave 2'},
-  {from:'13:11',to:'13:23',a:791,b:803,projection:'Negative',tone:'down',why:'KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 3'},
+  {from:'12:43',to:'13:11',a:763,b:791,projection:'Negative',tone:'down',why:'KP Sub-Lord: Mars & Rahu in Uttara Ashadha · afternoon distribution wave'},
+  {from:'13:11',to:'13:23',a:791,b:803,projection:'Negative',tone:'down',why:'KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 2'},
   {from:'13:23',to:'13:55',a:803,b:835,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Saturn in Shravana · base building & two-way swings'},
   {from:'13:55',to:'14:23',a:835,b:863,projection:'Sideways to Negative',tone:'down',why:'KP Sub-Lord: Mercury/Ketu in Shravana · late shakeout before power hour'},
   {from:'14:23',to:'14:50',a:863,b:890,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Venus in Dhanishta · initial closing rally push'},
@@ -2949,13 +2947,13 @@ function computeAstroMethod2Slices(dateStr){
     date: dateStr || '2026-10-26',
     count: slices.length,
     slices: slices,
-    method: 'Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 18 unmerged time slices.',
+    method: 'Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 16 time slices.',
     note: 'Trading ideas by Darshan Jain (Method 2). Keeps every KP Sub-Lord transition as its own row (unmerged).'
   };
 }
 function vxAstroSlices(reportOrSlices){
   const r = (reportOrSlices && reportOrSlices.header) ? reportOrSlices : null;
-  const mth = (typeof VD !== 'undefined' && VD.asmth) ? VD.asmth : 'm2';
+  const mth = (typeof VD !== 'undefined' && VD.asmth) ? VD.asmth : (localStorage.getItem('vx-asmth') || 'm1');
   let t = null;
   if (r) {
     if (mth === 'm2') {
@@ -2979,7 +2977,7 @@ function vxAstroSlices(reportOrSlices){
      <div>
        <select class="inp" id="vxAsMthSelect" style="width:auto;padding:5px 12px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer" aria-label="Astro Calculation Method">
          <option value="m1" ${mth==='m1'?'selected':''}>Method 1 (12 Slices - Standard)</option>
-         <option value="m2" ${mth==='m2'?'selected':''}>Method 2 (18 Slices - KP Sub-Lord)</option>
+         <option value="m2" ${mth==='m2'?'selected':''}>Method 2 (16 Slices - KP Sub-Lord)</option>
        </select>
      </div>
    </div>
@@ -4476,7 +4474,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},100);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261026n';s.onload=()=>{if(window.JV)JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
@@ -4647,7 +4645,7 @@ function trig(s,pv){
     if(p.tp&&(L?s.last>=p.tp:s.last<=p.tp)){closePos(s.s,'TP')}else if(p.sl&&(L?s.last<=p.sl:s.last>=p.sl)){closePos(s.s,p.tsl||p.lock?'TSL':'SL')}}}
 /* Auto profit lock (buys and sells): once open profit reaches Rs 1,500 the stop moves to cost + charges (breakeven);
    from Rs 2,000 it trails, keeping 50% of the best profit seen. The stop only ever tightens. */
-const LOCK_BE=1500,LOCK_TRAIL=2000,LOCK_KEEP=0.5;
+const LOCK_BE=2500,LOCK_TRAIL=3500,LOCK_KEEP=0.4;
 function profitLock(p,s){if(!p||!(s.last>0)||!p.q)return;{const m=App.meta[p.sym];if(m&&(m.spread||m.hedgeOf))return}const L=p.q>0,qa=Math.abs(p.q),pnl=(s.last-p.avg)*p.q;
   if(!(pnl<=(p.best||0)))p.best=pnl;const best=p.best||0;if(best<LOCK_BE)return;
   let feeU=0;try{const k=kindOf(s);feeU=(calcCharges(k,'buy',qa*p.avg).total+calcCharges(k,'sell',qa*s.last).total)/qa}catch(e){}

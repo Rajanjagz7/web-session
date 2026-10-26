@@ -41,7 +41,7 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 30000.0, "zTrendHedge": True}
+               "maxHoldSessions": 10, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
@@ -156,6 +156,8 @@ def _day_guard(st, today):
     """The ±dayPnlLimit guard: past the limit no new trades at all (profit locks and trailing keep running);
     inside the 75% soft zone only high-conviction entries (3+ indicators agreeing, or a Z Trend flip) are taken.
     Returns (mode, note): mode is 'off' | 'soft' | 'blocked'."""
+    if st.get("cfg", {}).get("limitRemoved") or st.get("cfg", {}).get("researchMode"):
+        return "off", None
     limit = float(st["cfg"].get("dayPnlLimit") or 0)
     if limit <= 0:
         return "off", None
@@ -845,7 +847,7 @@ def manage(st, now):
             _close(st, main, s1, "SPREAD-T1"); _close(st, hedge, s2, "SPREAD-T1")
 
 
-LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 1500.0, 2000.0, 0.5
+LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 2500.0, 3500.0, 0.4
 
 
 def _profit_lock(t, px):
@@ -862,7 +864,7 @@ def _profit_lock(t, px):
     if best < LOCK_BE:
         return
     fee_u = 80.0 / qty                                  # ~ two option legs of brokerage + taxes per lot set
-    keep = (0.7 if best >= 6000 else 0.6 if best >= 4000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0   # keep 50% from 2k, 60% from 4k, 70% from 6k
+    keep = (0.65 if best >= 10000 else 0.5 if best >= 6000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0   # keep 40% from 3.5k, 50% from 6k, 65% from 10k
     stop = round(t["entry"] + sgn * (fee_u + keep / qty), 2)
     cur = float(t.get("premSL") or 0)
     if (stop > cur) if sgn > 0 else (cur <= 0 or stop < cur):     # only ever tightens (down for a sold option)

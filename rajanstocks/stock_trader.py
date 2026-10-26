@@ -174,7 +174,7 @@ def _close(st, t, px, why, now):
             print(f"[stockbot] notify failed: {e}")
 
 
-LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 1500.0, 2000.0, 0.5
+LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 2500.0, 3500.0, 0.4
 
 
 def _profit_lock(st, t, now):
@@ -191,7 +191,7 @@ def _profit_lock(st, t, now):
     if best < LOCK_BE:
         return
     fee_u = CFG["costPct"] / 100 * 2 * t["entry"]           # round-trip charges per share
-    keep = (0.7 if best >= 6000 else 0.6 if best >= 4000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0
+    keep = (0.65 if best >= 10000 else 0.5 if best >= 6000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0
     stop = round(t["entry"] + d * (fee_u + keep / qty), 2)
     if d * (stop - t["stop"]) > 0:                          # only ever tightens
         t["stop"] = stop
