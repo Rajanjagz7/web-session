@@ -29,6 +29,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const isRemovedId = t => {
     if (!t) return false;
     const rawId = String(t.id || '');
+    if (rawId.startsWith('P|')) return REMOVED_IDS.has(rawId);   // open paper position ids embed the contract name (NIFTY 22900 PE 27 Oct): the digits are strike/expiry, not a trade number
     const m = rawId.match(/\d+/g);                 // A-1023-27-W -> 27 (shortId is declared later, so not used here)
     if (!REMOVED_IDS.has(rawId) && !(m && REMOVED_IDS.has(m[m.length - 1]))) return false;
     const e = rawId.match(/(?<!\d)(20\d{2})-?(\d{2})-?(\d{2})(?!\d)/);     // dated: a later trade that reuses the number is real
@@ -142,7 +143,17 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   }
   const EXIT_SRC = { TP: 'T2', SL: 'SL', TSL: 'TSL', manual: 'Manual Exit' };
   function lockTxt(p) { return p && p.lock ? (p.lock.mode === 'trail' ? `Auto trail · locks ₹${Math.round(p.lock.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : ''; }
-  function paperList() {
+    /* Market of a manual paper trade, from what was actually traded: an option (CE/PE contract) -> Options,
+     an index spot/futures symbol -> Index, anything else -> a stock (Equity Intraday). */
+  const paperMarket = (sym, m) => {
+    m = m || {};
+    if (/\b(CE|PE)\b/.test(sym || '') || m.cls === 'Options' || m.ikey) return 'Options';
+    let e = null;
+    try { e = (typeof SYM === 'function' && SYM(sym)) || (typeof SYMS !== 'undefined' && SYMS.find(x => x.s === sym)) || null; } catch (x) { }
+    if (m.sec === 'Index' || (e && (e.sec === 'Index' || e.cls === 'Indices' || e.cls === 'Index'))) return 'Index';
+    return 'Equity Intraday';
+  };
+function paperList() {
     if (typeof App === 'undefined') return [];
     const out = [];
     const sigOf = m => (m && m.sig) ? m.sig : null;
@@ -155,7 +166,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       out.push({
         id: 'P|' + p.sym, paper: true, symbol: p.sym, instrument: m.und || p.sym, dir: L ? 'Long' : 'Short', entry: p.avg, qty: Math.abs(p.q), mult,
         sl: p.sl || null, sl0: p.sl || p.avg, t2: p.tp || null, initRisk: p.sl ? Math.abs(p.avg - p.sl) * Math.abs(p.q) * mult : 0, status: 'Open', exits: [],
-        date: p.day || today(), time: tAtStr, market: isOpt ? 'Options' : (m.sec === 'Index' ? 'Index' : 'Equity Intraday'), sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
+        date: p.day || today(), time: tAtStr, market: paperMarket(p.sym, m), sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
         setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : L ? 'Trade screen · buy' : 'Trade screen · sell (write)',
         tsl: lockTxt(p) || (p.tsl ? `${p.tsl.v}${p.tsl.u === 'abs' ? ' ₹' : '%'} trail` : 'Off / Fixed SL'), pos: p
       });
@@ -173,7 +184,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       out.push({
         id: 'PT|' + x.id, paper: true, symbol: x.sym, instrument: x.und || m.und || x.sym, dir: dirVal, entry: entryPx, qty: qtyVal, mult,
         sl: null, sl0: entryPx, initRisk: 0, status: 'Closed', date: x.day || istDay(x.t || Date.now()), time: tAtStr,
-        market: isOpt ? 'Options' : (m.sec === 'Index' ? 'Index' : 'Equity Intraday'),
+        market: x.kind === 'option' ? 'Options' : paperMarket(x.sym, m),
         sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
         setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : dirVal === 'Long' ? 'Trade screen · buy' : 'Trade screen · sell (write)',
         exits: [{ qty: qtyVal, price: x.price, type: ty, date: x.day || today(), time: tAtStr }],
