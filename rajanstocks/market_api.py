@@ -1470,6 +1470,10 @@ def _extra_equity_syms():
         return []
 
 
+class _BuildBudget(RuntimeError):
+    """This build's cap on fresh Upstox candle calls is used up (not a real failure: retry in the next build)."""
+
+
 def _picks_compute(deadline_s, progress=None):
     """Screen indices first, then the curated liquid stocks, then the rest. Rate-limited requests are
     retried and swept again in a gentle second pass, so a symbol is never silently dropped.
@@ -1477,6 +1481,7 @@ def _picks_compute(deadline_s, progress=None):
     per-day cursor in shared cache: every build advances the frontier, the daily candle cache makes
     already-scanned symbols free, and rows are tagged universe=fno/cash so the Stock Trader can
     act on strong non-F&O stocks."""
+    t_start = time.time()                            # deadline_s counts from here, NOT after the slow setup below
     up = nse_service.upstox
     import equity_bhav
     keymap = {}
@@ -1497,7 +1502,15 @@ def _picks_compute(deadline_s, progress=None):
     if extra:
         import equity_bhav
         try:
-            bhav_diag = equity_bhav.warm(max_downloads=8 if os.environ.get("VERCEL") else 10, target_sessions=60)
+            on_vercel = bool(os.environ.get("VERCEL"))
+            if on_vercel and shared_cache.get("bhav:cooldown"):
+                bhav_diag = {"have": len(shared_cache.get("bhav:sessions") or []), "skipped": "cooldown"}
+            else:
+                # on serverless the whole build must fit the 30 s cap: give the downloads at most ~1/3 of the budget
+                bhav_diag = equity_bhav.warm(max_downloads=8 if on_vercel else 10, target_sessions=60,
+                                             budget_s=max(4, deadline_s / 3) if on_vercel else None)
+                if on_vercel and not bhav_diag.get("downloaded") and bhav_diag.get("have", 0) < 25:
+                    shared_cache.set("bhav:cooldown", 1, 300)      # archive blocked/slow: do not burn every request on it
         except Exception as e:
             bhav_diag = {"error": str(e)[:140]}
         bhav = bhav_diag if (isinstance(bhav_diag, dict) and bhav_diag.get("have", 0) >= 25) else None
@@ -1516,7 +1529,7 @@ def _picks_compute(deadline_s, progress=None):
         qs_vol[k] = v
         if k in keymap:
             qs_vol[keymap[k]] = v
-    deadline = time.time() + deadline_s
+    deadline = t_start + deadline_s
     _PK["total"] = len(keymap)
     _PK["coverage"] = {"fno": fno_n, "extra_total": len(extra), "extra_from": cursor, "extra_to": cursor + take}
 
@@ -1524,10 +1537,19 @@ def _picks_compute(deadline_s, progress=None):
     today_iso = today_s
     pre = shared_cache.get_many([f"dc|{k}|{today_s}" for k in keymap])       # ONE Redis command for every symbol
 
+    _fresh_calls = [0]
+    FRESH_CAP = 40 if os.environ.get("VERCEL") else 400
+
     def daily(k):
         key = f"dc|{k}|{today_s}"
         if key in pre:
             return pre[key]
+        if _fresh_calls[0] >= FRESH_CAP:
+            # the Upstox budget (~66 calls/min) is shared with every user-facing candle/strategy call: a cold
+            # build must not burn it all (that made RELIANCE & co. fail with "no candles"). The rest is
+            # fetched by the next builds; the daily cache (dc|...) makes already-fetched symbols free.
+            raise _BuildBudget("fresh-candle budget for this build used")
+        _fresh_calls[0] += 1
         rows = _cached(key, 6 * 3600, lambda: up.get_candles(k, "day"))
         if rows:
             shared_cache.set(key, rows, 20 * 3600)
@@ -1580,6 +1602,8 @@ def _picks_compute(deadline_s, progress=None):
                 try:
                     rows = daily(k)
                     break
+                except _BuildBudget:
+                    break                            # no point retrying (or sleeping): the next build continues
                 except Exception:
                     time.sleep(0.4 * (attempt + 1))
             if rows is None:
@@ -1767,7 +1791,7 @@ def picks(refresh: bool = False, response: Response = None):
                 if got:
                     _inject_cash_seed_if_needed(got)
                     return _public(got), True
-            v = _picks_compute(22)
+            v = _picks_compute(18)                                      # + response/serialisation must stay well under the 30 s cap
             _inject_cash_seed_if_needed(v)
             if v.get("count", 0) >= 20:
                 v["_t"] = time.time()

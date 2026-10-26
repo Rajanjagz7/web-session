@@ -24,7 +24,7 @@ _target = {"sessions": 0}
 _lock = threading.Lock()
 
 
-def _fetch_day(d: date):
+def _fetch_day(d: date, timeout=20, retries=2):
     """Parse one session's bhavcopy: {SYMBOL: {"date","open","high","low","close","prev","volume"}} (EQ series only)."""
     key = f"bhav:day2|{d.isoformat()}"
     hit = shared_cache.get(key)
@@ -32,9 +32,9 @@ def _fetch_day(d: date):
         return hit, True
     if d.weekday() >= 5:
         return None, True                                  # weekend: no file, no retry today
-    for attempt in range(2):                               # one transient retry: archives flake occasionally
+    for attempt in range(retries):                         # one transient retry: archives flake occasionally
         try:
-            r = requests.get(URL.format(d=d.strftime("%d%m%Y")), timeout=20, headers=UA)
+            r = requests.get(URL.format(d=d.strftime("%d%m%Y")), timeout=timeout, headers=UA)
             if r.status_code == 200 and len(r.content) > 5000:
                 break
             if r.status_code == 404:
@@ -42,7 +42,7 @@ def _fetch_day(d: date):
             print(f"[bhav] {d} -> HTTP {r.status_code} ({len(r.content)}b)")
         except Exception as ex:
             print(f"[bhav] {d} -> {type(ex).__name__}: {str(ex)[:100]}")
-        if attempt == 0:
+        if attempt + 1 < retries:
             time.sleep(1.0)
     else:
         return None, False                                 # still failing: transient, retry in the next warm()
@@ -81,9 +81,12 @@ def _dates_back(target_sessions, already):
     return out
 
 
-def warm(max_downloads=6, target_sessions=60):
+def warm(max_downloads=6, target_sessions=60, budget_s=None):
     """Fetch a few missing bhavcopy sessions (call repeatedly - it advances). Returns
-    {"have": n_REAL_sessions_cached (holidays don't count), "target", "downloaded"}."""
+    {"have": n_REAL_sessions_cached (holidays don't count), "target", "downloaded"}.
+    budget_s caps the wall time: a serverless request has a hard 30 s limit, and a blocked/slow archive
+    (20 s timeouts) used to eat all of it before the index was saved, so the warm never advanced."""
+    t_end = time.time() + budget_s if budget_s else None
     with _lock:
         idx = shared_cache.get("bhav:index") or {}
         stored = shared_cache.get("bhav:sessions") or []   # re-read at SET time: another instance may have
@@ -91,7 +94,13 @@ def warm(max_downloads=6, target_sessions=60):
         wanted = _dates_back(max(0, target_sessions - len(sessions)), idx)
         got = misses = 0
         for d in wanted[:max(0, max_downloads)]:
-            rows, permanent = _fetch_day(d)
+            if t_end is not None:
+                left = t_end - time.time()
+                if left < 3:
+                    break                                  # out of budget: save what we have and stop
+                rows, permanent = _fetch_day(d, timeout=min(20, max(3, left - 1)), retries=1)
+            else:
+                rows, permanent = _fetch_day(d)
             if rows:
                 idx[d.isoformat()] = True
                 sessions.add(d.isoformat())
