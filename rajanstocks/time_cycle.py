@@ -71,15 +71,18 @@ def build(symbol, mode="underlying", strike=None):
     if mode in ("ce", "pe"):
         if not ch or not ch.get("rows"):
             raise ValueError(f"{sym} has no option chain")
+        strikes = sorted(r["strike"] for r in ch["rows"])
         k = float(strike) if strike else ch.get("atm")
+        if strike and not (strikes[0] <= k <= strikes[-1]):    # do not silently snap to a far-away strike
+            raise ValueError(f"{sym} has no {mode.upper()} strike near {k:.0f} (available {strikes[0]:.0f} to {strikes[-1]:.0f})")
         row = min(ch["rows"], key=lambda r: abs(r["strike"] - k))
         leg = row.get(mode) or {}
         if not leg.get("key"):
-            raise ValueError("no such contract")
+            raise ValueError(f"{sym} {row['strike']:.0f} {mode.upper()} is not a listed contract")
         ikey, label = leg["key"], f"{sym} {row['strike']:.0f} {mode.upper()} ({ch.get('expiry')})"
     days = _bars(symbol="" if ikey else sym, ikey=ikey)
     if not days:
-        raise ValueError("no intraday candles")
+        raise ValueError(f"no intraday candles for {label} (illiquid or not traded yet) - try a strike closer to the money")
     dates = sorted(days)
     now = datetime.now(IST)
     today = now.date().isoformat()

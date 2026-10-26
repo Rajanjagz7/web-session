@@ -2,6 +2,7 @@
   "name": "Rajan Algo",
   "short_name": "Rajan Algo",
   "description": "NSE live scanner, paper trading and alerts",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -43,10 +43,14 @@ _tc: dict = {}
 
 
 @router.get("/timecycle")
-def timecycle(symbol: str = "NIFTY", mode: str = "underlying", strike: float = 0):
+def timecycle(symbol: str = "NIFTY", mode: str = "underlying", strike: str = ""):
     """Gann intraday time cycles + vibration zones for an index / F&O stock or its ATM option premium."""
     import time_cycle
     mode = mode.lower() if mode.lower() in ("underlying", "ce", "pe") else "underlying"
+    try:                                              # accept "22,700", " 22700 " etc. instead of a raw 422
+        strike = float(str(strike or "0").replace(",", "").strip() or 0)
+    except ValueError:
+        raise HTTPException(400, "Strike must be a number, e.g. 22700")
     k = (symbol.upper(), mode, strike)
     hit = _tc.get(k)
     if hit and time.time() - hit[0] < 120:

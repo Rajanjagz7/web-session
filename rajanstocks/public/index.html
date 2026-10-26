@@ -1530,15 +1530,16 @@ function pwaHidden(){
   return false}
 function pwaRefresh(){const b=document.getElementById('pwaBtn');if(!b)return;
   try{if(typeof I!=='undefined')b.innerHTML=I('download',17)}catch(e){}   // I lives in the main script block; skip the icon until it exists
-  const touch=/android|iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  const hidden=pwaHidden()||!(PWA.evt||touch);
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  // Android/desktop Chrome only fire beforeinstallprompt while the app is NOT installed, so no event = already installed
+  // (or not installable): hide. Only iOS Safari has no event, so it keeps the Add-to-Home-Screen guide button.
+  const hidden=pwaHidden()||!(PWA.evt||ios);
   b.hidden=hidden;
   b.style.display=hidden?'none':'';}
 function checkPwaInstallState(){
   if(navigator.getInstalledRelatedApps){
     navigator.getInstalledRelatedApps().then(a=>{
-      if(a&&a.length){try{localStorage.setItem('pwa-installed','1')}catch(e){}}
-      else{try{localStorage.removeItem('pwa-installed');localStorage.removeItem('pwa-downloaded');localStorage.removeItem('pwa-hide')}catch(e){}}
+      if(a&&a.length){try{localStorage.setItem('pwa-installed','1')}catch(e){}}   // an empty list is not proof of "not installed" (needs related_applications), so never clear the flag here
       pwaRefresh();
     }).catch(()=>{});
   }
