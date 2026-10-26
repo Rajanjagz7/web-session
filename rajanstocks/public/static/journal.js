@@ -14,9 +14,9 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader'], ['new', '+ Log trade']];
    const GROUPS = {};
-   const TAB_TIPS = { new: 'Log a trade: buy price, SL, target, quantity - R:R is worked out for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
+   const TAB_TIPS = { new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -118,21 +118,37 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const sigOf = m => (m && m.sig) ? m.sig : null;
     (App.positions || []).forEach(p => {
       if (!p || !p.q) return;
-      const L = p.q > 0, sg = sigOf((App.meta || {})[p.sym]);
-      out.push({ id: 'P|' + p.sym, paper: true, symbol: p.sym, instrument: p.sym, dir: L ? 'Long' : 'Short', entry: p.avg, qty: Math.abs(p.q), mult: 1,
-        sl: p.sl || null, sl0: p.sl || p.avg, t2: p.tp || null, initRisk: p.sl ? Math.abs(p.avg - p.sl) * Math.abs(p.q) : 0, status: 'Open', exits: [],
-        date: p.day || today(), market: /\b(CE|PE)\b/.test(p.sym) ? 'Options' : 'Equity', sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
+      const L = p.q > 0, m = (App.meta || {})[p.sym] || {}, sg = sigOf(m);
+      const isOpt = /\b(CE|PE)\b/.test(p.sym) || (m && m.cls === 'Options');
+      const mult = (m && m.lot) || 1;
+      const tAtStr = p.t ? istTime(new Date(p.t)) : istTime(new Date());
+      out.push({
+        id: 'P|' + p.sym, paper: true, symbol: p.sym, instrument: m.und || p.sym, dir: L ? 'Long' : 'Short', entry: p.avg, qty: Math.abs(p.q), mult,
+        sl: p.sl || null, sl0: p.sl || p.avg, t2: p.tp || null, initRisk: p.sl ? Math.abs(p.avg - p.sl) * Math.abs(p.q) * mult : 0, status: 'Open', exits: [],
+        date: p.day || today(), time: tAtStr, market: isOpt ? 'Options' : (m.sec === 'Index' ? 'Index' : 'Equity Intraday'), sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
         setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : L ? 'Trade screen · buy' : 'Trade screen · sell (write)',
-        tsl: lockTxt(p) || (p.tsl ? `${p.tsl.v}${p.tsl.u === 'abs' ? ' ₹' : '%'} trail` : 'Off / Fixed SL'), pos: p });
+        tsl: lockTxt(p) || (p.tsl ? `${p.tsl.v}${p.tsl.u === 'abs' ? ' ₹' : '%'} trail` : 'Off / Fixed SL'), pos: p
+      });
     });
     (App.trades || []).forEach(x => {
-      if (!(x.closeQty > 0) || !(x.avgBefore > 0)) return;
-      const ty = EXIT_SRC[x.src] || 'Manual Exit', sg = sigOf(x.meta);
-      out.push({ id: 'PT|' + x.id, paper: true, symbol: x.sym, instrument: x.sym, dir: x.side === 'sell' ? 'Long' : 'Short', entry: x.avgBefore, qty: x.closeQty, mult: 1,
-        sl: null, sl0: x.avgBefore, initRisk: 0, status: 'Closed', date: x.day, market: /\b(CE|PE)\b/.test(x.sym) ? 'Options' : 'Equity',
+      if (!(x.closeQty > 0) && !x.realized && x.posAfter !== 0) return;
+      const m = x.meta || (App.meta || {})[x.sym] || {};
+      const ty = EXIT_SRC[x.src] || (x.src === 'manual' ? 'Manual Exit' : x.src) || 'Manual Exit', sg = sigOf(m);
+      const isOpt = x.kind === 'option' || /\b(CE|PE)\b/.test(x.sym) || (m && m.cls === 'Options');
+      const mult = (m && m.lot) || (App.meta && App.meta[x.sym] && App.meta[x.sym].lot) || 1;
+      const entryPx = x.avgBefore > 0 ? x.avgBefore : (x.price || 0);
+      const qtyVal = x.closeQty > 0 ? x.closeQty : (x.qty || 1);
+      const dirVal = x.side === 'sell' ? 'Long' : 'Short';
+      const tAtStr = x.t ? istTime(new Date(x.t)) : '';
+      out.push({
+        id: 'PT|' + x.id, paper: true, symbol: x.sym, instrument: x.und || m.und || x.sym, dir: dirVal, entry: entryPx, qty: qtyVal, mult,
+        sl: null, sl0: entryPx, initRisk: 0, status: 'Closed', date: x.day || istDay(x.t || Date.now()), time: tAtStr,
+        market: isOpt ? 'Options' : (m.sec === 'Index' ? 'Index' : 'Equity Intraday'),
         sig: sg ? sg.name + ' · ' + sg.dir.toUpperCase() : null,
-        setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : x.side === 'sell' ? 'Trade screen · buy' : 'Trade screen · sell (write)', exits: [{ qty: x.closeQty, price: x.price, type: ty, date: x.day, time: '' }],
-        exitType: ty, costOverride: x.charges || 0, slipOverride: 0, reviewed: true, tsl: '' });
+        setup: sg ? `Signal ${sg.name} · test ${sg.dir.toUpperCase()}` : dirVal === 'Long' ? 'Trade screen · buy' : 'Trade screen · sell (write)',
+        exits: [{ qty: qtyVal, price: x.price, type: ty, date: x.day || today(), time: tAtStr }],
+        exitType: ty, costOverride: x.charges || 0, slipOverride: 0, reviewed: true, tsl: ''
+      });
     });
     return out;
   }
@@ -219,12 +235,12 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const budget = () => equity() * S.riskPct / 100;
   function dayStats(day) {
     let entries = 0, pnl = 0, unr = 0, open = 0;
-    T.forEach(t => {
+    allTrades().filter(t => !t.auto).forEach(t => {
       if (!entered(t)) return;
       if (t.date === day) entries++;
       const u = unrealised(t); if (u != null) { unr += u; }
       if (statusOf(t) !== 'Closed') open++;
-      (t.exits || []).forEach(l => { if (l.date === day) pnl += dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (t.costOverride != null ? 0 : (S.cost + S.slip) * units(t) * l.qty); });
+      (t.exits || []).forEach(l => { if (l.date === day) pnl += dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (t.costOverride != null ? t.costOverride : (S.cost + S.slip) * units(t) * l.qty); });
     });
     return { entries, pnl, unr, open };
   }
@@ -293,9 +309,26 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   /* ---------- filters ---------- */
   function filtered() {
     const f = ui.f;
-    return allTrades().filter(t => (!f.src || (f.src === 'auto' ? t.auto : !t.auto)) && (!f.from || t.date >= f.from) && (!f.to || t.date <= f.to) && (!f.market || t.market === f.market) &&
-      (!f.inst || (t.instrument || '').toUpperCase().includes(f.inst.toUpperCase())) && (!f.setup || t.setup === f.setup) &&
-      (!f.dir || t.dir === f.dir) && (!f.exit || t.exitType === f.exit) && (!f.rule || t.rule === f.rule));
+    return allTrades().filter(t => {
+      if (f.src === 'auto' && !t.auto) return false;
+      if (f.src === 'manual' && t.auto) return false;
+      if (f.from && t.date < f.from) return false;
+      if (f.to && t.date > f.to) return false;
+      if (f.market) {
+        const m = t.market || '';
+        if (f.market === 'Equity Intraday') {
+          if (m !== 'Equity' && m !== 'Equity Intraday') return false;
+        } else if (m !== f.market) {
+          return false;
+        }
+      }
+      if (f.inst && !(t.instrument || t.symbol || '').toUpperCase().includes(f.inst.toUpperCase())) return false;
+      if (f.setup && t.setup !== f.setup) return false;
+      if (f.dir && t.dir !== f.dir) return false;
+      if (f.exit && t.exitType !== f.exit) return false;
+      if (f.rule && t.rule !== f.rule) return false;
+      return true;
+    });
   }
 
   /* ---------- tiny canvas charts ---------- */
@@ -762,7 +795,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
 
   /* ---------- trade detail ---------- */
   function openDetail(id) {
-    const t = T.find(x => x.id === id) || AUTO.list.find(x => x.id === id); if (!t) return; ui.sel = id;
+    const t = allTrades().find(x => x.id === id); if (!t) return; ui.sel = id;
     const c = calc(t), st = statusOf(t), u = unrealised(t), rem = t.qty - c.qx;
     const legs = (t.exits || []).map((l, i) => `<tr><td>${i + 1}</td><td>${l.date} ${l.time || ''}</td><td>${E(l.type)}</td><td>${l.qty}</td><td>${px(l.price)}</td><td class="num ${cc(dirOf(t) * (l.price - t.entry))}">${sinr(dirOf(t) * (l.price - t.entry) * l.qty * units(t))}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No exits yet</td></tr>';
     const stops = (t.stops || []).map(s => `<li>${new Date(s.at).toLocaleString('en-IN')} — ${s.from == null ? 'set' : px(s.from) + ' → '}${px(s.to)} <small>${E(s.note || '')}</small></li>`).join('');
@@ -919,7 +952,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       });
   }
   function marketExit(id) {
-    const t = T.find(x => x.id === id); if (!t) return;
+    const t = allTrades().find(x => x.id === id); if (!t) return;
+    if (t.paper) {
+      const sym = String(id).replace(/^P\|/, '');
+      if (typeof closePos === 'function') { closePos(sym, 'manual'); setTimeout(render, 120); return; }
+    }
     const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);
     if (l == null) { addExit(id); return; }                           // no live quote here: ask for the exit price instead
     smallForm('Exit at market · ' + t.id, `<p>Exit the remaining <b>${rem}</b> of <b>${E(t.symbol || t.instrument)}</b> at the live price <b>${px(l)}</b>?</p>`, 'Exit now', () => {
@@ -1232,10 +1269,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const el = document.getElementById('v-journal'); if (!el) return;
     syncAuto(false);
     applyManualTsl();
-    const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
+    const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}<div class="jv-head-actions"><button class="btn btn-sm pri" data-jv="tab" data-k="new" style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>+ Log Manual Trade</button></div></div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, stocks: () => sbCard() };
+    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, stocks: () => sbCard(), new: viewNew };
     if (!bodies[ui.tab]) ui.tab = 'portfolio';
     el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' || ui.tab === 'stocks' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
     if (ui.tab === 'portfolio') {
@@ -1265,7 +1302,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     else if (a === 'open') openDetail(id);
     else if (a === 'clearf') { ui.f = { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }; render(); }
     else if (a === 'plan') savePlan();
-    else if (a === 'enter') { if (typeof go === 'function') go('options'); }      // trades are placed from the Trade screen
+    else if (a === 'enter') recordEntry();
     else if (a === 'resetform') { ui.draft = null; render(); }
     else if (a === 'cancelmodal') window.closeModal && window.closeModal();
     else if (a === 'addexit') addExit(id);
@@ -2075,5 +2112,5 @@ function lastDayStats(currentDay) {
     /* live portfolio for the header: capital + booked + open (marked to market) */
           totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday, last = lastDayStats(d);
       return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayBooked + L.unr, todayBooked, lastDay: last.day, lastDayPnl: last.pnl, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
-  setTimeout(() => { syncAuto(false).then(() => { if (typeof renderPfChip === 'function') renderPfChip(); }); }, 80);
+  setTimeout(() => { syncAuto(false).then(() => { if (typeof renderPfChip === 'function') renderPfChip(); if (typeof App !== 'undefined' && App.view === 'journal') render(); }); }, 80);
 })();
