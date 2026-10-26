@@ -1,0 +1,37 @@
+name: Auto-trader heartbeat
+# Vercel's plan only allows daily crons, so without an open browser tab (with notifications on) the auto-trader
+# never ran its cycle: no new entries (Eagle Trades 09:20-10:30 included), no stop / target checks.
+# This job calls the same endpoint the app tab calls, every 2 minutes through the session. The server takes a lock
+# (no overlapping cycles) and returns at once when the market is closed (holidays cost nothing).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "35 3 * * 1-5"       # 09:05 IST - main run (a job lasts at most ~5h50m)
+    - cron: "0 5 * * 1-5"        # 10:30 IST - backup if the 09:05 run was dropped / delayed
+    - cron: "0 7 * * 1-5"        # 12:30 IST - picks up after the main run until the close
+concurrency: { group: auto-trader, cancel-in-progress: false }
+jobs:
+  beat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Run a cycle every 2 minutes until 15:35 IST
+        run: |
+          URL="https://rajanstocks.vercel.app/api/cron/signal-push"
+          start=$(date +%s); closed=0
+          while :; do
+            now=$(TZ=Asia/Kolkata date +%H%M)
+            [ "$now" -ge 1535 ] && { echo "session over ($now IST)"; break; }
+            [ $(( $(date +%s) - start )) -ge 20700 ] && { echo "time budget used - the next scheduled run takes over"; break; }
+            if [ "$now" -ge 910 ]; then
+              out=$(curl -s -m 60 -X POST "$URL" -w ' [HTTP %{http_code}]' || echo 'request failed')
+              echo "$(TZ=Asia/Kolkata date +%T) IST ${out:0:300}"
+              # a holiday: the server still says the market is closed well after the open - stop early (status runs no cycle)
+              if [ "$now" -ge 925 ] && [ "$now" -lt 935 ]; then
+                if curl -s -m 30 https://rajanstocks.vercel.app/api/auto/status | grep -q '"marketOpen":false'; then
+                  closed=$((closed + 1)); [ $closed -ge 3 ] && { echo "market closed today"; break; }
+                else closed=0; fi
+              fi
+            fi
+            sleep 120
+          done
