@@ -707,10 +707,10 @@ function paperList() {
         <td class="num ${cc(c.R)}">${rr(c.R)}</td>
         <td><span class="badge ${getTradeOutcome(t).cls}">${getTradeOutcome(t).tag}</span></td>
         <td class="num" title="${closedish ? 'Held from ' + entryTime(t) + ' to ' + (exitTime(t) || 'exit') : 'Held so far (live)'}">${heldTxt(t)}</td>
-        <td>${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span class="badge ${getTradeOutcome(t).cls}" title="${E(t.exitType || getTradeOutcome(t).tag)}">${getTradeOutcome(t).tag}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}${!t.auto ? `<button class="btn-xs down" data-jv="deltrade" data-id="${E(t.id)}" title="Delete manual entry" style="margin-left:4px;padding:1px 5px;font-size:11px">✕</button>` : ''}</td>
+        <td class="jv-xc">${st !== 'Closed' && t.status !== 'Planned' && t.status !== 'Cancelled' ? `<button class="jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit this position now at the live price">Exit</button>` : `<span class="badge ${getTradeOutcome(t).cls}" title="${E(t.exitType || getTradeOutcome(t).tag)}">${getTradeOutcome(t).tag}${exitTime(t) ? ` <small class="num">${exitTime(t)}</small>` : ''}</span>`}${!t.auto ? `<button class="btn-xs down" data-jv="deltrade" data-id="${E(t.id)}" title="Delete manual entry" style="margin-left:4px;padding:1px 5px;font-size:11px">✕</button>` : ''}</td>
         <td title="${t.reviewed ? 'Reviewed' : st === 'Closed' ? 'Review pending' : 'Still open'}">${t.reviewed ? '✓' : (st === 'Closed' ? '<span class="warn">•</span>' : '')}</td></tr>`;
     }).join('');
-    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('LTP', 'Last traded price (live)', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
+    return `<div class="jv-tw" data-jvt="${key}"><div class="tbl-wrap"><table class="jv-t"><thead><tr>${th('ID', 'Trade ID · A = automated, M = manual')}${th('Date', 'Entry date and time · when the trade was taken')}${th('Symbol', 'Contract, with setup underneath')}${th('Side', 'L = long, S = short')}${th('Entry', 'Entry price', 'num')}${th('LTP', 'Last traded price (live)', 'num')}${th('SL', 'Current stop-loss (↑ = trailed)', 'num')}${th('Targets', 'T1 · T2 · T3', 'num')}${th('Qty', 'Lots / quantity', 'num')}${th('P&L', 'Booked P&L, or open P&L at live price', 'num')}${th('R', 'Result in multiples of initial risk', 'num')}${th('Status', 'Open, Partial or Closed')}${th('Held', 'How long the trade was held (live while open)', 'num')}${th('Exit', 'Exit an open position now, or how a closed trade ended (with the exit time)', 'jv-xc')}${th('✓', 'Reviewed')}</tr></thead><tbody>${rows}</tbody></table></div>${pager}</div>`;
   }
 
   function viewNew() {
@@ -1417,10 +1417,12 @@ function paperList() {
   /* Reset portfolio: one confirmation, then clear EVERYTHING that feeds the portfolio figure -
      manual journal trades, journal settings, the server's auto paper trades and the Trade screen's paper account. */
   async function resetPortfolio() {
-    if (!confirm('Reset the portfolio to ₹10,00,000?\n\nThis clears every journal trade, all auto paper trades (open and closed) and the Trade screen paper positions and orders. It cannot be undone.')) return;
-    const r = await jpost('/api/auto/reset', {});
+    if (!confirm('Reset the portfolio to ₹10,00,000?\n\nThis clears every journal trade, all auto paper trades (open and closed), the stock trader book and the Trade screen paper positions and orders. It cannot be undone.')) return;
+    const [r, rs] = await Promise.all([jpost('/api/auto/reset', {}), jpost('/api/stockbot/reset', {})]);   // options book AND the stock trader book
     T = []; S = Object.assign({}, DEFAULTS); persist(); persistS();
-    AUTO.list = []; AUTO.ts = Date.now();
+    AUTO.list = []; AUTO.stockTrades = []; AUTO.ts = Date.now();
+    try { SB.d = null; SB.ts = 0; } catch (e) { }
+    try { localStorage.setItem('mer-trades', '[]'); localStorage.setItem('mer-paper', '[]'); } catch (e) { }
     try {
       if (typeof App !== 'undefined') {
         App.cash = S.capital || 1000000; App.positions = []; App.orders = []; App.history = []; App.trades = []; App.meta = {};
@@ -1429,8 +1431,10 @@ function paperList() {
         if (typeof setChartLines === 'function') try { setChartLines(); } catch (e) { }
       }
     } catch (e) { }
-    toast_(r.ok ? 'Portfolio reset to ₹10,00,000 - all trades cleared' : 'Journal cleared, but the auto trades could not be reset: ' + r.err, r.ok ? 'ok' : 'err');
-    render(); setTimeout(() => syncAuto(true).then(render), 600);
+    const bad = [!r.ok && 'auto trades: ' + r.err, !rs.ok && 'stock trader: ' + rs.err].filter(Boolean);
+    toast_(!bad.length ? 'Journal reset to ₹10,00,000 - all trades cleared' : 'Journal cleared on this device, but the server reset failed (' + bad.join('; ') + '). Tap Reset again.', !bad.length ? 'ok' : 'err');
+    try { render(); } catch (e) { console.warn('journal render after reset', e); }
+    setTimeout(() => { syncAuto(true).then(render).catch(() => { }); try { sbLoad(true); } catch (e) { } }, 600);
   }
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-jv="reset"]'); if (!b) return;
@@ -1698,10 +1702,10 @@ function paperList() {
          <td class="num" data-c="cur"><b>${px(currentPrice)}</b></td>
          <td class="num ${pnlClass}" data-c="pnl">${sinr(pnl)}</td>
          <td class="num" title="How long the trade was held (live while open)">${heldTxt(t)}</td>
-         <td>${exitBtn}</td>
+         <td class="jv-xc">${exitBtn}</td>
        </tr>`;
      }).join('');
-     return `<table class="jv-t"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+     return `<table class="jv-t"><thead><tr>${headers.map(h => `<th${h === 'Exit' ? ' class="jv-xc"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
    }
 
    /* ---- Stock paper trader (server, its own Rs 10 L): intraday / swing / positional plans from Picks ---- */
@@ -1759,7 +1763,7 @@ function paperList() {
      const tot = tile('jv-btot', 'Total', d ? B.eq + Sx.eq + d.equity : null, B.cap + Sx.cap + sCap,
        d ? B.unr + Sx.unr + d.unrealised : null, d ? B.booked + Sx.booked + d.booked : null,
        d ? B.used + Sx.used + d.used : null, d ? B.free + Sx.free + d.cash : null);
-     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the options book to ₹10 L">Reset options book</button></div></div>
+     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book and stock trader back to ₹10 L each">Reset journal</button></div></div>
        <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
 
@@ -2055,6 +2059,8 @@ function paperList() {
   .jv-actions{display:flex;flex-wrap:wrap;gap:8px;padding:6px 14px 12px}
   .jv-detail h4{margin:14px 0 6px}.jv-rev{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 12px}
   .jv-s{width:110px;display:inline-block}.jv-chk{margin-right:10px}.jv-stops{margin:0;padding-left:18px;font-size:12.5px}
+  /* phones: keep the Exit / delete buttons on screen while the wide table scrolls sideways */
+  @media (max-width:700px){.jv-t th.jv-xc,.jv-t td.jv-xc{position:sticky;right:0;z-index:2;background:var(--panel,#10141d);box-shadow:-8px 0 8px -8px rgba(0,0,0,.6);padding-left:8px}.jv-tw .jv-t th:last-child,.jv-tw .jv-t td:last-child{display:none}.jv-t td.jv-xc .btn-xs{padding:1px 6px}}
   @media (max-width:600px){.jv-kpis{grid-template-columns:1fr 1fr}.jv-form{grid-template-columns:1fr}form.jv-form fieldset{grid-template-columns:1fr}}
   /* ---- compact journal ---- */
   .jv svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
