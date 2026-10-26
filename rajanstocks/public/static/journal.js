@@ -24,6 +24,15 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
     let T = load(KEY, []);
+const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
+  const isRemovedId = t => {
+    if (!t) return false;
+    const rawId = String(t.id || '');
+    if (REMOVED_IDS.has(rawId)) return true;
+    const m = rawId.match(/\d+/g);
+    if (m && REMOVED_IDS.has(m[m.length - 1])) return true;
+    return false;
+  };
   // Auto-purge the glitched top manual entry of 2.5 lakhs requested by user
   (function purgeTopManualGlitch() {
     const PURGE_KEY = 'rj-purge-top-manual-250k-v3';

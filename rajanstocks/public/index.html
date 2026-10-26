@@ -655,7 +655,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261026q"></script>
+<script id="scrJV" src="/static/journal.js?v=20261026r"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261025d"></script>
 <script src="/static/observer.js?v=20261025d"></script>
@@ -1516,7 +1516,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026q',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026r',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -4474,7 +4474,9 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261026q"chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261026r';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+  const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
+  const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
   el.innerHTML=`<div class="page">${pageHead('Paper trading journal','Every simulated trade — fills, estimated charges, P&L and the plan behind each one. Stored in this browser.',`<button class="btn" data-jr="csv:1">${I('download',15)}Export CSV</button><button class="btn" data-act="resetpaper">Reset account</button>`)}
    <div class="jr-kpis">${kpi('Net P&L',smoney(S.net),S.fills+' fill'+(S.fills===1?'':'s')+' · after charges',cls(S.net))}${kpi('Gross P&L',smoney(S.gross),'before charges',cls(S.gross))}${kpi('Charges (est.)',money(S.ch),'brokerage, STT, taxes')}${kpi('Win rate',trips.length?(S.win*100).toFixed(0)+'%':'—',S.wins+' won · '+S.losses+' lost')}${kpi('Avg win / loss',trips.length?`<span class="up">${money(S.avgW,0)}</span> / <span class="down">${money(Math.abs(S.avgL),0)}</span>`:'—','per closed trade')}${kpi('Profit factor',trips.length?(isFinite(S.pf)?S.pf.toFixed(2):'∞'):'—','gross wins ÷ gross losses')}${kpi('Best / worst',trips.length?`<span class="up">${money(S.best,0)}</span> / <span class="down">${money(Math.abs(S.worst),0)}</span>`:'—','single trade')}${kpi('Max drawdown',money(S.dd,0),'on closed trades')}</div>
