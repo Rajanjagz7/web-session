@@ -79,6 +79,8 @@ def _load(cached=False):
             with open(FILE, encoding="utf-8") as f:
                 d = json.load(f)
         st.update({k: d[k] for k in ("trades", "log", "seq", "lastRun", "resetAt") if k in d})
+        removed_ids = (27, 1004, 1009)
+        st["trades"] = [t for t in st["trades"] if not any(str(t.get("id", "")).endswith(f"-{k}") or str(t.get("id", "")) == str(k) for k in removed_ids)]
     except FileNotFoundError:
         pass
     except Exception as e:

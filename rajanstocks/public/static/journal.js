@@ -52,6 +52,25 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
             if (idx >= 0) { pp.splice(idx, 1); localStorage.setItem('mer-paper', JSON.stringify(pp)); if (typeof App !== 'undefined') App.positions = pp; }
           }
         } catch(e) {}
+        try {
+          if (rawT && rawT.length) {
+            rawT = rawT.filter(t => !isRemovedId(t));
+            save(KEY, rawT);
+            T = rawT;
+          }
+          let pt = JSON.parse(localStorage.getItem('mer-trades') || '[]');
+          if (pt && pt.length) {
+            pt = pt.filter(t => !isRemovedId(t));
+            localStorage.setItem('mer-trades', JSON.stringify(pt));
+            if (typeof App !== 'undefined') App.trades = pt;
+          }
+          let pp = JSON.parse(localStorage.getItem('mer-paper') || '[]');
+          if (pp && pp.length) {
+            pp = pp.filter(p => !isRemovedId(p) && !isRemovedId({ id: p.sym }));
+            localStorage.setItem('mer-paper', JSON.stringify(pp));
+            if (typeof App !== 'undefined') App.positions = pp;
+          }
+        } catch(e) {}
         localStorage.setItem(PURGE_KEY, 'done');
       } catch(e) {}
     }
@@ -184,7 +203,16 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     });
     return out;
   }
-  const allTrades = () => T.concat(AUTO.list, (AUTO.stockTrades || []), paperList());
+  const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
+  const isRemovedId = t => {
+    if (!t) return false;
+    const rawId = String(t.id || '');
+    const sid = String(typeof shortId === 'function' ? shortId(t) : (rawId.match(/\d+/g) || [''])[0] || '');
+    if (REMOVED_IDS.has(sid) || REMOVED_IDS.has(rawId)) return true;
+    if (rawId.endsWith('-27') || rawId.endsWith('-1004') || rawId.endsWith('-1009') || rawId.endsWith('-27-W')) return true;
+    return false;
+  };
+  const allTrades = () => T.concat(AUTO.list, (AUTO.stockTrades || []), paperList()).filter(t => !isRemovedId(t));
   async function jpost(url, body) {
     try {
       const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
