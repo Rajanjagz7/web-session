@@ -667,6 +667,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-sel{height:36px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--text);padding:0 10px;font:inherit;font-weight:700;font-size:14px}
 .opx-spot{display:flex;align-items:baseline;gap:8px;white-space:nowrap}.opx-spot b{font-size:20px}.opx-spot span{font-size:13px;font-weight:600}.opx-spot small{font-size:11.5px;color:var(--text-3)}
 .opx-exp{display:flex;align-items:center;gap:8px;min-width:0;flex:1}.opx-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}
+.opx-futc{display:flex;align-items:center;gap:8px;margin:0 0 8px}.opx-futc:empty{display:none}.opx-fut.on{background:var(--brand,#2f81f7);color:#fff}.ot-fut{padding:12px 14px;font-size:12.5px;line-height:1.5}
 .opx-expc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.opx-expc::-webkit-scrollbar{display:none}
 .opx-chip{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--text-2);font:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
 .opx-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -2582,7 +2583,7 @@ function renderTools(){$('#tools').innerHTML=TOOLS.map(([k,l])=>`<button class="
   `<span class="sep"></span><button class="ibtn ${chart.hideDraw?'on':''}" data-act="hidedraw" title="Hide drawings" aria-label="Hide drawings">${I(chart.hideDraw?'eyeoff':'eye')}</button><button class="ibtn" data-act="cleardraw" title="Remove all drawings" aria-label="Remove all drawings">${I('trash')}</button>`;
   const hint={trend:'Click two points to draw a trend line',hline:'Click to place a horizontal line',rect:'Click two corners',fib:'Click swing high, then swing low',measure:'Click start and end to measure'}[chart.tool];
   $('#hint').textContent=hint?hint+' · Esc to cancel':'';$('#hint').classList.toggle('show',!!hint)}
-function switchSym(k){k=String(k||'').trim().toUpperCase();App.span=null;let s=SYM(k);
+function switchSym(k){k=String(k||'').trim();App.span=null;let s=SYM(k)||SYM(k.toUpperCase());k=s?s.s:k.toUpperCase();   /* global / option pseudo-symbols are mixed case (GIFT Nifty, NIFTY 22,750 CE 27 Oct): match them as typed first, or they were re-created as fake NSE indices and the chart never opened */
   if(!s){const isI=['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX'].includes(k)||k.includes('NIFTY')||k.includes('SENSEX');
     s={s:k,n:k,sec:isI?'Index':'Stocks',cls:isI?'Indices':'Stocks',last:0,prev:0,dp:2,qdp:0,p:0,hi:0,lo:0,open:0,dvol:0,turn:0,bid:0,ask:0,unit:isI?'units':'shares'};SYMS.push(s)}
   if(s.last<=0&&App.picks&&Array.isArray(App.picks.picks)){const pk=App.picks.picks.find(p=>p.s===k);
@@ -3526,7 +3527,7 @@ async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const w
 function opxAutoPick(){const c=OPT.chain;if(!c||!c.rows||!c.rows.length)return;let side='CE';try{side=localStorage.getItem('opx-side')||'CE'}catch(e){}
   const atm=c.atm||c.spot,row=c.rows.slice().sort((a,b)=>Math.abs(a.strike-atm)-Math.abs(b.strike-atm)).find(r=>r[side.toLowerCase()])||c.rows.find(r=>r.ce||r.pe);if(!row)return;
   if(!row[side.toLowerCase()])side=side==='CE'?'PE':'CE';selectOption(side,row.strike,true)}
-function opxStep(dir){const c=OPT.chain;if(!c||!OPT.sel)return;const ks=c.rows.map(r=>r.strike).sort((a,b)=>a-b),i=ks.indexOf(OPT.sel.strike),k=ks[Math.max(0,Math.min(ks.length-1,i+dir))];if(k!=null&&k!==OPT.sel.strike)selectOption(OPT.sel.side,k)}
+function opxStep(dir){const c=OPT.chain;if(!c||!OPT.sel||OPT.sel.fut)return;const ks=c.rows.map(r=>r.strike).sort((a,b)=>a-b),i=ks.indexOf(OPT.sel.strike),k=ks[Math.max(0,Math.min(ks.length-1,i+dir))];if(k!=null&&k!==OPT.sel.strike)selectOption(OPT.sel.side,k)}
 const OPXF_DEF={span:5,oi:true,chg:false,vol:true,bars:true,liquid:false};
 OPT.f=(()=>{try{return Object.assign({},OPXF_DEF,JSON.parse(localStorage.getItem('rs-opxf2')||'{}'))}catch(e){return Object.assign({},OPXF_DEF)}})();
 OPT.span=OPT.f.span;OPT.mtab=OPT.mtab||'chain';OPT.wtab=OPT.wtab||'order';
@@ -3551,6 +3552,7 @@ function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.t
       <div class="opx-act"><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
         <button class="opx-ib" id="optRef" title="Refresh chain" aria-label="Refresh chain">↻</button></div>
     </div>
+    <div class="opx-futc" id="opxFut"></div>
     <div class="opx-sum" id="opxSum"></div>
     <div class="opx-xp" id="optExpired" hidden></div>
     <div class="opx-mtabs" role="tablist">${[['chain','Chain'],['chart','Chart'],['order','Order'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="mtab:${k}" class="${OPT.mtab===k?'on':''}">${l}</button>`).join('')}</div>
@@ -3598,7 +3600,7 @@ function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;cons
   return{levels:lv,sigs,top}}
 const PD_T=[1.5,2,5,10],pdTg=(e,x)=>x&&x.zone?x.zone.t.map(v=>fmtP(v)).join(' · '):PD_T.map(m=>m+'x '+fmtP(e*m)).join(' · ');   // user targets: 1.5x 2x 5x 10x the entry premium
 function pdTip(pd){return pd.sigs.map(x=>`${x.ind} ${x.name}: ${x.st==='hit'?'BUY zone':x.st==='near'?'approaching':x.st==='ran'?'touched, moved up':'below stop'} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}${x.sl5?' (tight '+fmtP(x.sl5)+')':''} · targets ${pdTg(x.entry,x)}`).join('\n')}
-function pdStrip(){const box=$('#opLv'),o=OPT.osym;if(!box)return;if(!o||!OPT.sel){box.innerHTML='';return}
+function pdStrip(){const box=$('#opLv'),o=OPT.osym;if(!box)return;if(!o||!OPT.sel||OPT.sel.fut){box.innerHTML='';return}
   const pd=pdEval({ltp:o.last,open:o.open,high:o.hi,low:o.lo,prev:o.prev},pdIsExpiry());
   if(!pd||!(pd.levels.length||pd.sigs.length)){box.innerHTML=`<span class="muted">No premium-divisor setup: ${pdIsExpiry()?'needs Open = High on expiry':'needs High = Open or High = prev close'} and a premium of 20+.</span>`;return}
   box.innerHTML=`<b class="h">${pd.levels.length?esc(pd.levels[0].ind):'Signals'}</b>`+pd.levels.map(x=>`<span class="${x.st}" title="${x.st==='hit'?'Premium is at your buy value':x.st==='near'?'Approaching':x.st==='ran'?'Touched and moved up':x.st==='stop'?'Fell through the stop':'Waiting'}">${x.name} ${fmtP(x.entry)} · SL ${fmtP(x.sl5)}–${fmtP(x.sl)}</span>`).join('')+pd.sigs.filter(x=>!x.lv).map(x=>`<span class="${x.st}">${esc(x.ind)} · entry ${fmtP(x.entry)} · SL ${fmtP(x.sl)}</span>`).join('')
@@ -3729,6 +3731,20 @@ function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f
   box.innerHTML=`<div class="oc-wrap"><table class="oc opx-oc"><thead><tr class="opx-side"><th colspan="${cols.length+1}" class="ce-h">CALLS</th><th></th><th colspan="${cols.length+1}" class="pe-h">PUTS</th></tr>
     <tr>${cols.map(k=>`<th>${hd(k)}</th>`).join('')}<th>LTP</th><th class="k">Strike</th><th>LTP</th>${cols.slice().reverse().map(k=>`<th>${hd(k)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
   const w=box.querySelector('.oc-wrap');if(w){if(st!=null)w.scrollTop=st;else{const a=w.querySelector('.opx-spotrow')||w.querySelector('tr.atm');if(a)w.scrollTop=a.offsetTop-w.clientHeight/2}}}
+/* ---- Futures: every index / F&O stock future opens as a chart in the same panel as the options (same candles, timeframes,
+   indicators and live price). Charts only - paper orders are for options. ---- */
+async function loadFuts(sym){OPT.futs=OPT.futs||{};if(OPT.futs[sym]!==undefined||OPT._futLd===sym||Date.now()<(OPT._futRetry||0))return;OPT._futLd=sym;
+  try{const r=await api('/api/m/futures?symbol='+encodeURIComponent(sym));OPT.futs[sym]=r.contracts||[]}
+  catch(e){if(e&&e.status===404)OPT.futs[sym]=[];else OPT._futRetry=Date.now()+20000}
+  OPT._futLd=null;if(App.view==='options')drawFutBar()}
+function drawFutBar(){const el=$('#opxFut');if(!el)return;const L=OPT.futs&&OPT.futs[OPT.sym];
+  if(L===undefined){loadFuts(OPT.sym);el.innerHTML='';return}
+  el.innerHTML=L.length?`<span class="opx-lbl">Futures</span><div class="opx-expc">${L.map(c=>`<button class="opx-chip ${OPT.sel&&OPT.sel.fut&&OPT.sel.key===c.key?'on':''}" data-opx="fut:${c.key}" title="${esc(c.label)}">${fmtExp(c.expiry)}</button>`).join('')}</div>`:''}
+function selectFuture(key){const L=(OPT.futs&&OPT.futs[OPT.sym])||[],c=L.find(x=>x.key===key);if(!c)return;
+  const label=`${OPT.sym} FUT ${fmtExp(c.expiry)}`;
+  OPT.sel={side:'FUT',strike:0,key:c.key,label,fut:true,exp:c.expiry};
+  OPT.osym={s:label,n:label,ikey:c.key,dp:2,qdp:0,ex:'NFO',cls:'Futures',sec:'Futures',lot:c.lot,noTrade:true,last:c.last||0,prev:c.prev||c.last||0,open:c.open,hi:c.high,lo:c.low,vol:c.vol,oi:c.oi,oiChg:(c.oi||0)-(c.oiPrev||0),bid:c.bid,ask:c.ask};
+  drawChain();drawFutBar();drawDetail();drawWhatIf();if(opxMobile())opxTab('chart')}
 function selectOption(side,strike,auto){const c=OPT.chain;if(!c)return;if(!auto){try{localStorage.setItem('opx-side',side)}catch(e){}}const row=c.rows.find(r=>r.strike===strike),leg=row&&row[side.toLowerCase()];if(!leg)return;
   const label=`${c.symbol} ${fmtP(strike,strike%1?2:0)} ${side} ${fmtExp(c.expiry)}`;
   OPT.sel={side,strike,key:leg.key,label};
@@ -3755,7 +3771,7 @@ function wiNextOpen(){const now=Date.now(),t=wiISO(now),open=Date.parse(t+'T09:1
 function wiLastClose(){const now=Date.now();let t=wiISO(now);if(wiTradingDay(t)&&now>=Date.parse(t+'T15:30:00+05:30'))return Date.parse(t+'T15:30:00+05:30');
   let d=Date.parse(t+'T12:00:00Z');do{d-=86400000}while(!wiTradingDay(new Date(d).toISOString().slice(0,10)));return Date.parse(new Date(d).toISOString().slice(0,10)+'T15:30:00+05:30')}
 function wiTradingDaysLeft(expMs){let n=0,d=Date.parse(wiISO(Date.now())+'T12:00:00Z');const e=wiISO(expMs);for(let k=0;k<400;k++){d+=86400000;const iso=new Date(d).toISOString().slice(0,10);if(iso>e)break;if(wiTradingDay(iso))n++}return n}
-function drawWhatIf(){const box=$('#opxWhatIf');if(!box)return;if(OPT.wtab&&OPT.wtab!=='order'){box.hidden=true;return}const c=OPT.chain,sel=OPT.sel,o=OPT.osym;if(!c||!sel||!o){box.innerHTML='';return}
+function drawWhatIf(){const box=$('#opxWhatIf');if(!box)return;if(OPT.wtab&&OPT.wtab!=='order'){box.hidden=true;return}const c=OPT.chain,sel=OPT.sel,o=OPT.osym;if(!c||!sel||!o||sel.fut){box.innerHTML='';return}
   const u=SYM(OPT.sym),S=(u&&u.last>0?u.last:c.spot)||0,K=sel.strike,call=sel.side==='CE',px=o.last||0,exp=wiExpiryMs(c.expiry),now=Date.now(),nxt=wiNextOpen();
   const live=typeof MKT!=='undefined'&&MKT.open,anchor=live?now:Math.min(now,wiLastClose());
   const key=[S,px,K,sel.side,c.expiry,live,Math.floor(now/60000)].join('|');if(box.dataset.k===key)return;box.dataset.k=key;   // re-priced every minute, not only on a price change
@@ -3787,7 +3803,7 @@ function opxStab(t){OPT.stab=t;document.querySelectorAll('.opx-stabs [data-opx]'
   const rd=$('#opRead');if(rd)rd.hidden=t!=='all'||!OPT.osym;   // contract readings need a selected contract
   if(t==='all'){if(OPT.osym)optReadings();optStrats()}
   if(t==='tc')drawOptTc();if(t==='ge')drawOptGe();if(t==='rzt')drawOptRzt();if(t==='hedge')drawOptHedge();if(t==='buy')drawBuyList()}
-function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel){d.hidden=true;return}d.hidden=false;
+function opxDock(){const d=$('#opxDock');if(!d)return;const o=OPT.osym;if(!o||!OPT.sel||OPT.sel.fut){d.hidden=true;return}d.hidden=false;
   d.innerHTML=`<div class="opx-dk-i"><b>${esc(OPT.sel.label)}</b><span class="num">${fmtP(o.last)}</span></div><button class="btn opx-dk-b" data-opx="dock:buy">Buy</button><button class="btn opx-dk-s" data-opx="dock:sell">Sell</button>`}
 function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
   if(!OPT.sel){box.innerHTML=`<div class="opx-empty opx-empty-s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="m5 15 4-5 4 3 6-7"/></svg><div><b>Pick a strike to trade</b><p>Tap any <b>CE</b> or <b>PE</b> price in the chain to open its chart and order ticket here. Signals from all your indicators for ${esc(OPT.sym)} are below.</p></div></div><div class="opx-card opx-sig">${opxSigTabs()}<div class="opx-spane" id="opAll" hidden><div id="opStrat"></div></div><div class="opx-spane" id="opGe"></div><div class="opx-spane" id="opTc" hidden></div><div class="opx-spane" id="opRzt" hidden></div><div class="opx-spane" id="opHedge" hidden></div><div class="opx-spane" id="opBuyList" hidden></div></div>`;drawOptTc();drawBuyList();OPT.shell=false;OPT.ochart=null;OPT.stratFor=null;optStrats();opxStab(OPT.stab||'all');return}
@@ -3801,11 +3817,12 @@ function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
     OPT.shell=true;
     OPT.ochart=new Chart($('#ochart'),{onTool:()=>{},onLegend:(uid,a)=>{const x=OPT.ochart.ind.findIndex(i=>i.uid===uid);if(x<0)return;if(a==='hide'){OPT.ochart.ind[x].hidden=!OPT.ochart.ind[x].hidden;OPT.ochart.lgDirty=true;OPT.ochart.req()}else if(a==='rm'){OPT.ochart.ind.splice(x,1);OPT.ochart.indChanged();drawOptChips();saveOptInds()}}});
     loadOptInds().forEach(k=>optAddInd(k,true));OPT.ochart.indChanged();drawOptChips();$('#ozoom').innerHTML=zoomBtns();opxWtab(OPT.wtab);drawBuyList()}
-  $('#opName').textContent=OPT.sel.label;$('#opSub').textContent=` · ${OPT.sel.side==='CE'?'Call':'Put'} · spot ${fmtP(OPT.chain?OPT.chain.spot:0)}`;
-  const sw=$('#opSw');if(sw)sw.innerHTML=`<div class="seg" role="group" aria-label="Call or put">${['CE','PE'].map(sd=>`<button class="${OPT.sel.side===sd?'on':''} ${sd==='CE'?'opx-ce':'opx-pe'}" data-opx="side:${sd}" title="${sd==='CE'?'Call':'Put'} at ${fmtP(OPT.sel.strike,0)}">${sd}</button>`).join('')}</div>
-    <div class="opx-step"><button class="opx-ib" data-opx="step:-1" title="Lower strike" aria-label="Lower strike">‹</button><b class="num">${fmtP(OPT.sel.strike,OPT.sel.strike%1?2:0)}</b><button class="opx-ib" data-opx="step:1" title="Higher strike" aria-label="Higher strike">›</button></div>`;
+  $('#opName').textContent=OPT.sel.label;$('#opSub').textContent=` · ${OPT.sel.fut?'Futures · lot '+(OPT.osym&&OPT.osym.lot||'')+' ·':OPT.sel.side==='CE'?'Call':'Put'} spot ${fmtP(OPT.chain?OPT.chain.spot:0)}`;
+  const sw=$('#opSw');if(sw)sw.innerHTML=`<div class="seg" role="group" aria-label="Call, put or future">${['CE','PE','FUT'].map(sd=>`<button class="${OPT.sel.side===sd?'on':''} ${sd==='CE'?'opx-ce':sd==='PE'?'opx-pe':'opx-fut'}" data-opx="side:${sd}" title="${sd==='FUT'?'Futures chart':(sd==='CE'?'Call':'Put')+(OPT.sel.fut?'':' at '+fmtP(OPT.sel.strike,0))}">${sd}</button>`).join('')}</div>
+    ${OPT.sel.fut?`<div class="opx-step"><b class="num">${esc(fmtExp(OPT.sel.exp))}</b></div>`:`<div class="opx-step"><button class="opx-ib" data-opx="step:-1" title="Lower strike" aria-label="Lower strike">‹</button><b class="num">${fmtP(OPT.sel.strike,OPT.sel.strike%1?2:0)}</b><button class="opx-ib" data-opx="step:1" title="Higher strike" aria-label="Higher strike">›</button></div>`}`;
   drawOptTf();drawOptTrade();drawOptPos();
   optStats();optLoad(false);drawOptTc()}
+setTimeout(()=>{try{const _dc=drawChain;drawChain=function(){const r=_dc.apply(this,arguments);try{drawFutBar()}catch(e){}return r}}catch(e){}},0);
 setTimeout(()=>{if(typeof optOrder==='function'){const _oo=optOrder;optOrder=function(){const r=_oo.apply(this,arguments);setTimeout(drawOptPos,80);return r}}},0);
 /* Open positions on the Options screen with editable stop-loss / target / trailing stop (same rules as the Journal). */
 function drawOptPos(){const box=$('#opxPos');if(!box)return;const ps=App.positions.slice().sort((a,b)=>(SYM(b.sym)?.cls==='Options')-(SYM(a.sym)?.cls==='Options'));
@@ -3817,7 +3834,11 @@ function drawOptPos(){const box=$('#opxPos');if(!box)return;const ps=App.positio
       <td class="pt-x"><button class="btn-xs opx-close" data-opx="close:${e}">Exit</button></td></tr>`}).join('')}</tbody></table></div>`}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-opx]');if(!t||!t.closest('.opx'))return;const v=t.dataset.opx,i=v.indexOf(':'),k=i<0?v:v.slice(0,i),a=i<0?'':v.slice(i+1);
   if(k==='filters'){const fp=$('#opxFp'),open=fp.hidden;if(open){fp.innerHTML=opxFilterHtml();const fb=$('#opxFbtn');if(fb&&!opxMobile()){const rc=fb.getBoundingClientRect();fp.style.top=Math.max(8,rc.bottom+8)+'px';fp.style.right=Math.max(8,innerWidth-rc.right)+'px'}else{fp.style.top='';fp.style.right=''}}fp.hidden=!open;$('#opxScrim').hidden=!open}
-  else if(k==='side'){if(OPT.sel&&a!==OPT.sel.side)selectOption(a,OPT.sel.strike)}
+  else if(k==='side'){if(!OPT.sel||a===OPT.sel.side)return;
+    if(a==='FUT'){const L=OPT.futs&&OPT.futs[OPT.sym];if(L&&L.length)selectFuture(L[0].key);else toast('No futures listed for '+OPT.sym,'info')}
+    else if(OPT.sel.fut){const c=OPT.chain;if(!c)return;const atm=c.atm||c.spot,row=c.rows.slice().sort((x,y)=>Math.abs(x.strike-atm)-Math.abs(y.strike-atm)).find(r=>r[a.toLowerCase()]);if(row)selectOption(a,row.strike)}
+    else selectOption(a,OPT.sel.strike)}
+  else if(k==='fut'){selectFuture(a)}
   else if(k==='step'){opxStep(+a)}
   else if(k==='close'){closePos(a,'manual');setTimeout(drawOptPos,50)}
   else if(k==='pos'){const c=OPT.chain,lab=(r,sd)=>`${c.symbol} ${fmtP(r.strike,r.strike%1?2:0)} ${sd} ${fmtExp(c.expiry)}`;let hit=null;
@@ -3861,7 +3882,7 @@ function calcDef(k,d,tf){const df=DEFS[k],p={};df.params.forEach(x=>p[x.k]=x.v);
 function drawOptTc(){
   const box=$('#opTc');if(!box)return;
   if(!TC._userEdited && typeof OPT!=='undefined'){
-    const s=OPT.sym||'NIFTY',m=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',st=OPT.sel?String(OPT.sel.strike):'';
+    const s=OPT.sym||'NIFTY',m=OPT.sel&&!OPT.sel.fut?(OPT.sel.side.toLowerCase()):'underlying',st=OPT.sel&&!OPT.sel.fut?String(OPT.sel.strike):'';
     if(TC.sym!==s||TC.mode!==m||TC.strike!==st){
       TC.sym=s;TC.mode=m;TC.strike=st;TC.d=null;TC.err='';
     }
@@ -3873,7 +3894,7 @@ function drawOptTc(){
    state, the trail line (= stop), zone resistance / support, the last flip and how each recent flip ended. */
 let RZT={sym:'',mode:'',strike:'',d:null,busy:false,err:''};
 function drawOptRzt(){const box=$('#opRzt');if(!box)return;
-  if(!RZT._userEdited&&typeof OPT!=='undefined'){const s=OPT.sym||'NIFTY',m=OPT.sel?(OPT.sel.side.toLowerCase()):'underlying',st=OPT.sel?String(OPT.sel.strike):'';
+  if(!RZT._userEdited&&typeof OPT!=='undefined'){const s=OPT.sym||'NIFTY',m=OPT.sel&&!OPT.sel.fut?(OPT.sel.side.toLowerCase()):'underlying',st=OPT.sel&&!OPT.sel.fut?String(OPT.sel.strike):'';
     if(RZT.sym!==s||RZT.mode!==m||RZT.strike!==st){RZT.sym=s;RZT.mode=m;RZT.strike=st;RZT.d=null;RZT.err=''}}
   if(!RZT.d&&!RZT.busy&&!RZT.err)setTimeout(rztLoad,0);
   box.innerHTML=vxRztCard()}
@@ -4066,7 +4087,7 @@ function tradePlan(d,o,tf,isOpt){const rd=computeReadings(d,o,tf);if(!d||d.lengt
   const why=rd.R.filter(r=>r.b!==0).sort((a,b)=>Math.abs(b.b)-Math.abs(a.b)).slice(0,3).map(r=>r.name.split(' (')[0]+': '+r.note.toLowerCase());
   return{sig,px,sl,t1,t2,rr:1.5,why,rd,tf:tf.k,label:isOpt?(sig==='BUY'?'BUY this option':sig==='SELL'?'SELL / EXIT this option':'WAIT'):(sig==='BUY'?'BUY':sig==='SELL'?'SELL / SHORT':'WAIT')}}
 function planHTML(p,isOpt){if(!p)return'';const open=localStorage.getItem(PLAN_STORE)==='1',cl=p.sig==='BUY'?'pl-buy':p.sig==='SELL'?'pl-sell':'pl-wait';
-  const oside=isOpt&&OPT.sel?OPT.sel.side:null,V=isOpt&&oside?optVerdict(OPT.sym,oside):null,
+  const oside=isOpt&&OPT.sel&&!OPT.sel.fut?OPT.sel.side:null,V=isOpt&&oside?optVerdict(OPT.sym,oside):null,
     clash=V&&V.ok!==null&&p.sig==='BUY'&&!V.ok?` <span class="down">⚠ The underlying's strategies disagree — higher risk.</span>`:'';
   const where=p.sig==='BUY'?(isOpt?`This ${oside||'option'}'s premium momentum is rising — buy near <b>${fmtP(p.px)}</b> and exit at the target or stop.${clash}`:`Buy futures near <b>${fmtP(p.px)}</b> · or buy CE · or sell PE`):p.sig==='SELL'?(isOpt?`This ${oside||'option'}'s premium momentum is falling — <b>do not buy</b>; exit if you hold it (around <b>${fmtP(p.px)}</b>). Selling (writing) it earns the premium decay but carries large risk — only with a stop.`:`Sell futures / short near <b>${fmtP(p.px)}</b> · or buy PE · or sell CE`):(isOpt?'Premium indicators are not aligned — no clean entry, wait.':'No clean entry — wait for a signal');
   return`<div class="plan ${cl} ${open?'open':''}"><button class="plan-h" data-plan="toggle" aria-expanded="${open}"><span class="pl-sig">${p.label}</span><span class="pl-sum">${p.sig==='WAIT'?'No trade':'SL '+fmtP(p.sl)}</span><span class="pl-chev">▾</span></button>
@@ -4076,7 +4097,8 @@ function planHTML(p,isOpt){if(!p)return'';const open=localStorage.getItem(PLAN_S
 let planTs=0;
 function updatePlan(force){if(!chart||!chart.data||!chart.data.length)return;const host=$('#chart');if(!host||App.view!=='trade')return;if(!force&&Date.now()-planTs<1500)return;planTs=Date.now();
   const p=tradePlan(chart.data,App.sym,App.tf,false);let el=host.querySelector('.plan-wrap');if(!el){el=document.createElement('div');el.className='plan-wrap';host.appendChild(el)}el.innerHTML=planHTML(p,false)}
-function updateOptPlan(){const host=$('#ochart');if(!host||!OPT.osym||!OPT.ochart||!OPT.ochart.data.length)return;const p=tradePlan(OPT.ochart.data,OPT.osym,OPT.tf,true);let el=host.querySelector('.plan-wrap');if(!el){el=document.createElement('div');el.className='plan-wrap';host.appendChild(el)}el.innerHTML=planHTML(p,true)}
+function updateOptPlan(){const host=$('#ochart');if(!host||!OPT.osym||!OPT.ochart||!OPT.ochart.data.length)return;if(OPT.sel&&OPT.sel.fut){const w=host.querySelector('.plan-wrap');if(w)w.remove();return}   // the trade plan is written for option premiums
+  const p=tradePlan(OPT.ochart.data,OPT.osym,OPT.tf,true);let el=host.querySelector('.plan-wrap');if(!el){el=document.createElement('div');el.className='plan-wrap';host.appendChild(el)}el.innerHTML=planHTML(p,true)}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-plan="toggle"]');if(!t)return;const pl=t.closest('.plan'),o=!pl.classList.contains('open');pl.classList.toggle('open',o);t.setAttribute('aria-expanded',o);try{localStorage.setItem(PLAN_STORE,o?'1':'0')}catch(x){}});
 
 /* ---- right column: Order | Indicators ---- */
@@ -4243,10 +4265,10 @@ const GL={items:null,ts:0,busy:false};
 async function loadGlobal(force){if(GL.busy||(!force&&Date.now()-GL.ts<2500))return;GL.busy=true;GL.ts=Date.now();
   try{GL.items=(await api('/api/m/global')).items;GL.err=null}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();{const el=$('#glStrip');if(el)el.innerHTML=glInner()}}
 function glInner(){if(!GL.items)return GL.err?'<span class="muted">Global data is unavailable right now.</span>':'<span class="muted">Loading global markets…</span>';
-  const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq','Nasdaq 100','S&P 500','Dow Jones','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','Bitcoin','USD / INR'];
+  const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq','Nasdaq 100','S&P 500','Dow Jones','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','Gold (COMEX)','Crude (NYMEX)','Silver (COMEX)','Bitcoin','USD / INR'];
   const list=order.map(n=>GL.items.find(i=>i.name===n)).filter(Boolean);
   return list.map(i=>{const inner=`<small>${esc(i.name)}</small><b class="num">${fmtP(i.price,i.price>=1000?0:2)}</b><span class="num ${cls(i.chgPct)}">${i.chgPct>=0?'+':'−'}${Math.abs(i.chgPct).toFixed(2)}%</span><i class="gl-m ${i.mode==='live'?'live':''}" title="${i.mode==='live'?'Live':'Delayed ~10 min'}">${i.mode==='live'?'LIVE':'10m'}</i>`;
-    return i.chart?`<button class="gl" data-gl="${esc(i.id)}" title="Open chart" aria-label="Open ${esc(i.name)} chart">${inner}</button>`:`<div class="gl" title="Price only - MCX charts need an exchange licence">${inner}</div>`}).join('')}
+    return i.chart?`<button class="gl" data-gl="${esc(i.id)}" title="Open chart" aria-label="Open ${esc(i.name)} chart">${inner}</button>`:`<div class="gl" title="Price only - MCX charts need an exchange licence. Open the COMEX / NYMEX tile next to it for the chart">${inner}</div>`}).join('')}
 const glHTML=()=>`<div class="gl-wrap"><div class="gl-h"><b>Global markets &amp; futures</b><small class="muted">GIFT Nifty, MCX, crypto live · US ~10 min delayed</small></div><div class="gls" id="glStrip">${glInner()}</div></div>`;
 
 
@@ -4382,7 +4404,8 @@ async function pollOptPositions(){const held=App.positions.filter(p=>App.meta[p.
     for(const q of r.quotes||[]){for(const p of held){const m=App.meta[p.sym];if(m.ikey!==q.key||!(q.last>0))continue;const s=SYM(p.sym);if(!s)continue;const pv=s.last;
       Object.assign(s,{last:q.last,prev:q.prev||s.prev,hi:q.high||s.hi,lo:q.low||s.lo,open:q.open||s.open,bid:q.bid,ask:q.ask,vol:q.vol});m.last=q.last;m.prev=q.prev;if(pv&&pv!==s.last)trig(s,pv)}}
     if(App.view==='options')updOptTrade();liveUpdate()}catch(e){}}
-function drawOptTrade(){const box=$('#opTrade');if(!box||!OPT.osym)return;const lot=(OPT.chain&&OPT.chain.lot)||1;OPT.osym.lot=lot;
+function drawOptTrade(){const box=$('#opTrade');if(!box||!OPT.osym)return;
+  if(OPT.sel&&OPT.sel.fut){box.innerHTML='<div class="ot-fut muted">Futures are chart-only here: candles, timeframes, indicators and the live price work as for options. Paper orders are placed on the option contracts.</div>';return}const lot=(OPT.chain&&OPT.chain.lot)||1;OPT.osym.lot=lot;
   box.innerHTML=`<div class="ot-row"><label class="ot-l">Lots<input class="inp" id="opLots" type="number" min="1" max="500" value="${OPT.lots||1}" inputmode="numeric" aria-label="Number of lots"></label><div class="ot-q"><small>Quantity</small><b class="num" id="opQty"></b><small class="muted">lot size ${lot}</small></div><div class="ot-q"><small>Buy at (ask)</small><b class="num" id="opPx"></b></div><div class="ot-q"><small>Sell at (bid)</small><b class="num" id="opBidPx"></b></div><div class="ot-q"><small>Cost · charges</small><b class="num" id="opCost"></b></div><div class="ot-q"><small>Margin to sell (est.)</small><b class="num" id="opMargin"></b></div></div>
    <div class="ot-type"><div class="seg" role="group" aria-label="Order type">${['market','limit'].map(t=>`<button type="button" class="${(OPT.otype||'market')===t?'on':''}" data-optype="${t}">${t==='market'?'Market':'Limit'}</button>`).join('')}</div>
      ${(OPT.otype||'market')==='limit'?`<label class="ot-l">Limit price<input class="inp" id="opLmt" type="number" step="0.05" min="0.05" inputmode="decimal" value="${OPT.lmt&&OPT.lmtFor===OPT.osym.s?OPT.lmt:fmtP(OPT.osym.last).replace(/,/g,'')}"></label><span class="muted">Buy fills when the premium trades at or below it · sell at or above. Good for the day.</span>`:'<span class="muted">Fills now: buy at the ask, sell at the bid.</span>'}</div>
@@ -4625,7 +4648,7 @@ async function renderAllIndicators(containerSel,und,side){const box=$(containerS
       try{const r=await api('/api/m/strategy?key='+m.key+'&symbol='+encodeURIComponent(und));r.ts=Date.now();OS.res[m.key+'|'+und]=r}catch(e){OS.res[m.key+'|'+und]={err:1,ts:Date.now()}}
       if(OS.token===tk)draw()}};
   await Promise.all([w(),w(),w()])}
-function optStrats(){return renderAllIndicators('#opStrat',OPT.sym,OPT.sel?OPT.sel.side:null)}
+function optStrats(){return renderAllIndicators('#opStrat',OPT.sym,OPT.sel&&!OPT.sel.fut?OPT.sel.side:null)}
 function renderTradeIndAll(){return renderAllIndicators('#rInd',App.sym.s,null)}
 
 /* ======================= Live engine (real NSE quotes via Upstox) ======================= */

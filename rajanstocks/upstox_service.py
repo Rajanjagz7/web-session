@@ -439,6 +439,48 @@ class UpstoxService:
             self._eq_fail_until = time.time() + 90     # stop the 20 s download retries from stacking up
         return self._eq_keys
 
+    def futures_for(self, symbol):
+        """Listed futures contracts for an underlying (index or F&O stock), nearest expiry first:
+        [{"key": "NSE_FO|48704", "label": "NIFTY FUT 27 OCT 26", "expiry": "2026-10-27", "lot": 65}].
+        Read from the public instrument master (one small cached download shared by every underlying)."""
+        import gzip, json, zlib
+        sym = (symbol or "").upper().strip()
+        futs = getattr(self, "_futs", None)
+        if futs is None or getattr(self, "_futs_at", 0) < time.time() - 12 * 3600:
+            cache_f = os.path.join(shared_cache._DISK, "upstox_futs_cache.z")
+            futs = None
+            try:
+                if os.path.exists(cache_f) and time.time() - os.path.getmtime(cache_f) < 12 * 3600:
+                    with open(cache_f, "rb") as f:
+                        futs = json.loads(zlib.decompress(f.read()).decode())
+            except Exception:
+                futs = None
+            if futs is None:
+                resp = self.session.get("https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz", timeout=20)
+                try:
+                    rows = json.loads(gzip.decompress(resp.content))
+                except OSError:
+                    rows = resp.json()
+                futs = {}
+                for x in rows:
+                    if x.get("segment") != "NSE_FO" or x.get("instrument_type") != "FUT" or not x.get("expiry"):
+                        continue
+                    exp = datetime.fromtimestamp(int(x["expiry"]) / 1000, timezone(timedelta(hours=5, minutes=30))).date().isoformat()
+                    futs.setdefault((x.get("underlying_symbol") or "").upper(), []).append(
+                        {"key": x["instrument_key"], "label": x.get("trading_symbol") or sym, "expiry": exp, "lot": int(x.get("lot_size") or 0)})
+                for v in futs.values():
+                    v.sort(key=lambda c: c["expiry"])
+                try:
+                    os.makedirs(shared_cache._DISK, exist_ok=True)
+                    with open(cache_f + ".tmp", "wb") as f:
+                        f.write(zlib.compress(json.dumps(futs, separators=(",", ":")).encode(), 6))
+                    os.replace(cache_f + ".tmp", cache_f)
+                except Exception:
+                    pass
+            self._futs, self._futs_at = futs, time.time()
+        today = date.today().isoformat()
+        return [c for c in futs.get(sym, []) if c["expiry"] >= today]
+
     def eq_names(self):
         """{SYMBOL: company name} for every listed NSE equity (F&O or not), or {} until the master loads."""
         self._load_equity_keys()

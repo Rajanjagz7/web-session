@@ -890,6 +890,38 @@ def oquote(keys: str):
     return {"quotes": out, "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat()}
 
 
+@router.get("/futures")
+def futures(symbol: str = "NIFTY"):
+    """Futures contracts (all listed expiries, nearest first) of an index / F&O stock with their live quotes - the Trade screen opens
+    any of them as a chart (same candles / indicators as the options: /candles?ikey=NSE_FO|...)."""
+    sym = symbol.upper().strip()
+    try:
+        cons = nse_service.upstox.futures_for(sym)
+    except Exception as e:
+        raise HTTPException(503, f"Futures list is temporarily unavailable: {str(e)[:140]}")
+    if not cons:
+        raise HTTPException(404, f"{sym} has no listed futures")
+    cons = cons[:3]                                  # near / next / far month - what NSE trades actively
+    keys = [c["key"] for c in cons]
+    quotes = {}
+    try:
+        okey = "fq|" + hashlib.md5(",".join(keys).encode()).hexdigest()
+        raw = _cached("fq|" + ",".join(keys), 4 if market_open() else 120,
+                      lambda: _shared(okey, 4 if market_open() else 120, lambda: nse_service.upstox._full_quotes(keys)))
+        for k, q in raw.items():
+            o = q.get("ohlc") or {}
+            last = _num(q.get("last_price"))
+            quotes[k] = {"last": last, "prev": _num(q.get("prev_close_price")) or (last - _num(q.get("net_change"))),
+                         "open": _num(o.get("open")), "high": _num(o.get("high")), "low": _num(o.get("low")),
+                         "vol": _num(q.get("volume")) or _num(o.get("volume")), "oi": _num(q.get("oi")), "oiPrev": _num(q.get("previous_oi")),
+                         "bid": _num(((q.get("depth") or {}).get("buy") or [{}])[0].get("price")),
+                         "ask": _num(((q.get("depth") or {}).get("sell") or [{}])[0].get("price"))}
+    except Exception:
+        pass                                         # contracts still list; prices arrive with the next poll
+    return {"symbol": sym, "contracts": [dict(c, **(quotes.get(c["key"]) or {})) for c in cons],
+            "marketOpen": market_open(), "asOf": datetime.now(IST).isoformat()}
+
+
 # ----------------------------- Daily scan: Open = High / Open = Low -----------------------------
 @router.get("/daily-scan")
 def daily_scan(refresh: bool = False, limit: int = 16):
@@ -995,7 +1027,7 @@ GLOBAL_ITEMS = [
     ("CME_MINI:NQ1!", "Nasdaq 100 Fut", "US futures"), ("NASDAQ:IXIC", "Nasdaq", "US indices"),
     ("NASDAQ:NDX", "Nasdaq 100", "US indices"), ("SP:SPX", "S&P 500", "US indices"), ("DJ:DJI", "Dow Jones", "US indices"),
     ("CBOE:VIX", "US VIX", "US indices"), ("MCX:GOLD1!", "Gold (MCX)", "Commodities"), ("MCX:CRUDEOIL1!", "Crude Oil (MCX)", "Commodities"),
-    ("MCX:SILVER1!", "Silver (MCX)", "Commodities"), ("COMEX:GC1!", "Gold (COMEX)", "Commodities"), ("NYMEX:CL1!", "Crude (NYMEX)", "Commodities"),
+    ("MCX:SILVER1!", "Silver (MCX)", "Commodities"), ("COMEX:GC1!", "Gold (COMEX)", "Commodities"), ("NYMEX:CL1!", "Crude (NYMEX)", "Commodities"), ("COMEX:SI1!", "Silver (COMEX)", "Commodities"),
     ("BITSTAMP:BTCUSD", "Bitcoin", "Crypto"), ("FX_IDC:USDINR", "USD / INR", "Currency"),
 ]
 
