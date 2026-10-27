@@ -313,7 +313,12 @@ def fill_slots(st, today, already):
             calls = market_api.quick_index_calls(6 if vercel else 15)
             ranked = []
             for c in calls:
-                if c["instrument"] in used:
+                # indices: only 5 symbols, so "once per symbol per day" (a carried trade exited at 09:07 blocked MIDCPNIFTY all
+                # day) is too strict - blocked only while one is open or for 30 minutes after one closed
+                busy_idx = {t["sym"] for t in st["trades"] if t["status"] == "OPEN"} | {x["sym"] for x in already} | {x["sym"] for x in out}
+                recent = (_now() - timedelta(minutes=30)).isoformat()
+                busy_idx |= {t["sym"] for t in st["trades"] if t["status"] == "CLOSED" and (t.get("closedAt") or "") >= recent}
+                if c["instrument"] in busy_idx:
                     continue
                 if c.get("signal") in ("BUY CALL", "BUY PUT"):
                     tier = 0 if c.get("confidence") == "high" else 1               # tier 0: chart + flow agree; tier 1: flow-led
