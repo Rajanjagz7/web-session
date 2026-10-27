@@ -528,7 +528,15 @@ function paperList() {
     });
     return true;
   }
-  function tslShow(t) { if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
+  /* auto trades: the live state of the trailing stop - the server moves it every cycle, the column used to show only a static label */
+  function autoTsl_(t) {
+    const a = t.raw || {}, l = a.lock;
+    if (l) return l.mode === 'trail' ? `Trail · locks ₹${Math.round(Number(l.keep) || 0).toLocaleString('en-IN')} · SL ${px(a.premSL)}` : `Breakeven · SL ${px(a.premSL)}`;
+    if (a.variant === 'trail' || (a.tsl && a.tsl.mode && a.tsl.mode !== 'off')) return `Trailing · ${a.sym} stop ${px(a.stopU)}${a.stopMoved ? ' ↑' : ''}`;
+    const u = unrealised(t);
+    return `Arms at +₹2,500${u != null ? ' (now ' + sinr(u) + ')' : ''}`;
+  }
+  function tslShow(t) { if (t.auto && statusOf(t) !== 'Closed') return autoTsl_(t); if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
   setInterval(() => { refreshLive(); if (!document.hidden && window.rjMkt()) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden && window.rjMkt()) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
