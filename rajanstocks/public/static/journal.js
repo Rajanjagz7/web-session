@@ -473,7 +473,7 @@ function paperList() {
   const SELL_CAP = 1000000;
   function sideTotals(sign) {
     let booked = 0, unr = 0;
-    allTrades().forEach(t => { if (!entered(t) || dirOf(t) !== sign) return; const c = calc(t).net || 0;
+    allTrades().forEach(t => { if (!entered(t) || t.isStock || dirOf(t) !== sign) return; const c = calc(t).net || 0;   // options books only: stock trades live in the Stock trader book (the Total tile adds it once)
       if (statusOf(t) === 'Closed') booked += c; else { booked += t.auto ? 0 : c; unr += unrealisedNet(t) || 0; } });   // manual trades can be partly booked
     return { booked, unr };
   }
