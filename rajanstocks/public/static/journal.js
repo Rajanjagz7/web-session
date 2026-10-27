@@ -614,6 +614,7 @@ function paperList() {
      <div class="jv-sec">How you're doing</div>
      ${filterBar(false)}
      ${insightCard(m)}
+     ${legCard()}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
      <div class="jv-sec">Open trades right now</div>
      <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>
@@ -1880,6 +1881,23 @@ function paperList() {
        <div class="jv-ins-g"><div><small>Win rate</small><b>${w}%</b></div><div><small>Average win</small><b class="up">${inr(W, 0)}</b></div><div><small>Average loss</small><b class="down">−${inr(Lo, 0)}</b></div>
        <div title="How many rupees you win for every rupee you lose, on average"><small>Win : Loss size</small><b class="${ratio != null && ratio >= 1 ? 'up' : 'down'}">${ratio == null ? '-' : ratio.toFixed(2) + ' : 1'}</b></div></div>
        <p>${verdict}</p></div>`;
+   }
+   /* Which part of the auto trader makes or loses the money: the entry itself, the PAIRED SELL leg the bot writes next to every entry
+      (id ends -W; it is a short option on the other side of the chain, so it is NOT a hedge - it adds to the same directional bet),
+      and the hedge leg of a credit spread (-X). All-time booked, booked today and running now, each on its own. */
+   function legCard() {
+     const day = today(), G = { main: { n: 0, b: 0, t: 0, o: 0 }, w: { n: 0, b: 0, t: 0, o: 0 }, x: { n: 0, b: 0, t: 0, o: 0 } };
+     AUTO.list.forEach(t => {
+       if (!entered(t)) return;
+       const id = String(t.id), k = /-W$/.test(id) ? 'w' : /-X$/.test(id) ? 'x' : 'main', g = G[k];
+       if (statusOf(t) === 'Closed') { const c = calc(t).net || 0; g.n++; g.b += c; if (lastExit(t).slice(0, 10) === day) g.t += c; }
+       else g.o += unrealisedNet(t) || 0;
+     });
+     const row = (name, hint, g) => `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>${hint}</small></div><div class="jv-hr-n"><div><small>All-time locked in</small><span class="${cc(g.b)}">${sinr(g.b)}</span></div><div><small>Today locked in</small><span class="${cc(g.t)}">${sinr(g.t)}</span></div><div><small>Running now</small><span class="${cc(g.o)}">${sinr(g.o)}</span></div></div></div>`;
+     if (!G.main.n && !G.w.n && !G.x.n && !G.main.o && !G.w.o && !G.x.o) return '';
+     return `<div class="card jv-hero" id="jvLegs"><div class="jv-hero-top"><span>Which trades make the money?</span></div>
+       ${row('Entry trades', `${G.main.n} closed`, G.main)}${row('Paired sell legs', `${G.w.n} closed · sold next to each entry, not a hedge`, G.w)}${row('Spread hedge legs', `${G.x.n} closed`, G.x)}
+       <p class="jv-hint">A paired sell leg is an option the bot sells on the other side of each entry. It makes money when your entry is right and loses money when it is wrong, so it adds to your risk instead of reducing it. If its row is negative over many trades, it is costing you.</p></div>`;
    }
    function booksCard() {
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
