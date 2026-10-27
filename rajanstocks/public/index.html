@@ -699,6 +699,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   .pf-chip{padding:0 8px}.hdr .brand{flex:none}
 }
 .jv-chb{margin-left:8px;padding:2px 9px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-2);color:var(--brand);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}.jv-chb:active{transform:scale(.95)}
+#v-trade.glsym .right,#v-trade.glsym .tdock{display:none !important}
+#v-trade.glsym{grid-template-columns:236px minmax(0,1fr)}
+@media (max-width:900px){#v-trade.on.glsym{padding-bottom:0}#v-trade.glsym{grid-template-columns:minmax(0,1fr)}}
 </style>
 <script id="scrJV" src="/static/journal.js?v=20261028c"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
@@ -2614,7 +2617,7 @@ document.addEventListener('change',e=>{if(e.target.id==='ocExp'){OC.expiry=e.tar
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverlays()});
 /* a tap anywhere outside the timeframe menu closes it (it used to stay open until its button was tapped again) */
 document.addEventListener('click',e=>{if(tfPopEl&&!tfPopEl.contains(e.target)&&!e.target.closest('[data-act="tfpop"]'))closeTfPop()},true);
-function renderSymbar(){const s=App.sym;const star=App.watch.has(s.s);
+function renderSymbar(){const s=App.sym;const star=App.watch.has(s.s);const vt=document.getElementById('v-trade');if(vt)vt.classList.toggle('glsym',!!s.tv);   /* global futures (GIFT Nifty, US futures...) are chart-only: no order ticket, indicators tab or quick Buy / Sell dock */
   $('#symbar').innerHTML=`<div class="sb-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><button class="symbtn" data-act="search" aria-label="Change symbol">${esc(s.s)}${I('chev',16)}</button><button class="ibtn ${star?'on':''}" data-act="star" aria-label="${star?'Remove from':'Add to'} watchlist">${I('star',16)}</button><span class="muted sb-nm">${esc(s.n)} · ${esc(s.ex)}</span></div>
   <div class="sb-px"><b class="num" data-px="${esc(s.s)}"></b><span data-chga="${esc(s.s)}"></span><span class="num" data-chg="${esc(s.s)}"></span></div>
   <div class="sb-stat">Day range<span class="num" data-rt></span><div class="rangebar" data-range="${esc(s.s)}"><i></i></div></div>
