@@ -71,7 +71,7 @@ svg.i{display:block;flex-shrink:0}
 .live i{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 3px var(--up-bg)}
 .pf-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--line);background:var(--panel-2);white-space:nowrap;font-variant-numeric:tabular-nums}
 .pf-chip small{font-size:11px;color:var(--text-3)}.pf-chip b{font-size:13px;color:var(--text)}.pf-d{font-size:11.5px;font-weight:600;color:var(--text-3)}
-.pf-chip.up .pf-d{color:var(--up)}.pf-chip.down .pf-d{color:var(--down)}.pf-chip:hover{border-color:var(--brand)}
+.pf-chip.up .pf-d{color:var(--up)}.pf-chip.down .pf-d{color:var(--down)}.pf-chip:hover{border-color:var(--brand)}.pf-chip.last{border-style:dashed;opacity:.8}
 .ibtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--text-2);position:relative;flex-shrink:0}
 .ibtn:hover{background:var(--panel-2);color:var(--text)}
 .ibtn.on{background:var(--brand-2);color:var(--brand)}
@@ -664,7 +664,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261027k"></script>
+<script id="scrJV" src="/static/journal.js?v=20261027l"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
@@ -2486,8 +2486,8 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=windo
   const cap=t?t.capital:1000000;
   let pl=0, isLast=false;
   const isMktOpen = (typeof MKT !== 'undefined' && MKT.open);
-  const hasToday = t && typeof t.today === 'number' && (t.today !== 0 || (isMktOpen && t.open > 0));
-  if(hasToday && isMktOpen){
+  const hasToday = t && typeof t.today === 'number' && (t.today !== 0 || t.open > 0);
+  if(hasToday){
     pl = t.today; isLast = false;
   } else if(t && typeof t.lastDayPnl === 'number' && t.lastDayPnl !== 0){
     pl = t.lastDayPnl; isLast = true;
@@ -2506,8 +2506,8 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=windo
   const pc = cap ? pl / cap * 100 : 0;
   const sh = v => { const a = Math.abs(v); return a >= 1e7 ? (a/1e7).toFixed(2)+' Cr' : a >= 1e5 ? (a/1e5).toFixed(2)+' L' : Math.round(a).toLocaleString('en-IN'); };
   const k = pl > 0.5 ? 'up' : pl < -0.5 ? 'down' : '';
-  const lbl = isLast || !isMktOpen ? 'Last day P&amp;L' : 'Today P&amp;L';
-  c.className = 'pf-chip ' + k;
+  const lbl = isLast ? 'Last day P&amp;L' : 'Today P&amp;L';
+  c.className = 'pf-chip ' + k + (isLast ? ' last' : '');
   c.innerHTML = `<small>${lbl}</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;
   c.title = `${isLast ? 'Last session' : "Today's"} P&L ${pl>=0?'+':'−'}₹${Math.round(Math.abs(pl)).toLocaleString('en-IN')} (${pc>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%) · Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} — click for the journal`;
 }
@@ -4525,7 +4525,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027k';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027l';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;

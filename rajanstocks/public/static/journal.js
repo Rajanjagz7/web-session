@@ -1857,7 +1857,7 @@ function paperList() {
    /* THE one "today" figure: locked in + running, all three books. The Today card, the header chip and the Running-trades header all use it. */
    function todayTotal() { const R = todayRows(); const b = R.buy.b + R.sell.b + R.stock.b, o = R.buy.o + R.sell.o + R.stock.o; return { booked: b, open: o, total: b + o }; }
    function todayCard() {
-     const R = todayRows(), mk = (typeof window.rjMkt === 'function') ? window.rjMkt() : false;
+     const R = todayRows(), mk = (typeof MKT !== 'undefined' && typeof MKT.open === 'boolean') ? MKT.open : ((typeof window.rjMkt === 'function') ? window.rjMkt() : false);
      const bk = R.buy.b + R.sell.b + R.stock.b, op = R.buy.o + R.sell.o + R.stock.o, tot = bk + op;
      const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
      const num = (lab, v) => `<div><small>${lab}</small><span class="${cc(v)}">${sinr(v)}</span></div>`;
