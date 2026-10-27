@@ -1874,12 +1874,18 @@ def picks(refresh: bool = False, response: Response = None):
 
         ttl_s = 600 if market_open() else 3600
         sk = "picks|" + date.today().isoformat()
+        # a list built before today's 09:15 (app opened pre-market) holds yesterday's prices / open-high-low: once the session is open
+        # it is stale at once, so the 09:15 auto-trade cycle and the screen rebuild from live prices instead of serving it for 10 minutes
+        opened_at = datetime.now(IST).replace(hour=9, minute=15, second=0, microsecond=0).timestamp() if market_open() else 0
+        mem = _cache.get("picks")
+        if mem and mem[0] < opened_at:
+            _cache.pop("picks", None)
 
         def build_ok():
             got = shared_cache.get(sk)                                  # another instance already built it
             if got:
                 _inject_cash_seed_if_needed(got)
-            if got and not refresh and time.time() - got.get("_t", 0) < ttl_s:
+            if got and not refresh and time.time() - got.get("_t", 0) < ttl_s and got.get("_t", 0) >= opened_at:
                 return _public(got), True
             if not shared_cache.lock("picks-build", 40):                # someone else is building: serve what exists
                 if got:

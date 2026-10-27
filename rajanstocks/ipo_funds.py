@@ -674,19 +674,52 @@ def _is_direct_growth(n):
     return "direct" in n and "growth" in n and not re.search(r"idcw|dividend|bonus|payout|reinvest", n)
 
 
+AMFI_URL = "https://portal.amfiindia.com/spages/NAVAll.txt"
+_AMFI = {"t": 0.0, "rows": []}
+
+
+def _amfi_schemes():
+    """Every scheme in AMFI's daily NAV file (~14k, same scheme codes as mfapi.in), cached 12 h per instance.
+    mfapi.in's own /search only returns ~15 hits, so a broad query ("hdfc") missed every Direct-Growth plan."""
+    if _AMFI["rows"] and time.time() - _AMFI["t"] < 12 * 3600:
+        return _AMFI["rows"]
+    r = _http.get(AMFI_URL, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    rows, seen = [], set()
+    for line in r.text.splitlines():
+        p = [x.strip() for x in line.split(";")]
+        if len(p) < 6 or not p[0].isdigit() or p[0] in seen:
+            continue
+        seen.add(p[0])
+        # current file: code;ISIN;ISIN;scheme;plan;option;NAV;date - older one: code;ISIN;ISIN;full name;NAV;date
+        name = " - ".join(x for x in p[3:6] if x and x != "-") if len(p) >= 8 else p[3]
+        rows.append({"schemeCode": int(p[0]), "schemeName": name})
+    if len(rows) > 1000:
+        _AMFI.update(t=time.time(), rows=rows)
+    return rows
+
+
 def mf_search(q, direct_growth=True):
-    last = None
-    for attempt in range(3):
-        try:
-            r = _http.get(f"{MF_API}/search", params={"q": q}, timeout=10)
-            r.raise_for_status()
-            items = r.json() or []
-            break
-        except Exception as e:  # mfapi.in rate-limits bursts: back off and retry
-            last = e
-            time.sleep(0.6 * (attempt + 1))
-    else:
-        raise last
+    toks = [t for t in re.split(r"\W+", (q or "").lower()) if t]
+    items = None
+    try:
+        hits = [r for r in _amfi_schemes() if all(t in r["schemeName"].lower() for t in toks)]
+        items = sorted(hits, key=lambda r: (not r["schemeName"].lower().startswith(toks[0]) if toks else 0, len(r["schemeName"])))
+    except Exception as e:
+        print(f"[funds] AMFI list unavailable, using mfapi search: {e}")
+    if items is None:
+        last = None
+        for attempt in range(3):
+            try:
+                r = _http.get(f"{MF_API}/search", params={"q": q}, timeout=10)
+                r.raise_for_status()
+                items = r.json() or []
+                break
+            except Exception as e:  # mfapi.in rate-limits bursts: back off and retry
+                last = e
+                time.sleep(0.6 * (attempt + 1))
+        else:
+            raise last
     if direct_growth:
         items = [i for i in items if _is_direct_growth(i.get("schemeName", ""))]
     return items

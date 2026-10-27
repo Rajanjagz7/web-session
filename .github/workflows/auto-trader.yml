@@ -1,37 +1,42 @@
 name: Auto-trader heartbeat
 # Vercel's plan only allows daily crons, so without an open browser tab (with notifications on) the auto-trader
 # never ran its cycle: no new entries (Eagle Trades 09:20-10:30 included), no stop / target checks.
-# This job calls the same endpoint the app tab calls, every 2 minutes through the session. The server takes a lock
-# (no overlapping cycles) and returns at once when the market is closed (holidays cost nothing).
+# This job calls the same endpoint the app tab calls: on the minute 09:15-09:30 (option buys from 09:15, selling from 09:20),
+# then every 2 minutes until 15:35 IST. The server takes a lock (no overlapping cycles) and returns at once when the market is closed.
 on:
   workflow_dispatch:
   schedule:
-    - cron: "35 3 * * 1-5"       # 09:05 IST - main run (a job lasts at most ~5h50m)
-    - cron: "0 5 * * 1-5"        # 10:30 IST - backup if the 09:05 run was dropped / delayed
-    - cron: "0 7 * * 1-5"        # 12:30 IST - picks up after the main run until the close
+    - cron: "15 3 * * 1-5"       # 08:45 IST - main run; GitHub can start scheduled jobs 5-20 min late, so it starts well before 09:15
+    - cron: "0 5 * * 1-5"        # 10:30 IST - backup if the main run was dropped
+    - cron: "0 7 * * 1-5"        # 12:30 IST - picks up after the main run (a job lasts at most ~5h50m) until the close
 concurrency: { group: auto-trader, cancel-in-progress: false }
 jobs:
   beat:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     steps:
-      - name: Run a cycle every 2 minutes until 15:35 IST
+      - name: Run the trading cycle through the session
         run: |
-          URL="https://rajanstocks.vercel.app/api/cron/signal-push"
+          SITE="https://rajanstocks.vercel.app"
           start=$(date +%s); closed=0
           while :; do
             now=$(TZ=Asia/Kolkata date +%H%M)
             [ "$now" -ge 1535 ] && { echo "session over ($now IST)"; break; }
             [ $(( $(date +%s) - start )) -ge 20700 ] && { echo "time budget used - the next scheduled run takes over"; break; }
-            if [ "$now" -ge 910 ]; then
-              out=$(curl -s -m 60 -X POST "$URL" -w ' [HTTP %{http_code}]' || echo 'request failed')
+            if [ "$now" -ge 915 ]; then
+              # warm today's picks first (a cycle that had to build them itself could hit Vercel's 30 s limit), then trade
+              curl -s -m 40 -o /dev/null "$SITE/api/m/picks" || true
+              sleep 20
+              out=$(curl -s -m 60 -X POST "$SITE/api/cron/signal-push" -w ' [HTTP %{http_code}]' || echo 'request failed')
               echo "$(TZ=Asia/Kolkata date +%T) IST ${out:0:300}"
               # a holiday: the server still says the market is closed well after the open - stop early (status runs no cycle)
               if [ "$now" -ge 925 ] && [ "$now" -lt 935 ]; then
-                if curl -s -m 30 https://rajanstocks.vercel.app/api/auto/status | grep -q '"marketOpen":false'; then
+                if curl -s -m 30 "$SITE/api/auto/status" | grep -q '"marketOpen":false'; then
                   closed=$((closed + 1)); [ $closed -ge 3 ] && { echo "market closed today"; break; }
                 else closed=0; fi
               fi
             fi
-            sleep 120
+            # next tick: the top of the next minute until 09:30, then every 2 minutes
+            now=$(TZ=Asia/Kolkata date +%H%M); step=60; [ "$now" -ge 930 ] && step=120
+            sleep $(( step - $(date +%s) % 60 + 2 ))
           done

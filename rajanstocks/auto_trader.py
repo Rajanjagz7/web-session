@@ -319,7 +319,10 @@ def fill_slots(st, today, already):
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
             left = morning_picks.MAX_PICKS - took
             picks = [p for p in market_api.picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
-            for p in [x for x in morning_picks.select(picks) if x["s"] not in used][:max(0, min(need["stock"], left))]:
+            # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:15; tier 2 rests on Open = Low / High,
+            # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
+            early = _mins(_now()) < EAGLE_FROM
+            for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2)][:max(0, min(need["stock"], left))]:
                 out.append({"key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
@@ -1073,8 +1076,9 @@ def _run_cycle(now, force, dry):
                     taken += 1
                     continue
                 try:
-                    # Enforce timing rule: BUY trades execute starting at 9:15 AM; SELL trades held until 9:20 AM
-                    is_sell = (c.get("key") == "rzt-hedge" or c.get("action") == "SELL" or c.get("pos") == "short")
+                    # Timing rule: option BUYING (CE for a BUY signal, PE for a SELL signal - stocks and indices) from 09:15;
+                    # option SELLING (credit spreads, written legs) from 09:20. Paired written legs (-W) are deferred inside open_trade.
+                    is_sell = c.get("key") == "rzt-hedge" or c.get("pos") == "short"
                     if is_sell and _mins(now) < SELL_FROM and not force:
                         st["log"].append({"at": now.isoformat(), "msg": f"holding {c['sym']} SELL trade until 09:20"})
                         continue
