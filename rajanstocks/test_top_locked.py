@@ -33,7 +33,7 @@ def test_not_locked_before_0920_and_when_incomplete(monkeypatch):
     v = {"picks": _picks([90] * 12), "complete": True}
     m._add_shortlist(v)
     assert v.get("topLocked") is False and not store
-    _setup(monkeypatch, (10, 0))
+    _setup(monkeypatch, (9, 30))
     v = {"picks": _picks([90] * 12), "complete": False}
     m._add_shortlist(v)
     assert v.get("topLocked") is False
@@ -59,3 +59,18 @@ def test_locks_then_ignores_reshuffle_but_updates_price(monkeypatch):
     v3 = {"picks": later, "complete": True}
     m._add_shortlist(v3)
     assert [r["s"] for r in v3["top"]] == first
+
+
+def test_incomplete_scan_locks_from_0945_only(monkeypatch):
+    _setup(monkeypatch, (9, 30))
+    v = {"picks": _picks([90] * 12), "complete": False}
+    m._add_shortlist(v)
+    assert v["topLocked"] is False
+    _setup(monkeypatch, (9, 50))
+    v = {"picks": _picks([90] * 12), "complete": False}
+    m._add_shortlist(v)
+    assert v["topLocked"] is True
+    _setup(monkeypatch, (9, 50))
+    v = {"picks": _picks([90] * 6), "complete": False}      # too short a list never locks
+    m._add_shortlist(v)
+    assert v["topLocked"] is False

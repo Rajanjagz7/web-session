@@ -1846,6 +1846,7 @@ def _inject_cash_seed_if_needed(data):
     return data
 
 
+TOP_LOCK_LATE = 9 * 60 + 45
 TOP_LOCK_FROM = 9 * 60 + 20            # IST minutes: from 09:20 the opening range (Open = Low / High) is known, so the day's shortlist is fixed
 _TOPF = {"day": None, "rows": None, "checked": 0.0}
 _TOP_LIVE = ("ltp", "chg")             # a locked row keeps its levels / reason / rank; only the price and % change keep moving
@@ -1872,7 +1873,10 @@ def _locked_top(v, top):
         now = datetime.now(IST)
         built = v.get("_t")                                                  # when the scan was built (serverless path); a 09:16 scan must not be locked at 09:21
         lock_ts = now.replace(hour=TOP_LOCK_FROM // 60, minute=TOP_LOCK_FROM % 60, second=0, microsecond=0).timestamp()
-        fresh = (market_open() and now.hour * 60 + now.minute >= TOP_LOCK_FROM and v.get("complete") and not v.get("stale")
+        mins = now.hour * 60 + now.minute
+        # a complete scan locks from 09:20; the 18 s serverless build is often NOT flagged complete (rate limits), so from 09:45 a full
+        # enough list (>= MIN_PICKS) locks anyway - otherwise the day's list could stay live (and keep reshuffling) all session
+        fresh = (market_open() and mins >= TOP_LOCK_FROM and not v.get("stale") and (v.get("complete") or mins >= TOP_LOCK_LATE)
                  and (not built or built >= lock_ts))
         if fresh and len(top) >= morning_picks.MIN_PICKS:
             _TOPF["rows"] = [dict(r) for r in top]
