@@ -609,7 +609,6 @@ button.gl2{cursor:pointer}button.gl2:hover{border-color:var(--brand);background:
 .glb-chip.down{border-left-color:var(--down)}.glb-chip.down b{color:var(--down)}
 .glp-more{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
 .glp-more summary{cursor:pointer;font-size:13px;font-weight:600;margin-bottom:0}.glp-more[open] summary{margin-bottom:10px}
-.glp-note{font-size:11.5px;line-height:1.5;margin:0;padding:0 4px}
 
 /* ---- news bar ---- */
 .newsbar{position:sticky;top:0;z-index:36;height:30px;display:flex;align-items:center;background:var(--panel-2);border-bottom:1px solid var(--line);overflow:hidden}
@@ -4357,7 +4356,7 @@ function glPageInner(){
   const rest=order.filter(n=>!used.has(n)).map(find).filter(Boolean);
   const more=rest.length?`<details class="glp-more" ${GL.more?'open':''}><summary>More markets &amp; futures (${rest.length})</summary><div class="glp-grid">${rest.map(i=>glTile(i,i.name.replace(/[^A-Za-z0-9]/g,'').slice(0,2),i.name)).join('')}</div></details>`:'';
   return head+`<div class="glp-grid">${prime}</div>`+glBiasHTML()+more
-    +`<p class="glp-note muted">Informational only: a read of trend and momentum (EMA 20/50, RSI, MACD), not a forecast or advice. Tap a tile to open its chart.</p>`}
+    }
 const glPageHTML=()=>`<div class="glp" id="glPage">${glPageInner()}</div>`;
 function glPageRender(){const el=$('#glPage');if(el){el.innerHTML=glPageInner();loadGlobalBias()}}
 document.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('glp-more'))GL.more=e.target.open},true);
