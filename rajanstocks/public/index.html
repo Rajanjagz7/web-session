@@ -392,7 +392,7 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   .hdr{padding:0 10px;gap:8px}.hdr .brand .txt{display:inline}.search-btn{margin-left:auto;min-width:0;width:34px;padding:0;justify-content:center}.search-btn span:not(#searchI){display:none}.search-btn kbd{display:none}
   .live{display:flex;align-items:center;gap:6px}.live #liveTxt{display:inline-block;font-size:11px;font-weight:600}
   .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;height:calc(60px + env(safe-area-inset-bottom));padding:4px 6px env(safe-area-inset-bottom);background:var(--panel);border-top:1px solid var(--line);justify-content:space-around;overflow:visible;flex:none}
-  .nav button{flex:1;height:100%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;border-radius:10px}
+  .nav button{flex:1;height:100%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;border-radius:10px;min-width:0;letter-spacing:-.01em}
   .nav .ni{display:block}.nav .nav-sub{display:none}.nav .sec{display:none}.nav .more{display:flex}
   .here{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;font-size:15px}.hdr .brand .txt{display:none}
   .here b{font-weight:700;color:var(--text)}.here-sep{color:var(--text-3)}.here-sub{color:var(--text-2);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis}.here-i{display:none}
@@ -2512,7 +2512,7 @@ function heatColor(c){const k=Math.min(1,Math.abs(c)/0.03);return`color-mix(in o
 
 /* ======================= Header / nav ======================= */
 const VIEWS=[['godseye',"God's Eye"],['options','Trade'],['ipo','IPO & Funds'],['journal','Journal'],['indicators','Indicators'],['vedic','Vedic Astro']];
-   const PRIMARY=['godseye','options','ipo','journal'];
+   const PRIMARY=['godseye','options','ipo','journal','indicators','vedic'];   /* every screen has its own nav tab; the old "More" menu is gone */
 /* Screens that are not nav items light up their parent, and the header chip names both (Trade › Options). */
 const SUBVIEWS={trade:['options','Chart'],mobile:['options',''],stocks:['godseye','Stocks'],picks:['godseye',"Today's Picks"],daily:['godseye','Daily scan'],portfolio:['journal','Portfolio'],orders:['journal','Orders'],alerts:['journal','Alerts']};
 const navKey=v=>(SUBVIEWS[v]||[v])[0];
@@ -2551,7 +2551,7 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=windo
   c.innerHTML = `<small>${lbl}</small><b>${pl>=0?'+':'−'}₹${sh(pl)}</b><span class="pf-d">${pl>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%</span>`;
   c.title = `${isLast ? 'Last session' : "Today's"} P&L ${pl>=0?'+':'−'}₹${Math.round(Math.abs(pl)).toLocaleString('en-IN')} (${pc>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%) · Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} — click for the journal`;
 }
-function renderNav(){const cur=navKey(App.view),behind=!PRIMARY.includes(cur);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('')+`<button class="more ${behind?'on':''}" data-act="more" ${behind?'aria-current="page"':''}><span class="ni">${I(behind&&NAVI[cur]?NAVI[cur]:'list',19)}</span><span>${behind?esc(viewLabel(cur).replace(' Astro','')):'More'}</span></button>`;renderHere()}
+function renderNav(){const cur=navKey(App.view);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('');renderHere()}
 const NAVI={picks:'trendup',trade:'candle',options:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
 function closeOverlays(){
