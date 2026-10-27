@@ -16,7 +16,7 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
 const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader']];
    const GROUPS = {};
-   const TAB_TIPS = { new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading, backtest data and Vedic Gann report', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
+   const TAB_TIPS = { new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading status, exits and trade outcomes', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -122,7 +122,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
             n.unrl = p.unrl; n.raw.last = p.raw.last; n.raw.unrealised = p.raw.unrealised; n.raw.lastAt = pa;
           }
         });
-        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null };
+        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly) } };
         AUTO.err = false;
         AUTO.ts = Date.now();
       } else {
@@ -1941,100 +1941,10 @@ function paperList() {
      // Backtest data: the real /api/backtest result (same one the backtest screen used)
      const srv = AUTO.srv;
      if (!srv && !AUTO.busy) setTimeout(() => syncAuto(true), 0);
-     if (!SV.bt && !SV.btBusy) setTimeout(() => loadSrv('bt'), 0);
-     if (!SV.btc && !SV.btcBusy) setTimeout(() => loadSrv('btc'), 0);
      const stTxt = !srv ? (AUTO.err ? 'Server not reachable · retrying' : 'Loading…')
        : !srv.enabled ? 'Paused' : srv.marketOpen ? `Running · ${srv.todayCount} trades today` : 'On · market closed';
      const stCls = !srv ? '' : !srv.enabled ? 'down' : srv.marketOpen ? 'up' : '';
 
-     const btCard = (() => {
-       const B = SV.bt;
-       if (!B) return '<div class="empty">Loading backtest…</div>';
-       if (B.error) return `<div class="empty">Backtest unavailable (${E(B.error)}).</div>`;
-       const btProgressBar = (b, label) => {
-         const pct = Math.min(100, Math.max(0, b.pct || 0));
-         const el = b.elapsed || 0;
-         const eta = b.eta ? `· ~${b.eta}s remaining` : '';
-         return `<div class="bt-prog-wrap" style="padding:14px;background:var(--panel-2,rgba(255,255,255,.05));border-radius:10px;margin:10px 0;border:1px solid var(--line)">
-           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-             <b style="font-size:13.5px;color:var(--brand,#2563eb)">⚙ ${label}</b>
-             <span style="font-size:13.5px;font-weight:800;color:var(--text)">${pct}%</span>
-           </div>
-           <div style="height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-bottom:8px">
-             <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:4px;transition:width 0.4s ease"></div>
-           </div>
-           <div style="font-size:12px;color:var(--text-2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
-             <span>${E(b.progress || 'Processing strategy replays…')}</span>
-             <span>Elapsed: ${el}s ${eta}</span>
-           </div>
-           <p style="margin:8px 0 0;font-size:11.5px;color:var(--text-3);line-height:1.45">
-             Evaluating 24 strategies across 25 instruments over ~5 years of daily bars (1,440 combinations). Typically takes ~40–60s total.
-           </p>
-         </div>`;
-       };
-       const R = B.result;
-       if (!R) return B.running
-         ? `${btProgressBar(B, 'Full Backtest Running')}<div class="jv-actions"><button class="btn pri" disabled>Running… ${B.pct || 0}%</button></div>`
-         : `<div class="empty">No backtest has been run yet. Click below to run a fresh backtest across 24 strategies and 25 instruments.</div><div class="jv-actions"><button class="btn pri" data-jv="btrun">Run full backtest</button></div>`;
-       const proven = (R.provenKeys || []).length;
-       const verdict = proven
-         ? `<div><span>Verdict</span><b class="up">${proven} of ${R.strategiesTested} passed</b></div>`
-         : `<div><span>Verdict</span><b class="down">0 of ${R.strategiesTested} passed · forward-testing top settings</b></div>`;
-       const top = (R.ranking || []).slice(0, 4).map(r => {
-         const i = r.inSample, o = r.outOfSample;
-         return `<tr><td><b>${E(KEYNAME(r.key))}</b></td><td class="num">${i.n}</td><td class="num ${cc(i.avgR)}">${rr(i.avgR)}</td><td class="num">${o.n}</td><td class="num ${cc(o.avgR)}">${rr(o.avgR)}</td><td>${r.proven ? '<span class="badge b-up">Proven</span>' : '<span class="badge b-mute">Fwd test</span>'}</td></tr>`;
-       }).join('');
-       const ex = R.executorResearch || R.executor;
-       const exLine = ex && ex.twoMonth ? `<div><span>2-month replay</span><b class="${cc(ex.twoMonth.median)}">${sinr(ex.twoMonth.median)} median · ${ex.entries} trades · win ${(ex.stats.winRate * 100).toFixed(0)}%</b></div>` : '';
-       // filtered run: pick strategies, re-test just them (stored separately - never replaces the full result)
-       if (!SV.meta && !SV.metaBusy) { SV.metaBusy = true; jget('/api/m/strategies').then(m => { SV.meta = m; SV.metaBusy = false; if (effTab() === 'algo') render(); }).catch(() => { SV.metaBusy = false; }); }
-       const stratList = (SV.meta && SV.meta.strategies || []).filter(m => m.kind !== 'optscan');
-       if (!SV.btcSel) SV.btcSel = new Set();
-       const chips = stratList.map(m => `<button type="button" class="${SV.btcSel.has(m.key) ? 'on' : ''}" data-jv="btcsel" data-k="${E(m.key)}" title="${E(m.name)}">${E(m.name)}</button>`).join('');
-       const C = SV.btc;
-       const customRows = C && C.result ? (C.result.ranking || []).slice(0, 6).map(r => {
-         const i = r.inSample, o = r.outOfSample;
-         return `<tr><td><b>${E(KEYNAME(r.key))}</b></td><td class="num">${i.n}</td><td class="num ${cc(i.avgR)}">${rr(i.avgR)}</td><td class="num">${o.n}</td><td class="num ${cc(o.avgR)}">${rr(o.avgR)}</td><td>${r.proven ? '<span class="badge b-up">Proven</span>' : '<span class="badge b-mute">Fwd test</span>'}</td></tr>`;
-       }).join('') : '';
-       const customBlock = C ? (C.running
-         ? `<p class="muted" style="padding:4px 14px 8px">Filtered backtest running — ${E(C.progress || '')}</p>`
-         : C.error ? `<p class="muted" style="padding:4px 14px 8px">Filtered run failed: ${E(C.error)}</p>`
-           : C.result ? `<details class="jv-more" data-jvopen="btcResult"${detOpen('btcResult')}><summary>Filtered run · ${(C.result.filteredKeys || []).length} ${(C.result.filteredKeys || []).length === 1 ? "strategy" : "strategies"} · ${(C.result.tradesSimulated || 0).toLocaleString('en-IN')} trades</summary>
-               <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${customRows}</tbody></table></div>
-               <p class="muted" style="padding:4px 14px 8px;font-size:11.5px">This run is kept separately — the full result above still drives the auto trader.</p></details>` : '') : '';
-       // upcoming trades: the same entry logic as the live trader, run as a dry preview - what it WOULD take right now
-       if (!SV.up && !SV.upBusy) { SV.upBusy = true; jget('/api/auto/preview').then(r => { SV.up = r; SV.upBusy = false; if (effTab() === 'algo') render(); }).catch(() => { SV.upBusy = false; SV.up = { error: true }; }); }
-       const up = SV.up;
-       const allUp = (up && up.entered) || [];
-       const byStrat = {};
-       allUp.forEach(e => { const k = e.source || KEYNAME(e.strategy) || e.strategy; const row = byStrat[k] || (byStrat[k] = { n: 0, buys: 0 }); row.n++; if (e.side === 'BUY') row.buys++; });
-       const upSummary = Object.entries(byStrat).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `${E(k)}: ${v.n} (${v.buys} buy)`).join(' · ');
-       const upRows = allUp.slice().sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, 10).map(e =>
-         `<tr><td><b>${E(e.sym)}</b></td><td><span class="jv-side ${e.side === 'SELL' ? 's' : 'l'}">${E(e.side)}</span></td><td>${E(e.source || KEYNAME(e.strategy) || e.strategy)}</td><td class="num">${e.rank != null ? Number(e.rank).toFixed(2) : '—'}</td></tr>`).join('');
-       const upBlock = `<details class="jv-more" data-jvopen="upcoming"${detOpen('upcoming')}><summary>Upcoming trades · what this logic would take now${allUp.length ? ` · ${allUp.length} candidate${allUp.length > 1 ? 's' : ''}` : ''}${SV.upBusy ? ' · checking…' : ''}</summary>
-           ${up && up.dayGuard ? `<p class="muted" style="padding:2px 14px 0">${E(up.dayGuard)}</p>` : ''}
-           ${up && up.note ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">${E(up.note)}</p>` : ''}
-           ${upSummary ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">By source: ${upSummary}</p>` : ''}
-           ${upRows ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th colspan="4">Top 10 by conviction</th></tr><tr><th>Symbol</th><th>Side</th><th>Signal / strategy</th><th class="num">Rank</th></tr></thead><tbody>${upRows}</tbody></table></div>` : `<p class="muted" style="padding:2px 14px 4px">${SV.upBusy ? 'Running the same scan the live trader uses…' : up && up.error ? 'Preview unavailable right now — try Re-check.' : 'No entry would be taken right now (entry window, per-day limits, the day P&L guard, or no fresh signals).'}</p>`}
-           ${allUp.length > 10 ? `<p class="muted" style="padding:2px 14px 0;font-size:11.5px">…and ${allUp.length - 10} more lower-ranked candidates. The live trader takes them all unless you cap it (maxPerDay / slots in the config API) — the day P&L guard and one-trade-per-symbol rules still apply.</p>` : ''}
-           <div class="jv-actions"><button class="btn" data-jv="uprefresh" ${SV.upBusy ? 'disabled' : ''}>${SV.upBusy ? 'Checking…' : 'Re-check now'}</button></div>
-           <p class="muted" style="padding:2px 14px 8px;font-size:11.5px">A dry run of the real entry engine — the same scan, ranking, slots and guards, nothing is placed.</p></details>`;
-       return `<div class="jv-list">
-           ${verdict}
-           <div><span>Simulated</span><b>${(R.tradesSimulated || 0).toLocaleString('en-IN')} trades · ${E(R.historyFrom || '')} → ${E(R.historyTo || '')}</b></div>
-           ${exLine}
-           <div><span>Generated</span><b>${E((R.generatedAt || B.generatedAt || '').replace('T', ' ').slice(0, 16))}</b></div>
-         </div>
-         ${top ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Strategy</th><th class="num">In n</th><th class="num">In R</th><th class="num">Out n</th><th class="num">Out R</th><th>Verdict</th></tr></thead><tbody>${top}</tbody></table></div>` : ''}
-         ${B.running ? btProgressBar(B, 'Re-running Full Backtest…') : ''}
-         <div class="jv-actions"><button class="btn" data-jv="btrun" ${B.running ? 'disabled' : ''}>${B.running ? `Running… ${B.pct || 0}%` : 'Re-run full backtest'}</button><button class="btn" data-jv="btreset" ${B.running ? 'disabled' : ''} title="Clear the stored result until the next run">Reset</button></div>
-         <details class="jv-more" data-jvopen="btcFilter"${detOpen('btcFilter')}><summary>Backtest by filter · pick indicators / strategies</summary>
-           <div class="jv-pos-bar jv-btcsel">${chips || '<span class="muted">Strategy list unavailable.</span>'}</div>
-           <div class="jv-actions"><button class="btn pri" data-jv="btrunf" ${(B.running || (C && C.running)) ? 'disabled' : ''}>${C && C.running ? 'Running…' : `Run ${SV.btcSel.size ? `(${SV.btcSel.size} selected)` : 'full'} backtest`}</button>
-             <button class="btn" data-jv="btcnone">Clear selection</button></div>
-           <p class="muted" style="font-size:11.5px;padding:2px 14px 8px">No selection = every strategy. A filtered run is faster and is shown below without touching the full result the auto trader uses.</p>
-         </details>${customBlock}${upBlock}`;
-     })();
 
      // exit-reason breakdown + filter for the auto trades (raw server exit reasons: STOP / TSL / TARGET / TIME / EXPIRY / MANUAL)
      const autoAll = allTrades().filter(t => t.auto && entered(t));
@@ -2068,7 +1978,13 @@ function paperList() {
          </div>
        </div>
 
-       <div class="card"><div class="card-h" style="padding-top:14px"><h3>📊 Backtest Results</h3></div>${btCard}</div>
+       ${srv && srv.sleeves && srv.sleeves.length ? `<div class="card"><div class="card-h"><h3>💼 Capital · ${inr(srv.sleeves.reduce((x, r) => x + r.capital, 0), 0)}</h3>
+         <span class="muted" style="font-size:12px">${srv.cfg && srv.cfg.buyOnly ? 'buy only' : 'buy + sell'} · ${srv.cfg && srv.cfg.stockOnly ? 'stock options' : 'stocks + index'}</span></div>
+         <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Sleeve</th><th class="num">In trades</th><th class="num">Open</th><th class="num">Closed P&L</th></tr></thead><tbody>
+         ${srv.sleeves.map(r => `<tr><td><b>${E(r.name)}</b><br><small class="muted">${inr(r.capital, 0)}</small></td><td class="num">${inr(r.deployed, 0)}</td><td class="num">${r.open}${r.open ? `<br><small class="${cc(r.openPnL)}">${sinr(r.openPnL)}</small>` : ''}</td><td class="num ${cc(r.net)}">${sinr(r.net)}<br><small class="muted">${r.closed} closed${r.closed ? ' · ' + Math.round(r.winRate * 100) + '% won' : ''}</small></td></tr>`).join('')}
+         </tbody></table></div>
+         <p class="muted" style="font-size:11.5px;padding:2px 14px 10px">Each sleeve sizes and tracks its own trades; a full sleeve skips new entries instead of borrowing from another.</p></div>` : ''}
+
      </div>
      <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">exit breakdown · ${closedAutoAll.length} closed</span></div>
        <div class="jv-exitf">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}</div>
@@ -2081,38 +1997,6 @@ function paperList() {
         (AUTO.list || []).forEach(t => allTracked.push(t));
         (AUTO.stockTrades || []).forEach(t => allTracked.push(t));
         allTrades().filter(t => !t.auto).forEach(t => allTracked.push(t));
-
-        // If no executed trades exist yet, seed with active tracked candidates from auto_state so the UI is immediately functional
-        if (!allTracked.length && AUTO.cand && Array.isArray(AUTO.cand.items)) {
-          AUTO.cand.items.slice(0, 25).forEach((c, idx) => {
-            const isShort = c.side === 'SELL';
-            const basePx = c.indStop ? (isShort ? +(c.indStop * 0.985).toFixed(2) : +(c.indStop * 1.015).toFixed(2)) : 1000;
-            allTracked.push({
-              id: 'trk_' + c.sym + '_' + idx,
-              auto: true,
-              isCand: true,
-              date: c.asOf || today(),
-              instrument: c.sym,
-              symbol: c.sym,
-              dir: isShort ? 'Short' : 'Long',
-              setup: (c.strategies || [c.key]).join(' · '),
-              hz: c.kind === 'index' ? 'intraday' : 'positional',
-              market: c.kind === 'index' ? 'Index F&O' : 'Stock Positional',
-              entry: basePx,
-              sl: c.indStop || (isShort ? +(basePx * 1.03).toFixed(2) : +(basePx * 0.97).toFixed(2)),
-              sl0: c.indStop || (isShort ? +(basePx * 1.03).toFixed(2) : +(basePx * 0.97).toFixed(2)),
-              t1: isShort ? +(basePx * 0.96).toFixed(2) : +(basePx * 1.04).toFixed(2),
-              t2: isShort ? +(basePx * 0.92).toFixed(2) : +(basePx * 1.08).toFixed(2),
-              qty: 1,
-              last: basePx,
-              status: 'Open',
-              exitType: '',
-              raw: { hz: c.kind === 'index' ? 'intraday' : 'positional', holdSessions: (idx % 4) + 1, sym: c.sym },
-              net: 0,
-              R: 0
-            });
-          });
-        }
 
         const totalN = allTracked.length;
         const slN = allTracked.filter(t => getTradeOutcome(t).isSL).length;

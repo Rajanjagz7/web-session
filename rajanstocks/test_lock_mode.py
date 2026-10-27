@@ -38,7 +38,7 @@ def test_index_screen_never_reenters_same_index_after_a_stop(monkeypatch):
     today = "2026-10-27"
     stopped = {"id": "A-1", "sym": "NIFTY", "date": today, "status": "CLOSED", "closedAt": today + "T09:30:00+05:30", "kind": "index"}   # opened today, stopped out
     carried = {"id": "A-0", "sym": "MIDCPNIFTY", "date": "2026-10-23", "status": "CLOSED", "closedAt": today + "T09:07:00+05:30", "kind": "index"}   # opened earlier
-    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [stopped, carried], "log": []}
+    st = {"cfg": {**at.DEFAULT_CFG, "stockOnly": False}, "trades": [stopped, carried], "log": []}      # the index screen itself (stock-only mode skips it)
     out = at.fill_slots(st, today, [])
     syms = {c["sym"] for c in out if c.get("kind") == "index"}
     assert "NIFTY" not in syms                # no re-entry after today's stop
@@ -70,3 +70,28 @@ def test_closing_a_short_at_a_missing_price_never_books_the_whole_premium():
 def test_pair_sell_setting_defaults_off_and_is_configurable():
     assert at.DEFAULT_CFG["pairSell"] is False
     assert "pairSell" in at.Cfg.model_fields
+
+
+def test_stock_only_skips_the_index_screen(monkeypatch):
+    import market_api
+    calls = [{"instrument": "NIFTY", "signal": "BUY CALL", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 80, "confidence": "high"}]
+    called = []
+    monkeypatch.setattr(at, "_picks", lambda: {"picks": []})
+    monkeypatch.setattr(market_api, "quick_index_calls", lambda n: called.append(n) or calls)
+    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [], "log": []}
+    assert at.DEFAULT_CFG["stockOnly"] and at.DEFAULT_CFG["buyOnly"] and at.DEFAULT_CFG["capital"] == 1500000.0
+    assert at.fill_slots(st, "2026-10-28", []) == [] and not called
+
+
+def test_sleeves_are_three_5_lakh_pools():
+    assert at.DEFAULT_CFG["sleeves"] == {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
+    assert sum(at.DEFAULT_CFG["sleeves"].values()) == at.DEFAULT_CFG["capital"]
+    assert at._sleeve_of("morning-pick") == "picks" and at._sleeve_of("Eagle Trades") == "eagle" and at._sleeve_of("Z Trend") == "signals"
+    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [
+        {"sleeve": "picks", "status": "CLOSED", "net": -12000.0}, {"sleeve": "eagle", "status": "CLOSED", "net": 5000.0},
+        {"status": "CLOSED", "net": 99999.0},                                  # an old trade with no sleeve moves no sleeve
+        {"sleeve": "picks", "status": "OPEN", "entry": 50.0, "lots": 2, "lot": 500, "last": 55.0}], "log": []}
+    assert at._sleeve_equity(st, "picks") == 488000.0 and at._sleeve_equity(st, "eagle") == 505000.0 and at._sleeve_equity(st, "signals") == 500000.0
+    assert at._sleeve_deployed(st, "picks") == 50000.0
+    rows = {r["key"]: r for r in at.sleeve_report(st)}
+    assert rows["picks"]["open"] == 1 and rows["picks"]["openPnL"] == 5000.0 and rows["eagle"]["net"] == 5000.0

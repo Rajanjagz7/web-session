@@ -85,7 +85,7 @@ def test_fill_slots_takes_the_shortlist_in_priority_order_and_at_most_15_a_day(m
     picks = [pick("OLY", signal="NEUTRAL", strength=25, op=100.0, lo=100.0, hi=101.0, ltp=100.6),
              pick("TOP", strength=100), pick("MID", strength=80), pick("FILL", strength=60)]
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": picks})
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [], "log": []}
     out = auto_trader.fill_slots(st, "2026-10-27", [])
     ranked = sorted(out, key=lambda c: -c["rank"])
     assert [c["sym"] for c in ranked] == ["TOP", "MID", "OLY", "FILL"]
@@ -108,7 +108,7 @@ def test_fill_slots_passes_the_shortlist_stop_to_the_trade(monkeypatch):
     import market_api
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: [])
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [pick("TOP", strength=100, stop=97.0)]})
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [], "log": []}
     c = auto_trader.fill_slots(st, "2026-10-27", [])[0]
     assert c["indStop"] == 97.0 and c["side"] == "BUY"
 
@@ -134,7 +134,7 @@ def test_eagle_cands_have_no_cap_are_tagged_and_ranked_first(monkeypatch):
     picks = [_eagle_pick(f"E{i}", sec=f"s{i % 3}") for i in range(30)] + [pick("PLAIN", strength=100)]
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": picks})
     monkeypatch.setattr(auto_trader, "_now", lambda: datetime(2026, 10, 27, 9, 35, tzinfo=auto_trader.IST))
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [{"date": "2026-10-27", "sym": "E0", "status": "OPEN"}], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [{"date": "2026-10-27", "sym": "E0", "status": "OPEN"}], "log": []}
     out = auto_trader.eagle_cands(st, "2026-10-27")
     assert len(out) == 29 and "E0" not in {c["sym"] for c in out}                  # all 30 qualify, minus the one already held; no 15-cap, no sector cap
     assert all(c["key"] == "Eagle Trades" and c["source"] == "Eagle Trades" and c["rank"] >= 20 for c in out)
@@ -145,7 +145,7 @@ def test_eagle_only_scans_in_the_opening_hour(monkeypatch):
     import market_api
     from datetime import datetime
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("E")]})
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [], "log": []}
     for hh, mm, n in ((9, 15, 0), (9, 20, 1), (10, 30, 1), (10, 31, 0), (14, 0, 0)):
         monkeypatch.setattr(auto_trader, "_now", lambda hh=hh, mm=mm: datetime(2026, 10, 27, hh, mm, tzinfo=auto_trader.IST))
         assert len(auto_trader.eagle_cands(st, "2026-10-27")) == n, (hh, mm)
@@ -160,7 +160,7 @@ def test_a_cycle_enters_eagle_trades_first_and_drops_duplicates(monkeypatch):
     monkeypatch.setattr(auto_trader, "_now", lambda: now)
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
-    st = {"cfg": {**auto_trader.DEFAULT_CFG, "eagleOn": True}, "trades": [], "log": []}    # Eagle is off by default now
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False, "eagleOn": True}, "trades": [], "log": []}    # Eagle is off by default now
     monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
     monkeypatch.setattr(auto_trader, "_save", lambda s: None)
     monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))
@@ -182,7 +182,7 @@ def test_eagle_is_skipped_when_switched_off(monkeypatch):
     monkeypatch.setattr(auto_trader, "_now", lambda: now)
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [], "log": []}
     monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
     monkeypatch.setattr(auto_trader, "_save", lambda s: None)
     monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))
@@ -191,3 +191,16 @@ def test_eagle_is_skipped_when_switched_off(monkeypatch):
     monkeypatch.setattr(auto_trader, "fill_slots", lambda s, t, already: [])
     rep = auto_trader._run_cycle(now, False, True)
     assert not any(e["strategy"] == "Eagle Trades" for e in rep["entered"])
+
+
+def test_buy_only_takes_no_sell_side_stock_picks(monkeypatch):
+    import market_api
+    monkeypatch.setattr(market_api, "quick_index_calls", lambda n: [])
+    picks = [pick("OLY", signal="NEUTRAL", strength=25, op=100.0, lo=100.0, hi=101.0, ltp=100.6),
+             pick("TOP", strength=100), pick("SHORT", signal="SELL", strength=95)]
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": picks})
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}            # default = buy-only, stock options only
+    out = auto_trader.fill_slots(st, "2026-10-28", [])
+    assert out and all(c["side"] == "BUY" and c["kind"] == "stock" for c in out)
+    st["cfg"]["buyOnly"] = False
+    assert any(c["side"] == "SELL" for c in auto_trader.fill_slots(st, "2026-10-28", []))

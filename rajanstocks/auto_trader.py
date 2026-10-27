@@ -39,9 +39,12 @@ def _cap(cfg, key):
     return NO_LIMIT if not v else int(v)
 
 
-DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
+PLAN_V = 20261028      # one-time switch from 28 Oct 2026: Rs 15 L, buy-only, stock options only, three Rs 5 L sleeves
+SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
+SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
+DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": True, "pairSell": False,
+               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
@@ -83,6 +86,9 @@ def _load(cached=False):
         st["cfg"].update(saved)
         if saved.get("pairV") != 1:                            # one-time: paired option SELL leg off (buy-only); the settings API can turn it back on
             st["cfg"].update(pairSell=False, pairV=1)
+            st["_dirty"] = True
+        if saved and saved.get("planV") != PLAN_V:              # one-time: from 28 Oct 2026 - Rs 15 L in three Rs 5 L sleeves, buy-only, stock options only
+            st["cfg"].update(capital=1500000.0, buyOnly=True, stockOnly=True, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -156,6 +162,40 @@ def _mins(now):
 
 def _equity(st):
     return st["cfg"]["capital"] + sum(t.get("net", 0.0) for t in st["trades"] if t["status"] == "CLOSED")
+
+
+def _sleeve_of(key):
+    return "picks" if key == "morning-pick" else "eagle" if key == "Eagle Trades" else "signals"
+
+
+def _sleeve_equity(st, name):
+    """Rs 5 L start + what that sleeve has closed so far; None when sleeves are off (the old single-pool sizing then applies)."""
+    base = (st["cfg"].get("sleeves") or {}).get(name)
+    if not base:
+        return None
+    return float(base) + sum(t.get("net", 0.0) for t in st["trades"] if t["status"] == "CLOSED" and t.get("sleeve") == name)
+
+
+def _sleeve_deployed(st, name):
+    return sum(t["entry"] * t["lots"] * t["lot"] for t in st["trades"] if t["status"] == "OPEN" and t.get("sleeve") == name and t.get("pos") != "short")
+
+
+def sleeve_report(st):
+    out = []
+    for name, label in SLEEVE_NAMES.items():
+        eq = _sleeve_equity(st, name)
+        if eq is None:
+            continue
+        mine = [t for t in st["trades"] if t.get("sleeve") == name]
+        closed = [t for t in mine if t["status"] == "CLOSED"]
+        opens = [t for t in mine if t["status"] == "OPEN"]
+        wins = [t for t in closed if t.get("net", 0) > 0]
+        out.append({"key": name, "name": label, "capital": float(st["cfg"]["sleeves"][name]), "equity": round(eq, 0),
+                    "deployed": round(_sleeve_deployed(st, name), 0), "open": len(opens), "closed": len(closed),
+                    "net": round(sum(t.get("net", 0.0) for t in closed), 0),
+                    "openPnL": round(sum((t["last"] - t["entry"]) * t["lots"] * t["lot"] for t in opens if t.get("pos") != "short"), 0),
+                    "winRate": round(len(wins) / len(closed), 2) if closed else 0})
+    return out
 
 
 def _open_pnl(t):
@@ -319,7 +359,7 @@ def fill_slots(st, today, already):
     out = []
     if room <= 0:
         return out
-    if need["index"] > 0:
+    if need["index"] > 0 and not cfg.get("stockOnly"):
         try:
             calls = market_api.quick_index_calls(6 if vercel else 15)
             ranked = []
@@ -360,7 +400,7 @@ def fill_slots(st, today, already):
             # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:15; tier 2 rests on Open = Low / High,
             # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
             early = _mins(_now()) < EAGLE_FROM
-            for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2)][:max(0, min(need["stock"], left))]:
+            for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2) and not (cfg.get("buyOnly") and x["side"] != "BUY")][:max(0, min(need["stock"], left))]:
                 out.append({"key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
@@ -636,15 +676,24 @@ def open_trade(st, c, today):
         raise RuntimeError("no valid stop")
     stop_u = entry_u - d * risk_u
     target_u = entry_u + d * backtest.TARGET_R * risk_u if variant == "fixed" else None
-    budget = _equity(st) * cfg["riskPct"] / 100
+    sl_name = _sleeve_of(c.get("key"))
+    sl_eq = _sleeve_equity(st, sl_name)
+    base_eq = sl_eq if sl_eq else _equity(st)                # a sleeve sizes its own trades (risk % and the 20% position cap)
+    budget = base_eq * cfg["riskPct"] / 100
     pair = cfg.get("pairSell", WRITE_PAIR)
     if pair:
         budget /= 2                                          # the paired sell takes the other half of the risk budget
     per_lot = ct["lot"] * 0.5 * risk_u
     lots = max(1, int(budget // per_lot)) if per_lot > 0 else 1
-    max_out = _equity(st) * 0.2
+    max_out = base_eq * 0.2
     while lots > 1 and lots * ct["lot"] * ct["premium"] > max_out:
         lots -= 1
+    if sl_eq:                                                # never spend more premium than the sleeve has free
+        free = sl_eq - _sleeve_deployed(st, sl_name)
+        while lots > 1 and lots * ct["lot"] * ct["premium"] > free:
+            lots -= 1
+        if lots * ct["lot"] * ct["premium"] > free:
+            raise RuntimeError(f"skipped: {SLEEVE_NAMES[sl_name]} sleeve is full (Rs {max(0, free):,.0f} free of Rs {sl_eq:,.0f})")
     t = {
         "id": f"A-{today.replace('-', '')}-{len([x for x in st['trades'] if x['date'] == today]) + 1}",
         "date": today, "openedAt": _now().isoformat(), "sym": c["sym"], "kind": c["kind"], "side": c["side"],
@@ -653,7 +702,7 @@ def open_trade(st, c, today):
         "stopU": round(stop_u, 2), "targetU": round(target_u, 2) if target_u is not None else None, "riskU": round(risk_u, 2),
         "variant": variant, "filter": c.get("filter", "none"), "bestU": round(entry_u, 2), "mode": c.get("label", ""),
         "initialRisk": round(min(lots * per_lot, lots * ct["lot"] * ct["premium"]), 0), "riskBudget": round(budget, 0),
-        "strategy": c["key"], "agree": c.get("agree", 1), **({"why": c["why"]} if c.get("why") else {}),
+        "strategy": c["key"], "sleeve": sl_name, "agree": c.get("agree", 1), **({"why": c["why"]} if c.get("why") else {}),
         "screenAgrees": c.get("screenAgrees"), "indicators": c.get("strategies") or [c["key"]],
         "source": c.get("source", f"{c.get('agree', 1)} indicator(s) agree" if c.get("strategies") else "strategy signal"), "status": "OPEN", "last": round(ct["premium"], 2),
         "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
@@ -1131,6 +1180,12 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(weak)} skipped for weak risk/reward"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"risk/reward check failed: {str(e)[:80]}"})
+            if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: stock options only, bought only - no index trades, no bearish / written legs
+                n0 = len(entries)
+                entries = [c for c in entries if not (cfg.get("stockOnly") and c.get("kind") != "stock")
+                           and not (cfg.get("buyOnly") and (c.get("side") != "BUY" or c.get("key") == "rzt-hedge" or c.get("pos") == "short"))]
+                if n0 != len(entries):
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} skipped (buy-only / stock-options-only)"
             slots = len(entries)
             if not force and _mins(now) <= _hm(cfg["windowStart"]):
                 burst = int(cfg.get("openBurstCap") or 12)
@@ -1225,6 +1280,10 @@ class Cfg(BaseModel):
     pairSell: bool | None = None
     eagleOn: bool | None = None
     lockMode: str | None = None
+    buyOnly: bool | None = None
+    stockOnly: bool | None = None
+    capital: float | None = None
+    sleeves: dict | None = None
 
 
 class TslBody(BaseModel):
@@ -1363,6 +1422,7 @@ def status():
         "cfg": st["cfg"], "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
         "dayPnl": {"value": round(_day_pnl(st, today), 0), "limit": st["cfg"].get("dayPnlLimit", 0), "mode": guard, "note": guard_note},
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
+        "sleeves": sleeve_report(st),
         "open": opens, "closed": closed[-120:][::-1], "log": st["log"][-120:][::-1],
         "summary": {"trades": len(closed), "net": round(sum(t["net"] for t in closed), 0),
                     "winRate": round(len(wins) / len(closed), 2) if closed else 0,
@@ -1400,6 +1460,18 @@ def config(c: Cfg):
             if c.dayPnlLimit < 0:
                 raise HTTPException(400, "dayPnlLimit must be 0 (guard off) or a positive rupee amount")
             st["cfg"]["dayPnlLimit"] = float(c.dayPnlLimit)
+        if c.buyOnly is not None:                                       # true: only BUY signals (calls), no puts, no written / spread legs
+            st["cfg"]["buyOnly"] = c.buyOnly
+        if c.stockOnly is not None:                                     # true: stock options only, no index trades
+            st["cfg"]["stockOnly"] = c.stockOnly
+        if c.capital is not None:
+            if c.capital < 100000:
+                raise HTTPException(400, "capital must be at least 1,00,000")
+            st["cfg"]["capital"] = float(c.capital)
+        if c.sleeves is not None:                                       # {"picks": 500000, "eagle": 500000, "signals": 500000}; {} = one pool
+            if any(k not in SLEEVE_NAMES or float(v) < 0 for k, v in c.sleeves.items()):
+                raise HTTPException(400, "sleeves keys must be picks / eagle / signals with amounts >= 0")
+            st["cfg"]["sleeves"] = {k: float(v) for k, v in c.sleeves.items()}
         if c.pairSell is not None:                                      # false: buy-only, no paired opposite-option sell leg
             st["cfg"]["pairSell"] = c.pairSell
         if c.zTrendHedge is not None:                                   # true: Z Trend flips open hedged credit spreads
