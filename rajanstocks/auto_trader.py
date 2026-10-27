@@ -330,7 +330,7 @@ def fill_slots(st, today, already):
                 out.append({"key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
-                            "source": f"morning shortlist · tier {p['tier']} · {p['why']}", "label": "morning shortlist"})
+                            "source": f"Today's Picks · tier {p['tier']} · {p['why']}", "label": "Today's Picks shortlist"})
         except Exception as e:
             st["log"].append({"at": _now().isoformat(), "msg": f"stock screen failed: {str(e)[:80]}"})
     return out[:room]
@@ -1095,7 +1095,16 @@ def _run_cycle(now, force, dry):
                         st["log"].append({"at": now.isoformat(), "msg": f"holding {c['sym']} SELL trade until 09:20"})
                         continue
                     if c.get("key") == "rzt-hedge":
-                        t = _open_rzt_hedge(st, c, today)      # Z Trend flip as a hedged credit spread (its own notify)
+                        try:
+                            t = _open_rzt_hedge(st, c, today)  # Z Trend flip as a hedged credit spread (its own notify)
+                        except RuntimeError as e:
+                            if "no credit" not in str(e):
+                                raise
+                            # no credit for the spread (expiry day, steep skew): take the flip as a plain option BUY instead
+                            # (CE for a BUY flip, PE for a SELL flip) so index flips are not lost
+                            b = dict(c, key="rzt-intraday", source=(c.get("source") or "").replace(" · hedged credit spread", "") + " · option buy (no credit for a spread)")
+                            t = open_trade(st, b, today)
+                            _notify(t)
                     else:
                         t = open_trade(st, c, today)
                         _notify(t)
