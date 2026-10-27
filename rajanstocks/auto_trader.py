@@ -41,7 +41,7 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": True, "pairSell": True,
+               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": True, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
@@ -81,6 +81,9 @@ def _load(cached=False):
                 d = json.load(f)
         saved = d.get("cfg") or {}
         st["cfg"].update(saved)
+        if saved.get("pairV") != 1:                            # one-time: paired option SELL leg off (buy-only); the settings API can turn it back on
+            st["cfg"].update(pairSell=False, pairV=1)
+            st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
             st["_dirty"] = True
@@ -832,7 +835,7 @@ def manage(st, now, t_end=None):
     if not opens:
         return
     # paired option SELL legs that were deferred before 09:20 go on now (user rule: selling starts at 09:20)
-    if _mins(now) >= SELL_FROM:
+    if _mins(now) >= SELL_FROM and st["cfg"].get("pairSell", WRITE_PAIR):
         for t in [x for x in opens if x.get("writePending") and not x.get("pairOf")]:
             if t_end and time.time() > t_end:
                 break                                         # out of time this cycle - the rest go on in the next one
