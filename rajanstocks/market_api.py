@@ -418,7 +418,8 @@ def quotes(symbols: str = ""):
     slast = "qs-last|" + hashlib.md5(",".join(syms).encode()).hexdigest()
     stale, why = False, ""
     try:
-        ttl = 4.0 if market_open() else 300        # live: 4s; Upstox allows ~66 calls/min in total, and every server instance has its own cache
+        ttl = 8.0 if market_open() else 300        # live: 8s (was 4s); Upstox allows ~2000 calls / 30 min for the whole app - 4s polling of every
+                                                   # symbol set by every open screen used most of it and tripped 429s ("Delayed")
         now = time.time()
         have, missing = {}, []
         for s in syms:
@@ -428,9 +429,9 @@ def quotes(symbols: str = ""):
             else:
                 missing.append(s)
         if missing:
-            qttl = 4 if market_open() else 120
+            qttl = 8 if market_open() else 120
             qkey = "qs|" + hashlib.md5(",".join(missing).encode()).hexdigest()
-            got = _cached("qf|" + ",".join(missing), 3 if market_open() else 45, lambda: _shared(qkey, qttl, lambda: fetch(missing)))
+            got = _cached("qf|" + ",".join(missing), 7 if market_open() else 45, lambda: _shared(qkey, qttl, lambda: fetch(missing)))
             t0 = time.time()
             for q in got:
                 _QSYM[q["s"]] = (t0, q)
@@ -873,8 +874,8 @@ def oquote(keys: str):
         raise HTTPException(400, "keys required")
     try:
         okey = "oqs|" + hashlib.md5(",".join(sorted(ks)).encode()).hexdigest()
-        raw = _cached("oq|" + ",".join(sorted(ks)), 4 if market_open() else 120,
-                      lambda: _shared(okey, 4 if market_open() else 120, lambda: nse_service.upstox._full_quotes(ks)))
+        raw = _cached("oq|" + ",".join(sorted(ks)), 8 if market_open() else 120,       # 8 s (was 4 s): see quotes()
+                      lambda: _shared(okey, 8 if market_open() else 120, lambda: nse_service.upstox._full_quotes(ks)))
     except Exception as e:
         raise HTTPException(503, f"Option prices are temporarily unavailable: {str(e)[:140]}")
     out = []
