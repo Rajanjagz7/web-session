@@ -412,8 +412,7 @@
   /* ---------- page ---------- */
   const GROUPS = [
     { key: 'picks', label: "Today's Picks", tabs: [['picks', "Today's Picks"]] },
-    { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood']] },
-    { key: 'opt', label: 'Options & Expiry', tabs: [['fno', 'Options & Expiry']] },
+    { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood'], ['fno', 'Options & Expiry']] },
     { key: 'stocks', label: 'Signals', tabs: [['signals', 'Signals'], ['sectors', 'Sectors'], ['movers', 'Movers'], ['fallen', 'Fallen']] },
     { key: 'world', label: 'Markets', tabs: [['global', 'Global'], ['stocklist', 'All stocks'], ['range', 'Range']] },
   ];
