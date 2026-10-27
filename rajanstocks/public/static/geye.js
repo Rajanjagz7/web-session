@@ -379,7 +379,7 @@
     { key: 'picks', label: "Today's Picks", tabs: [['picks', "Today's Picks"]] },
     { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood']] },
     { key: 'opt', label: 'Options & Expiry', tabs: [['fno', 'Options & Expiry']] },
-    { key: 'stocks', label: 'Signals', tabs: [['signals', 'Signals'], ['sectors', 'Sectors'], ['movers', 'Movers'], ['fallen', 'Fallen'], ['watch', 'Watchlist']] },
+    { key: 'stocks', label: 'Signals', tabs: [['signals', 'Signals'], ['sectors', 'Sectors'], ['movers', 'Movers'], ['fallen', 'Fallen']] },
     { key: 'world', label: 'Markets', tabs: [['global', 'Global'], ['stocklist', 'All stocks'], ['range', 'Range']] },
   ];
   const LAST_SUB = LS('ge-last', {});                  // a main tab reopens on the sub-tab used last
@@ -387,6 +387,7 @@
   function paint(reason) {
     const el = host(); if (!el) return;
     if (reason === 'data' && G.tab === 'stocklist' && document.getElementById('geSL')) { const u = el.querySelector('.ge-upd'); if (u && G.data) u.textContent = 'Updated ' + IST(G.data.asOf); return; }
+    if (G.tab === 'watch') G.tab = 'signals';            // the Watchlist tab was removed; anyone who had it open lands on Signals
     if (G.tab === 'picks') G.tab = 'overview';         // Today's Picks is its own screen (#v-picks); here it means Overview
     const d = G.data;
     const grp = GROUPS.find(g => g.tabs.some(t => t[0] === G.tab)) || GROUPS[0];
