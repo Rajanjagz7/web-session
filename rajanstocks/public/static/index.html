@@ -691,8 +691,15 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .jr-px{width:92px;height:28px;text-align:right}.jr-tsl{display:flex;gap:4px;justify-content:flex-end}.jr-u{width:58px;height:28px;padding:0 4px}
 .vx-astbl{overflow-x:auto}.vx-astbl table{width:100%;border-collapse:collapse;font-size:13px}.vx-astbl th{text-align:left;padding:6px 8px;color:var(--muted,#8a94a6);font-weight:600;border-bottom:1px solid var(--line,#2a3140)}.vx-astbl td{padding:6px 8px;border-bottom:1px solid var(--line,#2a3140);vertical-align:top;white-space:nowrap}.vx-astbl td:last-child{white-space:normal}.vx-astbl tr.on td{background:rgba(250,204,21,.10)}.vx-astbl summary{cursor:pointer;font-weight:600;list-style:none}.vx-astbl summary::-webkit-details-marker{display:none}.as-up{color:#22c55e}.as-down{color:#ef4444}.as-flat{color:#94a3b8}
 .ob-how, .gx-how, .hg-how, details.ob-how, details.gx-how, details.hg-how{display:none !important}
+/* phones: the header must never overlap - drop the page title and the status time, and make the install button icon-only */
+@media (max-width:520px){
+  .hdr{gap:6px;padding:0 8px;overflow:hidden}.hdr .here{display:none}.hdr-r{gap:5px;flex:none;margin-left:auto}.search-btn{margin-left:0}
+  .live .lv-t{display:none}.live{padding:0 8px}
+  #pwaBtn{width:32px;padding:0;justify-content:center}#pwaBtn::after{content:none}
+  .pf-chip{padding:0 8px}.hdr .brand{flex:none}
+}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261027s"></script>
+<script id="scrJV" src="/static/journal.js?v=20261027t"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
@@ -2537,7 +2544,7 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=windo
   } else {
     try {
       const saved = JSON.parse(localStorage.getItem('rs-last-pnl') || 'null');
-      if(saved && typeof saved.pl === 'number' && saved.pl !== 0){ pl = saved.pl; isLast = true; }
+      if(t && t.lastDay && saved && typeof saved.pl === 'number' && saved.pl !== 0){ pl = saved.pl; isLast = true; }   // only while the journal still has a real previous day (a reset used to leave the old figure here)
     } catch(e){}
   }
   if(pl !== 0){
@@ -4597,7 +4604,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027s';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027t';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
@@ -4775,7 +4782,7 @@ function profitLock(p,s){if(!p||!(s.last>0)||!p.q)return;{const m=App.meta[p.sym
   const keep=best>=LOCK_TRAIL?(best>=10000?0.65:best>=6000?0.5:LOCK_KEEP)*best:0,st=+(L?p.avg+feeU+keep/qa:p.avg-feeU-keep/qa).toFixed(s.dp||2);
   if(!(p.sl>0)||(L?st>p.sl:st<p.sl)){p.sl=st;p.lock={keep:Math.round(keep),best:Math.round(best),mode:keep?'trail':'breakeven'};savePaper();try{setChartLines()}catch(e){}
     try{toast(`${s.s}: profit ₹${Math.round(best).toLocaleString('en-IN')} - stop moved to ${fmtP(st)} (${keep?'locks ₹'+Math.round(keep).toLocaleString('en-IN'):'breakeven'})`,'ok')}catch(e){}}}
-function setStatus(){const t=$('#liveTxt'),d=$('#liveDot'),b=$('#liveBox');if(!t)return;const S=(w,full,c)=>{t.textContent=w;d.style.background=c;if(b)b.title=full};
+function setStatus(){const t=$('#liveTxt'),d=$('#liveDot'),b=$('#liveBox');if(!t)return;const S=(w,full,c)=>{const k=w.indexOf(' · ');if(k>0){t.textContent=w.slice(0,k);const sp=document.createElement('span');sp.className='lv-t';sp.textContent=w.slice(k);t.appendChild(sp)}else t.textContent=w;d.style.background=c;if(b)b.title=full};
   if(netOff())return S('Offline','No internet — prices are not live and trading is disabled','var(--down)');
   if(MKT.err)return S('No feed','Live prices unavailable — retrying','var(--down)');
   if(MKT.stale)return S('Delayed','Delayed by the data provider · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false}),'var(--warn)');

@@ -1509,7 +1509,7 @@ function paperList() {
     T = []; S = Object.assign({}, DEFAULTS); persist(); persistS();
     AUTO.list = []; AUTO.stockTrades = []; AUTO.ts = Date.now();
     try { SB.d = null; SB.ts = 0; } catch (e) { }
-    try { localStorage.setItem('mer-trades', '[]'); localStorage.setItem('mer-paper', '[]'); } catch (e) { }
+    try { localStorage.setItem('mer-trades', '[]'); localStorage.setItem('mer-paper', '[]'); localStorage.removeItem('rs-last-pnl'); } catch (e) { }
     try {
       if (typeof App !== 'undefined') {
         App.cash = S.capital || 1000000; App.positions = []; App.orders = []; App.history = []; App.trades = []; App.meta = {};
