@@ -125,9 +125,17 @@
     </section>`;
   }
 
+  /* GIFT Nifty / GIFT Bank Nifty tiles sit in the same grid, right after the NIFTY and SENSEX cards (prices come from the app's own global feed - no extra request) */
+  function cardsWithGift(list) {
+    const cs = list.map(card); let at = 0;
+    list.forEach((c, i) => { if (c.key === 'NIFTY' || c.key === 'SENSEX') at = Math.max(at, i); });
+    const gt = typeof glTopHTML === 'function' ? glTopHTML() : '';
+    if (gt) cs.splice(at + 1, 0, gt);
+    return cs.join('');
+  }
   function overview(d) {
     return `${outlookBlock(d.outlook, d.expiry, d.options)}
-      <div class="ge-cards ge-cards-w">${(d.cards || []).map(card).join('')}</div>`;
+      <div class="ge-cards ge-cards-w">${cardsWithGift(d.cards || [])}</div>`;
   }
   /* ---------- Overview, mounted at the top of Today's Picks (replaces the old Indices cards) ---------- */
   function ovInner() {

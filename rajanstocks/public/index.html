@@ -610,7 +610,7 @@ button.gl2{cursor:pointer}button.gl2:hover{border-color:var(--brand);background:
 .glb-chip.down{border-left-color:var(--down)}.glb-chip.down b{color:var(--down)}
 .glp-more{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
 .glp-mh{font-size:13px;font-weight:600;margin:0 0 10px}.glp-mh small{font-weight:400;font-size:11.5px}
-.glp-pk{margin:12px 0}.glp-pk .glp-msg{border:0;padding:10px}
+.ge-cards>.gl2{align-self:stretch;justify-content:center}.ge-cards>.gl2 .gl2-ch{display:none}.ge-cards>.gl2 .gl2-n{font-size:12px}.ge-cards>.gl2 .gl2-top{gap:6px}
 
 /* ---- news bar ---- */
 .newsbar{position:sticky;top:0;z-index:36;height:30px;display:flex;align-items:center;background:var(--panel-2);border-bottom:1px solid var(--line);overflow:hidden}
@@ -744,7 +744,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
-<script src="/static/geye.js?v=20261028d"></script>
+<script src="/static/geye.js?v=20261028e"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -3453,7 +3453,6 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const _keep=!!App.pkKeep;App.pkKeep=false;const _sp=pkScroller(el),_st=_sp.scrollTop,_pa=el.querySelector('.pkf'),_t0=_pa?_pa.getBoundingClientRect().top:null;   // keep the filter panel where it is on screen when the list below changes length
   el.innerHTML=`<div class="page">${window.geTabsHTML?geTabsHTML({upd:App.pkBusy?'Refreshing picks…':'Picks updated '+((P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')),busy:App.pkBusy}):pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    ${window.geOverviewHTML?geOverviewHTML():`<div class="ixs-h"><b>Indices</b></div><div class="ixs">${idxHtml}</div>`}
-   ${glMoreHTML()}
    <div class="card pkf">
      <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['STOCK','Stocks'],['INDEX','Index calls']],f.kind,'kind')}</div><div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div></div>
      <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${chips([['TOP','Top 10-15'],['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div></div>
@@ -4408,16 +4407,14 @@ function glTile(i,ic,label,b){const up=i.chgPct>=0,live=i.mode==='live';
     +`<b class="num gl2-p">${fmtP(i.price,i.price>=1000?0:2)}</b><span class="gl2-bot"><span class="num ${cls(i.chgPct)}">${up?'+':'−'}${Math.abs(i.chgPct).toFixed(2)}%</span>${glSpark(b&&b.spark)}</span>`;
   return i.chart?`<button type="button" class="gl2" data-gl="${esc(i.id)}" aria-label="Open ${esc(i.name)} chart">${body}</button>`
     :`<div class="gl2" title="Price only - MCX charts need an exchange licence. Open the COMEX / NYMEX tile for the chart">${body}</div>`}
-/* Global markets that are NOT already cards in the God's Eye overview (Gold, Silver, Crude, Bitcoin, Nasdaq 100, Dow and the US VIX / GLOBALRISK card are there already).
-   Shown at the top of Today's Picks from the same /api/m/global feed the header strip and the GIFT Nifty chart use - no extra request. */
-const GL_EXTRA=['GIFT Nifty','GIFT Bank Nifty'];
-function glMoreInner(){
-  if(!GL.items)return `<h4 class="glp-mh">Global markets &amp; futures</h4><div class="glp-msg muted">${GL.err?'Global data is unavailable right now.':'Loading global markets…'}</div>`;
-  const rest=GL_EXTRA.map(n=>GL.items.find(i=>i.name===n)).filter(Boolean);
-  if(!rest.length)return '';
-  return `<h4 class="glp-mh">Global markets &amp; futures <small class="muted">· GIFT Nifty, MCX live · US ~10 min delayed</small></h4><div class="glp-grid">${rest.map(i=>glTile(i,i.name.replace(/[^A-Za-z0-9]/g,'').slice(0,2),i.name)).join('')}</div>`}
-const glMoreHTML=()=>`<section class="glp-more glp-pk" id="glMore">${glMoreInner()}</section>`;
-function glMoreRender(){const el=$('#glMore');if(el)el.innerHTML=glMoreInner()}
+/* GIFT Nifty / GIFT Bank Nifty: tiles in the God's Eye overview grid, next to the NIFTY and SENSEX cards (geye.js cardsWithGift).
+   The other global markets (Gold, Crude, Nasdaq, Dow, VIX ...) are already score cards there. Same /api/m/global feed the header strip and GIFT chart use. */
+const GL_TOP=[['GIFT Nifty','GIFT Nifty'],['GIFT Bank Nifty','GIFT Bank']];
+function glTopTile(name,label){const i=GL.items&&GL.items.find(x=>x.name===name);
+  if(!i)return `<div class="gl2" data-gtop="${esc(name)}"><span class="gl2-top"><span class="gl2-ic">GI</span><span class="gl2-n">${esc(label)}</span></span><b class="num gl2-p">—</b><span class="gl2-bot muted">${GL.err?'unavailable':'loading…'}</span></div>`;
+  return glTile(i,'GI',label).replace('class="gl2"',`class="gl2" data-gtop="${esc(name)}"`)}
+const glTopHTML=()=>GL_TOP.map(([n,l])=>glTopTile(n,l)).join('');
+function glMoreRender(){document.querySelectorAll('[data-gtop]').forEach(el=>{const t=GL_TOP.find(x=>x[0]===el.dataset.gtop);if(t&&GL.items&&GL.items.find(i=>i.name===t[0]))el.outerHTML=glTopTile(t[0],t[1])})}
 document.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('glp-more'))GL.more=e.target.open},true);
 
 /* ======================= Global instrument charts, news bar, picks pagination ======================= */
