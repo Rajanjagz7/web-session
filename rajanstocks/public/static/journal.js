@@ -597,10 +597,13 @@ function paperList() {
 
   const PG_SIZES = [5, 10, 15, 1000];
   /* Buy / Sell split: one switch for every journal table */
-  const sideOk = t => !ui.side || ui.side === 'all' || (ui.side === 'sell' ? t.dir === 'Short' : t.dir !== 'Short');
+  /* Eagle Trades (strength >= 75 + Open = Low / High, server auto trader): a badge on every row and their own filter */
+  const isEagle = t => /^Eagle/i.test(t.setup || '');
+  const eagleTag = t => isEagle(t) ? '<span class="jv-eagle" title="Eagle Trades: strength 75+ with Open = Low (buy) / Open = High (sell)">🦅 EAGLE</span>' : '';
+  const sideOk = t => !ui.side || ui.side === 'all' || (ui.side === 'eagle' ? isEagle(t) : ui.side === 'sell' ? t.dir === 'Short' : t.dir !== 'Short');
   function sideBar(list) {
-    const nb = list.filter(t => t.dir !== 'Short').length, ns = list.length - nb, cur = ui.side || 'all';
-    return `<div class="jv-seg jv-sidesw" role="group" aria-label="Buy or sell trades">${[['all', 'All', list.length], ['buy', 'Buy', nb], ['sell', 'Sell', ns]].map(([k, l, n]) =>
+    const nb = list.filter(t => t.dir !== 'Short').length, ns = list.length - nb, ne = list.filter(isEagle).length, cur = ui.side || 'all';
+    return `<div class="jv-seg jv-sidesw" role="group" aria-label="Buy or sell trades">${[['all', 'All', list.length], ['buy', 'Buy', nb], ['sell', 'Sell', ns]].concat(ne || cur === 'eagle' ? [['eagle', '🦅 Eagle', ne]] : []).map(([k, l, n]) =>
       `<button class="${cur === k ? 'on' : ''} ${k}" data-jvside="${k}">${l} <small>${n}</small></button>`).join('')}</div>`;
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-jvside]'); if (!b || !e.target.closest('#v-journal')) return;
@@ -708,7 +711,7 @@ function paperList() {
       return `<tr data-jv="open" data-id="${t.id}" tabindex="0" title="Click for full details">
         <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : t.paper ? '<span class="jv-tag m" title="Placed from the Trade screen">T</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${shortId(t)}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
         <td title="Taken: ${t.date} ${entryTime(t) || ''}">${String(t.date).slice(5)}${entryTime(t) ? ` <small class="num">${entryTime(t)}</small>` : ''}</td>
-        <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small title="${E(tips)}">${E(t.setup || '')}</small></td>
+        <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}<small title="${E(tips)}">${E(t.setup || '')}</small></td>
         <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'SELL' : 'BUY'}</span></td>
         <td class="num">${px(t.entry)}</td>
         <td class="num" data-c="cur" title="${closedish ? 'Exit price' : 'Last traded price (live)'}"><b>${px(curPx(t))}</b></td>
@@ -1704,7 +1707,7 @@ function paperList() {
        const pnlClass = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
        const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit at the live price">Exit</button>` : `<span class="muted">${E(t.exitType || 'Closed')}</span>`;
        return `<tr data-pid="${E(t.id)}"${t.auto ? ' class="auto-row"' : ''}>
-         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><small>${E(t.setup || '')}</small></span></td>
+         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}<small>${E(t.setup || '')}</small></span></td>
          <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'BUY' : 'SELL'}</span></td>
          <td class="num" title="Taken ${entryTime(t) ? entryTime(t) : ''}">${px(t.entry)}${entryTime(t) ? ` <small class="muted">${entryTime(t)}</small>` : ''}</td>
          <td class="num" data-c="sl">${px(t.sl)}</td>
@@ -1981,7 +1984,7 @@ function paperList() {
           const hzTag = t.hz ? (t.hz.charAt(0).toUpperCase() + t.hz.slice(1)) : (t.setup && t.setup.toLowerCase().includes('positional') ? 'Positional' : 'Intraday');
           const isShort = t.dir === 'Short';
           return `<tr>
-            <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b><br><small class="muted">${E(t.setup || 'Auto strategy')}</small></td>
+            <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}<br><small class="muted">${E(t.setup || 'Auto strategy')}</small></td>
             <td><span class="badge ${t.isStock ? 'b-mute' : 'b-up'}" style="font-size:10.5px">${E(segTag)}</span> · <small>${E(hzTag)}</small></td>
             <td><span class="jv-side ${isShort ? 's' : 'l'}">${isShort ? 'SELL' : 'BUY'}</span></td>
             <td class="num"><b>${px(t.entry)}</b></td>
@@ -2103,6 +2106,8 @@ function paperList() {
   .jv .card-h h3{white-space:nowrap}.jv .card-h{flex-wrap:wrap}.jv .card-h .muted{min-width:0}
   .jv-t{font-size:12.5px}.jv-t th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;cursor:help;padding:6px 8px;position:sticky;top:0;background:var(--panel)}
   .jv-t td{padding:5px 8px;vertical-align:middle}.jv-t td.num,.jv-t th.num{text-align:right}
+  .jv-eagle{display:inline-block;margin:2px 0 1px;padding:1px 7px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.05em;color:#f5a524;background:rgba(245,165,36,.14);border:1px solid rgba(245,165,36,.5);white-space:nowrap}
+  :root[data-theme="light"] .jv-eagle{color:#b45309;background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.45)}
   .jv-sym b{display:block;font-size:12.5px;max-width:230px;overflow:hidden;text-overflow:ellipsis}.jv-sym small{display:block;font-size:10.5px;color:var(--text-3,#8a93a6);max-width:230px;overflow:hidden;text-overflow:ellipsis}
   .jv-tag{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:4px;font-size:9.5px;font-weight:800;margin-right:5px;background:color-mix(in srgb,var(--brand,#4f8ef7) 20%,transparent);color:var(--brand,#4f8ef7)}
   .jv-tag.m{background:var(--panel-2,rgba(255,255,255,.06));color:var(--text-3,#8a93a6)}
