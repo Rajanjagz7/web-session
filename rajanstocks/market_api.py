@@ -1264,7 +1264,12 @@ def health():
         except UpstoxRateLimited:
             return {"e": "", "busy": True}
         except Exception as e:
-            return {"e": str(e)[:160]}
+            m = str(e)[:160]
+            # a passing blip (rate limit worded differently, timeout, Upstox 5xx) is not a broken feed: the app keeps serving the
+            # last prices - it used to raise the red "Data feed issue" banner for 5 minutes (and the page kept it for 30)
+            if any(x in m.lower() for x in ("429", "rate", "too many", "last known", "timed out", "timeout", "502", "503", "504", "temporarily")):
+                return {"e": "", "busy": True}
+            return {"e": m}
 
     res = _cached("token-probe", 300, lambda: _shared("token-probe", 300, probe))
     err = res.get("e")
