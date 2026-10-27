@@ -172,18 +172,8 @@
   function fnoTab(d) {
     return `<div class="ge-grid4">${pInst(d.positioning)}${pOptionsOI(d.options)}${pPCR(d.options)}</div>${optTab(d)}`;
   }
-  function globalTab() {
-    let page = '';                                     // card layout from index.html: tile grid + sparklines + Global Market Bias card; every tile opens its chart
-    try {
-      if (typeof glPageHTML === 'function') page = glPageHTML();
-      if (typeof GL !== 'undefined' && !GL.items && typeof loadGlobal === 'function') loadGlobal(true);
-      else if (typeof loadGlobalBias === 'function') setTimeout(() => loadGlobalBias(), 0);
-    } catch (e) { }
-    return page || '<section class="ge-p"><p class="ge-na">Global markets unavailable right now.</p></section>';
-  }
   /* the full NSE stock list (search, index constituents, multibaggers) - the old Markets screen's screener, mounted here */
   function stocklistTab() { return '<div id="geSL" class="ge-sl"></div>'; }
-  window.geNeedsGlobal = () => !!host() && G.tab === 'global';
   window.geOpenTab = (tab, sub) => { G.tab = tab; if (sub) G.slTab = sub; const g = GROUPS.find(x => x.tabs.some(t => t[0] === tab)); if (g) { LAST_SUB[g.key] = tab; SS('ge-last', LAST_SUB); } SS('ge-tab', G.tab); };
   /* day / 20-day range with the price marker - from the cards' own detail block (no extra request) */
   function rangeBar(lo, hi, px, label) {
@@ -388,7 +378,7 @@
       <h4>Opportunity ${isN(r.opp) ? r.opp + '/100' : 'N/A'}${tip('opportunity')}</h4>
       ${(r.oppParts || []).map(q => `<div class="ge-row"><span>${E(q.name)} <small class="muted">${q.weight}%</small></span>${bar(q.value, q.value >= 50 ? 'up' : 'down')}<b class="num">${q.value}</b></div>`).join('') || '<p class="ge-na">Not enough data to score.</p>'}
       <div class="ge-dact"><button type="button" class="btn pri" data-gestkchart="${E(r.s)}">Open chart</button>${r.fno ? `<button type="button" class="btn" data-gestkopt="${E(r.s)}">Option chain</button>` : ''}<button type="button" class="btn" data-geclose="1">Close</button></div>
-      <p class="ge-sub">Price-based score; no P/E, ROCE or supplier data. Data as of ${E(IST(G.sec.asOf))}.</p></div></div>`;
+      <p class="ge-sub">Data as of ${E(IST(G.sec.asOf))}.</p></div></div>`;
   }
 
   const CHART = { NIFTY: ['sym', 'NIFTY'], SENSEX: ['sym', 'SENSEX'], BANKNIFTY: ['sym', 'BANKNIFTY'], GOLD: ['gl', 'COMEX:GC1!'], SILVER: ['gl', 'COMEX:SI1!'], CRUDEOIL: ['gl', 'NYMEX:CL1!'], BITCOIN: ['gl', 'BITSTAMP:BTCUSD'], NASDAQ: ['gl', 'NASDAQ:NDX'], DJI: ['gl', 'DJ:DJI'], GLOBALRISK: ['gl', 'CBOE:VIX'] };
@@ -414,13 +404,14 @@
     { key: 'picks', label: "Today's Picks", tabs: [['picks', "Today's Picks"]] },
     { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood'], ['fno', 'Options & Expiry']] },
     { key: 'stocks', label: 'Signals', tabs: [['signals', 'Signals'], ['sectors', 'Sectors'], ['movers', 'Movers'], ['fallen', 'Fallen']] },
-    { key: 'world', label: 'Markets', tabs: [['global', 'Global'], ['stocklist', 'All stocks'], ['range', 'Range']] },
+    { key: 'world', label: 'Markets', tabs: [['stocklist', 'All stocks'], ['range', 'Range']] },
   ];
   const LAST_SUB = LS('ge-last', {});                  // a main tab reopens on the sub-tab used last
   function host() { return typeof App !== 'undefined' && App.view === 'godseye' ? document.getElementById('v-godseye') : null; }
   function paint(reason) {
     const el = host(); if (!el) { paintTop(); return; }
     if (reason === 'data' && G.tab === 'stocklist' && document.getElementById('geSL')) { const u = el.querySelector('.ge-upd'); if (u && G.data) u.textContent = 'Updated ' + IST(G.data.asOf); return; }
+    if (G.tab === 'global') G.tab = 'picks';             // the Global tab moved into Today's Picks
     if (G.tab === 'watch') G.tab = 'signals';            // the Watchlist tab was removed; anyone who had it open lands on Signals
     if (G.tab === 'picks' || G.tab === 'overview') { G.tab = 'picks'; if (typeof go === 'function') go('picks'); return; }   // the Overview tab is gone: its content is the top of Today's Picks
     const d = G.data;
@@ -429,7 +420,7 @@
     let body;
     if (!d) body = G.err ? `<div class="ge-p"><p class="ge-na">God's Eye is unavailable: ${E(G.err)}</p><button class="btn" data-gerefresh="1">Retry</button></div>`
       : `<div class="ge-cards">${'<article class="ge-card ge-skel"></article>'.repeat(10)}</div><p class="muted">Reading markets, FII / DII and option data…</p>`;
-    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, stocklist: stocklistTab }[G.tab] || overview)(d);
+    else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, stocklist: stocklistTab }[G.tab] || overview)(d);
     if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
       ${headHTML(G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : '', 'data-gerefresh="1"', G.busy)}
@@ -712,6 +703,10 @@
   :root[data-theme="light"] .ge-card.bear{background:linear-gradient(180deg,color-mix(in srgb,var(--down) 7%,var(--panel)),var(--panel))}
   :root[data-theme="light"] .ge-dbg{background:rgba(15,23,42,.35)}
   :root[data-theme="light"] .ge-det{background:var(--panel);box-shadow:-12px 0 40px rgba(15,23,42,.18)}
+  /* detail sheet sizes to its content: bottom sheet on phones, centred card on wider screens (was a full-height drawer with a big empty bottom) */
+  .ge-dbg{align-items:center;justify-content:center;padding:16px}
+  .ge-det{height:auto;max-height:min(88vh,100%);border:1px solid var(--line);border-radius:16px;padding:18px 18px 22px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+  @media(max-width:700px){.ge-dbg{align-items:flex-end;padding:0}.ge-det{width:100%;max-height:90vh;border-width:1px 0 0;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.4)}}
   :root[data-theme="light"] .ge-out{background:linear-gradient(135deg,color-mix(in srgb,var(--ge-cy) 6%,var(--panel)),var(--panel))}
   .ge-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:8px}.ge-tabs::-webkit-scrollbar{display:none}
   .ge-sub2{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding-bottom:2px;border-bottom:1px solid var(--line)}.ge-sub2::-webkit-scrollbar{display:none}
