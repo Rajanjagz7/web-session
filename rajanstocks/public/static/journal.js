@@ -525,6 +525,7 @@ function paperList() {
     const k = document.getElementById('jvKpis'); if (!k) return;
     liveCap();
     { const td = document.getElementById('jvToday'); if (td) { const t = document.createElement('div'); t.innerHTML = todayCard(); const n = t.firstElementChild; if (n && n.innerHTML !== td.innerHTML) td.innerHTML = n.innerHTML; } }
+    { const db = document.getElementById('jvDayB'); if (db) { const v = todayTotal().total; db.textContent = 'Day ' + sinr(v); db.className = 'num ' + (v > 0 ? 'up' : v < 0 ? 'down' : ''); } }
     { const bk = document.getElementById('jvBooks'); if (bk) { sbLoad(false); const t = document.createElement('div'); t.innerHTML = booksCard(); const n = t.firstElementChild; if (n.innerHTML !== bk.innerHTML) bk.innerHTML = n.innerHTML; } }
     const day = today();
     { const ie = document.getElementById('jvInsight'); if (ie) { const t = document.createElement('div'); t.innerHTML = insightCard(metrics(filtered())); const n = t.firstElementChild; if (n && n.innerHTML !== ie.innerHTML) { ie.innerHTML = n.innerHTML; ie.className = n.className; } } }
@@ -607,7 +608,7 @@ function paperList() {
      const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
      let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
      const openAll = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), open = openAll.filter(sideOk);
-     const dayPnl = (daily[day] || 0) + openAll.filter(t => t.date === day).reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
+     const dayPnl = todayTotal().total;
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${todayCard()}
      ${booksCard()}
@@ -616,9 +617,9 @@ function paperList() {
      ${insightCard(m)}
      ${legCard()}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
-     <div class="jv-sec">Open trades right now</div>
-     <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>
-     <div class="card"><div class="card-h"><h3>Running trades</h3><span class="jv-hr"><b class="num ${dayPnl > 0 ? 'up' : dayPnl < 0 ? 'down' : ''}" title="Today's booked P&L + open P&L of today's trades" style="font-size:13px">Day ${sinr(dayPnl)}</b><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
+     <div class="jv-sec">Your trades</div>
+     <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Counts include closed trades · Buy = long · Sell = short / option writing</span></div>
+     <div class="card"><div class="card-h"><h3>Running trades</h3><span class="jv-hr"><b id="jvDayB" class="num ${dayPnl > 0 ? 'up' : dayPnl < 0 ? 'down' : ''}" title="Today's booked P&L + open P&L of today's trades" style="font-size:13px">Day ${sinr(dayPnl)}</b><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
      <div class="jv-sec">Recent trades</div>
      <div class="card"><div class="card-h"><h3>Latest first</h3></div>${tradeTable(recent, true, 'recent')}</div>`;
   }
@@ -1845,12 +1846,19 @@ function paperList() {
      });
      const d = SB.d && SB.d.byHorizon ? SB.d : null;
      if (d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: d.unrealised || 0 };
+     if (!R.stock) {                                  // stock trader not loaded yet: use the stock trades already mirrored from its status
+       let b = 0, o = 0;
+       (AUTO.stockTrades || []).forEach(t => { if (!entered(t)) return; if (statusOf(t) === 'Closed') { if (lastExit(t).slice(0, 10) === day || String((t.raw && t.raw.closedAt) || '').slice(0, 10) === day) b += (t.raw && typeof t.raw.net === 'number') ? t.raw.net : (calc(t).net || 0); } else o += unrealisedNet(t) || 0; });
+       R.stock = { b, o, est: true };
+     }
      R.carry = carry;
      return R;
    }
+   /* THE one "today" figure: locked in + running, all three books. The Today card, the header chip and the Running-trades header all use it. */
+   function todayTotal() { const R = todayRows(); const b = R.buy.b + R.sell.b + R.stock.b, o = R.buy.o + R.sell.o + R.stock.o; return { booked: b, open: o, total: b + o }; }
    function todayCard() {
      const R = todayRows(), mk = (typeof window.rjMkt === 'function') ? window.rjMkt() : false;
-     const bk = R.buy.b + R.sell.b + (R.stock ? R.stock.b : 0), op = R.buy.o + R.sell.o + (R.stock ? R.stock.o : 0), tot = bk + op;
+     const bk = R.buy.b + R.sell.b + R.stock.b, op = R.buy.o + R.sell.o + R.stock.o, tot = bk + op;
      const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
      const num = (lab, v) => `<div><small>${lab}</small><span class="${cc(v)}">${sinr(v)}</span></div>`;
      const row = (name, x, hint) => `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>${hint}</small></div>${x
@@ -1863,7 +1871,6 @@ function paperList() {
          <div class="jv-chip2"><small>Locked in</small><b class="${cc(bk)}">${sinr(bk)}</b><span>trades already closed</span></div>
          <div class="jv-chip2"><small>Running now</small><b class="${cc(op)}">${sinr(op)}</b><span>can still change</span></div>
        </div>
-       ${R.stock ? '' : '<p class="jv-hint">Stock trader is still loading - it will be added in a moment.</p>'}
        ${row('Options Buy', R.buy, 'you bought options')}${row('Options Sell', R.sell, 'you sold options')}${row('Stock trader', R.stock, 'shares')}
        <p class="jv-hint">Only "Locked in" is final. "Running now" moves with price until the trade closes. Stock trades that day-trade are closed at 3:15 pm; option trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open option trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
    }
@@ -2353,6 +2360,6 @@ function lastDayStats(currentDay) {
   window.JV = { cap: () => capUse(), render, sync: syncAuto, refreshLive, trades: () => T, settings: () => S, calc, validate,
     /* live portfolio for the header: capital + booked + open (marked to market) */
           totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday, last = lastDayStats(d);
-      return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayBooked + L.unr, todayBooked, lastDay: last.day, lastDayPnl: last.pnl, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
+      return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayTotal().total, todayBooked, lastDay: last.day, lastDayPnl: last.pnl, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };
   setTimeout(() => { syncAuto(false).then(() => { if (typeof renderPfChip === 'function') renderPfChip(); if (typeof App !== 'undefined' && App.view === 'journal') render(); }); }, 80);
 })();

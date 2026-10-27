@@ -83,5 +83,5 @@
       "destination": "/api/index"
     }
   ],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)docs' ':(exclude)qa' ':(exclude)tests' ':(exclude)*.md' ':(exclude)*_backtest.py' ':(exclude)strategy_audit.py' ':(exclude)run_backtest_ci.py' ':(exclude)accuracy_report.py'"
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" != \"rajan-web-session\" ]; then exit 0; fi; git diff --quiet HEAD^ HEAD -- . ':(exclude)docs' ':(exclude)qa' ':(exclude)tests' ':(exclude)*.md' ':(exclude)*_backtest.py' ':(exclude)strategy_audit.py' ':(exclude)run_backtest_ci.py' ':(exclude)accuracy_report.py'"
 }
