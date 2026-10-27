@@ -282,6 +282,29 @@ function paperList() {
     if (typeof v === 'number' && isFinite(v)) { UNR_LAST[k] = v; return v; }
     return Object.prototype.hasOwnProperty.call(UNR_LAST, k) ? UNR_LAST[k] : null;
   }
+  /* Open P&L is shown AFTER the estimated cost of closing the trade now, so it matches the booked P&L it turns into
+     (booked results are net of costs; open ones used to be gross, so a small open profit could close as a loss).
+     Server trades use the same costPct x (entry + exit) x qty the server charges on exit; manual trades use the Settings
+     cost + slippage per unit on the remaining qty (as calc() does); Trade-screen paper positions use the app's charge table. */
+  function exitCostEst(t) {
+    try {
+      if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') return 0;
+      const rem = t.qty - exitedQty(t);
+      if (t.auto) {
+        const pct = t.raw && Number(t.raw.costPctEff);
+        if (!(pct >= 0)) return 0;
+        const cur = t.isStock ? curPx(t) : ((t.raw && t.raw.last) || t.entry);
+        return pct / 100 * ((t.entry || 0) + (cur || 0)) * rem * units(t);
+      }
+      if (t.paper) {
+        if (typeof calcCharges !== 'function' || typeof kindOf !== 'function') return 0;
+        const s = (typeof SYM === 'function' && SYM(t.symbol)) || {}, cur = curPx(t) || t.entry;
+        return calcCharges(kindOf(s), dirOf(t) > 0 ? 'sell' : 'buy', rem * cur).total || 0;
+      }
+      return (S.cost + S.slip) * units(t) * rem;
+    } catch (e) { return 0; }
+  }
+  function unrealisedNet(t) { const u = unrealised(t); return u == null ? null : +(u - exitCostEst(t)).toFixed(2); }
   function unrealisedRaw(t) {
     if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') return null;
     if (t.isStock) {
@@ -309,19 +332,19 @@ function paperList() {
       .sort((a, b) => lastExit(a).localeCompare(lastExit(b)));
     let cum = 0, peak = 0, dd = 0;
     closed.forEach(t => { cum += calc(t).net || 0; peak = Math.max(peak, cum); dd = Math.max(dd, peak - cum); });
-    const unr = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').reduce((a, t) => a + (unrealised(t) || 0), 0);
+    const unr = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
     return Math.max(dd, peak - (cum + unr));
   }
   function dayStats(day) {
-    let entries = 0, pnl = 0, unr = 0, open = 0;
+    let entries = 0, pnl = 0, unr = 0, unrNet = 0, open = 0;   // unr = gross (the daily-loss-limit check uses it, unchanged); unrNet = after estimated exit costs (what is shown)
     allTrades().filter(t => !t.auto).forEach(t => {
       if (!entered(t)) return;
       if (t.date === day) entries++;
-      const u = unrealised(t); if (u != null) { unr += u; }
+      const u = unrealised(t); if (u != null) { unr += u; unrNet += unrealisedNet(t) || 0; }
       if (statusOf(t) !== 'Closed') open++;
       (t.exits || []).forEach(l => { if (l.date === day) pnl += dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (t.costOverride != null ? t.costOverride : (S.cost + S.slip) * units(t) * l.qty); });
     });
-    return { entries, pnl, unr, open };
+    return { entries, pnl, unr, unrNet, open };
   }
   function startOfDayEquity(day) {
     let p = 0;
@@ -439,7 +462,7 @@ function paperList() {
   function liveTotals(day) {
     const autoReal = AUTO.list.concat((AUTO.stockTrades || []).filter(t => t.status === 'Closed'), paperList().filter(t => t.status === 'Closed')).reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
     const booked = realised() + autoReal;
-    const unr = allTrades().reduce((a, t) => a + (unrealised(t) || 0), 0);
+    const unr = allTrades().reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
     const autoToday = AUTO.list.concat((AUTO.stockTrades || []), paperList()).reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
     return { booked, unr, autoToday, eq: S.capital + booked + unr };
   }
@@ -451,7 +474,7 @@ function paperList() {
   function sideTotals(sign) {
     let booked = 0, unr = 0;
     allTrades().forEach(t => { if (!entered(t) || dirOf(t) !== sign) return; const c = calc(t).net || 0;
-      if (statusOf(t) === 'Closed') booked += c; else { booked += t.auto ? 0 : c; unr += unrealised(t) || 0; } });   // manual trades can be partly booked
+      if (statusOf(t) === 'Closed') booked += c; else { booked += t.auto ? 0 : c; unr += unrealisedNet(t) || 0; } });   // manual trades can be partly booked
     return { booked, unr };
   }
   function capUse() {
@@ -514,7 +537,7 @@ function paperList() {
           if (!r) return;
           const pnlCell = r.querySelector('[data-c="pnl"]');
           const curCell = r.querySelector('[data-c="cur"]');
-          const u = unrealised(t), v = u == null ? '—' : sinr(u);
+          const u = unrealisedNet(t), v = u == null ? '—' : sinr(u);
           if (pnlCell && pnlCell.textContent !== v) {
             pnlCell.innerHTML = `<b>${v}</b>`;
             pnlCell.className = 'num ' + cc(u || 0);
@@ -558,7 +581,7 @@ function paperList() {
     if (open.map(t => t.id).join(',') !== tb.dataset.ids) return false;
     open.forEach(t => {
       const row = tb.querySelector(`tr[data-pid="${CSS.escape(String(t.id))}"]`); if (!row) return;
-      const u = unrealised(t) || 0, q = (k, v, c) => { const el = row.querySelector(`[data-c="${k}"]`); if (el) { el.innerHTML = v; if (c != null) el.className = 'num ' + c; } };
+      const u = unrealisedNet(t) || 0, q = (k, v, c) => { const el = row.querySelector(`[data-c="${k}"]`); if (el) { el.innerHTML = v; if (c != null) el.className = 'num ' + c; } };
       q('cur', `<b>${px(curPx(t))}</b>`); q('pnl', sinr(u), u > 0 ? 'up' : u < 0 ? 'down' : ''); q('sl', px(t.sl)); q('tsl', E(tslShow(t)), '');
     });
     return true;
@@ -583,7 +606,7 @@ function paperList() {
      const daily = {}; m.sorted.forEach(r => { const d = lastExit(r.t).slice(0, 10); daily[d] = (daily[d] || 0) + r.c.net; });
      let pk = -Infinity; const dd = curve.map(v => { pk = Math.max(pk, v); return v - pk; });
      const openAll = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), open = openAll.filter(sideOk);
-     const dayPnl = (daily[day] || 0) + openAll.filter(t => t.date === day).reduce((a, t) => a + (unrealised(t) || 0), 0);
+     const dayPnl = (daily[day] || 0) + openAll.filter(t => t.date === day).reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
      ${booksCard()}
@@ -740,7 +763,7 @@ function paperList() {
     const { part, bar: pager } = pagerBar(list, key);
     const th = (l, tip, cls) => `<th class="${cls || ''}" title="${tip}">${l}</th>`;
     const rows = part.map(t => {
-      const c = calc(t), st = statusOf(t), u = withUnr ? unrealised(t) : null, closedish = st === 'Closed' || c.qx;
+      const c = calc(t), st = statusOf(t), u = withUnr ? unrealisedNet(t) : null, closedish = st === 'Closed' || c.qx;
       const v = closedish ? c.net : (u || 0), pnl = closedish ? sinr(c.net) : (u != null ? sinr(u) : '—');
       const stCls = st === 'Open' || st === 'Partial' ? 'b-up' : 'b-mute';
       const tips = [`Setup: ${t.setup || '—'}`, t.tf ? `TF ${t.tf}` : '', t.ind ? `Indicators: ${t.ind}` : ''].filter(Boolean).join(' · ');
@@ -888,7 +911,7 @@ function paperList() {
   /* ---------- trade detail ---------- */
   function openDetail(id) {
     const t = allTrades().find(x => x.id === id); if (!t) return; ui.sel = id;
-    const c = calc(t), st = statusOf(t), u = unrealised(t), rem = t.qty - c.qx;
+    const c = calc(t), st = statusOf(t), u = unrealisedNet(t), rem = t.qty - c.qx;
     const legs = (t.exits || []).map((l, i) => `<tr><td>${i + 1}</td><td>${l.date} ${l.time || ''}</td><td>${E(l.type)}</td><td>${l.qty}</td><td>${px(l.price)}</td><td class="num ${cc(dirOf(t) * (l.price - t.entry))}">${sinr(dirOf(t) * (l.price - t.entry) * l.qty * units(t))}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No exits yet</td></tr>';
     const stops = (t.stops || []).map(s => `<li>${new Date(s.at).toLocaleString('en-IN')} — ${s.from == null ? 'set' : px(s.from) + ' → '}${px(s.to)} <small>${E(s.note || '')}</small></li>`).join('');
     const lock = t.auto ? `<p class="muted">Recorded automatically by the auto trader — plan, exit, costs, R multiple and review are filled in for you. Premium levels are estimates (delta 0.5); the stop and target that actually drive the trade are on the underlying.</p>
@@ -974,7 +997,7 @@ function paperList() {
   function exitAll() {
     const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
     if (!open.length) { toast_('No open positions to exit.', 'warn'); return; }
-    const unr = open.reduce((a, t) => a + (unrealised(t) || 0), 0);
+    const unr = open.reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
     smallForm('Exit all positions', `<p>Exit <b>${open.length}</b> open position${open.length === 1 ? '' : 's'} at live prices? Open P&L right now: <b class="${cc(unr)}">${sinr(unr)}</b>. This can't be undone.</p>`, 'Exit all', () => {
       const ok = document.getElementById('jvFormOk'), er = document.getElementById('jvFormErr'); ok.disabled = true;
       (async () => {
@@ -1524,7 +1547,7 @@ function paperList() {
        const trade = all.find(t => (t.symbol || t.instrument) === sym && entered(t) && statusOf(t) !== 'Closed');
        if (trade) {
          const qty = trade.qty - exitedQty(trade);
-         const unrealized = unrealised(trade);
+         const unrealized = unrealisedNet(trade);
          return sum + (unrealized || 0);
        }
        return sum;
@@ -1533,7 +1556,7 @@ function paperList() {
      const realizedPNL = realised();
      const openPNL = all.reduce((sum, t) => {
        if (entered(t) && statusOf(t) !== 'Closed') {
-         const unrealized = unrealised(t);
+         const unrealized = unrealisedNet(t);
          return sum + (unrealized || 0);
        }
        return sum;
@@ -1561,7 +1584,7 @@ function paperList() {
            <div><span>Total Equity</span><b class="${cc(totalEquity - S.capital)}">${inr(totalEquity, 0)}</b></div>
            <div><span>Realized P&L</span><b class="${cc(realizedPNL)}">${sinr(realizedPNL)}</b></div>
            <div><span>Open P&L</span><b class="${cc(openPNL)}">${sinr(openPNL)}</b></div>
-           <div><span>Today P&L</span><b class="${cc(todayStats.pnl + todayStats.unr)}">${sinr(todayStats.pnl + todayStats.unr)}</b></div>
+           <div><span>Today P&L</span><b class="${cc(todayStats.pnl + todayStats.unrNet)}">${sinr(todayStats.pnl + todayStats.unrNet)}</b></div>
          </div>
        </div>
        <div class="card"><div class="card-h"><h3>📊 Live Prices</h3></div>
@@ -1739,7 +1762,7 @@ function paperList() {
      const rows = trades.map(t => {
        const c = calc(t);
        const status = statusOf(t);
-       const open = status !== 'Closed', u = open ? unrealised(t) : null;
+       const open = status !== 'Closed', u = open ? unrealisedNet(t) : null;
        const currentPrice = open ? curPx(t) : ((t.exits || []).slice(-1)[0] || {}).price;
        const pnl = open ? (u || 0) : (c.net || 0);
        const r0 = Math.abs(t.entry - t.sl0), rrv = r0 > 0 && t.t2 ? Math.abs(t.t2 - t.entry) / r0 : null;

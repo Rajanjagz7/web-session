@@ -1326,6 +1326,7 @@ def status():
     for t in opens:
         _replan(t)
         t["unrealised"] = round((t["last"] - t["entry"]) * t["lots"] * t["lot"] * (-1 if t.get("pos") == "short" else 1), 2)
+        t["costPctEff"] = t.get("costPct", st["cfg"]["costPct"])      # the Journal shows open P&L after the estimated exit cost (same % as _close charges)
     import backtest
     bt = backtest.get()["result"]
     import backtest
