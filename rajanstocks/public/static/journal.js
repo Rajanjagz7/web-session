@@ -525,6 +525,7 @@ function paperList() {
     if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
     liveCap();
+    { const td = document.getElementById('jvToday'); if (td) { const t = document.createElement('div'); t.innerHTML = todayCard(); const n = t.firstElementChild; if (n && n.innerHTML !== td.innerHTML) td.innerHTML = n.innerHTML; } }
     { const bk = document.getElementById('jvBooks'); if (bk) { sbLoad(false); const t = document.createElement('div'); t.innerHTML = booksCard(); const n = t.firstElementChild; if (n.innerHTML !== bk.innerHTML) bk.innerHTML = n.innerHTML; } }
     const day = today();
     patchKids(k, kpiBlock(metrics(filtered()), dayStats(day), day));      // only the numbers that changed are touched - no page redraw
@@ -609,6 +610,7 @@ function paperList() {
      const dayPnl = (daily[day] || 0) + openAll.filter(t => t.date === day).reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
      return `${filterBar(false)}
+     ${todayCard()}
      ${booksCard()}
      <div class="jv-sec">Options book · performance</div>
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
@@ -1795,6 +1797,7 @@ function paperList() {
      catch (e) { if (!SB.d) SB.d = { error: 'network' }; }
      SB.ts = Date.now();                    // success OR failure: the next try waits (a failure used to retry in a tight loop)
      SB.busy = false;
+     { const td = document.getElementById('jvToday'); if (td) { const t = document.createElement('div'); t.innerHTML = todayCard(); td.replaceWith(t.firstElementChild); } }
      { const bk = document.getElementById('jvBooks'); if (bk) { const t = document.createElement('div'); t.innerHTML = booksCard(); bk.replaceWith(t.firstElementChild); } }
      if (effTab() === 'stocks' && document.getElementById('jvSB')) { const el = document.getElementById('jvSB'); const t = document.createElement('div'); t.innerHTML = sbCard(); el.replaceWith(t.firstElementChild); }
    }
@@ -1824,6 +1827,36 @@ function paperList() {
    }, true);
 
    /* two separate paper books: options / Trade screen (this journal) and the stock trader - each Rs 10 L, Rs 20 L together */
+   /* "Today" card: today's profit split by book into what is BOOKED (closed trades - locked in) and what is still OPEN (moves with
+      price until the trade closes). Options Buy / Options Sell come from the journal trades; the stock trader from its own server book. */
+   function todayRows() {
+     const day = today(), R = { buy: { b: 0, o: 0 }, sell: { b: 0, o: 0 }, stock: null };
+     let carry = 0;
+     allTrades().forEach(t => {
+       if (!entered(t) || t.isStock) return;
+       const k = dirOf(t) < 0 ? 'sell' : 'buy', closed = statusOf(t) === 'Closed';
+       if (t.auto || t.paper) { if (closed && lastExit(t).slice(0, 10) === day) R[k].b += calc(t).net || 0; }
+       else (t.exits || []).forEach(l => { if (l.date === day) R[k].b += dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (t.costOverride != null ? t.costOverride : (S.cost + S.slip) * units(t) * l.qty); });
+       if (!closed) { R[k].o += unrealisedNet(t) || 0; carry++; }
+     });
+     const d = SB.d && SB.d.byHorizon ? SB.d : null;
+     if (d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: d.unrealised || 0 };
+     R.carry = carry;
+     return R;
+   }
+   function todayCard() {
+     const R = todayRows(), line = (name, x) => {
+       if (!x) return `<tr><td>${name}</td><td class="num">…</td><td class="num">…</td><td class="num">…</td></tr>`;
+       const tot = x.b + x.o;
+       return `<tr><td>${name}</td><td class="num ${cc(x.b)}">${sinr(x.b)}</td><td class="num ${cc(x.o)}">${sinr(x.o)}</td><td class="num ${cc(tot)}"><b>${sinr(tot)}</b></td></tr>`;
+     };
+     const all = R.stock ? { b: R.buy.b + R.sell.b + R.stock.b, o: R.buy.o + R.sell.o + R.stock.o } : null;
+     return `<div class="card" id="jvToday"><div class="card-h"><h3>Today</h3><span class="muted" style="font-size:12px">booked = closed trades (locked in) · open = still running</span></div>
+       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Book</th><th class="num">Booked today</th><th class="num">Open now</th><th class="num">Total today</th></tr></thead><tbody>
+         ${line('Options Buy', R.buy)}${line('Options Sell', R.sell)}${line('Stock trader', R.stock)}${line('<b>All books</b>', all)}
+       </tbody></table></div>
+       <p class="muted" style="font-size:12px;margin:8px 12px 12px">Open amounts are not final - they move with price until the trade closes. Stock-trader intraday trades square off at 15:15; options trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open options trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
+   }
    function booksCard() {
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
      const day = today(), L = liveTotals(day), c = capUse(), ds = dayStats(day), oToday = ds.pnl + L.autoToday + L.unr;
