@@ -609,7 +609,7 @@ button.gl2{cursor:pointer}button.gl2:hover{border-color:var(--brand);background:
 .glb-chip.up{border-left-color:var(--up)}.glb-chip.up b{color:var(--up)}
 .glb-chip.down{border-left-color:var(--down)}.glb-chip.down b{color:var(--down)}
 .glp-more{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
-.glp-more summary{cursor:pointer;font-size:13px;font-weight:600;margin-bottom:0}.glp-more[open] summary{margin-bottom:10px}
+.glp-mh{font-size:13px;font-weight:600;margin:0 0 10px}
 
 /* ---- news bar ---- */
 .newsbar{position:sticky;top:0;z-index:36;height:30px;display:flex;align-items:center;background:var(--panel-2);border-bottom:1px solid var(--line);overflow:hidden}
@@ -698,8 +698,9 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   #pwaBtn{width:32px;padding:0;justify-content:center}#pwaBtn::after{content:none}
   .pf-chip{padding:0 8px}.hdr .brand{flex:none}
 }
+.jv-chb{margin-left:8px;padding:2px 9px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-2);color:var(--brand);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}.jv-chb:active{transform:scale(.95)}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261027v"></script>
+<script id="scrJV" src="/static/journal.js?v=20261028c"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
@@ -4371,7 +4372,7 @@ function glPageInner(){
   const used=new Set(GL_PRIME.map(p=>p[0]));
   const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq 100','S&P 500','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','USD / INR'];
   const rest=order.filter(n=>!used.has(n)).map(find).filter(Boolean);
-  const more=rest.length?`<details class="glp-more" ${GL.more?'open':''}><summary>More markets &amp; futures (${rest.length})</summary><div class="glp-grid">${rest.map(i=>glTile(i,i.name.replace(/[^A-Za-z0-9]/g,'').slice(0,2),i.name)).join('')}</div></details>`:'';
+  const more=rest.length?`<section class="glp-more"><h4 class="glp-mh">More markets &amp; futures (${rest.length})</h4><div class="glp-grid">${rest.map(i=>glTile(i,i.name.replace(/[^A-Za-z0-9]/g,'').slice(0,2),i.name)).join('')}</div></section>`:'';
   return head+`<div class="glp-grid">${prime}</div>`+glBiasHTML()+more
     }
 const glPageHTML=()=>`<div class="glp" id="glPage">${glPageInner()}</div>`;
@@ -4604,7 +4605,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027v';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028c';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;

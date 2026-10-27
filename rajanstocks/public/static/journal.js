@@ -766,6 +766,14 @@ function paperList() {
     }
   }
 
+  /* an open option position -> the contract the Trade screen can chart live (underlying, expiry, strike, CE/PE); null for anything else */
+  function optRef(t) {
+    if (!t || statusOf(t) === 'Closed') return null;
+    if (t.auto && t.raw && t.raw.strike && /^(CE|PE)$/.test(t.raw.opt || '')) return { sym: t.raw.sym, expiry: t.raw.expiry, strike: +t.raw.strike, side: t.raw.opt };
+    if (t.paper && t.pos) { const m = (typeof App !== 'undefined' && App.meta && App.meta[t.pos.sym]) || null; if (m && m.ikey && m.und && m.strike && /^(CE|PE)$/.test(m.side || '')) return { sym: m.und, expiry: m.expiry, strike: +m.strike, side: m.side }; }
+    return null;
+  }
+  const chartBtn = t => optRef(t) ? `<button type="button" class="jv-chb" data-jv="optchart" data-id="${E(String(t.id))}" title="Open this option's live chart on the Trade screen">📈 Chart</button>` : '';
   function tradeTable(list, withUnr, key) {
     key = key || 'tbl'; ui.tbl = ui.tbl || {}; ui.pg = ui.pg || {}; ui.tbl[key] = { list, withUnr };
     if (!list.length) return `<div class="jv-tw" data-jvt="${key}"><div class="empty">No trades match.</div></div>`;
@@ -779,7 +787,7 @@ function paperList() {
       return `<tr data-jv="open" data-id="${t.id}" tabindex="0" title="Click for full details">
         <td class="jv-id">${t.auto ? '<span class="jv-tag" title="Placed by the auto trader">A</span>' : t.paper ? '<span class="jv-tag m" title="Placed from the Trade screen">T</span>' : '<span class="jv-tag m" title="Logged manually">M</span>'}<span title="${t.id}">${shortId(t)}</span>${t.edited ? ' <i title="Edited after close">✎</i>' : ''}</td>
         <td title="Taken: ${t.date} ${entryTime(t) || ''}">${String(t.date).slice(5)}${entryTime(t) ? ` <small class="num">${entryTime(t)}</small>` : ''}</td>
-        <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}<small title="${E(tips)}">${E(t.setup || '')}</small></td>
+        <td class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}${chartBtn(t)}<small title="${E(tips)}">${E(t.setup || '')}</small></td>
         <td><span class="jv-side ${t.dir === 'Short' ? 's' : 'l'}" title="${t.dir}">${t.dir === 'Short' ? 'SELL' : 'BUY'}</span></td>
         <td class="num">${px(t.entry)}</td>
         <td class="num" data-c="cur" title="${closedish ? 'Exit price' : 'Last traded price (live)'}"><b>${px(curPx(t))}</b></td>
@@ -1426,6 +1434,12 @@ function paperList() {
     if (!document.getElementById('v-journal') && !document.querySelector('.modal-bg')) return;
     if (a === 'tab') { ui.tab = b.dataset.k; if (ui.tab === 'algo') { SV.auto = null; SV.bt = null; } render(); window.scrollTo(0, 0); }
     else if (a === 'subtab') { ui.sub[b.dataset.grp] = b.dataset.k; render(); }
+    else if (a === 'optchart') {
+      const t = allTrades().find(x => String(x.id) === String(id)), r = optRef(t);
+      if (!r) { toast_('This option position is no longer open', 'err'); return; }
+      if (window.closeModal) try { closeModal(); } catch (e2) { }
+      if (typeof openOptionFromScan === 'function') openOptionFromScan(r.sym, r.expiry, r.strike, r.side);
+    }
     else if (a === 'open') openDetail(id);
     else if (a === 'clearf') { ui.f = { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }; render(); }
     else if (a === 'plan') savePlan();
@@ -1784,7 +1798,7 @@ function paperList() {
        const pnlClass = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
        const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit at the live price">Exit</button>` : `<span class="muted">${E(t.exitType || 'Closed')}</span>`;
        return `<tr data-pid="${E(t.id)}"${t.auto ? ' class="auto-row"' : ''}>
-         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}<small>${E(t.setup || '')}</small></span></td>
+         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}${chartBtn(t)}<small>${E(t.setup || '')}</small></span></td>
          <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'BUY' : 'SELL'}</span></td>
          <td class="num" title="Quantity taken">${qtyTxt(t)}</td>
          <td class="num" title="Taken ${entryTime(t) ? entryTime(t) : ''}">${px(t.entry)}${entryTime(t) ? ` <small class="muted">${entryTime(t)}</small>` : ''}</td>
