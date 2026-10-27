@@ -272,6 +272,22 @@ def candidates(today):
     return out, label
 
 
+
+def _picks():
+    """market_api.picks() with a shared 3-minute cool-down after a rate-limited failure: the Eagle scan and the screens asked
+    for picks every cycle, and while Upstox was refusing (HTTP 429) each ask started a full ~200-quote rebuild - which kept
+    the limit tripped for everyone (Trade screen quotes included)."""
+    import market_api
+    if shared_cache.get("auto:picks-backoff"):
+        raise RuntimeError("picks paused for 3 min after an Upstox rate limit")
+    try:
+        return market_api.picks()
+    except Exception as e:
+        m = str(e).lower()
+        if "429" in m or "rate" in m or "too many" in m:
+            shared_cache.set("auto:picks-backoff", 1, 180)
+        raise
+
 def fill_slots(st, today, already):
     """Entries beyond the strategy signals come from the app's own screens:
        index slots  <- index CALL / PUT where the daily chart and the live option flow agree
@@ -322,7 +338,7 @@ def fill_slots(st, today, already):
             import morning_picks
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
             left = morning_picks.MAX_PICKS - took
-            picks = [p for p in market_api.picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
+            picks = [p for p in _picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
             # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:15; tier 2 rests on Open = Low / High,
             # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
             early = _mins(_now()) < EAGLE_FROM
@@ -350,7 +366,7 @@ def eagle_cands(st, today, taken=()):
         return []
     used = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today} | set(taken)
     out = []
-    for p in market_api.picks().get("picks", []):
+    for p in _picks().get("picks", []):
         if p.get("kind") == "index" or p.get("universe") == "cash" or p.get("s") in used:
             continue
         c = morning_picks.eagle(p)
@@ -436,7 +452,7 @@ def _screen_score():
     """Stock screen score and direction from the Picks engine (used only to choose among stock signals)."""
     try:
         import market_api
-        return {p["s"]: p for p in market_api.picks().get("picks", [])}
+        return {p["s"]: p for p in _picks().get("picks", [])}
     except Exception:
         return {}
 

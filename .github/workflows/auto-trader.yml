@@ -24,9 +24,9 @@ jobs:
             [ "$now" -ge 1535 ] && { echo "session over ($now IST)"; break; }
             [ $(( $(date +%s) - start )) -ge 20700 ] && { echo "time budget used - the next scheduled run takes over"; break; }
             if [ "$now" -ge 915 ]; then
-              # warm today's picks first (a cycle that had to build them itself could hit Vercel's 30 s limit), then trade
-              curl -s -m 40 -o /dev/null "$SITE/api/m/picks" || true
-              sleep 20
+              # at the open only: warm today's picks first (a cycle that had to build them itself could hit Vercel's 30 s limit).
+              # Later the cycle reads the cached list - warming every tick added Upstox load
+              if [ "$now" -lt 920 ]; then curl -s -m 40 -o /dev/null "$SITE/api/m/picks" || true; sleep 20; fi
               out=$(curl -s -m 60 -X POST "$SITE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed')
               echo "$(TZ=Asia/Kolkata date +%T) IST ${out:0:300}"
               # a holiday: the server still says the market is closed well after the open - stop early (status runs no cycle)
