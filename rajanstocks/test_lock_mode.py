@@ -56,3 +56,12 @@ def test_day_break_is_45k_and_works_in_research_mode():
     assert day(-34000.0) == "soft"          # 75% of 45,000 = 33,750
     assert day(-45000.0) == "blocked"
     assert day(45500.0) == "blocked"        # the guard is symmetric: it also stops after +45k
+
+
+def test_closing_a_short_at_a_missing_price_never_books_the_whole_premium():
+    t = {"id": "A-1-W", "sym": "NIFTY", "pos": "short", "side": "BUY", "opt": "PE", "strike": 25000, "lot": 25, "lots": 2, "entry": 100.0,
+         "last": 80.0, "status": "OPEN", "initialRisk": 1000}
+    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [t], "log": []}
+    at._close(st, t, 0.0, "MANUAL")
+    assert t["exit"] == 80.0                      # fell back to the last seen price, not 0
+    assert t["gross"] == (100.0 - 80.0) * 50      # +1,000 (not +5,000 = the whole premium)

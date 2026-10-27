@@ -160,6 +160,8 @@ def _quotes(syms):
 
 
 def _close(st, t, px, why, now):
+    if not (px and px > 0):                  # never book an exit at a missing (0) price
+        px = float(t.get("last") or 0) or float(t["entry"])
     gross = (px - t["entry"]) * t["qty"] * (1 if t["side"] == "BUY" else -1)
     cost = CFG["costPct"] / 100 * (t["entry"] + px) * t["qty"]
     t.update(status="CLOSED", exit=round(px, 2), exitReason=why, closedAt=now.isoformat(), gross=round(gross, 2), cost=round(cost, 2),
