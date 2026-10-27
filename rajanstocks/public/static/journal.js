@@ -103,8 +103,12 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         fetch('/api/auto/status', { cache: 'no-store' }).catch(() => null),
         fetch('/api/stockbot/status', { cache: 'no-store' }).catch(() => null)
       ]);
-      let before = JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType, x.entry, (x.raw && x.raw.last) || x.entry, x.unrl]));
-      let beforeStock = JSON.stringify((AUTO.stockTrades || []).map(x => [x.id, x.status, x.last, x.unrealised]));
+      /* a redraw only when the list itself changes (new trade, exit, status); live prices / P&L are patched in place by refreshLive -
+         a price tick used to redraw the whole table every sync (the open trades kept "refreshing") */
+      const shapeA = () => JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType, x.entry]));
+      const shapeS = () => JSON.stringify((AUTO.stockTrades || []).map(x => [x.id, x.status]));
+      const pricesA = () => JSON.stringify(AUTO.list.map(x => [(x.raw && x.raw.last) || x.entry, x.unrl]).concat((AUTO.stockTrades || []).map(x => [x.last, x.unrealised])));
+      let before = shapeA(), beforeStock = shapeS(), beforePx = pricesA();
       if (r && r.ok) {
         const a = await r.json();
         AUTO.cand = a.cand || null;
@@ -133,10 +137,12 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
           };
         });
       }
-      const changed = (JSON.stringify(AUTO.list.map(x => [x.id, x.status, x.exitType, x.entry, (x.raw && x.raw.last) || x.entry, x.unrl])) !== before) ||
-                      (JSON.stringify((AUTO.stockTrades || []).map(x => [x.id, x.status, x.last, x.unrealised])) !== beforeStock);
-      if (changed && document.getElementById('v-journal') && !document.querySelector('.modal-bg') &&
-          ['portfolio', 'positions', 'algo', 'stocks'].includes(effTab())) render();
+      const changed = shapeA() !== before || shapeS() !== beforeStock;
+      const pxMoved = pricesA() !== beforePx;
+      const ok = document.getElementById('v-journal') && !document.querySelector('.modal-bg');
+      if (ok && changed && ['portfolio', 'positions', 'algo', 'stocks'].includes(effTab())) render();
+      else if (ok && pxMoved && ['algo', 'stocks'].includes(effTab())) render();        // these two have no in-place price updater
+      else if (ok && pxMoved) refreshLive();
     } catch (e) {
       AUTO.err = true;
     }
@@ -277,6 +283,17 @@ function paperList() {
   const realised = () => T.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
   const equity = () => S.capital + realised();
   const budget = () => equity() * S.riskPct / 100;
+  /* today's max drawdown: the biggest fall of today's P&L from its high so far - trades closed today in exit order, then the open
+     positions' current P&L as the latest point. Starts from 0 every morning (the all-time figure never came down). */
+  function dayDD(day) {
+    const exitDay = t => ((t.exits || []).slice(-1)[0] || {}).date || (t.closedAt || '').slice(0, 10) || t.date;
+    const closed = allTrades().filter(t => entered(t) && statusOf(t) === 'Closed' && exitDay(t) === day)
+      .sort((a, b) => lastExit(a).localeCompare(lastExit(b)));
+    let cum = 0, peak = 0, dd = 0;
+    closed.forEach(t => { cum += calc(t).net || 0; peak = Math.max(peak, cum); dd = Math.max(dd, peak - cum); });
+    const unr = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').reduce((a, t) => a + (unrealised(t) || 0), 0);
+    return Math.max(dd, peak - (cum + unr));
+  }
   function dayStats(day) {
     let entries = 0, pnl = 0, unr = 0, open = 0;
     allTrades().filter(t => !t.auto).forEach(t => {
@@ -457,7 +474,7 @@ function paperList() {
       ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Win rate of closed trades, with average win and average loss')}
       ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R')}
       ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss')}
-      ${kpi('Max DD', inr(m.maxDD, 0), '', m.maxDD > 0 ? 'down' : '', 'Maximum drawdown from equity peak')}`;
+      ${(dd => kpi('Max DD · today', inr(dd, 0), 'all-time ' + inr(m.maxDD, 0), dd > 0 ? 'down' : '', "Largest fall of today's P&L (booked + open) from its high so far - resets every day"))(dayDD(day))}`;
   }
   function refreshLive() {
     const host = document.getElementById('v-journal');
@@ -599,11 +616,12 @@ function paperList() {
   /* Buy / Sell split: one switch for every journal table */
   /* Eagle Trades (strength >= 75 + Open = Low / High, server auto trader): a badge on every row and their own filter */
   const isEagle = t => /^Eagle/i.test(t.setup || '');
+  const isIndexT = t => t.market === 'Index' || /^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|BANKEX|NIFTYNXT50)/.test(String(t.instrument || t.symbol || '').toUpperCase());
   const eagleTag = t => isEagle(t) ? '<span class="jv-eagle" title="Eagle Trades: strength 75+ with Open = Low (buy) / Open = High (sell)">🦅 EAGLE</span>' : '';
-  const sideOk = t => !ui.side || ui.side === 'all' || (ui.side === 'eagle' ? isEagle(t) : ui.side === 'sell' ? t.dir === 'Short' : t.dir !== 'Short');
+  const sideOk = t => !ui.side || ui.side === 'all' || (ui.side === 'eagle' ? isEagle(t) : ui.side === 'index' ? isIndexT(t) : ui.side === 'sell' ? t.dir === 'Short' : t.dir !== 'Short');
   function sideBar(list) {
-    const nb = list.filter(t => t.dir !== 'Short').length, ns = list.length - nb, ne = list.filter(isEagle).length, cur = ui.side || 'all';
-    return `<div class="jv-seg jv-sidesw" role="group" aria-label="Buy or sell trades">${[['all', 'All', list.length], ['buy', 'Buy', nb], ['sell', 'Sell', ns]].concat(ne || cur === 'eagle' ? [['eagle', '🦅 Eagle', ne]] : []).map(([k, l, n]) =>
+    const nb = list.filter(t => t.dir !== 'Short').length, ns = list.length - nb, ne = list.filter(isEagle).length, ni = list.filter(isIndexT).length, cur = ui.side || 'all';
+    return `<div class="jv-seg jv-sidesw" role="group" aria-label="Buy or sell trades">${[['all', 'All', list.length], ['buy', 'Buy', nb], ['sell', 'Sell', ns]].concat(ni || cur === 'index' ? [['index', 'Index', ni]] : []).concat(ne || cur === 'eagle' ? [['eagle', '🦅 Eagle', ne]] : []).map(([k, l, n]) =>
       `<button class="${cur === k ? 'on' : ''} ${k}" data-jvside="${k}">${l} <small>${n}</small></button>`).join('')}</div>`;
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-jvside]'); if (!b || !e.target.closest('#v-journal')) return;
@@ -1316,7 +1334,7 @@ function paperList() {
       ${kpi('Total Booked P&L', sinr(totalBooked), m.n + ' closed trades', cc(totalBooked), 'All-time cumulative net P&L of all closed trades across the journal')}
       ${kpi('Open Positions', open.length, openAuto + ' auto · ' + (open.length - openAuto) + ' manual', '', 'Current active open positions')}
       ${kpi('Win Rate', (m.winRate * 100).toFixed(0) + '%', 'PF ' + (m.pf === Infinity ? '∞' : m.pf.toFixed(2)), '', 'Win rate and profit factor across closed trades')}
-      ${kpi('Max DD', inr(m.maxDD, 0), 'exp ' + rr(m.expR), m.maxDD > 0 ? 'down' : '', 'Maximum drawdown from equity peak')}
+      ${(dd => kpi('Max DD · today', inr(dd, 0), 'all-time ' + inr(m.maxDD, 0), dd > 0 ? 'down' : '', "Largest fall of today's P&L (booked + open) from its high so far - resets every day"))(dayDD(day))}
     </div>`;
   }
 
