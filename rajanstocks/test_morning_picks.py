@@ -160,7 +160,7 @@ def test_a_cycle_enters_eagle_trades_first_and_drops_duplicates(monkeypatch):
     monkeypatch.setattr(auto_trader, "_now", lambda: now)
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "eagleOn": True}, "trades": [], "log": []}    # Eagle is off by default now
     monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
     monkeypatch.setattr(auto_trader, "_save", lambda s: None)
     monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))
@@ -173,3 +173,21 @@ def test_a_cycle_enters_eagle_trades_first_and_drops_duplicates(monkeypatch):
     got = [(e["sym"], e["strategy"]) for e in rep["entered"]]
     assert got == [("EAG", "Eagle Trades"), ("OTH", "morning-pick")]               # Eagle first; the duplicate morning-pick for EAG is gone
     assert "1 Eagle trade(s)" in rep["note"]
+
+
+def test_eagle_is_skipped_when_switched_off(monkeypatch):
+    import market_api, nse_calendar, rzt
+    from datetime import datetime
+    now = datetime(2026, 10, 27, 9, 36, tzinfo=auto_trader.IST)
+    monkeypatch.setattr(auto_trader, "_now", lambda: now)
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
+    monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
+    monkeypatch.setattr(auto_trader, "_save", lambda s: None)
+    monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))
+    monkeypatch.setattr(auto_trader, "_timecycle_cands", lambda n: [])
+    monkeypatch.setattr(rzt, "intraday_cands", lambda: [])
+    monkeypatch.setattr(auto_trader, "fill_slots", lambda s, t, already: [])
+    rep = auto_trader._run_cycle(now, False, True)
+    assert not any(e["strategy"] == "Eagle Trades" for e in rep["entered"])
