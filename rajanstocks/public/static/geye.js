@@ -71,6 +71,7 @@
       <div class="ge-cd ${c.divergence ? (c.divergence === 'BULLISH' ? 'bull' : 'bear') : ''}">${c.divergence ? '⚡ ' + (c.divergence === 'BULLISH' ? 'Bullish' : 'Bearish') + ' divergence' : '&nbsp;'}</div>
       ${c.spark ? spark(c.spark, 120, 30, colOf(c.label)) : '<div class="ge-sp0"></div>'}
       <div class="ge-cp"><span class="num">${isN(c.price) ? (c.valueLabel ? E(c.valueLabel) + ' ' : '') + n2(c.price, c.price >= 1000 ? 1 : 2) : NA}</span><span class="num ${cc(c.chgPct)}">${pc(c.chgPct)}</span></div>
+      <span class="ix-f" data-ixf="${E(c.key)}"></span>
       <div class="ge-more">Click for details →</div></article>`;
   }
   function panel(title, key, body, cls) { return `<section class="ge-p ${cls || ''}"><h3>${E(title)}${key ? tip(key) : ''}</h3>${body}</section>`; }
@@ -112,7 +113,7 @@
     const left = x && isN(x.daysLeft) ? (x.daysLeft === 0 ? 'today' : x.daysLeft + ' left') : '';
     return `<section class="ge-out ge-outc ${lab(o.label)}">
       <div class="ge-oc">
-        <div class="ge-oc-a"><small>Next day</small><b class="ge-oc-l">${E(o.label)} <span class="num">${sg(o.score)}</span></b>${tip('outlook')}
+        <div class="ge-oc-a"><small>Next day</small><b class="ge-oc-l">${E(o.label)} <span class="num">${sg(o.score)}</span></b>
           <i class="ge-meter ge-meter-s" aria-label="Score ${sg(o.score)} on -10 to +10"><i style="left:${pos}%"></i></i><span class="ge-oc-c">${E(o.confidence)} · ${o.agree}/${o.of} agree</span></div>
         ${x && opt ? `<div class="ge-oc-b"><small>Expiry ${E(dShort(x.expiry))}${left ? ' · ' + left : ''}</small>
           <span>Range <b class="num">${opt.range ? n0(opt.range[0]) + '–' + n0(opt.range[1]) : NA}</b></span><span>Put wall <b class="num up">${n0(opt.putWall)}</b></span><span>Max pain <b class="num">${n0(opt.maxPain)}</b></span><span>Call wall <b class="num down">${n0(opt.callWall)}</b></span></div>` : ''}
@@ -120,7 +121,7 @@
       </div>
       <div class="ge-chips">${o.parts.map(p => `<span class="ge-chip ${cc(p.pts)}" title="${E(p.why)}">${E(p.name)} <b class="num">${sg(p.pts)}</b></span>`).join('')}</div>
       ${open ? `<div class="ge-parts">${o.parts.map(p => `<div class="ge-part"><span>${E(p.name)}</span><i class="ge-pb"><b class="${p.pts >= 0 ? 'up' : 'down'}" style="width:${Math.min(50, Math.abs(p.pts) / 3 * 50)}%;${p.pts >= 0 ? 'left:50%' : 'right:50%'}"></b></i><em class="num ${cc(p.pts)}">${sg(p.pts)}</em><small>${E(p.why)}</small></div>`).join('')}</div>
-        ${x ? `<div class="ge-exp"><h4>Expiry ${E(dShort(x.expiry))}${tip('expected')}</h4><ul>${x.lines.map(l => `<li>${E(l)}</li>`).join('')}</ul></div>` : ''}` : ''}
+        ${x ? `<div class="ge-exp"><h4>Expiry ${E(dShort(x.expiry))}</h4><ul>${x.lines.map(l => `<li>${E(l)}</li>`).join('')}</ul></div>` : ''}` : ''}
     </section>`;
   }
 
@@ -128,6 +129,41 @@
     return `${outlookBlock(d.outlook, d.expiry, d.options)}
       <div class="ge-cards ge-cards-w">${(d.cards || []).map(card).join('')}</div>`;
   }
+  /* ---------- Overview, mounted at the top of Today's Picks (replaces the old Indices cards) ---------- */
+  function ovInner() {
+    const d = G.data;
+    if (!d) return G.err ? `<section class="ge-p"><p class="ge-na">God's Eye is unavailable: ${E(G.err)} <button type="button" class="btn-xs" data-gerefresh="1">Retry</button></p></section>`
+      : `<div class="ge-cards ge-cards-w">${'<article class="ge-card ge-skel"></article>'.repeat(6)}</div>`;
+    return overview(d);
+  }
+  function paintTop() {
+    const t = document.getElementById('geOvTop'); if (!t) return;
+    t.innerHTML = ovInner();
+    let o = document.getElementById('geOvDet');
+    if (G.open && G.data) { if (!o) { o = document.createElement('div'); o.id = 'geOvDet'; o.className = 'ge'; document.body.appendChild(o); } o.innerHTML = detail(); }
+    else if (o) o.remove();
+    document.body.classList.toggle('ge-noscroll', !!G.open);
+    try { if (typeof drawPkFut === 'function') drawPkFut(true); } catch (e) { }
+  }
+  window.geOverviewHTML = () => {
+    if ((!G.data || Date.now() - G.ts > 300e3) && !G.busy && Date.now() - (G.tryTs || 0) > 30e3) { G.tryTs = Date.now(); setTimeout(() => load(false), 0); }
+    return `<div class="ge ge-ovtop" id="geOvTop">${ovInner()}</div>`;
+  };
+  document.addEventListener('click', e => {
+    const root = e.target.closest('#geOvTop, #geOvDet'); if (!root) return;
+    const t = e.target, q = s => t.closest(s);
+    const cl = q('[data-geclose]'); if (cl && (cl.tagName === 'BUTTON' || t === cl)) { G.open = null; return paint(); }
+    if (q('.ge-det')) { const ch = q('[data-gechart]'); if (ch) openChart(ch.dataset.gechart); return; }
+    const c = q('[data-gecard]'); if (c) { G.open = c.dataset.gecard; return paint(); }
+    if (q('[data-geout]')) { G.outOpen = !G.outOpen; return paint(); }
+    if (q('[data-gerefresh]')) return load(true);
+    const tp = q('[data-getip]'); if (tp && typeof toast === 'function') toast(tp.title, 'info');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && G.open && document.getElementById('geOvTop')) { G.open = null; paint(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('#geOvTop [data-gecard]') && !G.open) { e.preventDefault(); G.open = e.target.closest('[data-gecard]').dataset.gecard; paint(); }
+  });
+
   function retailTab(d) {
     const r = d.positioning && d.positioning.retail, o = d.options;
     const mood = r && r.skew ? `<section class="ge-p ge-moodp ${lab(r.skew)}"><small>Retail mood</small><b class="ge-oc-l">${E(r.skew)}</b><span class="muted">${isN(r.futLongPct) ? 'Retail index futures ' + r.futLongPct + '% long' : ''}</span></section>` : '';
@@ -375,7 +411,6 @@
 
   /* ---------- page ---------- */
   const GROUPS = [
-    { key: 'home', label: 'Overview', tabs: [['overview', 'Overview']] },
     { key: 'picks', label: "Today's Picks", tabs: [['picks', "Today's Picks"]] },
     { key: 'money', label: 'FII / DII', tabs: [['fii', 'Flows & positioning'], ['retail', 'Retail mood']] },
     { key: 'opt', label: 'Options & Expiry', tabs: [['fno', 'Options & Expiry']] },
@@ -385,10 +420,10 @@
   const LAST_SUB = LS('ge-last', {});                  // a main tab reopens on the sub-tab used last
   function host() { return typeof App !== 'undefined' && App.view === 'godseye' ? document.getElementById('v-godseye') : null; }
   function paint(reason) {
-    const el = host(); if (!el) return;
+    const el = host(); if (!el) { paintTop(); return; }
     if (reason === 'data' && G.tab === 'stocklist' && document.getElementById('geSL')) { const u = el.querySelector('.ge-upd'); if (u && G.data) u.textContent = 'Updated ' + IST(G.data.asOf); return; }
     if (G.tab === 'watch') G.tab = 'signals';            // the Watchlist tab was removed; anyone who had it open lands on Signals
-    if (G.tab === 'picks') G.tab = 'overview';         // Today's Picks is its own screen (#v-picks); here it means Overview
+    if (G.tab === 'picks' || G.tab === 'overview') { G.tab = 'picks'; if (typeof go === 'function') go('picks'); return; }   // the Overview tab is gone: its content is the top of Today's Picks
     const d = G.data;
     const grp = GROUPS.find(g => g.tabs.some(t => t[0] === G.tab)) || GROUPS[0];
     if (!grp.tabs.some(t => t[0] === G.tab)) G.tab = grp.tabs[0][0];
@@ -418,7 +453,7 @@
     draw(G.data && G.data.cards);
     if (!G.data || Date.now() - G.ts > 300e3) fetch('/api/observer').then(r => r.ok ? r.json() : null).then(d => { if (d && d.items && document.body.contains(root)) draw((G.data && G.data.cards) || d.items); }).catch(() => { });
   };
-  document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') { G.tab = 'overview'; SS('ge-tab', G.tab); go('godseye'); } });
+  document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') { G.tab = 'picks'; SS('ge-tab', G.tab); go('picks'); } });
   /* Today's Picks = the Picks screen under the same God's Eye tab bar; the other tabs go back to #v-godseye */
   /* one header for every God's Eye screen, Today's Picks included (its ↻ refreshes the picks) */
   function headHTML(upd, refAttr, busy) {
@@ -427,7 +462,7 @@
         <div class="ge-st">${status()}<span class="ge-upd">${upd}</span><button type="button" class="ge-ref" ${refAttr} aria-label="Refresh" title="Refresh" ${busy ? 'disabled' : ''}>↻</button></div></div>`;
   }
   window.geTabsHTML = (o = {}) => `<div class="ge ge-pkbar">${headHTML(E(o.upd || ''), 'data-act="rpicks"', o.busy)}<div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g.key === 'picks'}" class="${g.key === 'picks' ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div></div>`;
-  window.geHome = () => G.tab === 'picks' ? 'picks' : 'godseye';
+  window.geHome = () => (G.tab === 'picks' || G.tab === 'overview') ? 'picks' : 'godseye';
   document.addEventListener('click', e => {
     const tb = e.target.closest('#v-picks .ge-pkbar [data-gegrp]'); if (!tb || typeof go !== 'function') return;
     const g = GROUPS.find(x => x.key === tb.dataset.gegrp); if (!g) return;
@@ -496,10 +531,11 @@
     }
   }
   setInterval(() => {
-    if (!host() || document.hidden || G.busy) return;
+    const onPk = typeof App !== 'undefined' && App.view === 'picks' && document.getElementById('geOvTop');
+    if ((!host() && !onPk) || document.hidden || G.busy) return;
     const open = typeof MKT !== 'undefined' && MKT.open;
     if (Date.now() - G.ts > (open ? 60e3 : 300e3)) load(false);
-    if (['signals', 'sectors'].includes(G.tab) && Date.now() - G.secTs > (open ? 120e3 : 900e3)) loadSec(false);
+    if (!onPk && ['signals', 'sectors'].includes(G.tab) && Date.now() - G.secTs > (open ? 120e3 : 900e3)) loadSec(false);
   }, 15e3);
 
   const css = `
@@ -512,6 +548,7 @@
   .ge-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;font-weight:700;font-size:12px;background:var(--panel-2,rgba(255,255,255,.06))}
   .ge-pill i{width:8px;height:8px;border-radius:50%;background:var(--text-3)}.ge-pill.on{color:var(--up)}.ge-pill.on i{background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 30%,transparent)}
   .ge-pill.stale{color:var(--warn,#f5b942)}.ge-pill.stale i{background:var(--warn,#f5b942)}.ge-pill.off{color:var(--down)}.ge-pill.off i{background:var(--down)}
+  .ge-ovtop{padding-bottom:0;margin-bottom:12px}.ge-card .ix-f{display:flex;flex-wrap:wrap;gap:1px 8px;margin-top:2px;font-size:10.5px;color:var(--text-3)}.ge-card .ix-f:empty{display:none}.ge-card .ix-f b{font-size:11px;font-weight:600;color:var(--text-2)}.ge-card .ix-f .up{color:var(--up)}.ge-card .ix-f .down{color:var(--down)}
   .ge-ref{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:16px}
   .ge-tag{display:block;margin-top:4px;font-size:11px;font-weight:600;color:var(--text-3)}.ge-tag b{font-size:12px}.ge-tag.bull,.ge-tag.bull b{color:var(--up)}.ge-tag.bear,.ge-tag.bear b{color:var(--down)}
   .ge-tabs{display:flex;flex-wrap:wrap;gap:6px 4px;margin:4px 0 14px}
