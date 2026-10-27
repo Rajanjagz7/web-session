@@ -24,3 +24,35 @@ def test_new_lock_waits_for_2500():
 
 def test_defaults_eagle_off_old_lock():
     assert at.DEFAULT_CFG["eagleOn"] is False and at.DEFAULT_CFG["lockMode"] == "old"
+
+
+def test_index_screen_never_reenters_same_index_after_a_stop(monkeypatch):
+    import market_api
+    calls = [{"instrument": "NIFTY", "signal": "BUY CALL", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 80, "confidence": "high"},
+             {"instrument": "BANKNIFTY", "signal": "BUY PUT", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 70},
+             {"instrument": "MIDCPNIFTY", "signal": "BUY CALL", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 60}]
+    monkeypatch.setattr(market_api, "quick_index_calls", lambda n: calls)
+    monkeypatch.setattr(at, "_screen_score", lambda: {})
+    import morning_picks
+    monkeypatch.setattr(at, "_picks", lambda: {"picks": []})
+    today = "2026-10-27"
+    stopped = {"id": "A-1", "sym": "NIFTY", "date": today, "status": "CLOSED", "closedAt": today + "T09:30:00+05:30", "kind": "index"}   # opened today, stopped out
+    carried = {"id": "A-0", "sym": "MIDCPNIFTY", "date": "2026-10-23", "status": "CLOSED", "closedAt": today + "T09:07:00+05:30", "kind": "index"}   # opened earlier
+    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [stopped, carried], "log": []}
+    out = at.fill_slots(st, today, [])
+    syms = {c["sym"] for c in out if c.get("kind") == "index"}
+    assert "NIFTY" not in syms                # no re-entry after today's stop
+    assert "MIDCPNIFTY" in syms               # a carried trade that exited at 09:07 does not block it
+
+
+def test_day_break_is_45k_and_works_in_research_mode():
+    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [], "log": []}
+    assert st["cfg"]["researchMode"] is True and st["cfg"]["dayPnlLimit"] == 45000.0
+
+    def day(net):
+        st["trades"] = [{"date": "2026-10-27", "status": "CLOSED", "net": net}]
+        return at._day_guard(st, "2026-10-27")[0]
+    assert day(-20000.0) == "off"
+    assert day(-34000.0) == "soft"          # 75% of 45,000 = 33,750
+    assert day(-45000.0) == "blocked"
+    assert day(45500.0) == "blocked"        # the guard is symmetric: it also stops after +45k
