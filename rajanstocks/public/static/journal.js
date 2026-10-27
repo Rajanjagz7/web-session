@@ -123,7 +123,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
             n.unrl = p.unrl; n.raw.last = p.raw.last; n.raw.unrealised = p.raw.unrealised; n.raw.lastAt = pa;
           }
         });
-        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly) } };
+        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly), stockTrader: !(a.cfg && a.cfg.stockTrader === false) } };
         AUTO.err = false;
         AUTO.ts = Date.now();
       } else {
@@ -1397,7 +1397,7 @@ function paperList() {
     syncAuto(false);
     applyManualTsl();
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
-    const tabs = `<div class="jv-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
+    const tabs = `<div class="jv-tabs" role="tablist">${TABS.filter(([k]) => k !== 'stocks' || !stockHidden()).map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
     const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, stocks: () => sbCard(), new: viewNew };
     if (!bodies[ui.tab]) ui.tab = 'portfolio';
@@ -1803,6 +1803,8 @@ function paperList() {
 
    /* ---- Stock paper trader (server, its own Rs 10 L): intraday / swing / positional plans from Picks ---- */
    const SB = { d: null, ts: 0, busy: false };
+   /* the share paper trader is switched off (Rs 15 L options only): hide its book and tab while it holds nothing */
+   function stockHidden() { const off = !!(AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.stockTrader === false); const d = SB.d && SB.d.byHorizon ? SB.d : null; return off && !!d && !(d.used || d.booked || d.unrealised); }
    async function sbLoad(force) {
      if (SB.busy || (!force && Date.now() - SB.ts < 60000)) return;
      SB.busy = true;
@@ -1929,12 +1931,15 @@ function paperList() {
      const buyOnly = !!(AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.buyOnly), sellIdle = !(Sx.used || Sx.booked || Sx.unr);
      const hideSell = buyOnly && sellIdle;                                   // buy-only auto trader and no sold options: the sell book is not shown or counted
      const os = hideSell ? '' : tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked, Sx.used, Sx.free);
-     const st = tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null, d ? d.used : null, d ? d.cash : null);
+     const hideStock = stockHidden();
+     const st = hideStock ? '' : tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null, d ? d.used : null, d ? d.cash : null);
      const X = hideSell ? { eq: 0, cap: 0, unr: 0, booked: 0, used: 0, free: 0 } : Sx;
-     const tot = tile('jv-btot', 'Total', d ? B.eq + X.eq + d.equity : null, B.cap + X.cap + sCap,
-       d ? B.unr + X.unr + d.unrealised : null, d ? B.booked + X.booked + d.booked : null,
-       d ? B.used + X.used + d.used : null, d ? B.free + X.free + d.cash : null);
-     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Your money</h3><span class="muted" style="font-size:12px">paper money · ${inrL(B.cap)} options${hideSell ? '' : ' (buy)'} · ${inrL(sCap)} stock trader</span><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book back to its starting money and the stock trader back to ₹10 L">Reset journal</button></div></div>
+     const Z = hideStock ? { equity: 0, unrealised: 0, booked: 0, used: 0, cash: 0 } : d;
+     const zCap = hideStock ? 0 : sCap;
+     const tot = tile('jv-btot', 'Total', d ? B.eq + X.eq + Z.equity : null, B.cap + X.cap + zCap,
+       d ? B.unr + X.unr + Z.unrealised : null, d ? B.booked + X.booked + Z.booked : null,
+       d ? B.used + X.used + Z.used : null, d ? B.free + X.free + Z.cash : null);
+     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Your money</h3><span class="muted" style="font-size:12px">paper money · ${inrL(B.cap + X.cap + zCap)} ${hideStock && hideSell ? 'options (buy only)' : 'in all'}</span><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book back to its starting money and the stock trader back to ₹10 L">Reset journal</button></div></div>
        <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
 

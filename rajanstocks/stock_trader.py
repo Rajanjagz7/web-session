@@ -330,7 +330,12 @@ def run_cycle(force=False):
             st = _load()
             before = {t["id"] for t in st["trades"] if t["status"] == "CLOSED"}
             manage(st, now)
-            ent = enter(st, now)
+            try:                                  # from 28 Oct the options auto trader's Rs 15 L is the whole book: no new share trades (open ones are still managed)
+                import auto_trader
+                on = bool(auto_trader._load(cached=True)["cfg"].get("stockTrader", True))
+            except Exception:
+                on = True
+            ent = enter(st, now) if (on or force) else []
             st["lastRun"] = now.isoformat()
             _save(st)
             return {"ran": True, "entered": ent, "closed": [t["id"] for t in st["trades"] if t["status"] == "CLOSED" and t["id"] not in before]}

@@ -42,7 +42,7 @@ def _cap(cfg, key):
 PLAN_V = 20261028      # one-time switch from 28 Oct 2026: Rs 15 L, buy-only, stock options only, three Rs 5 L sleeves
 SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
-DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
+DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": True, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
@@ -88,7 +88,7 @@ def _load(cached=False):
             st["cfg"].update(pairSell=False, pairV=1)
             st["_dirty"] = True
         if saved and saved.get("planV") != PLAN_V:              # one-time: from 28 Oct 2026 - Rs 15 L in three Rs 5 L sleeves, buy-only, stock options only
-            st["cfg"].update(capital=1500000.0, buyOnly=True, stockOnly=True, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
+            st["cfg"].update(capital=1500000.0, buyOnly=True, stockOnly=True, stockTrader=False, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -1282,6 +1282,7 @@ class Cfg(BaseModel):
     lockMode: str | None = None
     buyOnly: bool | None = None
     stockOnly: bool | None = None
+    stockTrader: bool | None = None
     capital: float | None = None
     sleeves: dict | None = None
 
@@ -1464,6 +1465,8 @@ def config(c: Cfg):
             st["cfg"]["buyOnly"] = c.buyOnly
         if c.stockOnly is not None:                                     # true: stock options only, no index trades
             st["cfg"]["stockOnly"] = c.stockOnly
+        if c.stockTrader is not None:                                   # false: the separate share paper trader opens nothing new (open trades are still managed)
+            st["cfg"]["stockTrader"] = c.stockTrader
         if c.capital is not None:
             if c.capital < 100000:
                 raise HTTPException(400, "capital must be at least 1,00,000")
