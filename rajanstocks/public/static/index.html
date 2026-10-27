@@ -4401,7 +4401,7 @@ function loadChart(keep){const k=App.sym.s+'|'+App.tf.k;
 /* ======================= Global markets & futures (GIFT Nifty, US futures, Nasdaq ...) ======================= */
 const GL={items:null,ts:0,busy:false};
 async function loadGlobal(force){if(GL.busy||(!force&&Date.now()-GL.ts<2500))return;GL.busy=true;GL.ts=Date.now();
-  try{GL.items=(await api('/api/m/global')).items;GL.err=null}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();{const el=$('#glStrip');if(el)el.innerHTML=glInner()}glMoreRender()}
+  try{GL.items=(await api('/api/m/global')).items;GL.err=null;GL.okTs=Date.now()}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();{const el=$('#glStrip');if(el)el.innerHTML=glInner()}glMoreRender()}
 function glInner(){if(!GL.items)return GL.err?'<span class="muted">Global data is unavailable right now.</span>':'<span class="muted">Loading global markets…</span>';
   const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq','Nasdaq 100','S&P 500','Dow Jones','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','Gold (COMEX)','Crude (NYMEX)','Silver (COMEX)','Bitcoin','USD / INR'];
   const list=order.map(n=>GL.items.find(i=>i.name===n)).filter(Boolean);
@@ -4425,7 +4425,9 @@ function glTile(i,ic,label,b){const up=i.chgPct>=0,live=i.mode==='live';
 const GL_TOP=[['GIFT Nifty','GIFT Nifty'],['GIFT Bank Nifty','GIFT Bank']];
 function glTopTile(name,label){const i=GL.items&&GL.items.find(x=>x.name===name);
   if(!i)return `<div class="gl2" data-gtop="${esc(name)}"><span class="gl2-top"><span class="gl2-ic">GI</span><span class="gl2-n">${esc(label)}</span></span><b class="num gl2-p">—</b><span class="gl2-bot muted">${GL.err?'unavailable':'loading…'}</span></div>`;
-  return glTile(i,'GI',label).replace('class="gl2"',`class="gl2" data-gtop="${esc(name)}"`)}
+  let h=glTile(i,'GI',label).replace('class="gl2"',`class="gl2" data-gtop="${esc(name)}"`);
+  if(GL.okTs&&Date.now()-GL.okTs>60000)h=h.replace('>LIVE<','>STALE<').replace('>10m<','>STALE<');   // last good fetch is over a minute old: say so instead of showing an old price as live
+  return h}
 const glTopHTML=()=>GL_TOP.map(([n,l])=>glTopTile(n,l)).join('');
 function glMoreRender(){document.querySelectorAll('[data-gtop]').forEach(el=>{const t=GL_TOP.find(x=>x[0]===el.dataset.gtop);if(t&&GL.items&&GL.items.find(i=>i.name===t[0]))el.outerHTML=glTopTile(t[0],t[1])})}
 document.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('glp-more'))GL.more=e.target.open},true);
@@ -4876,12 +4878,13 @@ function uiRefresh(){if(!firstQuotes)return;
   if(App.view==='options')optTick();
   if(App.view==='journal'&&window.JV){try{if(window.JV.refreshLive)window.JV.refreshLive();else window.JV.render()}catch(e){}}
   if(App.view==='trade'&&App.sym.tv){loadGlobal();refreshGlobalChart()}   /* live price every ~3 s; history reload separately */
-  if(App.view==='picks'&&Date.now()-GL.ts>(MKT.open?15000:60000))loadGlobal();   /* the global tiles at the top of Today's Picks */
   if(App.view==='daily'&&Date.now()-(DAILY.ts||0)>(MKT.open?60000:600000)){DAILY.ts=Date.now();loadDaily(false)}
   if(App.view==='trade'){const k=App.sym.s+'|'+App.tf.k;if(CACHE[k]){chart.setData(series(App.sym,App.tf),App.sym,App.tf,true);setChartLines()}updateBook();calcTicket();updatePlan()}
   if(App.view==='mobile'&&mchart&&document.body.contains(mchart.cv)){series(App.sym,mchart.tf);mchart.compute();mchart.req();if(mchart._hov==null)mobHover(null);updMobEst()}
   liveUpdate()}
 setInterval(()=>{try{if(App.view==='trade'&&App.sym&&App.sym.tv&&!document.hidden){loadGlobal();refreshGlobalChart()}}catch(e){}},3000);
+/* GIFT Nifty / GIFT Bank Nifty tiles on Today's Picks: their own 10 s refresh (GIFT trades ~21 h a day, long after NSE closes), independent of the NSE quote feed - which pauses the other refreshes when it is closed or has no feed */
+setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadGlobal()}catch(e){}},10000);
 function dockCheck(){const d=document.getElementById('tradeDock');if(!d)return;const seg=document.querySelector('#v-trade.on .side-seg');let vis=false;
   if(seg&&seg.offsetParent){const r=seg.getBoundingClientRect();vis=r.bottom>0&&r.top<innerHeight-60}d.classList.toggle('gone',vis)}   /* one Buy/Sell at a time: hide the dock while the order ticket's own Buy/Sell is on screen */
 addEventListener('scroll',dockCheck,{passive:true,capture:true});addEventListener('resize',dockCheck);setInterval(dockCheck,800);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
