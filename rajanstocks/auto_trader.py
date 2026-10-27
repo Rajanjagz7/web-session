@@ -47,6 +47,8 @@ SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) 
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
 # (1-2 minutes later) takes the rest - best-ranked first.
 CYCLE_BUDGET = 18.0 if os.environ.get("VERCEL") else 10 ** 9
+FILL_EVERY = 180          # index / stock screens are re-read every 3 minutes (10 missed short-lived signals)
+MIN_INDEX_RR = 1.5        # index call / put screen: reward to target 1 must be >= 1.5x the stop distance
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
 
@@ -320,6 +322,9 @@ def fill_slots(st, today, already):
                 busy_idx |= {t["sym"] for t in st["trades"] if t["status"] == "CLOSED" and (t.get("closedAt") or "") >= recent}
                 if c["instrument"] in busy_idx:
                     continue
+                e_, s_, t1_ = (c.get(k) for k in ("entry", "stopLoss", "target1"))
+                if e_ and s_ and t1_ and e_ > s_ and (t1_ - e_) / (e_ - s_) < MIN_INDEX_RR:
+                    continue                                                   # weak risk/reward on the screen's own levels
                 if c.get("signal") in ("BUY CALL", "BUY PUT"):
                     tier = 0 if c.get("confidence") == "high" else 1               # tier 0: chart + flow agree; tier 1: flow-led
                     ranked.append((tier, -(c.get("strength") or 0), c, "BUY" if c["signal"] == "BUY CALL" else "SELL",
@@ -1080,7 +1085,7 @@ def _run_cycle(now, force, dry):
                 st["log"].append({"at": now.isoformat(), "msg": f"timecycle trigger failed: {str(e)[:80]}"})
             filled = []
             if cfg.get("fillSlots", True) and time.time() >= max(st.get("fillBackoff", 0), st.get("fillNext", 0)):
-                st["fillNext"] = time.time() + 600                 # live screens at most every 10 minutes (each costs ~40 Upstox calls)
+                st["fillNext"] = time.time() + FILL_EVERY          # live screens every 3 minutes (each costs ~40 Upstox calls)
                 filled = fill_slots(st, today, chosen)
                 if any("rate-limiting" in (l.get("msg") or "") or "budget" in (l.get("msg") or "") for l in st["log"][-2:]):
                     st["fillBackoff"] = time.time() + 600        # Upstox pushed back: leave it alone for 10 minutes
@@ -1097,6 +1102,18 @@ def _run_cycle(now, force, dry):
                 chosen, filled = [c for c in chosen if c["sym"] not in have], [c for c in filled if c["sym"] not in have]
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
             entries = sorted(eagles + chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
+            # only good risk/reward (user rule): every STOCK entry - strategy signal, Eagle, screen - must pass the same check as
+            # Today's Picks (risk <= 5% of the price, >= 1R of room to the 20-session high / low); a stock without a Picks row passes
+            try:
+                import morning_picks
+                pmap = _screen_score()
+                weak = [c for c in entries if c.get("kind") == "stock" and pmap.get(c["sym"]) and not morning_picks.good_rr(pmap[c["sym"]], c["side"])]
+                if weak:
+                    wk = {id(c) for c in weak}
+                    entries = [c for c in entries if id(c) not in wk]
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(weak)} skipped for weak risk/reward"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"risk/reward check failed: {str(e)[:80]}"})
             slots = len(entries)
             if not force and _mins(now) <= _hm(cfg["windowStart"]):
                 burst = int(cfg.get("openBurstCap") or 12)
