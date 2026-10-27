@@ -78,8 +78,8 @@ def test_stock_only_skips_the_index_screen(monkeypatch):
     called = []
     monkeypatch.setattr(at, "_picks", lambda: {"picks": []})
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: called.append(n) or calls)
-    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [], "log": []}
-    assert at.DEFAULT_CFG["stockOnly"] and at.DEFAULT_CFG["buyOnly"] and at.DEFAULT_CFG["capital"] == 1500000.0
+    st = {"cfg": {**at.DEFAULT_CFG, "stockOnly": True}, "trades": [], "log": []}
+    assert not at.DEFAULT_CFG["stockOnly"] and at.DEFAULT_CFG["buyOnly"] and at.DEFAULT_CFG["capital"] == 1500000.0
     assert at.fill_slots(st, "2026-10-28", []) == [] and not called
 
 
@@ -112,3 +112,14 @@ def test_share_trader_opens_nothing_while_switched_off(monkeypatch):
     assert sb.run_cycle()["entered"] == [] and not calls
     monkeypatch.setattr(at, "_load", lambda cached=False: {"cfg": {**at.DEFAULT_CFG, "stockTrader": True}})
     assert sb.run_cycle()["entered"] == ["X"] and calls
+
+
+def test_index_options_are_bought_by_default(monkeypatch):
+    import market_api
+    calls = [{"instrument": "NIFTY", "signal": "BUY CALL", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 80, "confidence": "high"}]
+    monkeypatch.setattr(at, "_picks", lambda: {"picks": []})
+    monkeypatch.setattr(market_api, "quick_index_calls", lambda n: calls)
+    st = {"cfg": {**at.DEFAULT_CFG}, "trades": [], "log": []}
+    out = at.fill_slots(st, "2026-10-28", [])
+    assert [c["sym"] for c in out] == ["NIFTY"] and out[0]["kind"] == "index" and out[0]["side"] == "BUY"
+    assert at._sleeve_of(out[0]["key"]) == "signals"

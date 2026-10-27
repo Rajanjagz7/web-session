@@ -39,10 +39,11 @@ def _cap(cfg, key):
     return NO_LIMIT if not v else int(v)
 
 
-PLAN_V = 20261028      # one-time switch from 28 Oct 2026: Rs 15 L, buy-only, stock options only, three Rs 5 L sleeves
+PLAN_V = 20261028      # one-time switch from 28 Oct 2026: Rs 15 L, buy-only, three Rs 5 L sleeves
+IDX_V = 20261028       # one-time: index options are bought too (not only stock options) - stockOnly stays a setting that can be turned back on
 SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
-DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": True, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
+DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
@@ -87,8 +88,11 @@ def _load(cached=False):
         if saved.get("pairV") != 1:                            # one-time: paired option SELL leg off (buy-only); the settings API can turn it back on
             st["cfg"].update(pairSell=False, pairV=1)
             st["_dirty"] = True
-        if saved and saved.get("planV") != PLAN_V:              # one-time: from 28 Oct 2026 - Rs 15 L in three Rs 5 L sleeves, buy-only, stock options only
-            st["cfg"].update(capital=1500000.0, buyOnly=True, stockOnly=True, stockTrader=False, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
+        if saved and saved.get("planV") != PLAN_V:              # one-time: from 28 Oct 2026 - Rs 15 L in three Rs 5 L sleeves, buy-only
+            st["cfg"].update(capital=1500000.0, buyOnly=True, stockTrader=False, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
+            st["_dirty"] = True
+        if saved.get("idxV") != IDX_V:                          # one-time: index options are bought as well as stock options
+            st["cfg"].update(stockOnly=False, idxV=IDX_V)
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -1188,7 +1192,7 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(weak)} skipped for weak risk/reward"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"risk/reward check failed: {str(e)[:80]}"})
-            if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: stock options only, bought only - no index trades, no bearish / written legs
+            if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: bought only - no bearish / written legs (stock options only too when stockOnly is switched on)
                 n0 = len(entries)
                 entries = [c for c in entries if not (cfg.get("stockOnly") and c.get("kind") != "stock")
                            and not (cfg.get("buyOnly") and (c.get("side") != "BUY" or c.get("key") == "rzt-hedge" or c.get("pos") == "short"))]

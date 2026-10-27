@@ -2010,7 +2010,7 @@ function paperList() {
        </div>
 
        ${srv && srv.sleeves && srv.sleeves.length ? `<div class="card"><div class="card-h"><h3>💼 Capital · ${inr(srv.sleeves.reduce((x, r) => x + r.capital, 0), 0)}</h3>
-         <span class="muted" style="font-size:12px">${srv.cfg && srv.cfg.buyOnly ? 'buy only' : 'buy + sell'} · ${srv.cfg && srv.cfg.stockOnly ? 'stock options' : 'stocks + index'}</span></div>
+         <span class="muted" style="font-size:12px">${srv.cfg && srv.cfg.buyOnly ? 'buy only' : 'buy + sell'} · ${srv.cfg && srv.cfg.stockOnly ? 'stock options only' : 'stock + index options'}</span></div>
          <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Sleeve</th><th class="num">In trades</th><th class="num">Open</th><th class="num">Closed P&L</th></tr></thead><tbody>
          ${srv.sleeves.map(r => `<tr><td><b>${E(r.name)}</b><br><small class="muted">${inr(r.capital, 0)}</small></td><td class="num">${inr(r.deployed, 0)}</td><td class="num">${r.open}${r.open ? `<br><small class="${cc(r.openPnL)}">${sinr(r.openPnL)}</small>` : ''}</td><td class="num ${cc(r.net)}">${sinr(r.net)}<br><small class="muted">${r.closed} closed${r.closed ? ' · ' + Math.round(r.winRate * 100) + '% won' : ''}</small></td></tr>`).join('')}
          </tbody></table></div>
