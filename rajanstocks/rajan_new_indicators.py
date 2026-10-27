@@ -292,25 +292,38 @@ def rajan_breakout_trap_scan(symbol, don_len=20, piv_len=10, conf_bars=3, lookba
 
     res = [None] * n
     sup = [None] * n
-    brk_up = [None] * n
-    brk_dn = [None] * n
     for i in range(n):
         res[i] = ph[i] if ph[i] is not None else (res[i - 1] if i else None)
         sup[i] = pl[i] if pl[i] is not None else (sup[i - 1] if i else None)
-        if i and res[i] is not None and closes[i] > res[i] and closes[i - 1] <= res[i]:
-            brk_up[i] = i
-        elif i:
-            brk_up[i] = brk_up[i - 1] if brk_up[i - 1] is not None and i - brk_up[i - 1] <= conf_bars else None
-        if i and sup[i] is not None and closes[i] < sup[i] and closes[i - 1] >= sup[i]:
-            brk_dn[i] = i
-        elif i:
-            brk_dn[i] = brk_dn[i - 1] if brk_dn[i - 1] is not None and i - brk_dn[i - 1] <= conf_bars else None
 
-    def trap_long(i):  # fake breakdown: pierced support, closed back above
-        return sup[i] is not None and lows[i] < sup[i] and closes[i] > sup[i]
+    # Fake breakout / breakdown, as in Rajan_Breakout_Trap.pine: a WICK trap pierces the swing level and closes back inside on
+    # the same bar; a CONFIRMED trap closes beyond the level and then closes back inside within `conf_bars` bars.
+    wick_long = [False] * n
+    wick_short = [False] * n
+    conf_long = [False] * n
+    conf_short = [False] * n
+    brk_up = brk_dn = None
+    for i in range(n):
+        if i and res[i] is not None and res[i - 1] is not None and closes[i] > res[i] and closes[i - 1] <= res[i - 1]:
+            brk_up = i
+        if i and sup[i] is not None and sup[i - 1] is not None and closes[i] < sup[i] and closes[i - 1] >= sup[i - 1]:
+            brk_dn = i
+        wick_short[i] = res[i] is not None and highs[i] > res[i] and closes[i] < res[i]
+        wick_long[i] = sup[i] is not None and lows[i] < sup[i] and closes[i] > sup[i]
+        conf_short[i] = (brk_up is not None and i > brk_up and i - brk_up <= conf_bars
+                         and res[i] is not None and closes[i] < res[i])
+        conf_long[i] = (brk_dn is not None and i > brk_dn and i - brk_dn <= conf_bars
+                        and sup[i] is not None and closes[i] > sup[i])
+        if conf_short[i] or (brk_up is not None and i - brk_up > conf_bars):
+            brk_up = None
+        if conf_long[i] or (brk_dn is not None and i - brk_dn > conf_bars):
+            brk_dn = None
 
-    def trap_short(i):  # fake breakout: pierced resistance, closed back below
-        return res[i] is not None and highs[i] > res[i] and closes[i] < res[i]
+    def trap_long(i):  # fake breakdown (bear trap): BUY
+        return wick_long[i] or conf_long[i]
+
+    def trap_short(i):  # fake breakout (bull trap): SELL
+        return wick_short[i] or conf_short[i]
 
     def bo_long(i):
         return i > 0 and upper[i - 1] is not None and closes[i] > upper[i - 1] and closes[i - 1] <= upper[i - 1]
@@ -318,13 +331,19 @@ def rajan_breakout_trap_scan(symbol, don_len=20, piv_len=10, conf_bars=3, lookba
     def bo_short(i):
         return i > 0 and lower[i - 1] is not None and closes[i] < lower[i - 1] and closes[i - 1] >= lower[i - 1]
 
-    def raw_long(i):
+    def _long_any(i):
         adx_ok = adx[i] is not None and adx[i] >= 18
         return (bo_long(i) and adx_ok) or trap_long(i)
 
-    def raw_short(i):
+    def _short_any(i):
         adx_ok = adx[i] is not None and adx[i] >= 18
         return (bo_short(i) and adx_ok) or trap_short(i)
+
+    def raw_long(i):          # a bar where long and short both fire is dropped (Pine: rawLong = ... and not short)
+        return _long_any(i) and not _short_any(i)
+
+    def raw_short(i):
+        return _short_any(i) and not _long_any(i)
 
     def init_sl(i, side):
         if atr14[i] is None:
@@ -365,7 +384,9 @@ def rajan_ohol_options_scan(symbol, lookback_days=120):
         tol = max(0.05, b["close"] * 0.0005)
         is_ol = b["high"] > b["low"] and abs(b["open"] - b["low"]) <= tol
         is_oh = b["high"] > b["low"] and abs(b["open"] - b["high"]) <= tol
-        rows.append({"date": b["date"], "signal": "BUY_CALL" if is_ol and not is_oh else "SELL_PUT_BIAS" if is_oh and not is_ol else "NONE",
+        # BULL_CALL = buy a call; BEAR_PUT = buy a put. (The old SELL_PUT_BIAS name was read as "sell a put" = bullish by the
+        # Strategies screen's direction reader, while the trader read it as SELL. These names make both readers agree.)
+        rows.append({"date": b["date"], "signal": "BULL_CALL" if is_ol and not is_oh else "BEAR_PUT" if is_oh and not is_ol else "NONE",
                      "openEqLow": is_ol, "openEqHigh": is_oh})
     last_bar = bars[-1]
     cur_row = rows[-1]
@@ -375,7 +396,7 @@ def rajan_ohol_options_scan(symbol, lookback_days=120):
         "date": last_bar["date"], "close": last_bar["close"], "signal": cur_row["signal"],
         "openEqLow": cur_row["openEqLow"], "openEqHigh": cur_row["openEqHigh"],
         "vix": vix, "vixTier": tier, "slPct": slpct, "t1Pct": t1pct,
-        "note": "Options-side setup: a BUY_CALL/SELL_PUT_BIAS day means buy the underlying's ATM option on that "
+        "note": "Options-side setup: a BULL_CALL (buy call) / BEAR_PUT (buy put) day means buy the underlying's ATM option on that "
                 "side; size the option's own stop/target from slPct/t1Pct off its own entry premium, not the "
                 "underlying's points.",
     }

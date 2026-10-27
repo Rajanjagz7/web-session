@@ -137,10 +137,13 @@
     return `<div class="ge-grid4">${pInst(d.positioning)}${pOptionsOI(d.options)}${pPCR(d.options)}</div>${optTab(d)}`;
   }
   function globalTab() {
-    let strip = '';                                    // the live futures / indices strip from the old Markets screen: every tile opens its chart
-    try { if (typeof glHTML === 'function') strip = glHTML(); if (typeof GL !== 'undefined' && !GL.items && typeof loadGlobal === 'function') loadGlobal(true); } catch (e) { }
-    return (strip || '<section class="ge-p"><p class="ge-na">Global markets unavailable right now.</p></section>')
-      + `<p class="ge-sub">Bullish / bearish read for Gold, Silver, Crude, Bitcoin, Nasdaq, Dow and global risk: <button type="button" class="btn-xs" data-getab="overview" data-gegrp="home">Overview ›</button></p>`;
+    let page = '';                                     // card layout from index.html: tile grid + sparklines + Global Market Bias card; every tile opens its chart
+    try {
+      if (typeof glPageHTML === 'function') page = glPageHTML();
+      if (typeof GL !== 'undefined' && !GL.items && typeof loadGlobal === 'function') loadGlobal(true);
+      else if (typeof loadGlobalBias === 'function') setTimeout(() => loadGlobalBias(), 0);
+    } catch (e) { }
+    return page || '<section class="ge-p"><p class="ge-na">Global markets unavailable right now.</p></section>';
   }
   /* the full NSE stock list (search, index constituents, multibaggers) - the old Markets screen's screener, mounted here */
   function stocklistTab() { return '<div id="geSL" class="ge-sl"></div>'; }

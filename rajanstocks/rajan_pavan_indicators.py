@@ -339,6 +339,33 @@ def hammer_support_entry_scan(
 
 # ───────────────────────── #2 W Pattern Support Entry ─────────────────────────
 
+def _w_breakouts(highs, lows, closes, pl, left, right, tol_pct, max_age=30):
+    """W / double-bottom tracker. When a pivot low forms within `tol_pct` of the previous pivot low, the W is ARMED with its
+    neckline = the highest high between the two lows. It FIRES on the first close above the neckline, and is dropped if price
+    closes below the second low or `max_age` bars pass first. (The old version also demanded that the same bar be within the
+    tolerance of the second low AND already above the neckline, which is almost impossible, so it never fired.)
+    Returns one dict per bar: {support, neckline, armed, breakout}."""
+    n = len(closes)
+    out = [{"support": None, "neckline": None, "armed": False, "breakout": False} for _ in range(n)]
+    prev = None          # (pivot_index, value) of the previous pivot low
+    arm = None           # dict(support, neckline, at)
+    for i in range(n):
+        if pl[i] is not None:
+            cur = (i - right, pl[i])
+            if prev is not None and prev[1] > 0 and abs(prev[1] - cur[1]) / prev[1] * 100 <= tol_pct:
+                arm = {"support": min(prev[1], cur[1]), "neckline": max(highs[prev[0]:cur[0] + 1]), "at": i}
+            prev = cur
+        if arm is not None:
+            if closes[i] < arm["support"] * (1 - tol_pct / 100.0) or i - arm["at"] > max_age:
+                arm = None
+            else:
+                out[i].update(support=arm["support"], neckline=arm["neckline"], armed=True)
+                if closes[i] > arm["neckline"]:
+                    out[i]["breakout"] = True
+                    arm = None
+    return out
+
+
 def w_pattern_scan(symbol, pivot_left=3, pivot_right=3, ema_length=50, support_tolerance_pct=1.0, lookback_days=180):
     symbol = _validate_symbol(symbol)
     ema_length = _clampi(ema_length, 2, 300, 50)
@@ -360,23 +387,16 @@ def w_pattern_scan(symbol, pivot_left=3, pivot_right=3, ema_length=50, support_t
     ph = _pivot_high(highs, pivot_left, pivot_right)
     pl = _pivot_low(lows, pivot_left, pivot_right)
 
-    low1 = low2 = neckline = None
+    wb = _w_breakouts(highs, lows, closes, pl, pivot_left, pivot_right, support_tolerance_pct)
     rows = []
     for i in range(n):
-        if pl[i] is not None:
-            low1, low2 = low2, pl[i]
-        if ph[i] is not None:
-            neckline = ph[i]
-
-        similar_lows = low1 is not None and low2 is not None and abs(low1 - low2) / low1 * 100 <= support_tolerance_pct
-        uptrend = i > 0 and closes[i] > ema_trend[i] and ema_trend[i] > ema_trend[i - 1]
-        near_support = low2 is not None and abs(closes[i] - low2) / closes[i] * 100 <= support_tolerance_pct
-        w_setup = uptrend and similar_lows and near_support and neckline is not None
-        w_breakout = w_setup and closes[i] > neckline
+        uptrend = i > 0 and ema_trend[i] is not None and ema_trend[i - 1] is not None \
+            and closes[i] > ema_trend[i] and ema_trend[i] > ema_trend[i - 1]
+        w_breakout = wb[i]["breakout"] and uptrend
 
         rows.append({
             "date": bars[i]["date"], "open": bars[i]["open"], "high": highs[i], "low": lows[i], "close": closes[i],
-            "emaTrend": ema_trend[i], "support": low2, "neckline": neckline,
+            "emaTrend": ema_trend[i], "support": wb[i]["support"], "neckline": wb[i]["neckline"],
             "signal": "BUY" if w_breakout else "NONE",
         })
 
@@ -1115,17 +1135,14 @@ def confluence_scan(
     ph = _pivot_high(highs, pivot_left, pivot_right)
     pl = _pivot_low(lows, pivot_left, pivot_right)
 
-    first_low = second_low = neckline = None
+    wb = _w_breakouts(highs, lows, closes, pl, pivot_left, pivot_right, support_tolerance_pct)
     rows = []
     for i in range(n):
-        if pl[i] is not None:
-            first_low, second_low = second_low, pl[i]
-        if ph[i] is not None:
-            neckline = ph[i]
-
         support = support_series[i]
         near_support = support is not None and abs(closes[i] - support) / closes[i] * 100 <= support_tolerance_pct
 
+        # Trend leg: price above rising 9/15 EMAs. The old version ALSO needed the close within 1% of the 20-day low, which
+        # contradicts "above rising EMAs" almost always, so it never fired.
         trend = (
             i > 0 and closes[i] > ema9[i] and ema9[i] > ema15[i]
             and ema9[i] > ema9[i - 1] and ema15[i] > ema15[i - 1]
@@ -1138,14 +1155,13 @@ def confluence_scan(
         lower_wick = min(o, c) - l
         hammer = r > 0 and body > 0 and body / r <= 0.35 and lower_wick / body >= 2.0 and upper_wick / body <= 0.5
 
-        similar_lows = first_low is not None and second_low is not None and abs(first_low - second_low) / first_low * 100 <= support_tolerance_pct
-        w_breakout = similar_lows and neckline is not None and closes[i] > neckline
+        w_breakout = wb[i]['breakout']
 
         volume_ok = (not use_volume) or (not has_volume) or (avg_volume[i] is not None and volumes[i] > avg_volume[i] * volume_multiplier)
 
-        hammer_setup = trend and near_support and hammer
-        w_setup = trend and w_breakout
-        long_signal = trend and near_support and (hammer_setup or w_setup) and volume_ok
+        hammer_setup = trend and near_support and hammer           # hammer sitting on the 20-day low
+        w_setup = trend and w_breakout                             # W neckline break (the W itself is the support)
+        long_signal = (hammer_setup or w_setup) and volume_ok
 
         rows.append({
             "date": bars[i]["date"], "open": o, "high": h, "low": l, "close": c,

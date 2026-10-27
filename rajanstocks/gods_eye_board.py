@@ -47,6 +47,7 @@ MARKETS = [
     ("CRUDEOIL", "Crude Oil", "CL=F", "Commodities", None),
     ("BITCOIN", "Bitcoin", "BTC-USD", "Crypto", None),
     ("NASDAQ", "Nasdaq", "^IXIC", "US", None),
+    ("DOW", "Dow Jones", "^DJI", "US", None),
 ]
 BULL, BEAR = 2.5, -2.5
 

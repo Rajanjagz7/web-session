@@ -410,14 +410,15 @@ def rj_best_scan(symbol, lookback=20, atr_period=14, sl_mult=1.5, tp1_mult=1.5, 
         zone = None
         levels = {}
         if i >= lookback and atr[i] is not None:
-            win = bars[i - lookback + 1:i + 1]
+            win = bars[i - lookback:i]   # the PREVIOUS `lookback` bars - including today made today's low the support itself
             support = min(b["low"] for b in win)
             resistance = max(b["high"] for b in win)
             a = atr[i]
             vols = [b["volume"] for b in bars[max(0, i - atr_period + 1):i + 1]]
             vol_ok = (sum(vols) / len(vols)) < bars[i]["volume"] if vols and sum(vols) > 0 else True
-            bull = closes[i] > support - a * 0.5 and bars[i]["low"] <= support and vol_ok
-            bear = closes[i] < resistance + a * 0.5 and bars[i]["high"] >= resistance and vol_ok
+            # key-level rejection: price pierces the prior 20-bar low/high intrabar and closes back inside it
+            bull = bars[i]["low"] <= support and closes[i] > support and vol_ok
+            bear = bars[i]["high"] >= resistance and closes[i] < resistance and vol_ok
             levels = {
                 "bullSL": support - a * sl_mult,
                 "bullTP1": support + a * reward_risk * tp1_mult,

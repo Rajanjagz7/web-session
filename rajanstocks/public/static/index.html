@@ -583,6 +583,33 @@ table.rd td{padding:8px 14px;border-top:1px solid var(--line)}.opt-hint{min-heig
 .gl small{color:var(--text-3);font-size:10.5px;white-space:nowrap;max-width:88px;overflow:hidden;text-overflow:ellipsis}.gl b{font-size:14px}.gl .num:last-of-type{font-size:12px}
 .gl-m{position:absolute;top:6px;right:7px;font-style:normal;font-size:9px;font-weight:700;color:var(--text-3);letter-spacing:.04em}.gl-m.live{color:var(--up)}
 
+/* ---- God's Eye > Global tab (card layout) ---- */
+.glp{display:flex;flex-direction:column;gap:12px}
+.glp-h,.glb{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.glp-h b{display:block;font-size:16px}.glp-h small{font-size:11.5px}
+.glp-msg{padding:18px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.glp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:900px){.glp-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.gl2{display:flex;flex-direction:column;gap:6px;min-width:0;text-align:left;font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+button.gl2{cursor:pointer}button.gl2:hover{border-color:var(--brand);background:var(--brand-2)}
+.gl2-top{display:flex;align-items:center;gap:7px;min-width:0}
+.gl2-ic{flex:none;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;background:var(--panel-2);color:var(--text-2,var(--text))}
+.gl2-n{flex:1;min-width:0;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gl2 .gl-m{position:static;flex:none}
+.gl2-ch{flex:none;color:var(--text-3);font-size:16px;line-height:1}
+.gl2-p{font-size:18px}
+.gl2-bot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:600}
+.gl2-sp{flex:none;width:64px;height:22px}.gl2-sp.up{color:var(--up)}.gl2-sp.down{color:var(--down)}
+.glb-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.glb-more{border:0;background:none;color:var(--brand);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 0}
+.glb-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.glb-chip{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:10px;background:var(--panel-2);border-left:3px solid var(--text-3)}
+.glb-chip small{font-size:11px;color:var(--text-3)}.glb-chip b{font-size:13px}.glb-chip em{font-style:normal;font-size:11px;color:var(--text-3)}
+.glb-chip.up{border-left-color:var(--up)}.glb-chip.up b{color:var(--up)}
+.glb-chip.down{border-left-color:var(--down)}.glb-chip.down b{color:var(--down)}
+.glp-more{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.glp-more summary{cursor:pointer;font-size:13px;font-weight:600;margin-bottom:0}.glp-more[open] summary{margin-bottom:10px}
+
 /* ---- news bar ---- */
 .newsbar{position:sticky;top:0;z-index:36;height:30px;display:flex;align-items:center;background:var(--panel-2);border-bottom:1px solid var(--line);overflow:hidden}
 .nb-l{flex:none;display:flex;align-items:center;gap:6px;padding:0 12px;height:100%;font-size:10.5px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--brand)}
@@ -4290,7 +4317,7 @@ function loadChart(keep){const k=App.sym.s+'|'+App.tf.k;
 /* ======================= Global markets & futures (GIFT Nifty, US futures, Nasdaq ...) ======================= */
 const GL={items:null,ts:0,busy:false};
 async function loadGlobal(force){if(GL.busy||(!force&&Date.now()-GL.ts<2500))return;GL.busy=true;GL.ts=Date.now();
-  try{GL.items=(await api('/api/m/global')).items;GL.err=null}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();{const el=$('#glStrip');if(el)el.innerHTML=glInner()}}
+  try{GL.items=(await api('/api/m/global')).items;GL.err=null}catch(e){GL.err=true}GL.busy=false;syncGlobalSym();{const el=$('#glStrip');if(el)el.innerHTML=glInner()}glPageRender()}
 function glInner(){if(!GL.items)return GL.err?'<span class="muted">Global data is unavailable right now.</span>':'<span class="muted">Loading global markets…</span>';
   const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq','Nasdaq 100','S&P 500','Dow Jones','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','Gold (COMEX)','Crude (NYMEX)','Silver (COMEX)','Bitcoin','USD / INR'];
   const list=order.map(n=>GL.items.find(i=>i.name===n)).filter(Boolean);
@@ -4298,6 +4325,41 @@ function glInner(){if(!GL.items)return GL.err?'<span class="muted">Global data i
     return i.chart?`<button class="gl" data-gl="${esc(i.id)}" title="Open chart" aria-label="Open ${esc(i.name)} chart">${inner}</button>`:`<div class="gl" title="Price only - MCX charts need an exchange licence. Open the COMEX / NYMEX tile next to it for the chart">${inner}</div>`}).join('')}
 const glHTML=()=>`<div class="gl-wrap"><div class="gl-h"><b>Global markets &amp; futures</b><small class="muted">GIFT Nifty, MCX, crypto live · US ~10 min delayed</small></div><div class="gls" id="glStrip">${glInner()}</div></div>`;
 
+
+/* ---- God's Eye > Global tab: card layout (tile grid with sparklines + Global Market Bias card) ---- */
+const GLB={d:null,ts:0,busy:false,err:false};
+/* [tile name in /api/m/global, key in /api/godseye/board, icon text, short label] */
+const GL_PRIME=[['Gold (COMEX)','GOLD','Au','Gold'],['Silver (COMEX)','SILVER','Ag','Silver'],['Crude (NYMEX)','CRUDEOIL','Oil','Crude'],['Bitcoin','BITCOIN','₿','Bitcoin'],['Nasdaq','NASDAQ','Nq','Nasdaq'],['Dow Jones','DOW','Dj','Dow']];
+async function loadGlobalBias(force){if(GLB.busy||(!force&&Date.now()-GLB.ts<60000))return;GLB.busy=true;GLB.ts=Date.now();
+  try{const r=await api('/api/godseye/board');GLB.d={};(r.items||[]).forEach(x=>{if(x.ok)GLB.d[x.key]=x});GLB.err=false}catch(e){GLB.err=true}
+  GLB.busy=false;const el=$('#glPage');if(el)el.innerHTML=glPageInner()}
+function glSpark(a){if(!a||a.length<3)return '<span class="gl2-sp"></span>';const up=a[a.length-1]>=a[0];   /* 30-day trend colour, independent of today's % */
+  const w=64,h=22,mn=Math.min(...a),mx=Math.max(...a),r=(mx-mn)||1;
+  const pts=a.map((v,i)=>(i/(a.length-1)*w).toFixed(1)+','+(h-2-(v-mn)/r*(h-4)).toFixed(1)).join(' ');
+  return `<svg class="gl2-sp ${up?'up':'down'}" role="img" aria-label="30-day trend" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`}
+function glTile(i,ic,label,b){const up=i.chgPct>=0,live=i.mode==='live';
+  const body=`<span class="gl2-top"><span class="gl2-ic">${esc(ic)}</span><span class="gl2-n" title="${esc(i.name)}">${esc(label)}</span><i class="gl-m ${live?'live':''}" title="${live?'Live':'Delayed ~10 min'}">${live?'LIVE':'10m'}</i>${i.chart?'<span class="gl2-ch" aria-hidden="true">›</span>':''}</span>`
+    +`<b class="num gl2-p">${fmtP(i.price,i.price>=1000?0:2)}</b><span class="gl2-bot"><span class="num ${cls(i.chgPct)}">${up?'+':'−'}${Math.abs(i.chgPct).toFixed(2)}%</span>${glSpark(b&&b.spark)}</span>`;
+  return i.chart?`<button type="button" class="gl2" data-gl="${esc(i.id)}" aria-label="Open ${esc(i.name)} chart">${body}</button>`
+    :`<div class="gl2" title="Price only - MCX charts need an exchange licence. Open the COMEX / NYMEX tile for the chart">${body}</div>`}
+function glBiasHTML(){const chips=GL_PRIME.map(p=>{const b=GLB.d&&GLB.d[p[1]];
+    const c=!b?'na':b.bias==='BULLISH'?'up':b.bias==='BEARISH'?'down':'flat';
+    return `<span class="glb-chip ${c}" title="${b?esc(b.bias)+' · score '+b.score+' (−10…+10)':'Not loaded'}"><small>${p[3]}</small><b>${b?(b.bias==='BULLISH'?'Bullish':b.bias==='BEARISH'?'Bearish':'Neutral'):(GLB.err?'n/a':'…')}</b>${b?`<em class="num">${b.score>0?'+':''}${b.score}</em>`:''}</span>`}).join('');
+  return `<section class="glb"><div class="glb-h"><b>Global Market Bias</b><button type="button" class="glb-more" data-getab="overview" data-gegrp="home">View overview →</button></div><div class="glb-chips">${chips}</div></section>`}
+function glPageInner(){
+  const head=`<section class="glp-h"><div><b>Global markets</b><small class="muted">GIFT Nifty, MCX, crypto live · US ~10 min delayed</small></div></section>`;
+  if(!GL.items)return head+`<section class="glp-msg muted">${GL.err?'Global data is unavailable right now.':'Loading global markets…'}</section>`+glBiasHTML();
+  const find=n=>GL.items.find(i=>i.name===n);
+  const prime=GL_PRIME.map(p=>{const i=find(p[0]);return i?glTile(i,p[2],p[3],GLB.d&&GLB.d[p[1]]):''}).join('');
+  const used=new Set(GL_PRIME.map(p=>p[0]));
+  const order=['GIFT Nifty','GIFT Bank Nifty','Dow Fut','S&P 500 Fut','Nasdaq 100 Fut','Nasdaq 100','S&P 500','US VIX','Gold (MCX)','Crude Oil (MCX)','Silver (MCX)','USD / INR'];
+  const rest=order.filter(n=>!used.has(n)).map(find).filter(Boolean);
+  const more=rest.length?`<details class="glp-more" ${GL.more?'open':''}><summary>More markets &amp; futures (${rest.length})</summary><div class="glp-grid">${rest.map(i=>glTile(i,i.name.replace(/[^A-Za-z0-9]/g,'').slice(0,2),i.name)).join('')}</div></details>`:'';
+  return head+`<div class="glp-grid">${prime}</div>`+glBiasHTML()+more
+    }
+const glPageHTML=()=>`<div class="glp" id="glPage">${glPageInner()}</div>`;
+function glPageRender(){const el=$('#glPage');if(el){el.innerHTML=glPageInner();loadGlobalBias()}}
+document.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('glp-more'))GL.more=e.target.open},true);
 
 /* ======================= Global instrument charts, news bar, picks pagination ======================= */
 const EXTRA={};                                   // chart-only pseudo symbols (global futures / indices)
