@@ -41,7 +41,7 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True,
+               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": True,
                "lockMode": "old", "eagleOn": False}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
@@ -81,6 +81,9 @@ def _load(cached=False):
                 d = json.load(f)
         saved = d.get("cfg") or {}
         st["cfg"].update(saved)
+        if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
+            st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
+            st["_dirty"] = True
         if saved and not saved.get("limitRemoved"):          # settings saved in the 5-a-day days: lift the cap once
             st["cfg"].update(maxPerDay=0, indexSlots=0, stockSlots=0, limitRemoved=True)
         st["trades"], st["log"] = d.get("trades") or [], d.get("log") or []
@@ -169,8 +172,6 @@ def _day_guard(st, today):
     """The ±dayPnlLimit guard: past the limit no new trades at all (profit locks and trailing keep running);
     inside the 75% soft zone only high-conviction entries (3+ indicators agreeing, or a Z Trend flip) are taken.
     Returns (mode, note): mode is 'off' | 'soft' | 'blocked'."""
-    if st.get("cfg", {}).get("limitRemoved") or st.get("cfg", {}).get("researchMode"):
-        return "off", None
     limit = float(st["cfg"].get("dayPnlLimit") or 0)
     if limit <= 0:
         return "off", None
@@ -316,11 +317,10 @@ def fill_slots(st, today, already):
             calls = market_api.quick_index_calls(6 if vercel else 15)
             ranked = []
             for c in calls:
-                # indices: only 5 symbols, so "once per symbol per day" (a carried trade exited at 09:07 blocked MIDCPNIFTY all
-                # day) is too strict - blocked only while one is open or for 30 minutes after one closed
-                busy_idx = {t["sym"] for t in st["trades"] if t["status"] == "OPEN"} | {x["sym"] for x in already} | {x["sym"] for x in out}
-                recent = (_now() - timedelta(minutes=30)).isoformat()
-                busy_idx |= {t["sym"] for t in st["trades"] if t["status"] == "CLOSED" and (t.get("closedAt") or "") >= recent}
+                # an index is blocked while a trade in it is open, or once one was OPENED today (no re-entry after a stop - the 30-minute
+                # re-entry rule bought the same index again after a loss). A carried trade that merely exited today (opened on an earlier
+                # day, e.g. out at 09:07) does not count, so it never blocks the index all day.
+                busy_idx = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t.get("date") == today} | {x["sym"] for x in already} | {x["sym"] for x in out}
                 if c["instrument"] in busy_idx:
                     continue
                 e_, s_, t1_ = (c.get(k) for k in ("entry", "stopLoss", "target1"))
@@ -1383,7 +1383,7 @@ def config(c: Cfg):
             if c.maxPerDay < 0:
                 raise HTTPException(400, "maxPerDay must be 0 (no limit) or a positive number")
             st["cfg"]["maxPerDay"] = c.maxPerDay
-        if c.dayPnlLimit is not None:                                   # 0 = guard off; default ±30,000
+        if c.dayPnlLimit is not None:                                   # 0 = guard off; default ±45,000
             if c.dayPnlLimit < 0:
                 raise HTTPException(400, "dayPnlLimit must be 0 (guard off) or a positive rupee amount")
             st["cfg"]["dayPnlLimit"] = float(c.dayPnlLimit)
