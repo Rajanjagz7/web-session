@@ -616,7 +616,7 @@ function paperList() {
   /* Buy / Sell split: one switch for every journal table */
   /* Eagle Trades (strength >= 75 + Open = Low / High, server auto trader): a badge on every row and their own filter */
   const isEagle = t => /^Eagle/i.test(t.setup || '');
-  const isIndexT = t => t.market === 'Index' || /^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|BANKEX|NIFTYNXT50)/.test(String(t.instrument || t.symbol || '').toUpperCase());
+  const isIndexT = t => t.market === 'Index' || /^(NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|BANKEX|NIFTYNXT50)\b/.test(String(t.instrument || t.symbol || '').toUpperCase());
   const eagleTag = t => isEagle(t) ? '<span class="jv-eagle" title="Eagle Trades: strength 75+ with Open = Low (buy) / Open = High (sell)">🦅 EAGLE</span>' : '';
   const sideOk = t => !ui.side || ui.side === 'all' || (ui.side === 'eagle' ? isEagle(t) : ui.side === 'index' ? isIndexT(t) : ui.side === 'sell' ? t.dir === 'Short' : t.dir !== 'Short');
   function sideBar(list) {
