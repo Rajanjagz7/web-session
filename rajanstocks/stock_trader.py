@@ -361,7 +361,7 @@ def status():
     unr = sum(t.get("unrealised", 0) for t in st["trades"] if t["status"] == "OPEN")
     return {"capital": CFG["capital"], "cash": round(cash), "used": round(used), "booked": round(booked), "unrealised": round(unr),
             "equity": round(CFG["capital"] + booked + unr), "byHorizon": {h: _stats([t for t in st["trades"] if t["hz"] == h]) for h in HZ},
-            "all": _stats(st["trades"]), "open": [t for t in st["trades"] if t["status"] == "OPEN"],
+            "all": _stats(st["trades"]), "open": [{**t, "costPctEff": CFG["costPct"]} for t in st["trades"] if t["status"] == "OPEN"],   # costPctEff: the Journal shows open P&L after the estimated exit cost
             "closed": [t for t in st["trades"] if t["status"] == "CLOSED"][-200:][::-1], "log": st["log"][-30:][::-1],
             "lastRun": st.get("lastRun"), "rules": __doc__.split("State is kept")[0].strip()}
 
