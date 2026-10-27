@@ -112,7 +112,16 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       if (r && r.ok) {
         const a = await r.json();
         AUTO.cand = a.cand || null;
+        const prevA = {}; AUTO.list.forEach(x => { prevA[x.id] = x; });
         AUTO.list = (a.open || []).concat(a.closed || []).map(mapAuto);
+        /* different serverless instances answer with different cached copies: a reply whose price is OLDER than the one already
+           shown for an open trade is ignored for that trade, so P&L does not swing back and forth between instances */
+        AUTO.list.forEach(n => {
+          const p = prevA[n.id], pa = p && p.raw && p.raw.lastAt, na = n.raw && n.raw.lastAt;
+          if (p && n.status !== 'Closed' && p.status !== 'Closed' && pa && na && na < pa) {
+            n.unrl = p.unrl; n.raw.last = p.raw.last; n.raw.unrealised = p.raw.unrealised; n.raw.lastAt = pa;
+          }
+        });
         AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null };
         AUTO.err = false;
         AUTO.ts = Date.now();
@@ -264,7 +273,16 @@ function paperList() {
     const net = gross - costs - slipv, risk = initialRisk(t);
     return { gross, costs, slip: slipv, net, risk, R: risk > 0 && qx > 0 ? net / risk : null, qx };
   }
+  /* A price that is missing for a moment (live quote not in yet, server copy mid-refresh) must not make a position's P&L vanish
+     (it was summed as 0, so the day total jumped between plus and minus): keep the last good figure for every open trade. */
+  const UNR_LAST = {};
   function unrealised(t) {
+    const k = String(t.id), v = unrealisedRaw(t);
+    if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') { delete UNR_LAST[k]; return null; }
+    if (typeof v === 'number' && isFinite(v)) { UNR_LAST[k] = v; return v; }
+    return Object.prototype.hasOwnProperty.call(UNR_LAST, k) ? UNR_LAST[k] : null;
+  }
+  function unrealisedRaw(t) {
     if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') return null;
     if (t.isStock) {
       const l = live(t.symbol || t.instrument);

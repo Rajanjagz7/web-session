@@ -1893,7 +1893,8 @@ def picks(refresh: bool = False, response: Response = None):
                 _inject_cash_seed_if_needed(got)
             if got and not refresh and time.time() - got.get("_t", 0) < ttl_s and got.get("_t", 0) >= opened_at:
                 return _public(got), True
-            if not shared_cache.lock("picks-build", 40):                # someone else is building: serve what exists
+            have_lock = shared_cache.lock("picks-build", 40)
+            if not have_lock:                                           # someone else is building: serve what exists
                 if got:
                     return _public(got), True
                 time.sleep(4)
@@ -1901,12 +1902,22 @@ def picks(refresh: bool = False, response: Response = None):
                 if got:
                     _inject_cash_seed_if_needed(got)
                     return _public(got), True
-            v = _picks_compute(18)                                      # + response/serialisation must stay well under the 30 s cap
+            try:
+                v = _picks_compute(18)                                  # + response/serialisation must stay well under the 30 s cap
+            except Exception as e:
+                # the rebuild failed (rate limit / upstream timeout): show the last good list rather than a 502
+                stale = got or (mem[1] if mem else None)
+                if isinstance(stale, dict) and stale.get("picks"):
+                    print(f"[picks] rebuild failed, serving the last good list: {e}")
+                    return _public({**stale, "stale": True}), False     # not complete -> only cached for a few seconds, retried soon
+                raise
+            finally:
+                if have_lock:                                           # only release a lock this request took (and always, even on failure)
+                    shared_cache.unlock("picks-build")
             _inject_cash_seed_if_needed(v)
             if v.get("count", 0) >= 20:
                 v["_t"] = time.time()
                 shared_cache.set(sk, v, 20 * 3600 if v.get("complete") else 300)
-            shared_cache.unlock("picks-build")
             return _public(v), v.get("complete", False)
         try:
             # memory TTL is short on purpose: build_ok re-reads the shared store first (cheap),
