@@ -43,6 +43,10 @@ DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
+# Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
+# quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
+# (1-2 minutes later) takes the rest - best-ranked first.
+CYCLE_BUDGET = 18.0 if os.environ.get("VERCEL") else 10 ** 9
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
 
@@ -782,7 +786,7 @@ def _push(idem, title, body):
         print(f"[auto] notify failed: {e}")
 
 
-def manage(st, now):
+def manage(st, now, t_end=None):
     import market_api
     opens = [t for t in st["trades"] if t["status"] == "OPEN"]
     if not opens:
@@ -790,6 +794,8 @@ def manage(st, now):
     # paired option SELL legs that were deferred before 09:20 go on now (user rule: selling starts at 09:20)
     if _mins(now) >= SELL_FROM:
         for t in [x for x in opens if x.get("writePending") and not x.get("pairOf")]:
+            if t_end and time.time() > t_end:
+                break                                         # out of time this cycle - the rest go on in the next one
             try:
                 _open_short(st, {"sym": t["sym"], "side": t["side"]}, now.date().isoformat(), t)
                 t.pop("writePending", None)
@@ -945,9 +951,10 @@ def run_cycle(force=False, dry=False):
     finally:
         if not dry:
             shared_cache.unlock("auto-cycle")
-            try:                                   # the stock paper trader rides on the same schedule
+            try:                                   # the stock paper trader rides on the same schedule (if this call still has time)
                 import stock_trader
-                stock_trader.run_cycle()
+                if time.time() - run_cycle._last_ran < CYCLE_BUDGET:
+                    stock_trader.run_cycle()
             except Exception as e:
                 print(f"[stockbot] cycle failed: {e}")
 
@@ -984,6 +991,7 @@ def mark_open_positions(min_gap=120):
 
 
 def _run_cycle(now, force, dry):
+    t0 = time.time()
     with _lock:
         st = _load()
         cfg = st["cfg"]
@@ -996,7 +1004,7 @@ def _run_cycle(now, force, dry):
             return {"ran": False, "reason": "market closed" + (f" ({nse_calendar.holiday(now.date())})" if nse_calendar.holiday(now.date()) else "")}
         before = {t["id"] for t in st["trades"] if t["status"] == "CLOSED"}
         if not dry:
-            manage(st, now)
+            manage(st, now, t0 + CYCLE_BUDGET * 0.5)
         rep["closed"] = [t["id"] for t in st["trades"] if t["status"] == "CLOSED" and t["id"] not in before]
         today = now.date().isoformat()
         in_window = _hm(cfg["windowStart"]) <= _mins(now) <= _hm(cfg["lastEntry"])
@@ -1067,8 +1075,12 @@ def _run_cycle(now, force, dry):
                 if len(entries) > slots:
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"opening-minute cap {burst}: {len(entries) - slots} candidate(s) wait for the next cycle"
             taken = 0
-            for c in entries:
+            for i, c in enumerate(entries):
                 if taken >= slots:
+                    break
+                over = time.time() - t0              # at least one entry per cycle (a slow scan must not starve them), hard stop at budget + 6 s
+                if not dry and (over > CYCLE_BUDGET + 6 or (taken and over > CYCLE_BUDGET)):
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"time budget: {len(entries) - i} entr(ies) wait for the next cycle"
                     break
                 if dry:
                     rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"],

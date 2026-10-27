@@ -27,7 +27,7 @@ jobs:
               # warm today's picks first (a cycle that had to build them itself could hit Vercel's 30 s limit), then trade
               curl -s -m 40 -o /dev/null "$SITE/api/m/picks" || true
               sleep 20
-              out=$(curl -s -m 60 -X POST "$SITE/api/cron/signal-push" -w ' [HTTP %{http_code}]' || echo 'request failed')
+              out=$(curl -s -m 60 -X POST "$SITE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed')
               echo "$(TZ=Asia/Kolkata date +%T) IST ${out:0:300}"
               # a holiday: the server still says the market is closed well after the open - stop early (status runs no cycle)
               if [ "$now" -ge 925 ] && [ "$now" -lt 935 ]; then
