@@ -1058,7 +1058,9 @@ def _run_cycle(now, force, dry):
                 st["log"].append({"at": now.isoformat(), "msg": f"rzt intraday failed: {str(e)[:80]}"})
             try:                                      # Gann time cycle: price AT a zone AT a cycle time, with the zone as stop
                 tc_extra = _timecycle_cands(now)
-                tseen = {c["sym"] for c in chosen}
+                # not just this cycle's picks: a symbol already traded / open today must not be bought again on every cycle
+                # while its time-cycle trigger stays active (BANKNIFTY went in 3 times in 3 minutes)
+                tseen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
                 troom = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
                 chosen = chosen + [c for c in tc_extra if c["sym"] not in tseen][:troom]
                 if tc_extra:
