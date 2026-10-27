@@ -712,6 +712,13 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .ot-chk{display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:2px;align-items:start;margin:10px 0;font-size:13px}.ot-chk input{margin-top:3px}.ot-chk .muted{grid-column:2;font-size:11.5px;line-height:1.4}
 .ot-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}.ot-btns .btn{height:40px;min-width:0;padding:0 6px;white-space:nowrap}
 .ot-pos{margin:8px 0 2px}
+/* one expiry row: option expiry chips, then a single "Futures" picker (no second row of dates) */
+.opx-exp{flex-wrap:nowrap}.opx-exp .opx-expc{min-width:0;flex:0 1 auto}
+.opx-exp .opx-futc{display:flex;margin:0;flex:none}
+.opx-exp .opx-futsel{height:28px;flex:none;width:auto;min-width:86px;max-width:none;border-radius:14px;padding:0 8px 0 12px;font-size:12px;font-weight:600;color:var(--text-2);background-color:transparent}
+.opx-exp .opx-expc{overflow-x:auto;scrollbar-width:none}.opx-exp .opx-expc::-webkit-scrollbar{display:none}
+.opx-exp .opx-futsel.on{border-color:var(--brand);color:var(--brand)}
+@media(min-width:900px){.opx-bar{gap:16px;padding:10px 14px}.opx-und{flex:0 0 auto}.opx-exp{justify-content:flex-start}.opx-act{flex:none}}
 </style>
 <script id="scrJV" src="/static/journal.js?v=20261028d"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
@@ -3631,11 +3638,10 @@ function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.t
     <div class="opx-bar">
       <div class="opx-und"><select class="opx-sel" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
         <div class="opx-spot" id="opxSpot"></div></div>
-      <div class="opx-exp"><span class="opx-lbl">Expiry</span><div class="opx-expc" id="opxExp"></div><select class="opx-sel opx-expsel" id="optExp" aria-label="All expiries"></select></div>
+      <div class="opx-exp"><span class="opx-lbl">Expiry</span><div class="opx-expc" id="opxExp"></div><select class="opx-sel opx-expsel" id="optExp" aria-label="All expiries"></select><div class="opx-futc" id="opxFut"></div></div>
       <div class="opx-act"><button class="opx-fbtn" id="opxFbtn" data-opx="filters" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filters</span><i id="opxBadge" hidden></i></button>
         <button class="opx-ib" id="optRef" title="Refresh chain" aria-label="Refresh chain">↻</button></div>
     </div>
-    <div class="opx-futc" id="opxFut"></div>
     <div class="opx-sum" id="opxSum"></div>
     <div class="opx-xp" id="optExpired" hidden></div>
     <div class="opx-mtabs" role="tablist">${[['chain','Chain'],['chart','Chart'],['order','Order'],['signals','Signals']].map(([k,l])=>`<button role="tab" data-opx="mtab:${k}" class="${OPT.mtab===k?'on':''}">${l}</button>`).join('')}</div>
@@ -3823,7 +3829,9 @@ async function loadFuts(sym){OPT.futs=OPT.futs||{};if(OPT.futs[sym]!==undefined|
 function drawFutBar(){const el=$('#opxFut');if(!el)return;const L=OPT.futs&&OPT.futs[OPT.sym];
   if(L===undefined){loadFuts(OPT.sym);el.innerHTML='';return}
   if(OPT.pendingFut&&L.some(c=>c.key===OPT.pendingFut)){const k=OPT.pendingFut;OPT.pendingFut=null;setTimeout(()=>selectFuture(k),0)}
-  el.innerHTML=L.length?`<span class="opx-lbl">Futures</span><div class="opx-expc">${L.map(c=>`<button class="opx-chip ${OPT.sel&&OPT.sel.fut&&OPT.sel.key===c.key?'on':''}" data-opx="fut:${c.key}" title="${esc(c.label)}">${fmtExp(c.expiry)}</button>`).join('')}</div>`:''}
+  const fsel=OPT.sel&&OPT.sel.fut?OPT.sel.key:'';
+  el.innerHTML=L.length?`<select class="opx-sel opx-futsel ${fsel?'on':''}" id="optFut" aria-label="Futures contracts" title="Futures (chart only)"><option value="">Futures</option>${L.map(c=>`<option value="${esc(c.key)}" ${c.key===fsel?'selected':''}>${fmtExp(c.expiry)} fut</option>`).join('')}</select>`:''}
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='optFut'&&e.target.value)selectFuture(e.target.value)});
 function selectFuture(key){const L=(OPT.futs&&OPT.futs[OPT.sym])||[],c=L.find(x=>x.key===key);if(!c)return;
   const label=`${OPT.sym} FUT ${fmtExp(c.expiry)}`;
   OPT.sel={side:'FUT',strike:0,key:c.key,label,fut:true,exp:c.expiry};
@@ -4539,11 +4547,16 @@ function drawOptTrade(){const box=$('#opTrade');if(!box||!OPT.osym)return;
 function updOptTrade(){const o=OPT.osym;if(!o||!$('#opQty'))return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1,qty=lots*lot,px=o.ask>0?o.ask:o.last,ch=calcCharges('option','buy',qty*px).total,p=posOf(o.s);
   $('#opQty').textContent=qn(qty);$('#opPx').textContent=fmtP(px);$('#opCost').textContent=money(qty*px,0)+' · '+money(ch,0);
   {const bp=o.bid>0?o.bid:o.last,bEl=$('#opBidPx'),mEl=$('#opMargin'),spot=(OPT.chain&&OPT.chain.spot)||0;if(bEl)bEl.textContent=fmtP(bp);if(mEl)mEl.textContent=money(qty*Math.max(0.12*spot,bp),0)}
-  $('#opExit').disabled=!p;const el=$('#opPos');
+  $('#opExit').disabled=!p;{const sb=$('#opSell');if(sb){const blk=sellRule(o,qty);sb.disabled=!!blk&&!(p&&p.q>0);sb.title=blk||''}}const el=$('#opPos');
   {const pe=$('#opPend'),od=App.orders.filter(x=>x.sym===o.s&&x.status==='Open');if(pe)pe.innerHTML=od.length?'<b>Pending limit orders</b>'+od.map(x=>`<div><span>${x.side==='buy'?'Buy':'Sell'} ${qn(x.qty)} @ <b class="num">${fmtP(x.price)}</b></span><button class="btn-xs" data-opcancel="${x.id}">Cancel</button></div>`).join(''):''}
   if(p){const pnl=p.q*(o.last-p.avg);el.innerHTML=`<b>${p.q<0?'You are short '+qn(-p.q):'You hold '+qn(p.q)} @ ${fmtP(p.avg)}</b> · unrealized <span class="num ${cls(pnl)}">${smoney(pnl)}</span>${p.sl?` · SL ${fmtP(p.sl)}`:''}${p.tp?` · target ${fmtP(p.tp)}`:''}`}else el.innerHTML='<span class="muted">No open position in this contract.</span>'}
+/* manual selling rule: buying is open everywhere; writing (sell to open) is stock options only, max 1 lot; index options are buy-only */
+function sellRule(o,qty){const p0=posOf(o.s),lot=o.lot||1,closing=p0&&p0.q>0?Math.min(qty,p0.q):0,opening=qty-closing;if(opening<=0)return'';
+  const u=SYMS.find(x=>x.s===OPT.sym);if(u&&u.cls==='Indices')return'Index options are buy-only. You can sell (write) stock options only.';
+  const have=p0&&p0.q<0?-p0.q:0;if(have+opening>lot)return have>=lot?'You already have 1 lot sold in this stock option.':'Selling a stock option is limited to 1 lot.';return''}
 function optOrder(side){if(!netGuard())return;const o=OPT.osym;if(!o||!OPT.sel)return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1;let qty=lots*lot;
   if(side==='exit'){const p=posOf(o.s);if(!p){toast('No open position in this contract to exit.','warn');return}closePos(o.s,'manual');updOptTrade();drawOptTrade();return}
+  if(side==='sell'){const g=sellRule(o,qty);if(g){toast(g,'warn');return}}
   if((OPT.otype||'market')==='limit'){const lp=+parseFloat(($('#opLmt')||{}).value);if(!(lp>0)){toast('Enter a limit price.','warn');return}
     const bp=o.bid>0?o.bid:o.last,ap=o.ask>0?o.ask:o.last,spot=(OPT.chain&&OPT.chain.spot)||0;OPT.lmt=lp;OPT.lmtFor=o.s;OPT.lots=lots;
     if(side==='buy'&&qty*lp>App.cash){toast('Not enough buying power for this order.','warn');return}
