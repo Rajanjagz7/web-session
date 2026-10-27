@@ -26,6 +26,8 @@ import ut_bot
 from indicators import get_india_vix, vix_tier
 
 NEW_CATALOG = [
+    ("rajan-ibs-reversion", "IBS Reversion (Internal Bar Strength)", "Reversal",
+     "UNPROVEN, backtest only. Long-only: buy after a day that closes in the bottom 10% of its own high-low range (IBS under 0.10), exit when a day closes in the top 10% (IBS over 0.90); wide 2.5 ATR stop. Published tests report about 67-74% winners on S&P/Nasdaq (see docs/IBS_REVERSION.md); average win is only about the size of the average loss, and nothing is measured on NSE data yet.", "new"),
     ("rajan-rsi2-pullback", "RSI(2) Pullback (Connors)", "Reversal",
      "UNPROVEN forward test. Long-only mean reversion: close above the 200-day average, 2-day RSI under 10 and close under the 5-day average; wide 2.5 ATR stop, exit when price closes back above the 5-day average. Published US-index backtests report roughly 74-75% winners with small average wins (see docs/RSI2_PULLBACK.md); not yet measured on NSE data.", "new"),
     ("rajan-trend-rider", "Rajan Trend Rider", "Trend",
@@ -47,6 +49,7 @@ NEW_CHART_LINES = {
     "rajan-breakout-trap": [("upper", "Donchian upper"), ("lower", "Donchian lower")],
     "rajan-gann-sq9": [("base", "Gann base"), ("u1", "Buy above (U1)"), ("d1", "Sell below (D1)")],
     "rajan-rsi2-pullback": [("sma200", "SMA 200"), ("sma5", "SMA 5")],
+    "rajan-ibs-reversion": [],
 }
 NO_CHART_NEW = {"rajan-ohol-options"}
 
@@ -524,6 +527,45 @@ def rajan_rsi2_pullback_scan(symbol, lookback_days=450):
             "current": _current_from_pos(bars[-1], pos, rows), "bars": rows[-300:], "events": rp._events_from_bars(rows)}
 
 
+# ───────────────────────── Rajan IBS Reversion (Internal Bar Strength) ─────────────────────────
+IBS_ENTRY, IBS_EXIT, IBS_STOP_ATR = 0.10, 0.90, 2.5
+
+
+def _ibs(b):
+    rng = b["high"] - b["low"]
+    return (b["close"] - b["low"]) / rng if rng > 0 else 0.5
+
+
+def rajan_ibs_reversion_scan(symbol, lookback_days=450):
+    """UNPROVEN. Buy a day that closed in the bottom 10% of its range (IBS < 0.10); exit when a day closes in the top 10% (IBS > 0.90).
+    Published rule (vendor + futures-blog tests, US indices): enter next open, exit next open. Here: entry on the signal bar's close,
+    2.5 ATR(14) stop, and the stop is pulled to the close of the first day with IBS > 0.90 (exit). Long-only."""
+    bars = ut_bot.fetch_index_history(symbol, lookback_days=lookback_days)
+    if len(bars) < 30:
+        raise RuntimeError(f"Not enough daily history for IBS Reversion ({len(bars)} bars)")
+    n = len(bars)
+    closes = [b["close"] for b in bars]
+    ibs = [_ibs(b) for b in bars]
+    atr14 = _atr(bars, 14)
+
+    def raw_long(i):
+        return atr14[i] is not None and ibs[i] < IBS_ENTRY
+
+    def raw_short(i):
+        return False
+
+    def init_sl(i, side):
+        return closes[i] - IBS_STOP_ATR * atr14[i] if atr14[i] is not None else None
+
+    def trail_fn(i, side, stop):
+        return closes[i] if ibs[i] > IBS_EXIT else None
+
+    rows_core, pos = _walk(bars, raw_long, raw_short, init_sl, trail_fn)
+    rows = [{**rows_core[i], "ibs": round(ibs[i], 3)} for i in range(n)]
+    return {"symbol": symbol, "columns": [{"key": "ibs", "label": "IBS"}],
+            "current": _current_from_pos(bars[-1], pos, rows), "bars": rows[-300:], "events": rp._events_from_bars(rows)}
+
+
 NEW_KEYS = {
     "rajan-trend-rider": rajan_trend_rider_scan,
     "rajan-ha-momentum": rajan_ha_momentum_scan,
@@ -531,4 +573,5 @@ NEW_KEYS = {
     "rajan-ohol-options": rajan_ohol_options_scan,
     "rajan-gann-sq9": rajan_gann_sq9_scan,
     "rajan-rsi2-pullback": rajan_rsi2_pullback_scan,
+    "rajan-ibs-reversion": rajan_ibs_reversion_scan,
 }
