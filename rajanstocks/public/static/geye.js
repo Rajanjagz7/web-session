@@ -262,15 +262,10 @@
         <button type="button" class="btn-xs" data-gechain="1">Open the option chain</button></section>`;
   }
 
+  /* Signals = the stock list by sector. The instrument table that used to be here repeated the Overview cards (same
+     NIFTY / SENSEX / BANKNIFTY / GOLD ... scores), so it was removed. */
   function sigTab(d) {
-    let list = (d.cards || []).filter(c => isN(c.score) && (G.filt === 'ALL' || c.label === G.filt));
-    list = list.slice().sort((a, b) => G.sort === 'name' ? String(a.name).localeCompare(b.name) : (b.score - a.score));
-    return `<div class="ge-bar2"><div class="ge-seg">${['ALL', 'BULLISH', 'NEUTRAL', 'BEARISH'].map(f => `<button type="button" class="${G.filt === f ? 'on' : ''}" data-gefilt="${f}">${f[0] + f.slice(1).toLowerCase()}</button>`).join('')}</div>
-      <div class="ge-seg">${[['score', 'By score'], ['name', 'By name']].map(([k, l]) => `<button type="button" class="${G.sort === k ? 'on' : ''}" data-gesort="${k}">${l}</button>`).join('')}</div></div>
-      <section class="ge-p"><div class="ge-tw"><table class="ge-t ge-sig"><thead><tr><th>Instrument</th><th class="r">Score</th><th>Signal</th><th class="r">Price</th><th class="r">Change</th><th>Action</th></tr></thead><tbody>
-      ${list.map(c => `<tr data-gecard="${E(c.key)}" tabindex="0"><td><b>${E(c.name)}</b>${c.divergence ? ' <small class="' + (c.divergence === 'BULLISH' ? 'up' : 'down') + '">⚡ div</small>' : ''}</td><td class="r num ${cc(c.score)}"><b>${sg(c.score)}</b></td>
-        <td><span class="ge-badge ${lab(c.label)}">${E(c.label)}</span></td><td class="r num">${isN(c.price) ? n2(c.price, c.price >= 1000 ? 1 : 2) : NA}</td><td class="r num ${cc(c.chgPct)}">${pc(c.chgPct)}</td><td>${c.action ? `<span class="ge-badge ge-act ${c.action.side === 'BUY' ? 'bull' : c.action.side === 'SELL' ? 'bear' : 'neu'}">${c.action.side === 'BUY' ? '▲ ' : c.action.side === 'SELL' ? '▼ ' : ''}${E(c.action.label)}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No instruments match.</td></tr>'}
-      </tbody></table></div></section>${stocksBlock()}`;
+    return stocksBlock();
   }
 
   /* ---------- sectors & stocks (Nifty 500 by NSE industry, /api/ge/sectors) ---------- */
@@ -402,8 +397,9 @@
     else body = ({ overview, retail: retailTab, fno: fnoTab, fii: fiiTab, options: optTab, movers: moversTab, range: rangeTab, global: globalTab, watch: watchTab, fallen: fallenTab, signals: sigTab, sectors: secTab, stocklist: stocklistTab }[G.tab] || overview)(d);
     if (['movers', 'watch', 'fallen'].includes(G.tab)) loadMQ(false);
     el.innerHTML = `<div class="page ge">
+      ${headHTML(G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : '', 'data-gerefresh="1"', G.busy)}
       ${G.err && d ? `<p class="ge-warn">Last refresh failed (${E(G.err)}) - showing data from ${E(IST(d.asOf))}.</p>` : ''}
-      <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}${refBtn(G.busy ? 'Updating…' : d ? 'Updated ' + E(IST(d.asOf)) : '', 'data-gerefresh="1"', G.busy)}</div>
+      <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div>
       ${grp.tabs.length > 1 ? `<div class="ge-sub2" role="tablist">${grp.tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>` : ''}
       ${body}
       ${G.tab === 'global' ? '' : `<p class="ge-disc">Informational only - built from public NSE data, broker quotes and rule-based scores; not a forecast or investment advice.</p>`}
@@ -424,14 +420,12 @@
   document.addEventListener('click', e => { if (e.target.closest('[data-geopen]') && typeof go === 'function') { G.tab = 'overview'; SS('ge-tab', G.tab); go('godseye'); } });
   /* Today's Picks = the Picks screen under the same God's Eye tab bar; the other tabs go back to #v-godseye */
   /* one header for every God's Eye screen, Today's Picks included (its ↻ refreshes the picks) */
-  /* The app top bar already shows the brand, market open/closed and a time, so the page no longer repeats them.
-     What is left: a small refresh button at the end of the tab row (the update time is its tooltip) and, only when
-     something is WRONG (stale / delayed / unavailable), a warning pill. */
-  function refBtn(upd, refAttr, busy) {
-    const s = status(), warn = /ge-pill (stale|off)/.test(s) ? s : '';
-    return `${warn}<button type="button" class="ge-ref ge-ref-in${busy ? ' busy' : ''}" ${refAttr} aria-label="Refresh" title="${upd || 'Refresh'}" ${busy ? 'disabled' : ''}>↻</button>`;
+  function headHTML(upd, refAttr, busy) {
+    return `<div class="ge-head"><div class="ge-brand"><svg viewBox="0 0 48 28" class="ge-eye" aria-hidden="true"><path d="M2 14C9 4 39 4 46 14C39 24 9 24 2 14Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="14" r="2.2" fill="currentColor"/></svg>
+        <div><h1><b class="ge-gt">GOD'S EYE</b> <span>– The Observer</span></h1></div></div>
+        <div class="ge-st">${status()}<span class="ge-upd">${upd}</span><button type="button" class="ge-ref" ${refAttr} aria-label="Refresh" title="Refresh" ${busy ? 'disabled' : ''}>↻</button></div></div>`;
   }
-  window.geTabsHTML = (o = {}) => `<div class="ge ge-pkbar"><div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g.key === 'picks'}" class="${g.key === 'picks' ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}${refBtn(E(o.upd || ''), 'data-act="rpicks"', o.busy)}</div></div>`;
+  window.geTabsHTML = (o = {}) => `<div class="ge ge-pkbar">${headHTML(E(o.upd || ''), 'data-act="rpicks"', o.busy)}<div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g.key === 'picks'}" class="${g.key === 'picks' ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div></div>`;
   window.geHome = () => G.tab === 'picks' ? 'picks' : 'godseye';
   document.addEventListener('click', e => {
     const tb = e.target.closest('#v-picks .ge-pkbar [data-gegrp]'); if (!tb || typeof go !== 'function') return;
@@ -517,7 +511,6 @@
   .ge-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:14px;font-weight:700;font-size:12px;background:var(--panel-2,rgba(255,255,255,.06))}
   .ge-pill i{width:8px;height:8px;border-radius:50%;background:var(--text-3)}.ge-pill.on{color:var(--up)}.ge-pill.on i{background:var(--up);box-shadow:0 0 0 3px color-mix(in srgb,var(--up) 30%,transparent)}
   .ge-pill.stale{color:var(--warn,#f5b942)}.ge-pill.stale i{background:var(--warn,#f5b942)}.ge-pill.off{color:var(--down)}.ge-pill.off i{background:var(--down)}
-  .ge-tabs .ge-ref-in{margin-left:auto;flex:none;width:30px;height:30px;padding:0;font-size:15px;line-height:1}.ge-tabs .ge-pill{margin-left:auto}.ge-tabs .ge-pill+.ge-ref-in{margin-left:6px}.ge-ref.busy{opacity:.5}
   .ge-ref{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font-size:16px}
   .ge-tag{display:block;margin-top:4px;font-size:11px;font-weight:600;color:var(--text-3)}.ge-tag b{font-size:12px}.ge-tag.bull,.ge-tag.bull b{color:var(--up)}.ge-tag.bear,.ge-tag.bear b{color:var(--down)}
   .ge-tabs{display:flex;flex-wrap:wrap;gap:6px 4px;margin:4px 0 14px}
