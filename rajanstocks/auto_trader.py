@@ -206,6 +206,9 @@ def _sessions_between(a, b):
 
 
 # ───────────────────────── signal selection ─────────────────────────
+FORWARD_TEST_EXTRA = ("rajan-rsi2-pullback",)   # unproven, added by hand (RSI(2) Pullback): runs once the backtest result contains it
+
+
 def active_set(cfg):
     """({key: score}, {key: (variant, filter)}, label). Proven strategies first; if none passed the out-of-sample
     test and research mode is on, the top 3 in-sample configs are forward-tested and clearly labelled UNPROVEN."""
@@ -218,7 +221,8 @@ def active_set(cfg):
     if r["provenKeys"]:
         return {k: sc[k] for k in r["provenKeys"]}, chosen, "proven"
     if cfg.get("researchMode") and r.get("researchKeys"):
-        return {k: sc[k] for k in r["researchKeys"]}, chosen, "unproven (forward test)"
+        keys = list(r["researchKeys"]) + [k for k in FORWARD_TEST_EXTRA if k in sc and k not in r["researchKeys"]]   # hand-picked strategies forward-tested beside the top 3
+        return {k: sc[k] for k in keys}, chosen, "unproven (forward test)"
     return {}, chosen, "no strategy passed the backtest and research mode is off"
 
 

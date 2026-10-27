@@ -26,6 +26,8 @@ import ut_bot
 from indicators import get_india_vix, vix_tier
 
 NEW_CATALOG = [
+    ("rajan-rsi2-pullback", "RSI(2) Pullback (Connors)", "Reversal",
+     "UNPROVEN forward test. Long-only mean reversion: close above the 200-day average, 2-day RSI under 10 and close under the 5-day average; wide 2.5 ATR stop, exit when price closes back above the 5-day average. Published US-index backtests report roughly 74-75% winners with small average wins (see docs/RSI2_PULLBACK.md); not yet measured on NSE data.", "new"),
     ("rajan-trend-rider", "Rajan Trend Rider", "Trend",
      "UT Bot ATR trail + EMA200/ADX/ALMA(34) slope filters, structure stop, 1R-3R targets. Pine: Rajan_Trend_Rider.pine.", "new"),
     ("rajan-ha-momentum", "Rajan HA Momentum", "Trend",
@@ -44,6 +46,7 @@ NEW_CHART_LINES = {
     "rajan-ha-momentum": [("basis", "HA channel basis"), ("ema9", "EMA 9"), ("ema21", "EMA 21")],
     "rajan-breakout-trap": [("upper", "Donchian upper"), ("lower", "Donchian lower")],
     "rajan-gann-sq9": [("base", "Gann base"), ("u1", "Buy above (U1)"), ("d1", "Sell below (D1)")],
+    "rajan-rsi2-pullback": [("sma200", "SMA 200"), ("sma5", "SMA 5")],
 }
 NO_CHART_NEW = {"rajan-ohol-options"}
 
@@ -456,10 +459,76 @@ def rajan_gann_sq9_scan(symbol, angle_step=0.25, lookback_days=250):
             "current": _current_from_pos(bars[-1], pos, rows), "bars": rows[-300:], "events": rp._events_from_bars(rows)}
 
 
+# ───────────────────────── Rajan RSI(2) Pullback (Larry Connors style) ─────────────────────────
+RSI2_ENTRY, RSI2_STOP_ATR = 10.0, 2.5
+
+
+def _sma_list(values, n):
+    out = [None] * len(values)
+    run = 0.0
+    for i, v in enumerate(values):
+        run += v
+        if i >= n:
+            run -= values[i - n]
+        if i >= n - 1:
+            out[i] = run / n
+    return out
+
+
+def _rsi_wilder(closes, n=2):
+    """Wilder RSI (what Connors' RSI(2) uses). None until n+1 closes exist."""
+    out = [None] * len(closes)
+    if len(closes) <= n:
+        return out
+    gains = [max(closes[i] - closes[i - 1], 0.0) for i in range(1, len(closes))]
+    losses = [max(closes[i - 1] - closes[i], 0.0) for i in range(1, len(closes))]
+    ag, al = sum(gains[:n]) / n, sum(losses[:n]) / n
+    out[n] = 100.0 if al == 0 else 100.0 - 100.0 / (1 + ag / al)
+    for i in range(n + 1, len(closes)):
+        ag = (ag * (n - 1) + gains[i - 1]) / n
+        al = (al * (n - 1) + losses[i - 1]) / n
+        out[i] = 100.0 if al == 0 else 100.0 - 100.0 / (1 + ag / al)
+    return out
+
+
+def rajan_rsi2_pullback_scan(symbol, lookback_days=450):
+    """Buy a sharp 2-day dip inside a long-term uptrend (UNPROVEN here; published backtests are on US indices).
+    Entry (completed bar): close > SMA200, RSI(2) < 10, close < SMA5. Initial stop 2.5 ATR(14) below the close.
+    Exit: the stop is pulled up to the close of any day that closes back above the SMA5 (the published exit), plus the engine's
+    breakeven-after-T1 rule. Long-only, as in the published tests."""
+    bars = ut_bot.fetch_index_history(symbol, lookback_days=lookback_days)
+    if len(bars) < 210:
+        raise RuntimeError(f"Not enough daily history for RSI(2) Pullback ({len(bars)} bars, need 200+ for the trend average)")
+    n = len(bars)
+    closes = [b["close"] for b in bars]
+    sma200, sma5 = _sma_list(closes, 200), _sma_list(closes, 5)
+    rsi2 = _rsi_wilder(closes, 2)
+    atr14 = _atr(bars, 14)
+
+    def raw_long(i):
+        return (sma200[i] is not None and sma5[i] is not None and rsi2[i] is not None and atr14[i] is not None
+                and closes[i] > sma200[i] and rsi2[i] < RSI2_ENTRY and closes[i] < sma5[i])
+
+    def raw_short(i):
+        return False                                          # long-only
+
+    def init_sl(i, side):
+        return closes[i] - RSI2_STOP_ATR * atr14[i] if atr14[i] is not None else None
+
+    def trail_fn(i, side, stop):
+        return closes[i] if sma5[i] is not None and closes[i] > sma5[i] else None      # bounce confirmed: exit at this close
+
+    rows_core, pos = _walk(bars, raw_long, raw_short, init_sl, trail_fn)
+    rows = [{**rows_core[i], "sma200": sma200[i], "sma5": sma5[i], "rsi2": rsi2[i]} for i in range(n)]
+    return {"symbol": symbol, "columns": [{"key": "sma200", "label": "SMA 200"}, {"key": "sma5", "label": "SMA 5"}, {"key": "rsi2", "label": "RSI(2)"}],
+            "current": _current_from_pos(bars[-1], pos, rows), "bars": rows[-300:], "events": rp._events_from_bars(rows)}
+
+
 NEW_KEYS = {
     "rajan-trend-rider": rajan_trend_rider_scan,
     "rajan-ha-momentum": rajan_ha_momentum_scan,
     "rajan-breakout-trap": rajan_breakout_trap_scan,
     "rajan-ohol-options": rajan_ohol_options_scan,
     "rajan-gann-sq9": rajan_gann_sq9_scan,
+    "rajan-rsi2-pullback": rajan_rsi2_pullback_scan,
 }
