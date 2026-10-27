@@ -1846,11 +1846,61 @@ def _inject_cash_seed_if_needed(data):
     return data
 
 
+TOP_LOCK_FROM = 9 * 60 + 20            # IST minutes: from 09:20 the opening range (Open = Low / High) is known, so the day's shortlist is fixed
+_TOPF = {"day": None, "rows": None, "checked": 0.0}
+_TOP_LIVE = ("ltp", "chg")             # a locked row keeps its levels / reason / rank; only the price and % change keep moving
+
+
+def _locked_top(v, top):
+    """The day's 10-15 shortlist must not reshuffle as strengths and prices tick: the first COMPLETE scan taken once the session is open
+    (>= 09:20) is stored for the day and served unchanged - same stocks, same order, same entry/stop/target - with only the live price
+    and % change refreshed. Before that (pre-market, holiday, half-built scan) the list is the plain live selection and nothing is stored."""
+    import morning_picks
+    today = date.today().isoformat()
+    if _TOPF["day"] != today:
+        _TOPF.update(day=today, rows=None, checked=0.0)
+    key = f"picks:top|{today}"
+    if _TOPF["rows"] is None and time.time() - _TOPF["checked"] > 60:       # not locked yet: look in the shared store at most once a minute
+        _TOPF["checked"] = time.time()
+        try:
+            got = shared_cache.get(key)
+            if isinstance(got, dict) and got.get("rows"):
+                _TOPF["rows"] = got["rows"]
+        except Exception:
+            pass
+    if _TOPF["rows"] is None:
+        now = datetime.now(IST)
+        built = v.get("_t")                                                  # when the scan was built (serverless path); a 09:16 scan must not be locked at 09:21
+        lock_ts = now.replace(hour=TOP_LOCK_FROM // 60, minute=TOP_LOCK_FROM % 60, second=0, microsecond=0).timestamp()
+        fresh = (market_open() and now.hour * 60 + now.minute >= TOP_LOCK_FROM and v.get("complete") and not v.get("stale")
+                 and (not built or built >= lock_ts))
+        if fresh and len(top) >= morning_picks.MIN_PICKS:
+            _TOPF["rows"] = [dict(r) for r in top]
+            try:
+                shared_cache.set(key, {"rows": _TOPF["rows"], "at": now.isoformat()}, 20 * 3600)
+            except Exception:
+                pass
+        else:
+            return top, False
+    live = {r.get("s"): r for r in v.get("picks") or []}
+    out = []
+    for r in _TOPF["rows"]:
+        r = dict(r)
+        lv = live.get(r.get("s")) or {}
+        for k in _TOP_LIVE:
+            if lv.get(k) is not None:
+                r[k] = lv[k]
+        out.append(r)
+    return out, True
+
+
 def _add_shortlist(v):
-    """`top`: the 10-15 stock trades to act on first (morning_picks.py). Added on read, so cached payloads from before this existed get it too."""
+    """`top`: the 10-15 stock trades to act on first (morning_picks.py), locked for the day once the session is open (_locked_top).
+    Added on read, so cached payloads from before this existed get it too."""
     try:
         import morning_picks
         top = morning_picks.select([r for r in v.get("picks") or [] if r.get("universe") != "cash"])
+        top, v["topLocked"] = _locked_top(v, top)
         v["top"] = [{k: r.get(k) for k in ("s", "n", "sec", "ltp", "chg", "signal", "strength", "tier", "side", "why", "room", "rank", "entry", "stop", "target", "target2",
                                            "risk", "rr", "volx", "rsi", "open", "high", "low")} for r in top]
         v["topSummary"] = morning_picks.summary(top)

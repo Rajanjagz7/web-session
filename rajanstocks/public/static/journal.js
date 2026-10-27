@@ -1319,6 +1319,8 @@ function paperList() {
         <p class="muted">Simulated at live option prices — no broker is connected and no real order is ever sent. Entries start at the 09:15 open: strategy signals come from the previous session, the other slots from live screens. Exits follow the rule on the underlying. At most 5 entries a day.</p>
         <div class="jv-actions" style="padding:0"><button class="btn ${c.enabled ? '' : 'pri'}" data-jv="autotoggle">${c.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>
         <button class="btn" data-jv="autoresearch">${c.researchMode ? 'Research mode: ON (click to switch off)' : 'Research mode: OFF (click to switch on)'}</button>
+        <button class="btn" data-jv="autoeagle">${c.eagleOn ? 'Eagle Trades: ON (click to stop)' : 'Eagle Trades: OFF (click to start)'}</button>
+        <button class="btn" data-jv="autolock">${c.lockMode === 'new' ? 'Profit lock: NEW (lock 2.5k, trail 3.5k+) - switch to old' : 'Profit lock: OLD (lock 1.5k, trail 2k+) - switch to new'}</button>
         <button class="btn" data-jv="autorefresh">Refresh</button></div></div></div>
       <div class="jv-kpis">
         ${kpi('Status', c.enabled ? (A.marketOpen ? 'Running' : 'Waiting for market') : 'Paused')}
@@ -1471,6 +1473,8 @@ function paperList() {
     }
     else if (a === 'autotoggle') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.enabled : (AUTO.srv ? AUTO.srv.enabled : null); if (cur == null) return;
       fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
+    else if (a === 'autoeagle') { const on = !(SV.auto && SV.auto.cfg.eagleOn); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eagleOn: on }) }).then(() => loadSrv('auto')); }
+    else if (a === 'autolock') { const m = (SV.auto && SV.auto.cfg.lockMode === 'new') ? 'old' : 'new'; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lockMode: m }) }).then(() => loadSrv('auto')); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }
     else if (a === 'exitf') { AUTO.exitFilter = b.dataset.k || ''; render(); }

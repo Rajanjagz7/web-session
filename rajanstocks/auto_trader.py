@@ -41,7 +41,8 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True}
+               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 100000.0, "zTrendHedge": True,
+               "lockMode": "old", "eagleOn": False}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
@@ -889,7 +890,7 @@ def manage(st, now, t_end=None):
                 if new != t["stopU"]:
                     t["stopU"] = round(new, 2)
                     t["stopMoved"] = _now().isoformat()
-        _profit_lock(t, opt_px if opt_px > 0 else exit_px)
+        _profit_lock(t, opt_px if opt_px > 0 else exit_px, st["cfg"].get("lockMode", "old"))
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if t.get("premSL") and (exit_px >= t["premSL"] if short else exit_px <= t["premSL"]):
             why = "TSL" if t.get("lock") else "STOP"   # option premium stop (30% cap) - catches time decay too
@@ -925,10 +926,13 @@ def manage(st, now, t_end=None):
             _close(st, main, s1, "SPREAD-T1"); _close(st, hedge, s2, "SPREAD-T1")
 
 
-LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 2500.0, 3500.0, 0.4
+LOCK_BE, LOCK_TRAIL, LOCK_KEEP = 2500.0, 3500.0, 0.4          # "new" lock (from 26 Oct)
+# "old" lock (21-25 Oct, the one with the better R:R): breakeven at Rs 1,500 profit, trail from Rs 2,000 keeping 50% (60% from 4k, 70% from 6k)
+LOCKS = {"old": (1500.0, 2000.0, 0.5, ((6000.0, 0.7), (4000.0, 0.6))),
+         "new": (LOCK_BE, LOCK_TRAIL, LOCK_KEEP, ((10000.0, 0.65), (6000.0, 0.5)))}
 
 
-def _profit_lock(t, px):
+def _profit_lock(t, px, mode="old"):
     """Auto profit lock on the option premium: at Rs 2,500 open profit the premium stop moves to entry + charges
     (breakeven); from Rs 3,500 it trails, keeping 40% of the best profit seen (50% from Rs 6,000, 65% from Rs 10,000).
     Only ever tightens."""
@@ -939,10 +943,12 @@ def _profit_lock(t, px):
     pnl = sgn * (px - t["entry"]) * qty
     best = max(float(t.get("bestPnl") or 0.0), pnl)
     t["bestPnl"] = round(best, 2)
-    if best < LOCK_BE:
+    be, trail, base, steps = LOCKS.get(mode) or LOCKS["old"]
+    if best < be:
         return
     fee_u = 80.0 / qty                                  # ~ two option legs of brokerage + taxes per lot set
-    keep = (0.65 if best >= 10000 else 0.5 if best >= 6000 else LOCK_KEEP) * best if best >= LOCK_TRAIL else 0.0   # keep 40% from 3.5k, 50% from 6k, 65% from 10k
+    frac = next((f for lvl, f in steps if best >= lvl), base)
+    keep = frac * best if best >= trail else 0.0
     stop = round(t["entry"] + sgn * (fee_u + keep / qty), 2)
     cur = float(t.get("premSL") or 0)
     if (stop > cur) if sgn > 0 else (cur <= 0 or stop < cur):     # only ever tightens (down for a sold option)
@@ -1094,7 +1100,7 @@ def _run_cycle(now, force, dry):
             # `openBurstCap` (12) entries are taken (paired hedge legs -W belong to their entry and do not count). Best-ranked
             # first; the rest are picked up by the following cycles as normal.
             try:
-                eagles = eagle_cands(st, today, {c["sym"] for c in chosen + filled if c.get("key") == EAGLE})
+                eagles = eagle_cands(st, today, {c["sym"] for c in chosen + filled if c.get("key") == EAGLE}) if cfg.get("eagleOn", False) else []   # Eagle is off by default (setting "eagleOn")
             except Exception as e:
                 eagles = []
                 st["log"].append({"at": now.isoformat(), "msg": f"eagle scan failed: {str(e)[:80]}"})
@@ -1206,6 +1212,8 @@ class Cfg(BaseModel):
     maxPerDay: int | None = None
     dayPnlLimit: float | None = None
     zTrendHedge: bool | None = None
+    eagleOn: bool | None = None
+    lockMode: str | None = None
 
 
 class TslBody(BaseModel):
@@ -1361,6 +1369,12 @@ def config(c: Cfg):
             st["cfg"]["enabled"] = c.enabled
         if c.researchMode is not None:
             st["cfg"]["researchMode"] = c.researchMode
+        if c.eagleOn is not None:
+            st["cfg"]["eagleOn"] = c.eagleOn
+        if c.lockMode is not None:
+            if c.lockMode not in LOCKS:
+                raise HTTPException(400, "lockMode must be 'old' or 'new'")
+            st["cfg"]["lockMode"] = c.lockMode
         if c.riskPct is not None:
             if not (0.05 <= c.riskPct <= 2):
                 raise HTTPException(400, "riskPct must be between 0.05 and 2")
