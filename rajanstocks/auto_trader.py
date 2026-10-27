@@ -681,6 +681,12 @@ def _open_rzt_hedge(st, c, today):
     if _mins(_now()) < SELL_FROM:                        # selling is a 09:20+ activity, same rule as the paired shorts
         raise RuntimeError("option selling starts at 09:20")
     ch = market_api.chain(c["sym"], "")
+    if ch.get("expiry") and (date.fromisoformat(ch["expiry"]) - date.fromisoformat(today)).days <= 1:
+        # expiry day / the day before: the spread would be closed as SPREAD-EXPIRY by the next cycle - use the next expiry
+        nxt = next((e for e in ch.get("expiries") or [] if (date.fromisoformat(e) - date.fromisoformat(today)).days >= 2), None)
+        if not nxt:
+            raise RuntimeError("only an expiring contract - no spread")
+        ch = market_api.chain(c["sym"], nxt)
     rows = [r for r in ch.get("rows") or [] if (r.get("ce") or {}).get("key") and (r.get("pe") or {}).get("key")]
     spot = float(ch.get("spot") or 0)
     if len(rows) < 4 or spot <= 0:
@@ -1105,6 +1111,12 @@ def _run_cycle(now, force, dry):
                                            "rank": round(c.get("rank", c.get("score") or 0), 2), "source": c.get("source") or c.get("label") or ""})   # Z Trend / time-cycle / filled candidates carry a score but no rank
                     taken += 1
                     continue
+                # a candidate that just failed (no credit, thin strike, wide spread) is not retried every minute - each try costs
+                # option-chain calls and kept Upstox rate-limited; it is tried again after 15 minutes
+                cool = st.setdefault("skipUntil", {})
+                ck = f"{c.get('key')}|{c['sym']}|{c.get('side')}"
+                if cool.get(ck, 0) > time.time():
+                    continue
                 try:
                     # Timing rule: option BUYING (CE for a BUY signal, PE for a SELL signal - stocks and indices) from 09:15;
                     # option SELLING (credit spreads, written legs) from 09:20. Paired written legs (-W) are deferred inside open_trade.
@@ -1130,6 +1142,10 @@ def _run_cycle(now, force, dry):
                     taken += 1
                 except Exception as e:
                     st["log"].append({"at": now.isoformat(), "msg": f"skip {c['sym']}: {str(e)[:80]}"})
+                    if "09:20" not in str(e):
+                        cool[ck] = time.time() + 900
+                        for k_ in [k_ for k_, v_ in cool.items() if v_ < time.time()]:
+                            cool.pop(k_, None)
         if not dry:
             _save(st)
         else:
