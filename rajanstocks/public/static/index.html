@@ -720,6 +720,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .opx-exp .opx-futsel.on{border-color:var(--brand);color:var(--brand)}
 @media(min-width:900px){.opx-bar{gap:16px;padding:10px 14px}.opx-und{flex:0 0 auto}.opx-exp{justify-content:flex-start}.opx-act{flex:none}}
 /* God's Eye picks filter panel */
+#v-picks,#v-picks *{overflow-anchor:none}
 .pkf{display:flex;flex-direction:column;gap:12px;padding:14px;margin:12px 0}
 .pkf-top{display:flex;gap:8px;align-items:center}
 .pkf .seg{background:var(--panel-2)}.pkf-kind button{height:32px;padding:0 14px;font-weight:600}
@@ -3391,6 +3392,7 @@ function drawPkFut(noLoad){if(!noLoad)loadPkFut(false);const d=PKF.d;if(!d||!d.i
 setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadPkFut(false)}catch(e){}},30000);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pkfut]');if(!b)return;const p=b.dataset.pkfut,i=p.indexOf('|'),und=p.slice(0,i),key=p.slice(i+1);
   OPT.sym=und;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.pendingFut=key;go('options')});
+function pkScroller(el){for(let n=el.parentElement;n&&n!==document.body;n=n.parentElement){const o=getComputedStyle(n).overflowY;if((o==='auto'||o==='scroll')&&n.scrollHeight>n.clientHeight+1)return n}return document.scrollingElement||document.documentElement}
 function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
     window._pkCashLoading=true;
@@ -3446,6 +3448,7 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
   const st=SYMS.filter(s=>s.cls==='Stocks'&&s.last>0),ch=s=>s.last/s.prev-1;
   const mv=(t,l)=>`<div class="card"><div class="card-h"><h3>${t}</h3></div>${l.slice(0,5).map(s=>`<button class="mv-row" data-sym="${esc(s.s)}"><span class="t"><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span><span class="num" data-px="${esc(s.s)}"></span><span class="badge ${ch(s)>=0?'b-up':'b-down'} num" style="min-width:64px;justify-content:flex-end" data-chg="${esc(s.s)}"></span></button>`).join('')||'<div class="empty">Loading…</div>'}</div>`;
   const news=App.news&&App.news.items?App.news.items.slice(0,8).map(n=>`<a class="nw" href="${esc(n.link)}" target="_blank" rel="noopener"><b>${esc(n.title)}</b><small>${esc(n.source||'')} · ${esc(newsTime(n.pubDate))}</small></a>`).join(''):'';
+  const _sp=pkScroller(el),_st=_sp.scrollTop,_pa=el.querySelector('.pkf'),_t0=_pa?_pa.getBoundingClientRect().top:null;   // keep the filter panel where it is on screen when the list below changes length
   el.innerHTML=`<div class="page">${window.geTabsHTML?geTabsHTML({upd:App.pkBusy?'Refreshing picks…':'Picks updated '+((P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')),busy:App.pkBusy}):pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    ${window.geOverviewHTML?geOverviewHTML():`<div class="ixs-h"><b>Indices</b></div><div class="ixs">${idxHtml}</div>`}
    <div class="card pkf">
@@ -3458,7 +3461,8 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    </div>
    
    ${body}
-   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;{const on=el.querySelector('.pkf-scroll .chip.on');if(on){const sc=on.parentNode;sc.scrollLeft+=on.getBoundingClientRect().left-sc.getBoundingClientRect().left-12}}liveUpdate();if(window.geTags)geTags(el);drawPkFut()}   /* Index futures block removed: it repeated NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY from the Indices cards just above (and polled /api/m/futures/board every 15s) */
+   <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;{const on=el.querySelector('.pkf-scroll .chip.on');if(on){const sc=on.parentNode;sc.scrollLeft+=on.getBoundingClientRect().left-sc.getBoundingClientRect().left-12}}
+  if(_t0!==null){_sp.scrollTop=_st;const pa=el.querySelector('.pkf');if(pa){const d=pa.getBoundingClientRect().top-_t0;if(Math.abs(d)>1)_sp.scrollTop=_st+d}}liveUpdate();if(window.geTags)geTags(el);drawPkFut()}   /* Index futures block removed: it repeated NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY from the Indices cards just above (and polled /api/m/futures/board every 15s) */
 document.addEventListener('click',e=>{const rs=e.target.closest('[data-pkreset]');if(rs){Object.assign(App.pk,{sig:'TOP',kind:'STOCK',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:'',str:'ALL'});renderPicks();return}const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 
