@@ -6,9 +6,15 @@ name: Auto-trader heartbeat
 on:
   workflow_dispatch:
   schedule:
-    - cron: "15 3 * * 1-5"       # 08:45 IST - main run; GitHub can start scheduled jobs 5-20 min late, so it starts well before 09:15
-    - cron: "0 5 * * 1-5"        # 10:30 IST - backup if the main run was dropped
-    - cron: "0 7 * * 1-5"        # 12:30 IST - picks up after the main run (a job lasts at most ~5h50m) until the close
+    # GitHub starts scheduled jobs late or drops them (worst at :00 / :15 / :30) - on 27 Oct the 08:45 run never started.
+    # Several odd-minute starts: the first that fires runs the session, the others wait in the queue (one job at a time) and
+    # the queued one takes over when the first reaches its time budget.
+    - cron: "17 3 * * 1-5"       # 08:47 IST
+    - cron: "29 3 * * 1-5"       # 08:59 IST
+    - cron: "41 3 * * 1-5"       # 09:11 IST
+    - cron: "53 3 * * 1-5"       # 09:23 IST
+    - cron: "7 5 * * 1-5"        # 10:37 IST
+    - cron: "7 7 * * 1-5"        # 12:37 IST - picks up after the morning run (a job lasts at most ~5h50m) until the close
 concurrency: { group: auto-trader, cancel-in-progress: false }
 jobs:
   beat:
