@@ -799,6 +799,8 @@ def _open_short(st, c, today, main):
 
 def _close(st, t, px, why):
     qty = t["lots"] * t["lot"]
+    if not (px and px > 0):                  # a missing price must never book as 0: a sold option "bought back" at 0 showed its whole premium as profit
+        px = float(t.get("last") or 0) or float(t["entry"])
     gross = (px - t["entry"]) * qty * (-1 if t.get("pos") == "short" else 1)      # a sold option gains when the premium falls
     cost = t.get("costPct", st["cfg"]["costPct"]) / 100 * (t["entry"] + px) * qty
     t.update(status="CLOSED", exit=round(px, 2), exitReason=why, closedAt=_now().isoformat(), gross=round(gross, 2),
@@ -1253,7 +1255,9 @@ def manual_exit(tid: str):
         except Exception as e:
             raise HTTPException(503, f"Live price unavailable right now, try again in a moment ({str(e)[:80]})")
         bid = float((((q or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
-        px = bid if bid > 0 else _last(q)
+        ask = float((((q or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
+        side_px = ask if t.get("pos") == "short" else bid      # a sold option is bought back at the ask, a bought one sold at the bid
+        px = side_px if side_px > 0 else _last(q)
         if px <= 0:
             raise HTTPException(503, "No live price for this contract right now, try again in a moment")
         _close(st, t, px, "MANUAL")
