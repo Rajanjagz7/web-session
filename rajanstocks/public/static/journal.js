@@ -1320,6 +1320,7 @@ function paperList() {
         <div class="jv-actions" style="padding:0"><button class="btn ${c.enabled ? '' : 'pri'}" data-jv="autotoggle">${c.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>
         <button class="btn" data-jv="autoresearch">${c.researchMode ? 'Research mode: ON (click to switch off)' : 'Research mode: OFF (click to switch on)'}</button>
         <button class="btn" data-jv="autoeagle">${c.eagleOn ? 'Eagle Trades: ON (click to stop)' : 'Eagle Trades: OFF (click to start)'}</button>
+        <button class="btn" data-jv="autopair">${c.pairSell === false ? 'Option SELL leg: OFF (buy-only) - switch on' : 'Option SELL leg: ON (buy + paired sell) - switch to buy-only'}</button>
         <button class="btn" data-jv="autolock">${c.lockMode === 'new' ? 'Profit lock: NEW (lock 2.5k, trail 3.5k+) - switch to old' : 'Profit lock: OLD (lock 1.5k, trail 2k+) - switch to new'}</button>
         <button class="btn" data-jv="autorefresh">Refresh</button></div></div></div>
       <div class="jv-kpis">
@@ -1474,6 +1475,7 @@ function paperList() {
     else if (a === 'autotoggle') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.enabled : (AUTO.srv ? AUTO.srv.enabled : null); if (cur == null) return;
       fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
     else if (a === 'autoeagle') { const on = !(SV.auto && SV.auto.cfg.eagleOn); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eagleOn: on }) }).then(() => loadSrv('auto')); }
+    else if (a === 'autopair') { const m = !(SV.auto && SV.auto.cfg.pairSell === false) ? false : true; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairSell: m }) }).then(() => loadSrv('auto')); }
     else if (a === 'autolock') { const m = (SV.auto && SV.auto.cfg.lockMode === 'new') ? 'old' : 'new'; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lockMode: m }) }).then(() => loadSrv('auto')); }
     else if (a === 'autoresearch') { const on = !(SV.auto && SV.auto.cfg.researchMode); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ researchMode: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autorefresh') { loadSrv('auto'); syncAuto(true).then(render); }

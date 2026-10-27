@@ -41,7 +41,7 @@ def _cap(cfg, key):
 
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
-               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": True,
+               "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": True, "pairSell": True,
                "lockMode": "old", "eagleOn": False}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
@@ -634,7 +634,8 @@ def open_trade(st, c, today):
     stop_u = entry_u - d * risk_u
     target_u = entry_u + d * backtest.TARGET_R * risk_u if variant == "fixed" else None
     budget = _equity(st) * cfg["riskPct"] / 100
-    if WRITE_PAIR:
+    pair = cfg.get("pairSell", WRITE_PAIR)
+    if pair:
         budget /= 2                                          # the paired sell takes the other half of the risk budget
     per_lot = ct["lot"] * 0.5 * risk_u
     lots = max(1, int(budget // per_lot)) if per_lot > 0 else 1
@@ -656,7 +657,7 @@ def open_trade(st, c, today):
     }
     st["trades"].append(t)
     st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]"})
-    if WRITE_PAIR:
+    if pair:
         if _mins(_now()) < SELL_FROM:
             t["writePending"] = True          # option SELL legs wait until 09:20 (user rule); buys go at 09:15
             st["log"].append({"at": _now().isoformat(), "msg": f"paired sell for {t['id']} deferred - option selling starts at 09:20"})
@@ -1218,6 +1219,7 @@ class Cfg(BaseModel):
     maxPerDay: int | None = None
     dayPnlLimit: float | None = None
     zTrendHedge: bool | None = None
+    pairSell: bool | None = None
     eagleOn: bool | None = None
     lockMode: str | None = None
 
@@ -1395,6 +1397,8 @@ def config(c: Cfg):
             if c.dayPnlLimit < 0:
                 raise HTTPException(400, "dayPnlLimit must be 0 (guard off) or a positive rupee amount")
             st["cfg"]["dayPnlLimit"] = float(c.dayPnlLimit)
+        if c.pairSell is not None:                                      # false: buy-only, no paired opposite-option sell leg
+            st["cfg"]["pairSell"] = c.pairSell
         if c.zTrendHedge is not None:                                   # true: Z Trend flips open hedged credit spreads
             st["cfg"]["zTrendHedge"] = c.zTrendHedge
         st["cfg"]["cfgAt"] = time.time()                                # newest settings win if two databases are merged

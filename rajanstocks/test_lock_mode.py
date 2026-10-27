@@ -65,3 +65,8 @@ def test_closing_a_short_at_a_missing_price_never_books_the_whole_premium():
     at._close(st, t, 0.0, "MANUAL")
     assert t["exit"] == 80.0                      # fell back to the last seen price, not 0
     assert t["gross"] == (100.0 - 80.0) * 50      # +1,000 (not +5,000 = the whole premium)
+
+
+def test_pair_sell_setting_defaults_on_and_is_configurable():
+    assert at.DEFAULT_CFG["pairSell"] is True
+    assert "pairSell" in at.Cfg.model_fields
