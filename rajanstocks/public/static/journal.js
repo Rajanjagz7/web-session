@@ -735,7 +735,7 @@ function paperList() {
         <td class="num" data-c="cur" title="${closedish ? 'Exit price' : 'Last traded price (live)'}"><b>${px(curPx(t))}</b></td>
         <td class="num" title="${t.sl !== t.sl0 ? 'Initial SL ' + px(t.sl0) + ' · ' : ''}Trailing: ${E(t.tsl || 'off')}">${px(t.sl)}${t.sl !== t.sl0 ? ' <small class="up">↑</small>' : ''}</td>
         <td class="num jv-tg" title="Targets T1 / T2 / T3">${[t.t1, t.t2, t.t3].map(x => x ? px(x) : '–').join(' · ')}</td>
-        <td class="num">${t.qty}</td>
+        <td class="num" title="Quantity taken">${qtyTxt(t)}</td>
         <td class="num ${cc(v)}" data-c="pnl" title="${closedish ? 'Booked P&L after costs' : 'Open P&L at live price'}"><b>${pnl}</b></td>
         <td class="num ${cc(c.R)}">${rr(c.R)}</td>
         <td><span class="badge ${getTradeOutcome(t).cls}">${getTradeOutcome(t).tag}</span></td>
@@ -1712,9 +1712,12 @@ function paperList() {
        <p class="muted" style="font-size:12px;margin:6px 2px 0">From the B / S buttons in Trade → Signals. BUY = the signal as given; SELL = the opposite trade with a small stop.</p></div>`;
    }
 
-   function positionTable(trades) {
+   /* quantity taken: auto option trades as lots and units (1 lot · 65), everything else in units */
+  const qtyTxt = t => { const q = Number(t.qty) || 0, m = Number(t.mult) || 1; if (!q) return '—';
+    return t.auto && m > 1 ? `${q} lot${q === 1 ? '' : 's'} · ${(q * m).toLocaleString('en-IN')}` : (q * m).toLocaleString('en-IN'); };
+  function positionTable(trades) {
      if (!trades.length) return '<div class="empty">No positions</div>';
-     const headers = ['Symbol', 'Side', 'Entry · in', 'SL', 'TSL', 'Target', 'R:R', 'LTP (₹)', 'P&L', 'Held', 'Exit'];
+     const headers = ['Symbol', 'Side', 'Qty', 'Entry · in', 'SL', 'TSL', 'Target', 'R:R', 'LTP (₹)', 'P&L', 'Held', 'Exit'];
      const rows = trades.map(t => {
        const c = calc(t);
        const status = statusOf(t);
@@ -1727,6 +1730,7 @@ function paperList() {
        return `<tr data-pid="${E(t.id)}"${t.auto ? ' class="auto-row"' : ''}>
          <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}<small>${E(t.setup || '')}</small></span></td>
          <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'BUY' : 'SELL'}</span></td>
+         <td class="num" title="Quantity taken">${qtyTxt(t)}</td>
          <td class="num" title="Taken ${entryTime(t) ? entryTime(t) : ''}">${px(t.entry)}${entryTime(t) ? ` <small class="muted">${entryTime(t)}</small>` : ''}</td>
          <td class="num" data-c="sl">${px(t.sl)}</td>
          <td class="num" data-c="tsl">${E(open ? tslShow(t) : '—')}</td>
@@ -1762,8 +1766,8 @@ function paperList() {
      const rows = Object.entries(d.byHorizon).map(([k, v]) => `<tr><td><b>${HZL[k]}</b></td><td class="num">${v.open}</td><td class="num">${v.closed}</td><td class="num ${v.winRate == null ? '' : v.winRate >= 50 ? 'up' : 'down'}">${v.winRate == null ? '—' : v.winRate + '%'}</td><td class="num">${v.pf == null ? '—' : v.pf}</td><td class="num ${cc(v.net)}">${sinr(v.net)}</td><td class="num ${cc(v.unrealised)}">${sinr(v.unrealised)}</td></tr>`).join('');
      const pc = pagerBar(d.closed, 'sbc');
      const po = pagerBar(d.open, 'sbo');
-     const closed = pc.part.map(t => `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${t.side === 'BUY' ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.exit)}</td><td>${E(t.exitReason)}</td><td class="num ${cc(t.net)}">${sinr(t.net)}</td><td class="muted">${E(String(t.date).slice(5))}</td></tr>`).join('');
-     const open = po.part.map(t => { const up = t.side === 'BUY'; return `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${up ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b><small class="muted" style="display:block">${E(t.why || '')}</small></td><td class="num">${t.qty}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.last)}</td><td class="num down">${px(t.stop)}${t.t1Hit ? ' <small class="up" title="Target 1 hit - stop at entry">BE</small>' : ''}${t.lockMoved ? ' <small class="up" title="Auto profit lock moved the stop (breakeven / trailing)">L</small>' : ''}</td><td class="num">${px(t.t1)} · ${px(t.t2)}</td><td class="num ${cc(t.unrealised)}">${sinr(t.unrealised || 0)}</td><td><button class="btn jv-exit" data-sb="exit" data-id="${E(t.id)}">Exit</button></td></tr>`; }).join('');
+     const closed = pc.part.map(t => `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${t.side === 'BUY' ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b></td><td class="num" title="Quantity taken">${qtyTxt(t)}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.exit)}</td><td>${E(t.exitReason)}</td><td class="num ${cc(t.net)}">${sinr(t.net)}</td><td class="muted">${E(String(t.date).slice(5))}</td></tr>`).join('');
+     const open = po.part.map(t => { const up = t.side === 'BUY'; return `<tr><td>${HZL[t.hz]}</td><td><span class="jv-side ${up ? 'l' : 's'}">${t.side}</span></td><td><b>${E(t.sym)}</b><small class="muted" style="display:block">${E(t.why || '')}</small></td><td class="num" title="Quantity taken">${qtyTxt(t)}</td><td class="num">${px(t.entry)}</td><td class="num">${px(t.last)}</td><td class="num down">${px(t.stop)}${t.t1Hit ? ' <small class="up" title="Target 1 hit - stop at entry">BE</small>' : ''}${t.lockMoved ? ' <small class="up" title="Auto profit lock moved the stop (breakeven / trailing)">L</small>' : ''}</td><td class="num">${px(t.t1)} · ${px(t.t2)}</td><td class="num ${cc(t.unrealised)}">${sinr(t.unrealised || 0)}</td><td><button class="btn jv-exit" data-sb="exit" data-id="${E(t.id)}">Exit</button></td></tr>`; }).join('');
      return `<div class="card" id="jvSB"><div class="card-h"><h3>📈 Stock trader · ₹10 L (paper)</h3><span class="jv-hr"><span class="muted" style="font-size:12px">${d.lastRun ? 'last run ' + new Date(d.lastRun).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'waits for market hours'}</span><button class="btn" data-sb="reset">Reset</button></span></div>
        <div class="jv-capg"><div><small>Equity</small><b class="${cc(d.equity - d.capital)}">${inr(d.equity, 0)}</b><span class="muted">booked ${sinr(d.booked)} · open ${sinr(d.unrealised)}</span></div>
          <div><small>In use</small><b>${inr(d.used, 0)}</b><span class="muted">${(d.used / d.capital * 100).toFixed(1)}% of ₹10 L</span></div><div><small>Free cash</small><b class="up">${inr(d.cash, 0)}</b><span class="muted">${d.all.closed} closed · ${d.all.winRate == null ? '—' : d.all.winRate + '% won'}</span></div></div>
