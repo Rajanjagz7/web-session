@@ -373,7 +373,7 @@
           <div class="ge-lv"><span>Best today<b>${E(s.best || '—')}</b></span><span>Worst today<b>${E(s.worst || '—')}</b></span>${s.bull || s.bear ? `<span>Picks signals<b><span class="up">${s.bull} buy</span> · <span class="down">${s.bear} sell</span></b></span>` : ''}</div>
           <button type="button" class="btn-xs" data-geseestocks="${E(s.sec)}">See all ${s.count} stocks →</button></section>` : ''}</div>
       <h3 class="ge-h3">Standouts right now</h3><div class="ge-stands">${stand || '<p class="ge-na">No standouts yet.</p>'}</div>
-      <p class="ge-sub">${E(d.note)} Data as of ${E(IST(d.asOf))} · ${d.historyDays} sessions of history.</p>`;
+      <p class="ge-sub">${E(d.note)} Data as of ${E(IST(d.asOf))} · ${d.historyDays} sessions of history.${d.historyDays < 21 ? ' <b>1-month return, trend and volume need 21 sessions of prices - they show N/A until enough history has loaded (it fills in on its own, refresh in a few minutes).</b>' : ''}</p>`;
   }
   function stockDetail() {
     const r = G.sec && G.sec.stocks.find(x => x.s === G.stock); if (!r) return '';

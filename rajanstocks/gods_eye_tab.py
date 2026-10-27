@@ -614,6 +614,15 @@ def sectors_build():
     q = stocks_api._quote_rows([u["s"] for u in uni])
     try:
         days = equity_bhav.load_days()
+        if len(days) < 24 and not shared_cache.get("bhav:cooldown"):
+            # 1-month return / trend / volume need 21+ sessions of prices. The cache fills slowly (a few downloads per Picks
+            # build), so top it up here too - a few sessions per call, time-boxed, advancing on every rebuild.
+            try:
+                equity_bhav.warm(max_downloads=6, target_sessions=30, budget_s=10)
+                equity_bhav._days_cache["at"] = 0.0              # force load_days to re-read the store
+                days = equity_bhav.load_days()
+            except Exception:
+                pass
     except Exception:
         days = {}
     dates = sorted(days)[-25:]
