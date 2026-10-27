@@ -695,7 +695,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
-<script src="/static/geye.js?v=20261027q"></script>
+<script src="/static/geye.js?v=20261027r"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1717,9 +1717,10 @@ function refresh(){const c=unread(),b=S.bell;const ae=document.activeElement,typ
 function itemHtml(n){const sec=n.evt==='N-15'&&!n.answered;
   return`<div class="rn-item ${n.read?'':'unread'}" role="button" tabindex="0" data-rn="open:${n.id}"><span class="rn-ico c-${n.cat}">${ico(n.cat)}</span><span class="rn-main"><b>${esc(n.title)}</b>${n.body?`<span>${esc(n.body)}</span>`:''}${n.test?'<em>Test</em>':''}<small>${ago(n.t)} · ${esc((CATS.find(c=>c[0]===n.cat)||[0,n.cat])[1])}</small>${sec?`<span class="rn-sec"><button data-rn="sec:${n.id}:yes">Yes, it was me</button><button class="bad" data-rn="sec:${n.id}:no">No, secure my account</button></span>`:''}</span>${n.read?'':'<i class="rn-dot" aria-label="Unread"></i>'}<button class="rn-x" data-rn="del:${n.id}" aria-label="Dismiss this notification" title="Dismiss">×</button></div>`}
 function drawPop(){let p=$('#rnPop');if(!p){p=document.createElement('div');p.id='rnPop';p.className='rn-pop';p.setAttribute('role','dialog');p.setAttribute('aria-label','Notifications');document.body.appendChild(p)}
-  const r=S.bell.getBoundingClientRect();p.style.top=(r.bottom+6)+'px';p.style.right=Math.max(8,innerWidth-r.right-4)+'px';
-  p.innerHTML=`<div class="rn-pop-h"><b>Notifications</b><span class="rn-sp"></span><button data-rn="readall">Mark all read</button><button data-rn="clearall">Clear all</button><button data-rn="centre:notifs">View all</button><button class="rn-x" data-rn="closepop" aria-label="Close notifications" title="Close">×</button></div>
-  <div class="rn-list">${S.notifs.slice(0,50).map(itemHtml).join('')||'<div class="rn-empty">You’re all caught up.</div>'}</div>`}
+  const r=S.bell.getBoundingClientRect();const w=Math.min(380,innerWidth-16);p.style.top=(r.bottom+6)+'px';p.style.right='auto';p.style.left=Math.max(8,Math.min(r.right-w+4,innerWidth-w-8))+'px';   /* stay fully on screen on a phone */
+  p.innerHTML=`<div class="rn-pop-h"><b>Notifications</b><span class="rn-sp"></span><button data-rn="readall">Mark all read</button><button data-rn="centre:prefs" aria-label="Notification settings" title="Settings">⚙</button><button class="rn-x" data-rn="closepop" aria-label="Close notifications" title="Close">×</button></div>
+  <div class="rn-list">${S.notifs.slice(0,8).map(itemHtml).join('')||'<div class="rn-empty">You’re all caught up.</div>'}</div>
+  <button class="rn-viewall" data-rn="centre:notifs">View all${S.notifs.length>8?' ('+S.notifs.length+')':''} ›</button>`}
 function togglePop(){S.popOpen?closePop():(S.popOpen=true,drawPop())}
 function closePop(){S.popOpen=false;const p=$('#rnPop');if(p)p.remove()}
 
@@ -1761,17 +1762,18 @@ function linesFor(sym){return S.alerts.filter(a=>a.sym===sym&&a.status==='Active
 function alertSyms(){return[...new Set(S.alerts.filter(a=>a.status==='Active').map(a=>a.sym))]}
 
 /* ---------- centre ---------- */
-const TABS=()=>[['notifs','Notifications'],...(S.H.hasAlerts?[]:[['alerts','Alerts']]),['prefs','Preferences'],['log','Delivery log'],['audit','Audit log']];
+const TABS=()=>[['notifs','Notifications'],...(S.H.hasAlerts?[]:[['alerts','Alerts']]),['prefs','Settings'],['log','Activity']];
 function openCentre(tab,opts){closePop();if(tab)S.tab=tab;if(opts&&opts.sym)S.newSym=opts.sym;
   let bg=$('#rnCentre');if(!bg){bg=document.createElement('div');bg.id='rnCentre';bg.className='rn-bg';document.body.appendChild(bg)}drawCentre()}
 function closeCentre(){const b=$('#rnCentre');if(b)b.remove();S.editing=null}
 function drawCentre(soft){const bg=$('#rnCentre');if(!bg)return;if(soft&&(S.tab==='prefs'||(S.tab==='alerts'&&($('#rnAlForm')&&document.activeElement&&$('#rnAlForm').contains(document.activeElement)))))return;
+  if(S.tab==='audit'){S.tab='log';S.act='audit'}
   if(!TABS().some(t=>t[0]===S.tab))S.tab='notifs';
   bg.innerHTML=`<div class="rn-centre" role="dialog" aria-modal="true" aria-label="Notification centre"><div class="rn-c-h"><h2>Notification centre</h2><div class="rn-tabs" role="tablist">${TABS().map(([k,l])=>`<button role="tab" aria-selected="${S.tab===k}" class="${S.tab===k?'on':''}" data-rn="tab:${k}">${l}${k==='notifs'&&unread()?` <span class="rn-pill">${unread()}</span>`:''}</button>`).join('')}</div><button class="rn-x" data-rn="close" aria-label="Close">×</button></div><div class="rn-c-b" id="rnBody">${tabBody()}</div></div>`;
   if(S.tab==='alerts')bindAlertForm();if(S.tab==='notifs')drawNotifList()}
-function tabBody(){switch(S.tab){case'alerts':return alertsHtml();case'prefs':return prefsHtml();case'log':return logHtml();case'audit':return auditHtml();default:return`<div class="rn-bar"><select id="rnFcat" aria-label="Category"><option value="ALL">All categories</option>${CATS.map(c=>`<option value="${c[0]}" ${S.f.cat===c[0]?'selected':''}>${c[1]}</option>`).join('')}</select>
+function tabBody(){switch(S.tab){case'alerts':return alertsHtml();case'prefs':return prefsHtml();case'log':case'audit':return actHtml();default:return`<div class="rn-bar"><select id="rnFcat" aria-label="Category"><option value="ALL">All categories</option>${CATS.map(c=>`<option value="${c[0]}" ${S.f.cat===c[0]?'selected':''}>${c[1]}</option>`).join('')}</select>
     <select id="rnFread" aria-label="Read state">${[['ALL','All'],['unread','Unread'],['read','Read']].map(([v,l])=>`<option value="${v}" ${S.f.read===v?'selected':''}>${l}</option>`).join('')}</select>
-    <input id="rnFq" placeholder="Search" value="${esc(S.f.q)}" aria-label="Search notifications"><span class="rn-sp"></span><button class="rn-btn" data-rn="readall">Mark all read</button><button class="rn-btn" data-rn="clearall">Clear all</button><button class="rn-btn" data-rn="csv">Export CSV</button></div><div id="rnNList"></div>`}}
+    <input id="rnFq" placeholder="Search" value="${esc(S.f.q)}" aria-label="Search notifications"><span class="rn-sp"></span><button class="rn-btn" data-rn="readall">Mark all read</button><button class="rn-btn" data-rn="clearall">Clear all</button></div><div id="rnNList"></div>`}}
 function filtered(){const q=S.f.q.trim().toLowerCase();return S.notifs.filter(n=>(S.f.cat==='ALL'||n.cat===S.f.cat)&&(S.f.read==='ALL'||(S.f.read==='unread'?!n.read:n.read))&&(!q||(n.title+' '+n.body).toLowerCase().includes(q)))}
 function drawNotifList(){const h=$('#rnNList');if(!h)return;const l=filtered(),part=l.slice(0,S.f.n);
   h.innerHTML=part.length?`<div class="rn-list big">${part.map(itemHtml).join('')}</div>${l.length>part.length?`<button class="rn-btn" style="margin:10px auto;display:block" data-rn="more">Show more (${l.length-part.length})</button>`:''}<p class="rn-note">Showing the last ${DAYS} days.</p>`:`<div class="rn-empty">${S.notifs.length?'No notifications match these filters.':'No notifications yet. Orders, price alerts and account events will appear here.'}</div>`}
@@ -1810,6 +1812,7 @@ function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notificatio
   <div class="rn-card"><h3>Quiet hours</h3><p class="rn-note">Normal and High push messages are held and delivered as one summary when quiet hours end. Critical messages always deliver.</p>
     <div class="rn-grid"><label class="rn-chk"><input type="checkbox" id="pfQon" ${P.quiet.on?'checked':''}> Turn on</label><label>From<input type="time" id="pfQs" value="${P.quiet.start}"></label><label>To<input type="time" id="pfQe" value="${P.quiet.end}"></label>
     <label>Time zone<input id="pfQz" value="${esc(P.quiet.tz)}" placeholder="Asia/Kolkata"></label><label>Buying-power warning below (₹)<input type="number" id="pfBp" min="0" step="1000" value="${P.bp}"></label></div></div>
+  <details class="rn-adv"><summary>Advanced: channels per event, test message, incident switch, export</summary>
   <div class="rn-card"><h3>Channels by event</h3><p class="rn-note">Choose which events are sent to you as push notifications. Locked cells (🔒) can't be turned off. Every notification also stays in your notification list.</p>
     <div class="rn-tw"><table class="rn-matrix"><thead><tr><th>Event</th>${CH_UI.map(c=>`<th class="c">${CHL[c]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
     </div>
@@ -1818,8 +1821,11 @@ function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notificatio
   <div class="rn-card"><h3>Pause an event type (incident switch)</h3><p class="rn-note">Stops an event type from being sent platform-wide. Pause and resume are written to the audit log.</p><div class="rn-grid">
     <label>Event<select id="psEv">${Object.keys(EV).filter(i=>!EV[i].hidden).map(i=>`<option value="${i}">${i} · ${esc(EV[i].name)}${P.paused[i]?' (paused)':''}</option>`).join('')}</select></label><label>Reason<input id="psWhy" placeholder="e.g. provider incident"></label></div>
     <div style="margin-top:8px"><button class="rn-btn" data-rn="pause">Pause</button><button class="rn-btn" data-rn="unpause">Resume</button></div>
-    <p class="rn-note">${Object.keys(P.paused).length?'Paused: '+Object.keys(P.paused).map(esc).join(', '):'Nothing is paused.'}</p></div>`}
+    <p class="rn-note">${Object.keys(P.paused).length?'Paused: '+Object.keys(P.paused).map(esc).join(', '):'Nothing is paused.'}</p></div>
+  <div class="rn-card"><h3>Export</h3><p class="rn-note">Download your notification list as a spreadsheet.</p><div><button class="rn-btn" data-rn="csv">Export CSV</button></div></div></details>`}
 function sample(id){const s={'N-01':{side:'buy',qty:10,sym:'TCS',price:'3,950.00',type:'limit'},'N-02':{side:'buy',qty:10,sym:'TCS',price:'3,950.00'},'N-03':{filled:4,qty:10,sym:'TCS',price:'3,950.00'},'N-04':{side:'buy',sym:'TCS',type:'limit'},'N-05':{reason:'insufficient buying power',side:'buy',qty:10,sym:'TCS'},'N-06':{sym:'TCS'},'N-07':{sym:'TCS',price:'4,050.00',pnl:'+₹1,000'},'N-08':{sym:'TCS',price:'3,900.00',pnl:'−₹500'},'N-09':{sym:'TCS',level:'4,000.00',price:'4,001.20'},'N-10':{sym:'TCS',level:'3,900.00',price:'3,899.10'},'N-11':{sym:'TCS',dir:'up',pct:'5.2',price:'4,100.00'},'N-12':{amount:'₹5,000.00'},'N-13':{amount:'₹1,200.00',state:'sent',note:'Sent to ••4821'},'N-14':{threshold:'₹10,000',available:'₹8,250.00'},'N-15':{device:'Chrome on Windows',place:'Mumbai'},'N-16':{what:'password'}};return s[id]||{}}
+function actHtml(){const a=S.act==='audit'?'audit':'log';
+  return`<div class="rn-seg" role="tablist"><button role="tab" aria-selected="${a==='log'}" class="${a==='log'?'on':''}" data-rn="act:log">Delivery log</button><button role="tab" aria-selected="${a==='audit'}" class="${a==='audit'?'on':''}" data-rn="act:audit">Audit log</button></div>`+(a==='audit'?auditHtml():logHtml())}
 function logHtml(){const q=S.f.dq.trim().toLowerCase(),rows=[];S.notifs.forEach(n=>n.deliv.forEach(d=>rows.push({n,d})));
   const l=rows.sort((a,b)=>b.d.at-a.d.at).filter(r=>!q||(r.n.title+' '+r.n.evt+' '+r.d.ch+' '+r.d.status+' '+r.d.reason).toLowerCase().includes(q)).slice(0,S.f.dn);
   return`<div class="rn-bar"><input id="rnLq" placeholder="Search delivery log" value="${esc(S.f.dq)}" aria-label="Search delivery log"><span class="rn-note">Statuses: queued, sent, delivered, opened, failed, suppressed</span></div>
@@ -1936,7 +1942,15 @@ body.net-off #tkGo,body.net-off #opBuy,body.net-off #opSell,body.net-off #opExit
 .rn-st.s-Active,.rn-st.d-delivered,.rn-st.d-sent{color:var(--up,#0A8F6C);border-color:var(--up,#0A8F6C)}
 .rn-st.s-Triggered{color:var(--brand,#2a78d6);border-color:var(--brand,#2a78d6)}
 .rn-st.d-failed,.rn-st.s-Expired{color:var(--down,#D93240);border-color:var(--down,#D93240)}
-@media(max-width:600px){.rn-bg{padding:0}.rn-centre{max-height:100vh;border-radius:0}#rnToasts{top:56px}}
+@media(max-width:600px){.rn-bg{padding:0}.rn-centre{max-height:100vh;border-radius:0}#rnToasts{top:56px}
+ .rn-c-h{gap:8px 10px}.rn-c-h h2{flex:1;font-size:15px}.rn-c-h .rn-x{margin-left:auto}.rn-tabs{order:3;flex:1 0 100%;overflow:visible}.rn-tabs button{flex:1;padding:0 6px;height:34px}
+ .rn-bar select{flex:1 1 40%}.rn-bar #rnFq{flex:1 1 100%;order:3}.rn-bar .rn-sp{display:none}}
+.rn-viewall{display:block;width:100%;padding:12px;border-top:1px solid var(--line,#E2E6EC);background:none;color:var(--brand,#2a78d6);font-size:13.5px;font-weight:700;text-align:center;border-radius:0 0 12px 12px}
+.rn-viewall:hover{background:var(--brand-2,#E7F0FC)}
+.rn-seg{display:inline-flex;gap:2px;padding:3px;margin-bottom:12px;background:var(--panel-2,#F2F4F7);border-radius:10px}
+.rn-seg button{height:28px;padding:0 14px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-2,#4A5568)}.rn-seg button.on{background:var(--panel,#fff);color:var(--brand,#2a78d6);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.rn-adv{margin-top:4px}.rn-adv>summary{cursor:pointer;padding:12px 14px;border:1px solid var(--line,#E2E6EC);border-radius:12px;font-size:13.5px;font-weight:600;color:var(--text-2,#4A5568);list-style:none}
+.rn-adv>summary::before{content:'▸ '}.rn-adv[open]>summary::before{content:'▾ '}.rn-adv[open]>summary{margin-bottom:12px}
 `;
 function injectCss(){if(document.getElementById('rnCss'))return;const s=document.createElement('style');s.id='rnCss';s.textContent=CSS;document.head.appendChild(s)}
 
@@ -1947,11 +1961,11 @@ document.addEventListener('click',e=>{
   const bg=$('#rnCentre');if(bg&&e.target===bg){closeCentre();return}
   const t=e.target.closest('[data-rn]');if(!t)return;const[k,a,b]=t.dataset.rn.split(':');
   if(e.target.closest('.rn-sec button')&&k!=='sec')return;
-  if(k==='del'){e.stopPropagation();removeNotif(a)}else if(k==='clearall'){clearAllNotifs()}else if(k==='clearaudit'){S.audit=[];saveAu();openCentre('audit')}else if(k==='closepop'){closePop()}
+  if(k==='del'){e.stopPropagation();removeNotif(a)}else if(k==='clearall'){clearAllNotifs()}else if(k==='clearaudit'){S.audit=[];saveAu();openCentre('log')}else if(k==='closepop'){closePop()}
   else if(k==='open'){const n=S.notifs.find(x=>x.id===a);if(n)open(n)}
   else if(k==='sec'){const n=S.notifs.find(x=>x.id===a);if(n){n.answered=b;n.read=true;saveN();audit(b==='yes'?'Confirmed new sign-in':'Secured account from sign-in alert',n.title);if(b==='no')toastInfo('Other sessions were signed out. Please reset your password.');refresh()}}
   else if(k==='readall'){markAll()}else if(k==='centre')openCentre(a);else if(k==='close')closeCentre();
-  else if(k==='tab'){S.tab=a;S.editing=null;drawCentre()}else if(k==='more'){S.f.n+=50;drawNotifList()}else if(k==='csv')csv();
+  else if(k==='tab'){S.tab=a;S.editing=null;drawCentre()}else if(k==='act'){S.act=a;drawCentre()}else if(k==='more'){S.f.n+=50;drawNotifList()}else if(k==='csv')csv();
   else if(k==='al')alertAction(a,b);else if(k==='canceledit'){S.editing=null;drawCentre()}
   else if(k==='wp'){t.disabled=true;(a==='on'?pushEnable():a==='off'?pushOff():pushTest()).then(()=>toastInfo(a==='on'?'Push enabled on this device':a==='off'?'Push turned off':'Test push sent — it should appear in a few seconds')).catch(err=>toastInfo(String(err&&err.message||err))).then(()=>drawCentre())}
   else if(k==='perm'){Notification.requestPermission().then(p=>{audit('Browser notification permission',p);drawCentre()})}
