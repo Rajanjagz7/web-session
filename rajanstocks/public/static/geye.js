@@ -407,7 +407,7 @@
       <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div>
       ${grp.tabs.length > 1 ? `<div class="ge-sub2" role="tablist">${grp.tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>` : ''}
       ${body}
-      <p class="ge-disc">Informational only - built from public NSE data, broker quotes and rule-based scores; not a forecast or investment advice.</p>
+      ${G.tab === 'global' ? '' : `<p class="ge-disc">Informational only - built from public NSE data, broker quotes and rule-based scores; not a forecast or investment advice.</p>`}
       ${G.open ? detail() : G.stock ? stockDetail() : ''}</div>`;
     document.body.classList.toggle('ge-noscroll', !!(G.open || G.stock));
     if (G.tab === 'stocklist' && window.SB) { try { SB.page(document.getElementById('geSL'), G.slTab || undefined); G.slTab = null; } catch (e) { } }
