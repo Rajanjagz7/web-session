@@ -1767,7 +1767,7 @@ function openCentre(tab,opts){closePop();if(tab)S.tab=tab;if(opts&&opts.sym)S.ne
   let bg=$('#rnCentre');if(!bg){bg=document.createElement('div');bg.id='rnCentre';bg.className='rn-bg';document.body.appendChild(bg)}drawCentre()}
 function closeCentre(){const b=$('#rnCentre');if(b)b.remove();S.editing=null}
 function drawCentre(soft){const bg=$('#rnCentre');if(!bg)return;if(soft&&(S.tab==='prefs'||(S.tab==='alerts'&&($('#rnAlForm')&&document.activeElement&&$('#rnAlForm').contains(document.activeElement)))))return;
-  if(S.tab==='audit'){S.tab='log';S.act='audit'}
+  if(S.tab==='audit')S.tab='log';
   if(!TABS().some(t=>t[0]===S.tab))S.tab='notifs';
   bg.innerHTML=`<div class="rn-centre" role="dialog" aria-modal="true" aria-label="Notification centre"><div class="rn-c-h"><h2>Notification centre</h2><div class="rn-tabs" role="tablist">${TABS().map(([k,l])=>`<button role="tab" aria-selected="${S.tab===k}" class="${S.tab===k?'on':''}" data-rn="tab:${k}">${l}${k==='notifs'&&unread()?` <span class="rn-pill">${unread()}</span>`:''}</button>`).join('')}</div><button class="rn-x" data-rn="close" aria-label="Close">×</button></div><div class="rn-c-b" id="rnBody">${tabBody()}</div></div>`;
   if(S.tab==='alerts')bindAlertForm();if(S.tab==='notifs')drawNotifList()}
@@ -1824,8 +1824,7 @@ function prefsHtml(){const P=S.prefs,perm=('Notification' in global)?Notificatio
     <p class="rn-note">${Object.keys(P.paused).length?'Paused: '+Object.keys(P.paused).map(esc).join(', '):'Nothing is paused.'}</p></div>
   <div class="rn-card"><h3>Export</h3><p class="rn-note">Download your notification list as a spreadsheet.</p><div><button class="rn-btn" data-rn="csv">Export CSV</button></div></div></details>`}
 function sample(id){const s={'N-01':{side:'buy',qty:10,sym:'TCS',price:'3,950.00',type:'limit'},'N-02':{side:'buy',qty:10,sym:'TCS',price:'3,950.00'},'N-03':{filled:4,qty:10,sym:'TCS',price:'3,950.00'},'N-04':{side:'buy',sym:'TCS',type:'limit'},'N-05':{reason:'insufficient buying power',side:'buy',qty:10,sym:'TCS'},'N-06':{sym:'TCS'},'N-07':{sym:'TCS',price:'4,050.00',pnl:'+₹1,000'},'N-08':{sym:'TCS',price:'3,900.00',pnl:'−₹500'},'N-09':{sym:'TCS',level:'4,000.00',price:'4,001.20'},'N-10':{sym:'TCS',level:'3,900.00',price:'3,899.10'},'N-11':{sym:'TCS',dir:'up',pct:'5.2',price:'4,100.00'},'N-12':{amount:'₹5,000.00'},'N-13':{amount:'₹1,200.00',state:'sent',note:'Sent to ••4821'},'N-14':{threshold:'₹10,000',available:'₹8,250.00'},'N-15':{device:'Chrome on Windows',place:'Mumbai'},'N-16':{what:'password'}};return s[id]||{}}
-function actHtml(){const a=S.act==='audit'?'audit':'log';
-  return`<div class="rn-seg" role="tablist"><button role="tab" aria-selected="${a==='log'}" class="${a==='log'?'on':''}" data-rn="act:log">Delivery log</button><button role="tab" aria-selected="${a==='audit'}" class="${a==='audit'?'on':''}" data-rn="act:audit">Audit log</button></div>`+(a==='audit'?auditHtml():logHtml())}
+function actHtml(){return auditHtml()}   /* Activity = the audit log only; the delivery log view was removed (deliveries are still recorded) */
 function logHtml(){const q=S.f.dq.trim().toLowerCase(),rows=[];S.notifs.forEach(n=>n.deliv.forEach(d=>rows.push({n,d})));
   const l=rows.sort((a,b)=>b.d.at-a.d.at).filter(r=>!q||(r.n.title+' '+r.n.evt+' '+r.d.ch+' '+r.d.status+' '+r.d.reason).toLowerCase().includes(q)).slice(0,S.f.dn);
   return`<div class="rn-bar"><input id="rnLq" placeholder="Search delivery log" value="${esc(S.f.dq)}" aria-label="Search delivery log"><span class="rn-note">Statuses: queued, sent, delivered, opened, failed, suppressed</span></div>
