@@ -7,7 +7,7 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   'use strict';
   const KEY = 'rj-journal-v1', SKEY = 'rj-journal-settings-v1';
   const DEFAULTS = {
-    capital: 1000000, maxTrades: 5, riskPct: 0.5, dailyLossPct: 2, maxOpen: 1, minRR: 2,
+    capital: 1500000, maxTrades: 5, riskPct: 0.5, dailyLossPct: 2, maxOpen: 1, minRR: 2,
     cost: 0, slip: 0, t1: 1, t2: 2, t3: 3, allowOverride: true,
     labTrigger: 1, labStep: 0.5, labTrail: 1,
   };
@@ -23,6 +23,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
+  if (S.capV !== 20261028) { if (S.capital === 1000000) S.capital = 1500000; S.capV = 20261028; save(SKEY, S); }      // 28 Oct 2026: options paper money is Rs 15 L (three Rs 5 L sleeves)
     let T = load(KEY, []);
   const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
   const REMOVED_UNTIL = '2026-10-25';                    // untimed trades dated on/before this day
@@ -225,6 +226,7 @@ function paperList() {
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
   const inr = (n, d = 2) => (n < 0 ? '−' : '') + '₹' + Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const inrL = n => '₹' + (n / 100000).toLocaleString('en-IN', { maximumFractionDigits: 1 }) + ' L';
   const sinr = n => (n >= 0 ? '+' : '−') + '₹' + Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const px = n => (n == null || !isFinite(n)) ? '—' : n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const rr = n => (n == null || !isFinite(n)) ? '—' : (n >= 0 ? '+' : '−') + Math.abs(n).toFixed(2) + 'R';
@@ -1147,7 +1149,7 @@ function paperList() {
   function viewSettings() {
     const n = (k, l, step, hint) => `<label class="fld"><span>${l}</span><input class="inp" data-jset="${k}" type="number" step="${step || 'any'}" value="${S[k]}"><small>${hint || ''}</small></label>`;
     return `<div class="card"><div class="card-h"><h3>Risk &amp; limits</h3></div><div class="jv-form">
-      ${n('capital', 'Starting virtual capital (₹)', 1000, 'Default ₹10,00,000')}${n('maxTrades', 'Max entries per day', 1, 'Each entry / re-entry counts; partial exits do not')}
+      ${n('capital', 'Starting virtual capital (₹)', 1000, 'Default ₹15,00,000')}${n('maxTrades', 'Max entries per day', 1, 'Each entry / re-entry counts; partial exits do not')}
       ${n('riskPct', 'Risk per trade (% of equity)', 0.05, 'Illustrative default 0.50%')}${n('dailyLossPct', 'Daily loss limit (% of start-of-day equity)', 0.1, 'Realised + unrealised')}
       ${n('maxOpen', 'Max open positions', 1)}${n('minRR', 'Minimum planned R:R', 0.1, 'Below this needs an override reason')}
       ${n('cost', 'Estimated cost per unit (₹)', 'any', '0 is only a placeholder — enter realistic costs')}${n('slip', 'Slippage per unit (₹)', 'any')}
@@ -1380,7 +1382,7 @@ function paperList() {
     const openAuto = open.filter(t => t.auto).length;
     const autoToday = AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length;
     return `<div class="jv-kpis jv-top" aria-label="Journal summary">
-      ${kpi('Total Equity', inr(totalEquity, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', cc(totalBooked + unr), 'Total portfolio equity: Capital (₹10 L) + Total Booked P&L + Open Unrealized P&L')}
+      ${kpi('Total Equity', inr(totalEquity, 0), unr ? 'open ' + sinr(unr) : 'no open P&L', cc(totalBooked + unr), 'Total portfolio equity: Capital (' + inrL(S.capital) + ') + Total Booked P&L + Open Unrealized P&L')}
       ${kpi("Today's P&L", sinr(todayTotal), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(unr), cc(todayTotal), "Today's net P&L across all closed and open positions for the current session")}
       ${kpi('Total Booked P&L', sinr(totalBooked), m.n + ' closed trades', cc(totalBooked), 'All-time cumulative net P&L of all closed trades across the journal')}
       ${kpi('Open Positions', open.length, openAuto + ' auto · ' + (open.length - openAuto) + ' manual', '', 'Current active open positions')}
@@ -1504,7 +1506,7 @@ function paperList() {
   /* Reset portfolio: one confirmation, then clear EVERYTHING that feeds the portfolio figure -
      manual journal trades, journal settings, the server's auto paper trades and the Trade screen's paper account. */
   async function resetPortfolio() {
-    if (!confirm('Reset the portfolio to ₹10,00,000?\n\nThis clears every journal trade, all auto paper trades (open and closed), the stock trader book and the Trade screen paper positions and orders. It cannot be undone.')) return;
+    if (!confirm('Reset the portfolio to ' + inr(DEFAULTS.capital, 0) + '?\n\nThis clears every journal trade, all auto paper trades (open and closed), the stock trader book and the Trade screen paper positions and orders. It cannot be undone.')) return;
     const [r, rs] = await Promise.all([jpost('/api/auto/reset', {}), jpost('/api/stockbot/reset', {})]);   // options book AND the stock trader book
     T = []; S = Object.assign({}, DEFAULTS); persist(); persistS();
     AUTO.list = []; AUTO.stockTrades = []; AUTO.ts = Date.now();
@@ -1519,7 +1521,7 @@ function paperList() {
       }
     } catch (e) { }
     const bad = [!r.ok && 'auto trades: ' + r.err, !rs.ok && 'stock trader: ' + rs.err].filter(Boolean);
-    toast_(!bad.length ? 'Journal reset to ₹10,00,000 - all trades cleared' : 'Journal cleared on this device, but the server reset failed (' + bad.join('; ') + '). Tap Reset again.', !bad.length ? 'ok' : 'err');
+    toast_(!bad.length ? 'Journal reset to ' + inr(DEFAULTS.capital, 0) + ' - all trades cleared' : 'Journal cleared on this device, but the server reset failed (' + bad.join('; ') + '). Tap Reset again.', !bad.length ? 'ok' : 'err');
     try { render(); } catch (e) { console.warn('journal render after reset', e); }
     setTimeout(() => { syncAuto(true).then(render).catch(() => { }); try { sbLoad(true); } catch (e) { } }, 600);
   }
@@ -1924,12 +1926,15 @@ function paperList() {
        <div class="jv-bl">${v('Running now', open, 'pl', sinr)}${v('Locked in', booked, 'pl', sinr)}${v('In trades', used, '', amt)}${v('Available', free, 'up', amt)}</div></div>`;
      const B = c.buy, Sx = c.sell;
      const ob = tile('', 'Options Buy', B.eq, B.cap, B.unr, B.booked, B.used, B.free);
-     const os = tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked, Sx.used, Sx.free);
+     const buyOnly = !!(AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.buyOnly), sellIdle = !(Sx.used || Sx.booked || Sx.unr);
+     const hideSell = buyOnly && sellIdle;                                   // buy-only auto trader and no sold options: the sell book is not shown or counted
+     const os = hideSell ? '' : tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked, Sx.used, Sx.free);
      const st = tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null, d ? d.used : null, d ? d.cash : null);
-     const tot = tile('jv-btot', 'Total', d ? B.eq + Sx.eq + d.equity : null, B.cap + Sx.cap + sCap,
-       d ? B.unr + Sx.unr + d.unrealised : null, d ? B.booked + Sx.booked + d.booked : null,
-       d ? B.used + Sx.used + d.used : null, d ? B.free + Sx.free + d.cash : null);
-     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Your money</h3><span class="muted" style="font-size:12px">paper money · ₹10 L in each book</span><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book and stock trader back to ₹10 L each">Reset journal</button></div></div>
+     const X = hideSell ? { eq: 0, cap: 0, unr: 0, booked: 0, used: 0, free: 0 } : Sx;
+     const tot = tile('jv-btot', 'Total', d ? B.eq + X.eq + d.equity : null, B.cap + X.cap + sCap,
+       d ? B.unr + X.unr + d.unrealised : null, d ? B.booked + X.booked + d.booked : null,
+       d ? B.used + X.used + d.used : null, d ? B.free + X.free + d.cash : null);
+     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Your money</h3><span class="muted" style="font-size:12px">paper money · ${inrL(B.cap)} options${hideSell ? '' : ' (buy)'} · ${inrL(sCap)} stock trader</span><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book back to its starting money and the stock trader back to ₹10 L">Reset journal</button></div></div>
        <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
 

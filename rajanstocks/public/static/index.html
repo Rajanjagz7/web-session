@@ -699,7 +699,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
   .pf-chip{padding:0 8px}.hdr .brand{flex:none}
 }
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261027t"></script>
+<script id="scrJV" src="/static/journal.js?v=20261027u"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
@@ -4604,7 +4604,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027t';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261027u';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
