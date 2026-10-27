@@ -509,13 +509,12 @@ function paperList() {
   function kpiBlock(m, ds, day) {
     const L = liveTotals(day), todayBooked = ds.pnl + L.autoToday, todayAll = todayBooked + L.unr;
     const openN = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length;
-    return `      ${kpi("Today's P&L", sinr(todayAll), 'booked ' + sinr(todayBooked) + ' · open ' + sinr(L.unr), cc(todayAll), "Today's net P&L across all closed and open positions")}
-      ${kpi('Total Booked', sinr(L.booked), m.n + ' closed trades', cc(L.booked), 'Cumulative net P&L of all closed trades all-time')}
-      ${kpi('Trades Today', String(ds.entries + AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length, '', 'Entries taken today')}
-      ${kpi('Win %', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Win rate of closed trades, with average win and average loss')}
-      ${kpi('Exp.', rr(m.expR), '', cc(m.expR), 'Expectancy: average result per trade in R')}
-      ${kpi('PF', m.pf === Infinity ? '∞' : m.pf.toFixed(2), '', '', 'Profit factor: gross profit ÷ gross loss')}
-      ${(dd => kpi('Max DD · today', inr(dd, 0), 'all-time ' + inr(m.maxDD, 0), dd > 0 ? 'down' : '', "Largest fall of today's P&L (booked + open) from its high so far - resets every day"))(dayDD(day))}`;
+    return `      ${kpi('Total profit locked in', sinr(L.booked), m.n + ' closed trades', cc(L.booked), 'Net profit of every closed trade, all time (after costs)')}
+      ${kpi('Trades today', String(ds.entries + AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length), 'manual ' + ds.entries + ' · auto ' + AUTO.list.concat(AUTO.stockTrades || []).filter(t => t.date === day).length, '', 'Trades taken today')}
+      ${kpi('Win rate', (m.winRate * 100).toFixed(0) + '%', 'W ' + inr(m.avgWin, 0) + ' · L ' + inr(m.avgLoss, 0), '', 'Share of closed trades that made money, with the average win (W) and average loss (L)')}
+      ${kpi('Avg result per trade', rr(m.expR), 'in R', cc(m.expR), 'Average result of a trade measured in R, where 1R is the money you risked on it. Above 0 means you make money over time')}
+      ${kpi('Profit factor', m.pf === Infinity ? '∞' : m.pf.toFixed(2), 'profit ÷ loss', '', 'Total profit divided by total loss. Above 1 = profitable, above 1.5 = good')}
+      ${(dd => kpi('Biggest drop today', inr(dd, 0), 'all-time ' + inr(m.maxDD, 0), dd > 0 ? 'down' : '', "Largest fall of today's profit from its high so far (closed + running). Resets every day"))(dayDD(day))}`;
   }
   function refreshLive() {
     const host = document.getElementById('v-journal');
@@ -528,6 +527,7 @@ function paperList() {
     { const td = document.getElementById('jvToday'); if (td) { const t = document.createElement('div'); t.innerHTML = todayCard(); const n = t.firstElementChild; if (n && n.innerHTML !== td.innerHTML) td.innerHTML = n.innerHTML; } }
     { const bk = document.getElementById('jvBooks'); if (bk) { sbLoad(false); const t = document.createElement('div'); t.innerHTML = booksCard(); const n = t.firstElementChild; if (n.innerHTML !== bk.innerHTML) bk.innerHTML = n.innerHTML; } }
     const day = today();
+    { const ie = document.getElementById('jvInsight'); if (ie) { const t = document.createElement('div'); t.innerHTML = insightCard(metrics(filtered())); const n = t.firstElementChild; if (n && n.innerHTML !== ie.innerHTML) { ie.innerHTML = n.innerHTML; ie.className = n.className; } } }
     patchKids(k, kpiBlock(metrics(filtered()), dayStats(day), day));      // only the numbers that changed are touched - no page redraw
     const o = document.getElementById('jvOpen');
     if (o) {
@@ -609,14 +609,17 @@ function paperList() {
      const openAll = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed'), open = openAll.filter(sideOk);
      const dayPnl = (daily[day] || 0) + openAll.filter(t => t.date === day).reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
      const recent = L.filter(sideOk).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
-     return `${filterBar(false)}
-     ${todayCard()}
+     return `${todayCard()}
      ${booksCard()}
-     <div class="jv-sec">Options book · performance</div>
+     <div class="jv-sec">How you're doing</div>
+     ${filterBar(false)}
+     ${insightCard(m)}
      <div class="jv-kpis" id="jvKpis">${kpiBlock(m, ds, day)}    </div>
+     <div class="jv-sec">Open trades right now</div>
      <div class="jv-pos-bar">${sideBar(L.concat(openAll.filter(t => !L.includes(t))))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>
-     <div class="card"><div class="card-h"><h3>Open paper positions</h3><span class="jv-hr"><b class="num ${dayPnl > 0 ? 'up' : dayPnl < 0 ? 'down' : ''}" title="Today's booked P&L + open P&L of today's trades" style="font-size:13px">Day ${sinr(dayPnl)}</b><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
-     <div class="card"><div class="card-h"><h3>Recent trades</h3></div>${tradeTable(recent, true, 'recent')}</div>`;
+     <div class="card"><div class="card-h"><h3>Running trades</h3><span class="jv-hr"><b class="num ${dayPnl > 0 ? 'up' : dayPnl < 0 ? 'down' : ''}" title="Today's booked P&L + open P&L of today's trades" style="font-size:13px">Day ${sinr(dayPnl)}</b><span class="muted" style="font-size:12px" id="jvLiveTs">live</span>${open.length ? `<button class="jv-exit jv-exitall" data-jv="exitall" title="Exit every open position at the live price">Exit all (${open.length})</button>` : ''}</span></div><div id="jvOpen" data-ids="${E(open.map(t => t.id).join(','))}">${tradeTable(open, true, 'open')}</div></div>
+     <div class="jv-sec">Recent trades</div>
+     <div class="card"><div class="card-h"><h3>Latest first</h3></div>${tradeTable(recent, true, 'recent')}</div>`;
   }
 
   function viewOrders() {
@@ -1845,17 +1848,38 @@ function paperList() {
      return R;
    }
    function todayCard() {
-     const R = todayRows(), line = (name, x) => {
-       if (!x) return `<tr><td>${name}</td><td class="num">…</td><td class="num">…</td><td class="num">…</td></tr>`;
-       const tot = x.b + x.o;
-       return `<tr><td>${name}</td><td class="num ${cc(x.b)}">${sinr(x.b)}</td><td class="num ${cc(x.o)}">${sinr(x.o)}</td><td class="num ${cc(tot)}"><b>${sinr(tot)}</b></td></tr>`;
-     };
-     const all = R.stock ? { b: R.buy.b + R.sell.b + R.stock.b, o: R.buy.o + R.sell.o + R.stock.o } : null;
-     return `<div class="card" id="jvToday"><div class="card-h"><h3>Today</h3><span class="muted" style="font-size:12px">booked = closed trades (locked in) · open = still running</span></div>
-       <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Book</th><th class="num">Booked today</th><th class="num">Open now</th><th class="num">Total today</th></tr></thead><tbody>
-         ${line('Options Buy', R.buy)}${line('Options Sell', R.sell)}${line('Stock trader', R.stock)}${line('<b>All books</b>', all)}
-       </tbody></table></div>
-       <p class="muted" style="font-size:12px;margin:8px 12px 12px">Open amounts are not final - they move with price until the trade closes. Stock-trader intraday trades square off at 15:15; options trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open options trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
+     const R = todayRows(), mk = (typeof window.rjMkt === 'function') ? window.rjMkt() : false;
+     const bk = R.buy.b + R.sell.b + (R.stock ? R.stock.b : 0), op = R.buy.o + R.sell.o + (R.stock ? R.stock.o : 0), tot = bk + op;
+     const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
+     const num = (lab, v) => `<div><small>${lab}</small><span class="${cc(v)}">${sinr(v)}</span></div>`;
+     const row = (name, x, hint) => `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>${hint}</small></div>${x
+       ? `<div class="jv-hr-n">${num('Locked in', x.b)}${num('Running', x.o)}${num('Total', x.b + x.o)}</div>`
+       : '<div class="jv-hr-n"><span class="muted">loading…</span></div>'}</div>`;
+     return `<div class="card jv-hero ${box}" id="jvToday">
+       <div class="jv-hero-top"><span>Today's profit</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em></div>
+       <div class="jv-hero-big ${cls}">${sinr(tot)}</div>
+       <div class="jv-chips">
+         <div class="jv-chip2"><small>Locked in</small><b class="${cc(bk)}">${sinr(bk)}</b><span>trades already closed</span></div>
+         <div class="jv-chip2"><small>Running now</small><b class="${cc(op)}">${sinr(op)}</b><span>can still change</span></div>
+       </div>
+       ${R.stock ? '' : '<p class="jv-hint">Stock trader is still loading - it will be added in a moment.</p>'}
+       ${row('Options Buy', R.buy, 'you bought options')}${row('Options Sell', R.sell, 'you sold options')}${row('Stock trader', R.stock, 'shares')}
+       <p class="jv-hint">Only "Locked in" is final. "Running now" moves with price until the trade closes. Stock trades that day-trade are closed at 3:15 pm; option trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open option trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
+   }
+   function insightCard(m) {
+     if (!m || m.n < 5) return `<div class="card jv-ins" id="jvInsight"><b>How you're doing</b><p>Not enough closed trades yet (${m ? m.n : 0}). Come back after about 5 closed trades.</p></div>`;
+     const w = Math.round(m.winRate * 100), W = Math.abs(m.avgWin), Lo = Math.abs(m.avgLoss), ratio = Lo > 0 ? W / Lo : null;
+     let verdict = '', cl = 'ok';
+     if (ratio != null) {
+       const need = Math.round(Lo / (W + Lo) * 100);
+       if (ratio >= 1.5) { verdict = `Your wins are bigger than your losses - you only need to win about ${need}% of trades to make money.`; cl = 'pos'; }
+       else if (ratio >= 1) { verdict = `Wins are a bit bigger than losses. You need to win about ${need}% of trades to break even; you win ${w}%.`; cl = w >= need ? 'pos' : 'neg'; }
+       else { verdict = `Your average win is smaller than your average loss, so you must win more than ${need}% of trades just to break even (you win ${w}%). ${w >= need ? 'You are above that line, but only just.' : 'You are below that line - this is where money leaks.'}`; cl = w >= need + 8 ? 'ok' : 'neg'; }
+     }
+     return `<div class="card jv-ins jv-i-${cl}" id="jvInsight"><b>Wins vs losses</b>
+       <div class="jv-ins-g"><div><small>Win rate</small><b>${w}%</b></div><div><small>Average win</small><b class="up">${inr(W, 0)}</b></div><div><small>Average loss</small><b class="down">−${inr(Lo, 0)}</b></div>
+       <div title="How many rupees you win for every rupee you lose, on average"><small>Win : Loss size</small><b class="${ratio != null && ratio >= 1 ? 'up' : 'down'}">${ratio == null ? '-' : ratio.toFixed(2) + ' : 1'}</b></div></div>
+       <p>${verdict}</p></div>`;
    }
    function booksCard() {
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
@@ -1866,7 +1890,7 @@ function paperList() {
      const amt = x => inr(x, 0);
      const tile = (cls, title, eq, cap, open, booked, used, free) => `<div class="jv-book ${cls}"><b class="jv-bt">${title}</b>
        <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div>
-       <div class="jv-bl">${v('Open', open, 'pl', sinr)}${v('Booked', booked, 'pl', sinr)}${v('In use', used, '', amt)}${v('Free', free, 'up', amt)}</div></div>`;
+       <div class="jv-bl">${v('Running now', open, 'pl', sinr)}${v('Locked in', booked, 'pl', sinr)}${v('In trades', used, '', amt)}${v('Available', free, 'up', amt)}</div></div>`;
      const B = c.buy, Sx = c.sell;
      const ob = tile('', 'Options Buy', B.eq, B.cap, B.unr, B.booked, B.used, B.free);
      const os = tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked, Sx.used, Sx.free);
@@ -1874,7 +1898,7 @@ function paperList() {
      const tot = tile('jv-btot', 'Total', d ? B.eq + Sx.eq + d.equity : null, B.cap + Sx.cap + sCap,
        d ? B.unr + Sx.unr + d.unrealised : null, d ? B.booked + Sx.booked + d.booked : null,
        d ? B.used + Sx.used + d.used : null, d ? B.free + Sx.free + d.cash : null);
-     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Books</h3><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book and stock trader back to ₹10 L each">Reset journal</button></div></div>
+     return `<div class="card" id="jvBooks"><div class="card-h"><h3>Your money</h3><span class="muted" style="font-size:12px">paper money · ₹10 L in each book</span><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book and stock trader back to ₹10 L each">Reset journal</button></div></div>
        <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
    }
 
@@ -2248,6 +2272,26 @@ function paperList() {
   details.jv-more>*{max-width:100% !important}
   @media (max-width:600px){.jv-kpis{grid-template-columns:repeat(3,1fr)}.jv-kpi b{font-size:13.5px}.jv-search{max-width:none;order:5;flex-basis:100%}.jv-tabs{overflow-x:auto}div.jv-more{display:grid;grid-template-columns:1fr 1fr}.jv-more .inp{min-width:0;width:100%}.jv-t .jv-tg,.jv-t th[title^="T1"]{display:none}}`
   ;
+  st.textContent += `
+  /* Portfolio redesign: big Today card, plain-language blocks */
+  .jv-hero{padding:16px;margin-bottom:4px;border-radius:16px}
+  .jv-hero.jv-pos{border-color:color-mix(in srgb,var(--up) 45%,var(--line))}.jv-hero.jv-neg{border-color:color-mix(in srgb,var(--down) 45%,var(--line))}
+  .jv-hero-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--text-2)}
+  .jv-mkt{font-style:normal;font-size:11.5px;padding:3px 9px;border-radius:12px;background:var(--panel-2);color:var(--text-3)}.jv-mkt.on{background:var(--up-bg);color:var(--up)}
+  .jv-hero-big{font-size:38px;line-height:1.1;font-weight:700;letter-spacing:-.02em;margin:8px 0 12px;font-variant-numeric:tabular-nums}
+  .jv-chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .jv-chip2{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel-2);min-width:0}
+  .jv-chip2 small{display:block;color:var(--text-3);font-size:12px;font-weight:600}.jv-chip2 b{display:block;font-size:19px;margin:2px 0;font-variant-numeric:tabular-nums}.jv-chip2 span{font-size:11.5px;color:var(--text-3)}
+  .jv-hr-row{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--line)}.jv-hr-row:first-of-type{margin-top:14px}
+  .jv-hr-name{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.jv-hr-name small{color:var(--text-3);font-size:11.5px}
+  .jv-hr-n{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-variant-numeric:tabular-nums}
+  .jv-hr-n small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}.jv-hr-n span{font-size:14px;font-weight:600;white-space:nowrap}
+  .jv-hint{margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--text-3)}
+  .jv-ins{padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--line)}.jv-ins.jv-i-pos{border-left-color:var(--up)}.jv-ins.jv-i-neg{border-left-color:var(--down)}.jv-ins.jv-i-ok{border-left-color:var(--brand)}
+  .jv-ins>b{font-size:14px}.jv-ins p{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--text-2)}
+  .jv-ins-g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.jv-ins-g small{display:block;font-size:11px;color:var(--text-3)}.jv-ins-g b{font-size:15px;font-variant-numeric:tabular-nums}
+  @media (max-width:600px){.jv-hero-big{font-size:34px}.jv-ins-g{grid-template-columns:1fr 1fr}}
+`;
   document.head.appendChild(st);
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
