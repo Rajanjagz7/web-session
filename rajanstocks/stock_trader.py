@@ -81,6 +81,12 @@ def _load(cached=False):
         st.update({k: d[k] for k in ("trades", "log", "seq", "lastRun", "resetAt") if k in d})
         from common import is_removed_trade
         st["trades"] = [t for t in st["trades"] if not is_removed_trade(t)]
+        from common import before_fresh_start, fresh_start_active
+        old = [t for t in st["trades"] if before_fresh_start(t)] if fresh_start_active(_now()) else []
+        if old:                                           # fresh start on 28 Oct 2026
+            st["trades"] = [t for t in st["trades"] if not before_fresh_start(t)]
+            st["log"] = [{"at": _now().isoformat(), "msg": f"Fresh start: {len(old)} older paper trade(s) cleared"}]
+            st["_dirty"] = True
     except FileNotFoundError:
         pass
     except Exception as e:
@@ -93,6 +99,7 @@ def _save(st):
     if st.get("_readonly"):
         print("[stockbot] state was not read - not saving")
         return
+    st.pop("_dirty", None)
     st["log"] = st["log"][-150:]
     try:
         r = _remote()
@@ -357,6 +364,9 @@ def status():
     import nse_calendar
     now = _now()
     st = _load(cached=True)
+    if st.get("_dirty"):                                    # the 28 Oct fresh start: persist the cleared book once
+        with _lock:
+            _save(st)
     last = st.get("lastRun")
     if nse_calendar.session_open(now) and (not last or (now - datetime.fromisoformat(last)).total_seconds() > 180):
         try:

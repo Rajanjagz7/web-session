@@ -129,7 +129,6 @@
         <div><small>20-day high</small><b class="num">${num(r.hi)}</b></div>
         <div><small>20-day low</small><b class="num">${num(r.lo)}</b></div>
       </div>
-      <p class="gx-note">Informational summary of trend and momentum from daily prices. It is not a forecast or a trade signal on its own.</p>
     </div></div>`;
   }
 

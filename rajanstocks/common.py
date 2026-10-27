@@ -57,3 +57,21 @@ def is_removed_trade(t):
         return ts < REMOVED_TRADES_BEFORE                  # same +05:30 offset, so ISO strings compare chronologically
     day = str(t.get("date") or "") or (f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else "")
     return not day or day <= REMOVED_TRADES_UNTIL
+
+
+FRESH_START = "2026-10-28T09:00:00+05:30"   # from 28 Oct 2026 the paper books start at zero: every trade created before this instant is void
+FRESH_START_DAY = "2026-10-27"
+FRESH_START_FROM = "2026-10-27T21:00:00+05:30"   # the rule only acts from this instant (the request time), never on earlier clocks
+
+
+def fresh_start_active(now):
+    return now.isoformat() >= FRESH_START_FROM
+
+
+def before_fresh_start(t):
+    """True for a paper trade created before the 28 Oct 2026 fresh start (anything opened from tomorrow's session on is kept)."""
+    ts = str(t.get("openedAt") or t.get("at") or "")
+    if ts:
+        return ts < FRESH_START                            # every timestamp is IST (+05:30), so ISO strings compare chronologically
+    day = str(t.get("date") or "")
+    return bool(day) and day <= FRESH_START_DAY

@@ -702,12 +702,22 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 #v-trade.glsym .right,#v-trade.glsym .tdock{display:none !important}
 #v-trade.glsym{grid-template-columns:236px minmax(0,1fr)}
 @media (max-width:900px){#v-trade.on.glsym{padding-bottom:0}#v-trade.glsym{grid-template-columns:minmax(0,1fr)}}
+/* Order ticket (option contract): a tidy two-column grid, full-width controls */
+.ot-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
+.ot-row .ot-l,.ot-row .ot-q{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0;justify-content:center}
+.ot-row .ot-l{font-size:11px;gap:4px}.ot-row .ot-l .inp{width:100%;height:34px}
+.ot-row .ot-q small{display:block;line-height:1.3}.ot-row .ot-q b{font-size:16px;margin:2px 0}
+.ot-type{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0}.ot-type .seg{display:flex;width:100%}.ot-type .seg button{flex:1;min-width:0}
+.ot-type .ot-l{width:100%}.ot-type .ot-l .inp{width:100%;height:36px}.ot-type .muted{line-height:1.45}
+.ot-chk{display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:2px;align-items:start;margin:10px 0;font-size:13px}.ot-chk input{margin-top:3px}.ot-chk .muted{grid-column:2;font-size:11.5px;line-height:1.4}
+.ot-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}.ot-btns .btn{height:40px;min-width:0;padding:0 6px;white-space:nowrap}
+.ot-pos{margin:8px 0 2px}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261028c"></script>
+<script id="scrJV" src="/static/journal.js?v=20261028d"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
-<script src="/static/geye.js?v=20261028a"></script>
+<script src="/static/geye.js?v=20261028b"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2534,7 +2544,7 @@ function renderHere(){const el=$('#here');if(!el)return;const k=navKey(App.view)
 /* Header index strip: Nifty, Bank Nifty, Sensex, VIX with live change; click opens the chart. */
 /* Header portfolio chip: the Journal's live equity (capital + booked + open P&L at live prices). */
 setInterval(()=>{if(!document.hidden)renderPfChip()},4000);setTimeout(()=>renderPfChip(),800);
-function renderPfChip(){const c=$('#pfChip');if(!c)return;let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
+function renderPfChip(){const c=$('#pfChip');if(!c)return;if(!window.__pfCl){window.__pfCl=1;try{localStorage.removeItem('rs-last-pnl')}catch(e){}}   /* an old saved 'last day P&L' kept showing after a reset */let t=null;try{t=window.JV&&JV.totals?JV.totals():null}catch(e){}
   const cap=t?t.capital:1000000;
   let pl=0, isLast=false;
   const isMktOpen = (typeof MKT !== 'undefined' && MKT.open);
@@ -3415,7 +3425,6 @@ function renderPicks(){const el=$('#v-picks');if(!el)return;const P=App.picks,f=
    <div class="pk-tools"><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock"><select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All strengths</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong setups (≥65%)</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High conviction (≥75%)</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker setups (&lt;65%)</option></select><select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest first'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select><select class="inp" id="pkSize" aria-label="Per page">${[[10,'10 per page'],[15,'15 per page'],[30,'30 per page'],[100,'100 per page'],[500,'500 per page'],[1000,'1000 per page']].map(([k,l])=>`<option value="${k}" ${f.size===k?'selected':''}>${l}</option>`).join('')}</select></div>
    
    ${body}
-   <p class="disc">Automated screen of NSE-listed instruments, refreshed through the trading day. This is a screening aid, not investment advice — trades here are paper trades only.</p>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;liveUpdate();if(window.geTags)geTags(el);drawPkFut()}   /* Index futures block removed: it repeated NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY from the Indices cards just above (and polled /api/m/futures/board every 15s) */
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');App.pk[k]=v;App.pk.page=0;renderPicks()}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
@@ -3886,7 +3895,7 @@ function drawDetail(){const box=$('#optDetail');if(!box)return;opxDock();
      <div class="opx-stats2"><div class="opt-stats" id="opStats"></div><div class="opx-rng" id="opRng"></div><div class="opx-lv" id="opLv"></div></div>
      <div class="opt-tools"><div class="seg" id="opTf"></div><div class="chips" id="opInds"></div></div>
      <div class="chart opt-chart" id="ochart"><div class="zoom" id="ozoom"></div></div></div>
-     <div class="opx-card opx-panel"><div class="opx-ph">Order <span class="muted">· paper trade</span></div><div class="opx-wtabs" role="tablist">${[['order','Order'],['sig','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${(OPT.wtab==='read'||OPT.wtab==='signals'?'sig':OPT.wtab)===k?'on':''}">${l}</button>`).join('')}</div>
+     <div class="opx-card opx-panel"><div class="opx-ph">Order</div><div class="opx-wtabs" role="tablist">${[['order','Order'],['sig','Signals']].map(([k,l])=>`<button role="tab" data-opx="wtab:${k}" class="${(OPT.wtab==='read'||OPT.wtab==='signals'?'sig':OPT.wtab)===k?'on':''}">${l}</button>`).join('')}</div>
        <div id="opTrade" class="opx-pane"></div><div class="opx-pane" id="opSig">${opxSigTabs()}<div class="opx-spane" id="opAll" hidden><div id="opRead"></div><div id="opStrat"></div></div><div class="opx-spane" id="opGe"></div><div class="opx-spane" id="opTc" hidden></div><div class="opx-spane" id="opRzt" hidden></div><div class="opx-spane" id="opHedge" hidden></div><div class="opx-spane" id="opBuyList" hidden></div></div></div>
      <div class="opx-card opx-pos" id="opxPos"></div>`;
     OPT.shell=true;
@@ -4526,7 +4535,6 @@ function drawOptTrade(){const box=$('#opTrade');if(!box||!OPT.osym)return;
      <button class="btn ot-exit" id="opExit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Exit</button>
    </div>
    <div class="ot-pos" id="opPos"></div><div class="ot-pend" id="opPend"></div>
-   <p class="muted" style="font-size:11.5px;margin-bottom:8px">Paper trade — no real money. Buys fill at the ask, sells at the bid. Charges and margin are estimates. <b>Selling (writing) options can lose far more than the premium received.</b></p>
    <div class="opx-wi" id="opxWhatIf" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px"></div>`;updOptTrade();drawWhatIf()}
 function updOptTrade(){const o=OPT.osym;if(!o||!$('#opQty'))return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1,qty=lots*lot,px=o.ask>0?o.ask:o.last,ch=calcCharges('option','buy',qty*px).total,p=posOf(o.s);
   $('#opQty').textContent=qn(qty);$('#opPx').textContent=fmtP(px);$('#opCost').textContent=money(qty*px,0)+' · '+money(ch,0);
@@ -4608,7 +4616,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028c';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028d';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;

@@ -25,6 +25,13 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
   if (S.capV !== 20261028) { if (S.capital === 1000000) S.capital = 1500000; S.capV = 20261028; save(SKEY, S); }      // 28 Oct 2026: options paper money is Rs 15 L (three Rs 5 L sleeves)
     let T = load(KEY, []);
+  /* fresh start: from 28 Oct 2026 the books begin at zero - drop journal trades created before 09:00 that morning (nothing newer is touched) */
+  (function freshStart() {
+    const CUT = Date.parse('2026-10-28T09:00:00+05:30'); if (Date.now() < Date.parse('2026-10-27T21:00:00+05:30')) return;
+    const old = t => { const ts = t && (t.ts || Date.parse(t.at || t.openedAt || t.created || '')); return isFinite(ts) ? ts < CUT : String((t && (t.date || t.day)) || '') <= '2026-10-27'; };
+    const n = T.length; T = T.filter(t => !old(t)); if (T.length !== n) save(KEY, T);
+    try { ['mer-trades', 'mer-paper'].forEach(k => { const v = JSON.parse(localStorage.getItem(k) || '[]'); if (Array.isArray(v) && v.length) { const w = v.filter(x => !old(x)); if (w.length !== v.length) localStorage.setItem(k, JSON.stringify(w)); } }); localStorage.removeItem('rj-cap-peak'); } catch (e) { }
+  })();
   const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
   const REMOVED_UNTIL = '2026-10-25';                    // untimed trades dated on/before this day
   const REMOVED_BEFORE_MS = Date.parse('2026-10-26T13:30:00+05:30');   // removal was requested ~13:26 IST: anything created after is real

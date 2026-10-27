@@ -153,7 +153,7 @@
     const root = e.target.closest('#geOvTop, #geOvDet'); if (!root) return;
     const t = e.target, q = s => t.closest(s);
     const cl = q('[data-geclose]'); if (cl && (cl.tagName === 'BUTTON' || t === cl)) { G.open = null; return paint(); }
-    if (q('.ge-det')) { const ch = q('[data-gechart]'); if (ch) openChart(ch.dataset.gechart); return; }
+    if (q('.ge-det')) { const ch = q('[data-gechart]'); if (ch) { closeDetail(); openChart(ch.dataset.gechart); } return; }
     const c = q('[data-gecard]'); if (c) { G.open = c.dataset.gecard; return paint(); }
     if (q('[data-geout]')) { G.outOpen = !G.outOpen; return paint(); }
     if (q('[data-gerefresh]')) return load(true);
@@ -388,7 +388,7 @@
       <h4>Opportunity ${isN(r.opp) ? r.opp + '/100' : 'N/A'}${tip('opportunity')}</h4>
       ${(r.oppParts || []).map(q => `<div class="ge-row"><span>${E(q.name)} <small class="muted">${q.weight}%</small></span>${bar(q.value, q.value >= 50 ? 'up' : 'down')}<b class="num">${q.value}</b></div>`).join('') || '<p class="ge-na">Not enough data to score.</p>'}
       <div class="ge-dact"><button type="button" class="btn pri" data-gestkchart="${E(r.s)}">Open chart</button>${r.fno ? `<button type="button" class="btn" data-gestkopt="${E(r.s)}">Option chain</button>` : ''}<button type="button" class="btn" data-geclose="1">Close</button></div>
-      <p class="ge-sub">Price-based score; no P/E, ROCE or supplier data. Data as of ${E(IST(G.sec.asOf))}. Informational only.</p></div></div>`;
+      <p class="ge-sub">Price-based score; no P/E, ROCE or supplier data. Data as of ${E(IST(G.sec.asOf))}.</p></div></div>`;
   }
 
   const CHART = { NIFTY: ['sym', 'NIFTY'], SENSEX: ['sym', 'SENSEX'], BANKNIFTY: ['sym', 'BANKNIFTY'], GOLD: ['gl', 'COMEX:GC1!'], SILVER: ['gl', 'COMEX:SI1!'], CRUDEOIL: ['gl', 'NYMEX:CL1!'], BITCOIN: ['gl', 'BITSTAMP:BTCUSD'], NASDAQ: ['gl', 'NASDAQ:NDX'], DJI: ['gl', 'DJ:DJI'], GLOBALRISK: ['gl', 'CBOE:VIX'] };
@@ -406,7 +406,7 @@
         ${a.zone ? `<div class="ge-lv"><span>Zone<b class="num">${dp(a.zone[0])} – ${dp(a.zone[1])}</b></span><span>Stop<b class="num down">${dp(a.sl)}</b></span><span>Targets<b class="num up">${(a.targets || []).map(dp).join(' · ')}</b></span></div>` : ''}</div>` : ''}
       ${(d.reasons || []).length ? `<h4>Why</h4><ul>${d.reasons.map(r => `<li>${E(r)}</li>`).join('')}</ul>` : ''}
       <div class="ge-dact">${CHART[c.key] ? `<button type="button" class="btn" data-gechart="${E(c.key)}">Open chart</button>` : ''}<button type="button" class="btn" data-geclose="1">Close</button></div>
-      <p class="ge-sub">Data as of ${E(IST(G.data.asOf))}. Informational only - not a forecast or advice.</p></div></div>`;
+      <p class="ge-sub">Data as of ${E(IST(G.data.asOf))}.</p></div></div>`;
   }
 
   /* ---------- page ---------- */
@@ -437,7 +437,6 @@
       <div class="ge-tabs" role="tablist">${GROUPS.map(g => `<button type="button" role="tab" aria-selected="${g === grp}" class="${g === grp ? 'on' : ''}" data-getab="${g.tabs[0][0]}" data-gegrp="${g.key}">${g.label}</button>`).join('')}</div>
       ${grp.tabs.length > 1 ? `<div class="ge-sub2" role="tablist">${grp.tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${G.tab === k}" class="${G.tab === k ? 'on' : ''}" data-getab="${k}">${l}</button>`).join('')}</div>` : ''}
       ${body}
-      ${G.tab === 'global' ? '' : `<p class="ge-disc">Informational only - built from public NSE data, broker quotes and rule-based scores; not a forecast or investment advice.</p>`}
       ${G.open ? detail() : G.stock ? stockDetail() : ''}</div>`;
     document.body.classList.toggle('ge-noscroll', !!(G.open || G.stock));
     if (G.tab === 'stocklist' && window.SB) { try { SB.page(document.getElementById('geSL'), G.slTab || undefined); G.slTab = null; } catch (e) { } }
@@ -475,9 +474,9 @@
     const cl = q('[data-geclose]');
     if (cl && (cl.tagName === 'BUTTON' || t === cl)) { G.open = null; G.stock = null; return paint(); }   // the backdrop itself or a close button - not every button inside the drawer
     if (q('.ge-det')) {
-      const ch = q('[data-gechart]'); if (ch) openChart(ch.dataset.gechart);
-      const sc = q('[data-gestkchart]'); if (sc && typeof switchSym === 'function') { G.stock = null; document.body.classList.remove('ge-noscroll'); switchSym(sc.dataset.gestkchart); }
-      const so = q('[data-gestkopt]'); if (so && typeof go === 'function') { G.stock = null; document.body.classList.remove('ge-noscroll'); try { OPT.sym = so.dataset.gestkopt; OPT.expiry = ''; OPT.chain = null; OPT.sel = null; OPT.osym = null; } catch (x) { } go('options'); }
+      const ch = q('[data-gechart]'); if (ch) { closeDetail(); openChart(ch.dataset.gechart); }
+      const sc = q('[data-gestkchart]'); if (sc && typeof switchSym === 'function') { closeDetail(); switchSym(sc.dataset.gestkchart); }
+      const so = q('[data-gestkopt]'); if (so && typeof go === 'function') { closeDetail(); try { OPT.sym = so.dataset.gestkopt; OPT.expiry = ''; OPT.chain = null; OPT.sel = null; OPT.osym = null; } catch (x) { } go('options'); }
       return;
     }
     const st = q('[data-gestock]'); if (st) { G.stock = st.dataset.gestock; return paint(); }
@@ -520,8 +519,10 @@
     }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('#v-godseye [data-gecard]') && !G.open) { e.preventDefault(); G.open = e.target.closest('[data-gecard]').dataset.gecard; paint(); }
   });
+  /* close the detail sheet for good (also the one drawn on Today's Picks, which lives on <body>) before another screen opens */
+  function closeDetail() { G.open = null; G.stock = null; const o = document.getElementById('geOvDet'); if (o) o.remove(); document.body.classList.remove('ge-noscroll'); }
   function openChart(key) {
-    const m = CHART[key]; if (!m) return; G.open = null; document.body.classList.remove('ge-noscroll');
+    const m = CHART[key]; if (!m) return; closeDetail();
     if (m[0] === 'sym' && typeof switchSym === 'function') { switchSym(m[1]); return; }
     if (typeof openGlobal === 'function') {
       const gl = () => (typeof GL !== 'undefined' && GL.items) || null;      // GL is a top-level const of the main script: not on window

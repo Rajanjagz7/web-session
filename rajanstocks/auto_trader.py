@@ -96,6 +96,14 @@ def _load(cached=False):
         if saved and not saved.get("limitRemoved"):          # settings saved in the 5-a-day days: lift the cap once
             st["cfg"].update(maxPerDay=0, indexSlots=0, stockSlots=0, limitRemoved=True)
         st["trades"], st["log"] = d.get("trades") or [], d.get("log") or []
+        from common import before_fresh_start, fresh_start_active
+        old = [t for t in st["trades"] if before_fresh_start(t)] if fresh_start_active(_now()) else []
+        if old:                                           # "remove all old entries, start from 0 tomorrow"
+            st["trades"] = [t for t in st["trades"] if not before_fresh_start(t)]
+            st["cand"] = {}
+            st["log"] = [{"at": _now().isoformat(), "msg": f"Fresh start: {len(old)} older paper trade(s) cleared - the book starts at zero on 28 Oct"}]
+            st["resetAt"] = _now().isoformat()
+            st["_dirty"] = True
         import nse_calendar                               # trades "opened" on an exchange holiday used stale prices: void them
         bad = [t for t in st["trades"] if nse_calendar.holiday(t.get("date"))]
         if bad:
