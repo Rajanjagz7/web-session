@@ -551,9 +551,9 @@ def options(symbol: str = "NIFTY", expiry: str = ""):
     return options_view(symbol.upper().strip(), expiry)
 
 
-# ---------------------------------------------------------------- sectors & stocks (Nifty 500, by NSE industry)
+# ---------------------------------------------------------------- sectors & stocks (Nifty Total Market = Nifty 500 + Microcap 250, by NSE industry)
 RULES["opportunity"] = ("Opportunity score (0-100, price-based - no fundamentals or relationship data are used): 1-month return rank in the "
-                        "Nifty 500 (25), 1-month return vs its own sector (15), trend - above its 20-session average and up over 5 sessions (15), "
+                        "Nifty Total Market (25), 1-month return vs its own sector (15), trend - above its 20-session average and up over 5 sessions (15), "
                         "place in the 52-week range (15), volume vs its 20-session average (10), Picks strength (20; re-weighted when the "
                         "stock is not in Picks). Missing parts are left out and the rest re-weighted, never counted as zero.")
 RULES["breadth"] = "Breadth = share of the sector's stocks trading above their own 20-session average close."
@@ -603,7 +603,14 @@ def _opportunity(r, r20, sec_med20):
 def sectors_build():
     import equity_bhav
     import stocks_api
-    uni = stocks_api._constituents("nifty500")
+    # Nifty Total Market = Nifty 500 + Nifty Microcap 250 (~750 stocks, every one with an NSE industry so it can be put in a sector).
+    # Stocks outside every NSE index have no sector classification in the free NSE files, so they stay in the All stocks search.
+    uni = list(stocks_api._constituents("nifty500"))
+    have = {u["s"] for u in uni}
+    try:
+        uni += [u for u in stocks_api._constituents("microcap250") if u["s"] not in have]
+    except Exception:
+        pass                                     # microcap file unavailable: fall back to the Nifty 500 alone
     q = stocks_api._quote_rows([u["s"] for u in uni])
     try:
         days = equity_bhav.load_days()
@@ -674,7 +681,7 @@ def sectors_build():
     if scored:
         t = max(scored, key=lambda r: r["opp"])
         stand.append({"key": "opp", "title": "Highest Opportunity Score", "s": t["s"], "n": t["n"], "sec": t["sec"], "value": f"{t['opp']}/100",
-                      "why": "best mix of 1-month strength, trend, 52-week position and volume in the Nifty 500"})
+                      "why": "best mix of 1-month strength, trend, 52-week position and volume among the ~750 Nifty Total Market stocks"})
     if best_sec:
         stand.append({"key": "sector", "title": "Strongest sector (1 month)", "sec": best_sec["sec"], "value": f"{best_sec['ret20']:+.1f}%",
                       "why": f"median stock {best_sec['ret20']:+.1f}% in a month · {best_sec['breadth']}% above their 20-session average"})
@@ -688,12 +695,12 @@ def sectors_build():
                       "why": "fell the most in a month but still well above its 52-week low - a watch, not a signal"})
     known = [r for r in rows if r["chg"] is not None]
     ab = [r for r in rows if r["aboveAvg"] is not None]
-    return {"asOf": _now().isoformat(timespec="seconds"), "universe": "Nifty 500", "count": len(rows),
+    return {"asOf": _now().isoformat(timespec="seconds"), "universe": "Nifty Total Market" if len(uni) > 600 else "Nifty 500", "count": len(rows),
             "adv": sum(1 for r in known if r["chg"] > 0), "dec": sum(1 for r in known if r["chg"] < 0),
             "breadth": round(sum(1 for r in ab if r["aboveAvg"]) / len(ab) * 100) if ab else None,
             "historyDays": len(dates), "sectors": sectors, "stocks": rows, "standouts": stand,
             "rules": {"opportunity": RULES["opportunity"], "breadth": RULES["breadth"]},
-            "note": "Sector = NSE industry classification of the Nifty 500. Opportunity scores use prices only (no P/E, ROCE or supplier data)."}
+            "note": "Sector = NSE industry classification of the Nifty 500 + Microcap 250 (Nifty Total Market). Opportunity scores use prices only (no P/E, ROCE or supplier data)."}
 
 
 @router.get("/sectors")

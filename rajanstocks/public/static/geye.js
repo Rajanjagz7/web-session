@@ -282,7 +282,7 @@
   }
   const SEC_COL = ['#22d3ee', '#3b82f6', '#a855f7', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#84cc16', '#06b6d4', '#f97316', '#6366f1', '#14b8a6', '#eab308', '#8b5cf6', '#0ea5e9', '#d946ef', '#22c55e', '#fb7185', '#94a3b8', '#64748b'];
   const secCol = name => { const i = ((G.sec && G.sec.sectors) || []).findIndex(x => x.sec === name); return SEC_COL[(i < 0 ? 0 : i) % SEC_COL.length]; };
-  const secOrNote = () => G.sec ? '' : `<section class="ge-p"><p class="muted">${G.secErr ? 'Sector data unavailable: ' + E(G.secErr) + ' <button type="button" class="btn-xs" data-gesecretry="1">Retry</button>' : 'Loading Nifty 500 stocks by sector…'}</p></section>`;
+  const secOrNote = () => G.sec ? '' : `<section class="ge-p"><p class="muted">${G.secErr ? 'Sector data unavailable: ' + E(G.secErr) + ' <button type="button" class="btn-xs" data-gesecretry="1">Retry</button>' : 'Loading stocks by sector…'}</p></section>`;
   const oppB = v => isN(v) ? `<span class="ge-opp ${v >= 70 ? 'hi' : v >= 45 ? 'mid' : 'lo'}"><i style="width:${v}%"></i><b class="num">${v}</b></span>` : NA;
   const rangeMini = r => isN(r.rangePos) ? `<i class="ge-rgm" title="52-week range: ${n2(r.yl)} – ${n2(r.yh)}"><b style="left:${r.rangePos}%"></b></i>` : NA;
   function stockRows() {
