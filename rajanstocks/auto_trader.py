@@ -853,7 +853,8 @@ def manage(st, now, t_end=None):
         opt_px, und_px = _last(opt_q), _last(und_q)
         if opt_px > 0:
             t["last"] = round(opt_px, 2)
-        bid = float((((opt_q or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
+            t["lastAt"] = _now().isoformat()          # when this price was seen: the Journal never swaps a newer price for an older one
+        bid =float((((opt_q or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
         ask = float((((opt_q or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
         short = t.get("pos") == "short"
         exit_px = (ask if ask > 0 else opt_px) if short else (bid if bid > 0 else opt_px)   # a short is bought back at the ask
