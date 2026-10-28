@@ -50,7 +50,7 @@ SL_V = 1                                 # one-time: premium stop 12.5% + risk p
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
-               "lockMode": "old", "eagleOn": False}
+               "lockMode": "old", "eagleOn": True, "eagleV": 1}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
@@ -100,6 +100,9 @@ def _load(cached=False):
             st["_dirty"] = True
         if saved and saved.get("slV") != SL_V:                  # one-time (user, 28 Oct): 10-15% option stop and bigger trades; the settings API can change both later
             st["cfg"].update(premSlPct=PREM_SL_PCT, riskPct=1.0, slV=SL_V)
+            st["_dirty"] = True
+        if saved and saved.get("eagleV") != 1:                  # one-time (user, 28 Oct): Eagle Trades back ON - buy-only like everything else (call for Open = Low, put for Open = High); the Algo button / settings API can switch it off again
+            st["cfg"].update(eagleOn=True, eagleV=1)
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -1241,7 +1244,7 @@ def _run_cycle(now, force, dry):
             # `openBurstCap` (12) entries are taken (paired hedge legs -W belong to their entry and do not count). Best-ranked
             # first; the rest are picked up by the following cycles as normal.
             try:
-                eagles = eagle_cands(st, today, {c["sym"] for c in chosen + filled if c.get("key") == EAGLE}) if cfg.get("eagleOn", False) else []   # Eagle is off by default (setting "eagleOn")
+                eagles = eagle_cands(st, today, {c["sym"] for c in chosen + filled if c.get("key") == EAGLE}) if cfg.get("eagleOn", False) else []   # Eagle is on by default since 28 Oct (setting "eagleOn"); buy-only like the rest
             except Exception as e:
                 eagles = []
                 st["log"].append({"at": now.isoformat(), "msg": f"eagle scan failed: {str(e)[:80]}"})

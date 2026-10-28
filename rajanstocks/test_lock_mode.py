@@ -23,7 +23,7 @@ def test_new_lock_waits_for_2500():
 
 
 def test_defaults_eagle_off_old_lock():
-    assert at.DEFAULT_CFG["eagleOn"] is False and at.DEFAULT_CFG["lockMode"] == "old"
+    assert at.DEFAULT_CFG["eagleOn"] is True and at.DEFAULT_CFG["lockMode"] == "old"
 
 
 def test_index_screen_never_reenters_same_index_after_a_stop(monkeypatch):

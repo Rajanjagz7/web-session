@@ -186,7 +186,7 @@ def test_eagle_is_skipped_when_switched_off(monkeypatch):
     monkeypatch.setattr(auto_trader, "_now", lambda: now)
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
-    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [], "log": []}
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False, "eagleOn": False}, "trades": [], "log": []}
     monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
     monkeypatch.setattr(auto_trader, "_save", lambda s: None)
     monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))
