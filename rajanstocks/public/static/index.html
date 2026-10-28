@@ -1056,6 +1056,10 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-lean b{font-size:20px;letter-spacing:.02em}.vx-lean.up b{color:var(--up)}.vx-lean.down b{color:var(--down)}.vx-lean.mute b{color:var(--gold)}
 .vx-meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--line) 50%,var(--up))}.vx-meter i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
 .vx-factors{display:flex;flex-wrap:wrap;gap:4px}
+.pk-live{margin:8px 0;padding:8px 10px;border-radius:8px;background:var(--panel-2);font-size:12.5px;line-height:1.4}.pk-live.empty{display:none}
+.pkl-b{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:10px;margin-right:6px;background:var(--panel);color:var(--text-2)}
+.pkl-b.up{background:var(--up-bg);color:var(--up)}.pkl-b.down{background:var(--down-bg);color:var(--down)}.pkl-b.warn{background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold)}
+.pkl-r{margin-top:6px;padding:6px 8px;border-left:3px solid var(--gold);background:color-mix(in srgb,var(--gold) 9%,transparent);border-radius:4px;font-size:12px;color:var(--text)}
 .vx-lean{cursor:default}.vx-lsay{margin:2px 0 0;font-size:13px;line-height:1.35;color:var(--text-2)}
 .vx-mw{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:10.5px;color:var(--text-3);margin-top:4px}
 .vx-tally{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;font-weight:700;color:var(--text-3)}.vx-tally .up{color:var(--up)}.vx-tally .down{color:var(--down)}
@@ -3256,6 +3260,44 @@ function updMobEst(){const s=App.sym,e=$('#mEst');if(e)e.textContent=money(mob.q
 /* ======================= Picks (recommended for the day) ======================= */
 const sigCls=s=>s==='BUY'||s==='Bullish'?'b-up':s==='SELL'||s==='Bearish'?'b-down':'b-mute';
 const round=(v,d=2)=>typeof v==='number'&&isFinite(v)?Math.round(v*Math.pow(10,d))/Math.pow(10,d):v;
+/* Live status of a pick: stop / target hits and reversals, from the live price against the pick's own levels. Picks themselves are a snapshot
+   (the list is rebuilt every few minutes), so this is what tells you the stop went or the target came. Hits are remembered for the day. */
+function pkLiveStore(){const k='pkl-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);
+  if(!App.pkl||App.pkl._k!==k){let o={};try{o=JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){}App.pkl={_k:k,d:o}}return App.pkl.d}
+function pkLiveSave(){try{localStorage.setItem(App.pkl._k,JSON.stringify(App.pkl.d))}catch(e){}}
+function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0;if(!px||!(o.stop>0)||!(o.t1>0))return null;
+  const L=o.dir==='L',st=pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec);
+  const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl);
+  if(beyond(px,o.stop,true)&&!rec.sl)rec.sl=now;if(beyond(px,o.t1,false)&&!rec.t1)rec.t1=now;if(o.t2>0&&beyond(px,o.t2,false)&&!rec.t2)rec.t2=now;
+  if(o.morning&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
+    if((L?lo<=o.stop:hi>=o.stop)&&!rec.sl)rec.sl=1;if((L?hi>=o.t1:lo<=o.t1)&&!rec.t1)rec.t1=1;if(o.t2>0&&(L?hi>=o.t2:lo<=o.t2)&&!rec.t2)rec.t2=1}
+  if(JSON.stringify(rec)!==was)pkLiveSave();
+  const f=v=>fmtP(v,o.dp==null?2:o.dp),tm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'',pc=(a,b)=>((a-b)/b*100);
+  let state,tone,txt;
+  const both=rec.sl&&rec.t1,slFirst=both&&rec.sl>1&&rec.t1>1?rec.sl<rec.t1:null;
+  if(rec.t2){state='T2';tone='up';txt=`Target 2 hit${tm(rec.t2)?' at '+tm(rec.t2):''} · book the rest, the trade is done`}
+  else if(both&&slFirst===null){state='BOTH';tone='warn';txt=`Stop and Target 1 were both touched today · the trade is over, wait for a fresh signal`}
+  else if(rec.sl&&(!rec.t1||slFirst)){state='SL';tone='down';txt=`Stop-loss hit${tm(rec.sl)?' at '+tm(rec.sl):''} · ${f(o.stop)} broke${rec.t1?' (Target 1 touched later)':''} · exit, wait for a fresh signal`}
+  else if(rec.t1){state='T1';tone='up';txt=`Target 1 hit${tm(rec.t1)?' at '+tm(rec.t1):''} · book part, move the stop to entry${rec.sl?' (stop touched later)':''}`}
+  else{state='ACTIVE';tone='mute';const toSl=Math.abs(pc(px,o.stop)),toT=Math.abs(pc(o.t1,px));txt=`Active · live ${f(px)} · ${toSl.toFixed(2)}% from the stop · ${toT.toFixed(2)}% to Target 1`}
+  /* reversal watch: the day's range says the market turned against this pick */
+  let rev='';const hi=s.hi,lo=s.lo;
+  if(state==='ACTIVE'&&hi>0&&lo>0&&hi>lo&&(hi-lo)/px>=0.002){const rg=hi-lo;
+    if(!L&&px>=lo+rg*0.5&&px>o.entry)rev=`Reversal watch: price bounced ${pc(px,lo).toFixed(2)}% off the day low ${f(lo)} — this bearish pick is losing grip, the buy side may be taking over`;
+    if(L&&px<=hi-rg*0.5&&px<o.entry)rev=`Reversal watch: price fell ${Math.abs(pc(px,hi)).toFixed(2)}% from the day high ${f(hi)} — this bullish pick is losing grip, the sell side may be taking over`}
+  else if(state==='SL'||state==='BOTH'){rev=L?'The market went against this long idea.':'The market went against this short idea.'}
+  return{state,tone,txt,rev}}
+function pkLiveHTML(o){const r=pkLiveEval(o);if(!r)return'';
+  return`<span class="pkl-b ${r.tone}">${r.state==='ACTIVE'?'ACTIVE':r.state==='SL'?'SL HIT':r.state==='T1'?'TARGET 1 HIT':r.state==='T2'?'TARGET 2 HIT':'STOP + TARGET TOUCHED'}</span> <span class="pkl-t">${esc(r.txt)}</span>${r.rev?`<div class="pkl-r">${esc(r.rev)}</div>`:''}`}
+function pkMorning(){const a=App.picks&&App.picks.asOf;if(!a)return false;const d=new Date(new Date(a).getTime()+330*60000),m=d.getUTCHours()*60+d.getUTCMinutes();return m>=555&&m<=565}   /* list built in the first minutes of the session */
+function pkLiveLv(p,L){const P=p.plans,sel=PK_HZ[App.pk.hz],x=P?(sel?P[sel[0]]:P.intraday):null,ok=x&&x.side!=='WAIT'&&x.stop>0;
+  const dir=ok?(x.side==='BUY'?'L':'S'):(L?'L':'S');
+  return{sym:p.s,dir,entry:ok?x.entry:p.ltp,stop:ok?x.stop:p.stop,t1:ok?x.t1:p.target,t2:ok?x.t2:p.target2,key:'st|'+p.s+'|'+dir+'|'+(sel?sel[0]:'intraday'),morning:pkMorning()}}
+function pkLiveBox(o){const h=pkLiveHTML(o);return`<div class="pk-live ${h?'':'empty'}" data-pkl="${esc(JSON.stringify(o))}">${h}</div>`}
+function pkLiveTick(){if(typeof App==='undefined'||App.view!=='picks'||document.hidden)return;
+  document.querySelectorAll('.pk-live[data-pkl]').forEach(e=>{let o;try{o=JSON.parse(e.dataset.pkl)}catch(x){return}
+    const h=pkLiveHTML(o);if(e._h!==h){e._h=h;e.innerHTML=h;e.classList.toggle('empty',!h)}})}
+setInterval(()=>{try{pkLiveTick()}catch(e){}},4000);
 function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
   const hz=(k,v)=>`<span class="hz ${v==='Bullish'?'bu':v==='Bearish'?'be':''}"><i>${k}</i>${v}</span>`;
   const c=(App.calls&&App.calls.calls)?App.calls.calls.find(x=>x.instrument===p.s):null;
@@ -3288,6 +3330,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
      <div class="pk-sig"><span class="badge ${isPut?'b-down':'b-up'}">${esc(optSignal)}</span><div class="bar"><i style="width:${p.strength||80}%;background:${isPut?'var(--down)':'var(--up)'}"></i></div><small class="muted">Strength ${p.strength||80}</small></div>
      <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
      <div class="pk-act ${isPut?'be-dn':'be-up'}"><b>${esc(optSignal)}</b> — ${esc(contract)} @ Premium <b>₹${fmtP(optEntry)}</b></div>
+     ${pkLiveBox({sym:p.s,dir:isPut?'S':'L',entry:p.ltp,stop:p.stop,t1:p.target,t2:0,key:'ix|'+p.s+'|'+(isPut?'S':'L'),morning:pkMorning()})}
      <div class="pk-lv" style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:8px 0">
       <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:3px">🎯 OPTION PREMIUM LEVELS (${hzText})</div>
       <div><small>Premium Entry</small><b class="num">₹${fmtP(optEntry)}</b></div>
@@ -3312,6 +3355,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
    <div class="pk-sig"><span class="badge ${sigCls(p.signal)}">${p.signal==='NEUTRAL'?'WATCH':p.signal}</span><div class="bar"><i style="width:${p.strength}%;background:${p.signal==='SELL'?'var(--down)':p.signal==='BUY'?'var(--up)':'var(--text-3)'}"></i></div><small class="muted">Strength ${p.strength}</small></div>
    <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
    <div class="pk-act ${L?'be-up':'be-dn'}">${p.signal==='NEUTRAL'?'No clean trade — wait for a signal':cash?L?'<b>Buy (cash)</b> with the plan&rsquo;s stop and targets':'<b>Sell (cash)</b> with the plan&rsquo;s stop and targets':L?'<b>Buy futures</b> · or <b>Buy CE</b> · or <b>Sell PE</b> (premium)':'<b>Sell futures</b> · or <b>Buy PE</b> · or <b>Sell CE</b> (premium)'}</div>
+   ${p.signal==='NEUTRAL'?'':pkLiveBox(pkLiveLv(p,L))}
    ${pkPlans(p)}
    <ul class="pk-why">${p.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')||'<li>No strong trend, volume or range signal today</li>'}</ul>
    <div class="pk-f"><span class="muted">R:R ${p.rr}</span><span><button class="btn-xs" data-sym="${esc(p.s)}">Chart</button>${cash?'':` <button class="btn-xs" data-ocq="${esc(p.s)}">Options</button>`} <button class="btn-xs ${L?'pri':''}" data-pk="${L?'buy':'sell'}:${esc(p.s)}" style="${L?'background:linear-gradient(180deg,#10b981 0%,#059669 100%);color:#fff;border-color:#059669':'background:linear-gradient(180deg,#f43f5e 0%,#e11d48 100%);color:#fff;border-color:#e11d48'};border-radius:6px;font-weight:600;padding:3px 10px">${L?'Buy':'Sell'}</button></span></div>
@@ -3343,7 +3387,7 @@ function callCard(c){const go=c.signal==='BUY CALL'||c.signal==='BUY PUT',up=c.s
   const flow=(c.callPct==null?'':`<div class="muted" style="font-size:12px;margin-top:6px">Option flow: ${c.callPct}% calls · ${c.putPct}% puts · chart ${esc(c.tech||'—')}</div>`)+inv;
   return`<article class="pk"><div class="pk-h"><div class="pk-t"><b>${esc(c.instrument)}</b><small>${go?esc(c.contract):'Index option'}${c.expiry?' · exp '+esc(c.expiry):''}</small></div><div class="pk-p"><b class="num" data-px="${esc(c.instrument)}">${fmtP(c.spot)}</b></div></div>
    <div class="pk-sig"><span class="badge ${cls2}">${esc(c.signal)}</span>${c.confidence==='medium'?`<small class="muted" title="${esc(c.basis||'')}">Flow-led · medium confidence</small>`:c.strength!=null?`<small class="muted">Strength ${c.strength}</small>`:''}</div>
-   ${lv}${flow}
+   ${lv}${go&&u.stop&&u.target?pkLiveBox({sym:c.instrument,dir:up?'L':'S',entry:c.spot,stop:u.stop,t1:u.target,t2:0,key:'call|'+c.instrument+'|'+(up?'L':'S'),morning:pkMorning()}):''}${flow}
    <ul class="pk-why">${[c.basis&&go?'Basis: '+c.basis:'',...(c.reasons||[c.reason||''])].filter(Boolean).slice(0,5).map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
    <div class="pk-f"><span class="muted">${c.lot?'Lot '+c.lot:''}</span><span><button class="btn-xs" data-sym="${esc(c.instrument)}">Chart</button></span></div></article>`}
 function callsBlock(){const C=App.calls;
