@@ -1352,6 +1352,7 @@ function paperList() {
         <p class="muted">Simulated at live option prices — no broker is connected and no real order is ever sent. Buying starts at 09:16: strategy signals come from the previous session, the other slots from live screens. Exits follow the rule on the underlying. At most 5 entries a day.</p>
         <div class="jv-actions" style="padding:0"><button class="btn ${c.enabled ? '' : 'pri'}" data-jv="autotoggle">${c.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>
         <button class="btn" data-jv="autoresearch">${c.researchMode ? 'Research mode: ON (click to switch off)' : 'Research mode: OFF (click to switch on)'}</button>
+        <button class="btn" data-jv="autogann">${c.gannOn === false ? 'Gann angle: OFF (click to start)' : 'Gann angle: ON (click to stop)'}</button>
         <button class="btn" data-jv="autoeagle">${c.eagleOn ? 'Eagle Trades: ON (click to stop)' : 'Eagle Trades: OFF (click to start)'}</button>
         <button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Rs 5 L of its own, next to the Rs 10 L option-buying book.">${c.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>
         <button class="btn" data-jv="autopair">${c.pairSell === false ? 'Option SELL leg: OFF (buy-only) - switch on' : 'Option SELL leg: ON (buy + paired sell) - switch to buy-only'}</button>
@@ -1514,6 +1515,7 @@ function paperList() {
     }
     else if (a === 'autotoggle') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.enabled : (AUTO.srv ? AUTO.srv.enabled : null); if (cur == null) return;
       fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !cur }) }).then(() => { loadSrv('auto'); syncAuto(true).then(render); }); }
+    else if (a === 'autogann') { const on = (SV.auto && SV.auto.cfg.gannOn) === false; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ gannOn: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autoeagle') { const on = !(SV.auto && SV.auto.cfg.eagleOn); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eagleOn: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autostock') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.stockTrader : (AUTO.srv && AUTO.srv.cfg ? AUTO.srv.cfg.stockTrader : false), on = (cur === false); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stockTrader: on }) }).then(() => syncAuto(true)).then(() => { if (SV.auto) loadSrv('auto'); render(); }); }
     else if (a === 'autopair') { const m = !(SV.auto && SV.auto.cfg.pairSell === false) ? false : true; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairSell: m }) }).then(() => loadSrv('auto')); }

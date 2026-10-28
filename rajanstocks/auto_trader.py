@@ -541,28 +541,48 @@ TC_TRIGGER_TOL = 0.0015          # price within 0.15% of the zone at the cycle t
 TC_MIN_RR = 1.2                  # only take a cycle trigger when the zone-to-zone reward is worth the risk
 
 
-def _gann_cands(now):
-    """Gann time-price angle bounce on NIFTY / BANKNIFTY 15-minute bars (see gann_angle.py): the latest CLOSED bar dipped to the slanted
-    1x1 line and closed back off it. Buy-only - a call for a support bounce, a put for a resistance rejection."""
+GANN_STOCKS = 30                 # stocks scanned per 15-minute bar: the strongest F&O names on the Picks screen (each costs one candle request)
+
+
+def _gann_one(sym, now):
     import gann_angle
     import market_api
+    try:
+        bars = market_api.candles(symbol=sym, tf="15m", recent=10)["bars"]
+    except Exception:
+        return None
+    ms = now.timestamp() * 1000
+    bars = [b for b in bars if b["t"] + 15 * 60 * 1000 <= ms]                                  # closed bars only
+    if not bars or ms - (bars[-1]["t"] + 15 * 60 * 1000) > 20 * 60 * 1000:
+        return None                                                                           # the signal bar must be the one that just closed
+    return gann_angle.bounce(bars)
+
+
+def _gann_cands(now, used=()):
+    """Gann time-price angle bounce (see gann_angle.py) on every index and the strongest F&O stocks, 15-minute bars: the latest CLOSED bar
+    dipped to the slanted 1x1 line and closed back off it. Buy-only - a call for a support bounce, a put for a resistance rejection.
+    Indices are looked at every cycle (candles are cached for seconds); the stock list once per 15-minute bar."""
+    import concurrent.futures
     now_m = _mins(now)
     if not (9 * 60 + 45 <= now_m <= 15 * 60):
         return []
-    out = []
-    for s in ("NIFTY", "BANKNIFTY"):
+    syms = [(s, "index") for s in INDEX_SYMS if s not in used]
+    slot = int(now.timestamp() // 900)
+    if not shared_cache.get(f"auto:gann-stocks:{slot}"):
+        shared_cache.set(f"auto:gann-stocks:{slot}", 1, 900)
         try:
-            bars = market_api.candles(symbol=s, tf="15m", recent=10)["bars"]
+            ps = [p for p in _picks().get("picks", []) if p.get("kind") != "index" and p.get("universe") != "cash" and p.get("s") not in INDEX_SYMS and p.get("s") not in used]
+            ps.sort(key=lambda p: -(p.get("strength") or 0))
+            syms += [(p["s"], "stock") for p in ps[:GANN_STOCKS]]
         except Exception:
-            continue
-        bars = [b for b in bars if b["t"] + 15 * 60 * 1000 <= now.timestamp() * 1000]            # closed bars only
-        if not bars or now.timestamp() * 1000 - (bars[-1]["t"] + 15 * 60 * 1000) > 20 * 60 * 1000:
-            continue                                                                          # the signal bar must be the one that just closed
-        g = gann_angle.bounce(bars)
-        if g:
-            out.append({"key": "gann-angle", "sym": s, "side": g["side"], "asOf": now.date().isoformat(), "score": 0.6, "indStop": g["stop"],
-                        "variant": "fixed", "filter": "none", "kind": "index", "source": g["why"], "label": "Gann angle"})
-    return out[:1]
+            pass
+    out = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        for (sym, kind), g in zip(syms, pool.map(lambda x: _gann_one(x[0], now), syms)):
+            if g:
+                out.append({"key": "gann-angle", "sym": sym, "side": g["side"], "asOf": now.date().isoformat(), "score": 0.6, "rank": 6 + g["rr"] / 10, "indStop": g["stop"],
+                            "variant": "fixed", "filter": "none", "kind": kind, "source": g["why"], "label": "Gann angle"})
+    return sorted(out, key=lambda c: -c["rank"])[:3]
 
 
 def _timecycle_cands(now):
@@ -1260,8 +1280,8 @@ def _run_cycle(now, force, dry):
                 st["log"].append({"at": now.isoformat(), "msg": f"timecycle trigger failed: {str(e)[:80]}"})
             try:                                      # Gann time-price angle bounce (chart indicator "Gann", user 28 Oct)
                 if cfg.get("gannOn", True):
-                    g_extra = _gann_cands(now)
                     gseen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                    g_extra = _gann_cands(now, gseen)
                     groom = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
                     chosen = chosen + [c for c in g_extra if c["sym"] not in gseen][:groom]
                     if g_extra:
