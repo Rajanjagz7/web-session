@@ -721,7 +721,7 @@ def classic_filter(entries, extras_agree=False):
     and side agrees (the extra is taken instead of the classic one, tagged 'agrees with ...'); unconfirmed extras stay paper-only."""
     is_extra = lambda c: c.get("key") in SHADOW_KEYS or str(c.get("key", "")).startswith("rzt")
     classic = {(c["sym"], c["side"]): c for c in entries if not is_extra(c)}
-    agreed = {(c["sym"], c["side"]) for c in entries if is_extra(c) and (c["sym"], c["side"]) in classic}
+    agreed = {(c["sym"], c["side"]) for c in entries if extras_agree and is_extra(c) and (c["sym"], c["side"]) in classic}
     kept, paper = [], []
     for c in entries:
         k = (c["sym"], c["side"])
