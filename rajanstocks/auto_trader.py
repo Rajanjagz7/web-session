@@ -1376,6 +1376,41 @@ def manual_exit(tid: str):
         return {"ok": True, "exit": t["exit"], "net": t["net"], "R": t["R"]}
 
 
+@router.post("/exit-all")
+def exit_all():
+    """Close EVERY open automated paper trade at the live bid / ask in ONE request (one state load, one quote call for all contracts,
+    one save). The Journal used to call the single-trade exit 20+ times in a row: each call loaded and saved the whole book and waited for
+    the cycle lock, so on Vercel the first one could hang and "Exit all" sat at 1/20 forever."""
+    for _ in range(8):                                   # a running cycle holds the shared lock for up to ~30 s - wait a little, then go on anyway
+        if shared_cache.lock("auto-cycle", 6):
+            break
+        time.sleep(1.0)
+    with _lock:
+        st = _load()
+        opens = [t for t in st["trades"] if t["status"] == "OPEN"]
+        if not opens:
+            return {"ok": True, "closed": 0, "net": 0, "failed": []}
+        keys = sorted({t["key"] for t in opens if t.get("key")})
+        try:
+            q = _quotes(keys) if keys else {}
+        except Exception as e:
+            raise HTTPException(503, f"Live prices unavailable right now, try again in a moment ({str(e)[:80]})")
+        n, net, failed = 0, 0.0, []
+        for t in opens:
+            qq = q.get(t.get("key")) or {}
+            bid = float((((qq or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
+            ask = float((((qq or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
+            px = (ask if t.get("pos") == "short" else bid) or _last(qq)
+            if px <= 0:                                  # no live price for this contract: leave it open rather than book a guess
+                failed.append(f"{t['id']}: no live price")
+                continue
+            _close(st, t, px, "MANUAL")
+            n += 1
+            net += t.get("net") or 0
+        _save(st)
+        return {"ok": True, "closed": n, "net": round(net, 2), "failed": failed}
+
+
 @router.post("/trade/{tid}/tsl")
 def set_tsl(tid: str, b: TslBody):
     """Attach (or remove) your own trailing stop. It only ever tightens the stop."""

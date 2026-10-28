@@ -227,10 +227,12 @@ function paperList() {
   const allTrades = () => T.concat(AUTO.list, (AUTO.stockTrades || []), paperList()).filter(t => !isRemovedId(t));
   async function jpost(url, body) {
     try {
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 45000);      /* never leave a button spinning forever */
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), signal: ac.signal });
+      clearTimeout(to);
       const d = await r.json().catch(() => ({}));
       return r.ok ? { ok: true, d } : { ok: false, err: d.detail || ('Request failed (' + r.status + ')') };
-    } catch (e) { return { ok: false, err: 'No internet connection.' }; }
+    } catch (e) { return { ok: false, err: e && e.name === 'AbortError' ? 'The server took too long - try again.' : 'No internet connection.' }; }
   }
   const ui = { tab: 'portfolio', sub: { analysis: 'strategy', config: 'auto' }, f: { from: '', to: '', market: '', inst: '', setup: '', dir: '', exit: '', rule: '', src: '' }, sel: null, lab: null, labBusy: false };
 
@@ -1031,10 +1033,17 @@ function paperList() {
     smallForm('Exit all positions', `<p>Exit <b>${open.length}</b> open position${open.length === 1 ? '' : 's'} at live prices? Open P&L right now: <b class="${cc(unr)}">${sinr(unr)}</b>. This can't be undone.</p>`, 'Exit all', () => {
       const ok = document.getElementById('jvFormOk'), er = document.getElementById('jvFormErr'); ok.disabled = true;
       (async () => {
-        let done = 0, fail = []; const now = new Date();
+        let done = 0, fail = [], autoBulk = null; const now = new Date();
         for (const t of open) {
           ok.textContent = `Exiting ${done + fail.length + 1}/${open.length}…`;
-          if (t.auto) { const r = await jpost('/api/auto/trade/' + encodeURIComponent(t.id) + '/exit'); if (r.ok) done++; else fail.push(t.id + ': ' + r.err); }
+          if (t.auto) {
+            if (autoBulk === null) {                       /* every auto trade closes in ONE request (20 single calls hung on Vercel) */
+              ok.textContent = 'Exiting auto trades…';
+              const r = await jpost('/api/auto/exit-all'); autoBulk = r;
+              if (r.ok) { done += r.d.closed || 0; (r.d.failed || []).forEach(f => fail.push(f)); } else fail.push('Auto trades: ' + r.err);
+            }
+            continue;
+          }
           else if (t.paper) { if (typeof closePos === 'function') { closePos(t.symbol, 'manual'); done++; } else fail.push(t.symbol + ': Trade screen not loaded'); }
           else { const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);
             if (l == null) { fail.push(t.id + ': no live price'); continue; }
