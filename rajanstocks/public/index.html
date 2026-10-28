@@ -2993,8 +2993,8 @@ function vxFixedGrid(spot,sym){if(!(spot>0))return'';
   rows.forEach((r,i)=>{if(!placed&&r.v<spot){html+=`<div class="vx-lad now"><span>${esc(sym||'NIFTY')}</span><b class="num">${f(spot)}</b><em>${typeof MKT!=='undefined'&&MKT.open?'live':'last'}</em></div>`;placed=true}
     if(r.half&&!(r.v>=L&&r.v<=U+.01&&Math.abs(r.v-M)<.01))return;      /* 22.5 deg steps only where they matter: the trigger band */
     const isBand=Math.abs(r.v-M)<.01||Math.abs(r.v-L)<.01,magic=!r.half&&Number.isInteger(r.q/4),cls=r.v>spot?'up':'dn';
-    html+=`<div class="vx-lad ${cls}${isBand?' vx-band':''}" title="${r.half?'22.5° step (edge of the trigger band)':'45° step · root '+(r.q/4)}"><span>${r.half?'22.5° · band':(magic?'★ root '+(r.q/4):'root '+(r.q/4))}</span><b class="num">${f(r.v)}</b><em class="num">${pct(r.v)}</em></div>`});
-  return`<div class="vx-ladder">${html}</div><p class="vx-note">${status}</p><p class="vx-note">Fixed grid: (root ÷ 4)² on whole roots, so it is the same every day. ★ marks the whole-root levels (Gann's "magic numbers"). The previous-close ladder above moves with each day's close.</p>`}
+    html+=`<div class="vx-lad ${cls}${isBand?' vx-band':''}" title="${r.half?'Edge of the no-trade band':magic?'Gann magic number':'Square of 9 level'}"><span>${r.half?'Band edge':(magic?'★ Magic':(r.v>spot?'Resistance':'Support'))}</span><b class="num">${f(r.v)}</b><em class="num">${pct(r.v)}</em></div>`});
+  return`<div class="vx-ladder">${html}</div><p class="vx-note">${status}</p>`}
 function vxLadder(g,sym){if(!g||!g.available)return`<div class="empty">${esc(g&&g.reason||'Gann levels not available')}</div>`;
   sym=sym||'NIFTY';const spot=vxSpot(g,sym),{up,dn}=vxAround(g,spot,4),live=typeof MKT!=='undefined'&&MKT.open;
   const row=l=>{const d=(l.level-spot)/spot*100,isUp=l.level>spot,ang=Math.abs(l.n)*45;
