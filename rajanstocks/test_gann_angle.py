@@ -70,6 +70,8 @@ def test_classic_filter_extras_need_a_classic_agreement():
     ent = [dict(sym="NIFTY", side="BUY", key="index", label="index call/put screen"), dict(sym="NIFTY", side="BUY", key="gann-angle", source="Gann"),
            dict(sym="TCS", side="BUY", key=a.EAGLE), dict(sym="SBIN", side="SELL", key="stock-screen"), dict(sym="SBIN", side="BUY", key="gann-angle")]
     kept, paper = a.classic_filter(ent)
+    assert sorted((c["sym"], c["key"]) for c in kept) == [("NIFTY", "index"), ("SBIN", "stock-screen")]
+    kept, paper = a.classic_filter(ent, True)
     assert sorted((c["sym"], c["key"]) for c in kept) == [("NIFTY", "gann-angle"), ("SBIN", "stock-screen")]
     assert "agrees with" in kept[0]["source"] or "agrees with" in kept[1]["source"]
     assert sorted((c["sym"], c["side"]) for c in paper) == [("SBIN", "BUY"), ("TCS", "BUY")]

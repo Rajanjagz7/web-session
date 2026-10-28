@@ -716,7 +716,7 @@ def shadow_summary(st):
     return sorted(out.values(), key=lambda o: -o["n"])
 
 
-def classic_filter(entries):
+def classic_filter(entries, extras_agree=False):
     """Classic mode: (traded, paper-only). Picks / Eagle / Gann angle / time cycle / Z Trend trade only when a classic entry on the same symbol
     and side agrees (the extra is taken instead of the classic one, tagged 'agrees with ...'); unconfirmed extras stay paper-only."""
     is_extra = lambda c: c.get("key") in SHADOW_KEYS or str(c.get("key", "")).startswith("rzt")
@@ -728,7 +728,7 @@ def classic_filter(entries):
         if not is_extra(c):
             if k not in agreed:
                 kept.append(c)
-        elif k in classic:
+        elif extras_agree and k in classic:
             base = classic[k]
             kept.append(dict(c, source=f"{c.get('source') or c.get('label') or c['key']} · agrees with {base.get('label') or base.get('key')}", agree=max(c.get("agree", 1), 2)))
         else:
@@ -1421,12 +1421,12 @@ def _run_cycle(now, force, dry):
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
             entries = sorted(eagles + chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
             if cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
-                kept, paper = classic_filter(entries)
+                kept, paper = classic_filter(entries, bool(cfg.get("extrasAgree", False)))
                 shadow_record(st, paper, now)
                 n0 = len(entries)
                 entries = kept
                 if paper:
-                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(paper)} not confirmed by a classic signal (paper only)"
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(paper)} extra-strategy signal(s) logged as paper only"
             # only good risk/reward (user rule): every STOCK entry - strategy signal, Eagle, screen - must pass the same check as
             # Today's Picks (risk <= 5% of the price, >= 1R of room to the 20-session high / low); a stock without a Picks row passes
             try:
@@ -1541,6 +1541,7 @@ class Cfg(BaseModel):
     eagleOn: bool | None = None
     gannOn: bool | None = None
     classicOnly: bool | None = None
+    extrasAgree: bool | None = None
     lockMode: str | None = None
     buyOnly: bool | None = None
     stockOnly: bool | None = None
@@ -1748,6 +1749,8 @@ def config(c: Cfg):
             st["cfg"]["gannOn"] = c.gannOn
         if c.classicOnly is not None:
             st["cfg"]["classicOnly"] = c.classicOnly
+        if c.extrasAgree is not None:
+            st["cfg"]["extrasAgree"] = c.extrasAgree
         if c.lockMode is not None:
             if c.lockMode not in LOCKS:
                 raise HTTPException(400, "lockMode must be 'old' or 'new'")
