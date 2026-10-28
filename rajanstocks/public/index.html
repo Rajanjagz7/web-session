@@ -741,6 +741,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pkf-rst{height:28px;padding:0 12px;border-radius:14px;border:1px solid var(--line);color:var(--brand);font-weight:600;font-size:12px}
 @media(min-width:900px){.pkf{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}.pkf-top,.pkf-show,.pkf-sel,.pkf-foot{grid-column:1/-1}.pkf-top{max-width:none}.pkf-sel{grid-template-columns:repeat(3,minmax(0,220px))}}
 @media(max-width:380px){.pkf-l{flex-basis:48px}.pkf-kind button{padding:0 10px}}
+.pk-sec{display:flex;margin:10px 0}.pk-sec button{flex:1;padding:11px 8px;font-weight:600}.pk-sec .pk-n{font-style:normal;background:var(--accent,#3b82f6);color:#fff;border-radius:9px;padding:0 6px;margin-left:4px;font-size:11px}[hidden]{display:none!important}
 </style>
 <script id="scrJV" src="/static/journal.js?v=20261028n"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
@@ -3368,10 +3369,13 @@ function pkFreshHTML(){const all=pkfLoad().slice().sort((a,b)=>(b.trend-a.trend)
   const n=pg.n||all.length||1,pages=Math.max(1,Math.ceil(all.length/n));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const list=all.slice(pg.p*n,pg.p*n+n);
   const pager=all.length>4?`<div class="pkfs-pg"><span class="pkfs-sz">${PKF_SIZES.map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pkfn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pkfp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${pg.p*n+1}–${Math.min(all.length,pg.p*n+n)} of ${all.length}</small><button data-pkfp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
-  return`<section class="card pkfs"><div class="pkfs-h"><b>⚡ Fresh buys</b><small class="muted">${all.length?all.length+' reversal setup'+(all.length>1?'s':''):'reversals found live'}</small></div>
+  return`<section class="card pkfs"><div class="pkfs-h"><b>⚡ Fresh picks</b><small class="muted">${all.length?all.length+' reversal setup'+(all.length>1?'s':''):'reversals found live'}</small></div>
    ${list.length?`<div class="pkfs-g">${list.map(pkfCard).join('')}</div>${pager}`:`<p class="muted pkfs-e">${MKT.open?'No fresh setup right now.':'Starts when the market opens.'} A <b>call</b> shows when an index or F&amp;O stock takes support (bounces off its day low and turns up), a <b>put</b> when it is rejected at its day high. Checked every few seconds from 09:20 to 14:45.</p>`}</section>`}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pkfn],[data-pkfp]');if(!b)return;const pg=pkfPg();
   if(b.dataset.pkfn!==undefined){pg.n=parseInt(b.dataset.pkfn,10)||0;pg.p=0;try{localStorage.setItem('pkf-size',String(pg.n))}catch(x){}}else pg.p+=parseInt(b.dataset.pkfp,10);pkFreshTick()});
+/* the Picks screen has two sections, one at a time: today's fresh picks, or the browse / filter lists */
+function pkSec(){if(App.pkSec)return App.pkSec;let v='fresh';try{v=localStorage.getItem('pk-sec')==='browse'?'browse':'fresh'}catch(e){}return App.pkSec=v}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pksec]');if(!b)return;App.pkSec=b.dataset.pksec==='browse'?'browse':'fresh';try{localStorage.setItem('pk-sec',App.pkSec)}catch(x){}App.pkKeep=false;renderPicks(true)});
 function pkFreshTick(){const e=document.getElementById('pkFresh');if(!e)return;const h=pkFreshHTML();if(e._h!==h){e._h=h;e.innerHTML=h}}
 function pkLiveBox(o){const h=pkLiveHTML(o);return`<div class="pk-live ${h?'':'empty'}" data-pkl="${esc(JSON.stringify(o))}">${h}</div>`}
 function pkLiveTick(){if(typeof App==='undefined'||document.hidden)return;const syms=new Set();
@@ -3520,6 +3524,7 @@ function patchPicks(el,tpl){const t=document.createElement('div');t.innerHTML=tp
   el.querySelector('#pkRes').innerHTML=t.querySelector('#pkRes').innerHTML;el.querySelector('#pkNews').innerHTML=t.querySelector('#pkNews').innerHTML;
   const lp=el.querySelector('#pkPanel'),np=t.querySelector('#pkPanel'),typing=document.activeElement&&document.activeElement.id==='pkQ';
   if(typing){const lf=lp.querySelector('#pkFoot'),nf=np.querySelector('#pkFoot');if(lf&&nf)lf.innerHTML=nf.innerHTML}else{lp.innerHTML=np.innerHTML;pkAlign(el)}
+  ['#pkRes','#pkPanel','#pkFresh'].forEach(i=>{const a=el.querySelector(i),b=t.querySelector(i);if(a&&b)a.hidden=b.hidden});const lt=el.querySelector('.pk-sec'),nt=t.querySelector('.pk-sec');if(lt&&nt)lt.innerHTML=nt.innerHTML;
   return true}
 function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(f.kind==='INDEX'){f.hz='ALL';f.mkt='ALL';f.str='ALL';f.q='';if(f.sig==='EVERY')f.sig='TOP'}   // index calls only have the Show filter: nothing hidden can empty the list
@@ -3583,8 +3588,9 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
   const _keep=!!App.pkKeep;App.pkKeep=false;const _sp=pkScroller(el),_st=_sp.scrollTop,_pa=el.querySelector('.pkf'),_t0=_pa?_pa.getBoundingClientRect().top:null;   // keep the filter panel where it is on screen when the list below changes length
   const _tpl=`<div class="page">${window.geTabsHTML?geTabsHTML({upd:App.pkBusy?'Refreshing picks…':'Picks updated '+((P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')),busy:App.pkBusy}):pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    ${window.geOverviewHTML?geOverviewHTML():`<div class="ixs-h"><b>Indices</b></div><div class="ixs">${idxHtml}</div>`}
-   <div id="pkFresh">${pkFreshHTML()}</div>
-   <div class="card pkf" id="pkPanel">
+   <div class="seg pk-sec" role="tablist" aria-label="Picks sections"><button type="button" role="tab" class="${pkSec()==='fresh'?'on':''}" aria-selected="${pkSec()==='fresh'}" data-pksec="fresh">⚡ Fresh picks${pkfLoad().length?` <i class="pk-n">${pkfLoad().length}</i>`:''}</button><button type="button" role="tab" class="${pkSec()==='browse'?'on':''}" aria-selected="${pkSec()==='browse'}" data-pksec="browse">🔎 Browse &amp; filter</button></div>
+   <div id="pkFresh" ${pkSec()==='fresh'?'':'hidden'}>${pkFreshHTML()}</div>
+   <div class="card pkf" id="pkPanel" ${pkSec()==='browse'?'':'hidden'}>
      <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['STOCK','Stocks'],['INDEX','Index calls']],f.kind,'kind')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
      <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):chips([['TOP','Top 10-15'],['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div></div>
      ${isIdx?'':`<div class="pkf-row"><span class="pkf-l">Horizon</span><div class="seg pkf-seg">${segs([['ALL','Any'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>
@@ -3593,7 +3599,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
      <div id="pkFoot">${pkDirty(f)?'<div class="pkf-foot"><span>Filters applied</span><button type="button" class="pkf-rst" data-pkreset="1">Reset filters</button></div>':''}</div>
    </div>
    
-   <div id="pkRes">${body}</div>
+   <div id="pkRes" ${pkSec()==='browse'?'':'hidden'}>${body}</div>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws" id="pkNews">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;
   if(partial===true&&patchPicks(el,_tpl)){liveUpdate();if(window.geTags)geTags(el);return}
   el.innerHTML=_tpl;pkAlign(el);
