@@ -740,7 +740,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(min-width:900px){.pkf{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}.pkf-top,.pkf-show,.pkf-sel,.pkf-foot{grid-column:1/-1}.pkf-top{max-width:none}.pkf-sel{grid-template-columns:repeat(3,minmax(0,220px))}}
 @media(max-width:380px){.pkf-l{flex-basis:48px}.pkf-kind button{padding:0 10px}}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261028g"></script>
+<script id="scrJV" src="/static/journal.js?v=20261028h"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
@@ -1056,6 +1056,18 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-lean b{font-size:20px;letter-spacing:.02em}.vx-lean.up b{color:var(--up)}.vx-lean.down b{color:var(--down)}.vx-lean.mute b{color:var(--gold)}
 .vx-meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--line) 50%,var(--up))}.vx-meter i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
 .vx-factors{display:flex;flex-wrap:wrap;gap:4px}
+.pkfs{margin-bottom:12px;padding:12px 14px}.pkfs-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}.pkfs-h b{font-size:15px}.pkfs-e{font-size:12.5px;margin:0;line-height:1.45}
+.pkfs-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.pkfr{border-radius:12px;padding:10px 12px;background:var(--panel-2);border-left:4px solid var(--text-3)}.pkfr.up{border-left-color:var(--up)}.pkfr.down{border-left-color:var(--down)}
+.pkfr-h{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:6px}.pkfr-h b{font-size:14.5px}.pkfr-b{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:.03em}.pkfr.up .pkfr-b{background:var(--up-bg);color:var(--up)}.pkfr.down .pkfr-b{background:var(--down-bg);color:var(--down)}
+.pkfr-l{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:4px 0}.pkfr-l small{display:block;font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.pkfr-l b{font-size:13px}
+.pkfr-w{font-size:12px;color:var(--text-2);margin:4px 0}
+.pkc-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px}
+.pkc{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:3px 9px;border-radius:12px;background:var(--panel);color:var(--text-3)}.pkc i{font-style:normal;font-weight:600;font-size:11px;opacity:.85}
+.pkc.sl{background:var(--down-bg);color:var(--down)}.pkc.tg{background:var(--up-bg);color:var(--up)}.pkc.off{font-weight:600}
+.pkl-t{font-size:12px;color:var(--text-2)}
+.pkg{margin:10px 0}.pkg h4{margin:0 0 6px;font-size:13px}.pkg-sum{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-weight:700;margin-bottom:8px}.pkg-sum .up{color:var(--up)}.pkg-sum .down{color:var(--down)}
+.pkr{padding:8px 10px;border-radius:10px;background:var(--panel-2);margin-bottom:6px}.pkr-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}.pkr-h b{font-size:13.5px}.pkr-tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--panel);color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}.pkr-s{font-size:12px;color:var(--text-2);margin-top:3px}
 .pk-live{margin:8px 0;padding:8px 10px;border-radius:8px;background:var(--panel-2);font-size:12.5px;line-height:1.4}.pk-live.empty{display:none}
 .pkl-b{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:10px;margin-right:6px;background:var(--panel);color:var(--text-2)}
 .pkl-b.up{background:var(--up-bg);color:var(--up)}.pkl-b.down{background:var(--down-bg);color:var(--down)}.pkl-b.warn{background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold)}
@@ -3263,41 +3275,106 @@ const round=(v,d=2)=>typeof v==='number'&&isFinite(v)?Math.round(v*Math.pow(10,d
 /* Live status of a pick: stop / target hits and reversals, from the live price against the pick's own levels. Picks themselves are a snapshot
    (the list is rebuilt every few minutes), so this is what tells you the stop went or the target came. Hits are remembered for the day. */
 function pkLiveStore(){const k='pkl-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);
-  if(!App.pkl||App.pkl._k!==k){let o={};try{o=JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){}App.pkl={_k:k,d:o}}return App.pkl.d}
+  if(!App.pkl||App.pkl._k!==k){let o={};try{o=JSON.parse(localStorage.getItem(k)||'{}')||{}}catch(e){}App.pkl={_k:k,d:o};
+    try{const cut=new Date(Date.now()+330*60000-14*864e5).toISOString().slice(0,10);for(let i=localStorage.length-1;i>=0;i--){const n=localStorage.key(i);if(n&&/^pkl-\d{4}-\d\d-\d\d$/.test(n)&&n.slice(4)<cut)localStorage.removeItem(n)}}catch(e){}}   /* keep 14 days */
+  return App.pkl.d}
 function pkLiveSave(){try{localStorage.setItem(App.pkl._k,JSON.stringify(App.pkl.d))}catch(e){}}
-function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0;if(!px||!(o.stop>0)||!(o.t1>0))return null;
-  const L=o.dir==='L',st=pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec);
-  const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl);
-  if(beyond(px,o.stop,true)&&!rec.sl)rec.sl=now;if(beyond(px,o.t1,false)&&!rec.t1)rec.t1=now;if(o.t2>0&&beyond(px,o.t2,false)&&!rec.t2)rec.t2=now;
+const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
+/* SL 🚫 / T1 ✅ marks: a hit shows the mark (and the time if known), a level not reached yet shows its price */
+function pkChipsHTML(m,h){const f=v=>fmtP(v,m.dp==null?2:m.dp),c=(k,lvl,ts,isSl)=>ts?`<span class="pkc ${isSl?'sl':'tg'}">${k} ${isSl?'🚫':'✅'}${pkTm(ts)?' <i>'+pkTm(ts)+'</i>':''}</span>`:`<span class="pkc off">${k} <i>${f(lvl)}</i></span>`;
+  return c('SL',m.sl,h.sl,true)+(m.t||[]).map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false)).join('')}
+/* what happened, in order: "SL 🚫 → T1 ✅" and a one-line story */
+function pkStory(m,h,best){const ev=[];if(h.sl)ev.push(['SL',h.sl]);(m.t||[]).forEach((v,i)=>{if(h['t'+(i+1)])ev.push(['T'+(i+1),h['t'+(i+1)]])});
+  if(!ev.length){const T1=(m.t||[])[0],L=m.d==='L',pr=best!=null&&T1&&m.e?((L?best-m.e:m.e-best)/Math.abs(T1-m.e))*100:0;
+    return pr>=60?`Went near T1 (${Math.min(99,Math.round(pr))}% of the way), not reached`:'No stop or target touched'}
+  const known=ev.every(x=>x[1]>1);if(known)ev.sort((a,b)=>a[1]-b[1]);
+  const top=Math.max(0,...ev.filter(x=>x[0]!=='SL').map(x=>+x[0].slice(1))),slI=ev.findIndex(x=>x[0]==='SL'),firstT=ev.findIndex(x=>x[0]!=='SL');
+  let s;if(slI<0)s=`Target reached (T${top})`;else if(firstT<0)s='Stopped out';else if(!known)s=`Stop and T${top} both touched`;else s=slI<firstT?`Hit the stop, then went to T${top}`:`Reached T${ev[firstT][0].slice(1)}, then the stop went`;
+  return s+(known?'':' (order unknown)')}
+function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).filter(v=>v>0);if(!px||!(o.stop>0)||!T.length)return null;
+  const L=o.dir==='L',st=pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec),h=rec.h||(rec.h={});
+  const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl),mark=(k,t)=>{if(!h[k])h[k]=t};
+  if(beyond(px,o.stop,true))mark('sl',now);T.forEach((v,i)=>{if(beyond(px,v,false))mark('t'+(i+1),now)});
   if(o.morning&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
-    if((L?lo<=o.stop:hi>=o.stop)&&!rec.sl)rec.sl=1;if((L?hi>=o.t1:lo<=o.t1)&&!rec.t1)rec.t1=1;if(o.t2>0&&(L?hi>=o.t2:lo<=o.t2)&&!rec.t2)rec.t2=1}
+    if(L?lo<=o.stop:hi>=o.stop)mark('sl',1);T.forEach((v,i)=>{if(L?hi>=v:lo<=v)mark('t'+(i+1),1)})}
+  const ext=o.morning&&s.hi>0&&s.lo>0?(L?s.hi:s.lo):px;rec.best=rec.best==null?ext:(L?Math.max(rec.best,ext,px):Math.min(rec.best,ext,px));
+  if(!rec.m||!Object.keys(h).length)rec.m={s:o.sym,l:o.label||o.sym,d:o.dir,k:o.kind||'stock',e:o.entry,sl:o.stop,t:T,at:(rec.m&&rec.m.at)||now,dp:o.dp==null?2:o.dp};
   if(JSON.stringify(rec)!==was)pkLiveSave();
-  const f=v=>fmtP(v,o.dp==null?2:o.dp),tm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'',pc=(a,b)=>((a-b)/b*100);
-  let state,tone,txt;
-  const both=rec.sl&&rec.t1,slFirst=both&&rec.sl>1&&rec.t1>1?rec.sl<rec.t1:null;
-  if(rec.t2){state='T2';tone='up';txt=`Target 2 hit${tm(rec.t2)?' at '+tm(rec.t2):''} · book the rest, the trade is done`}
-  else if(both&&slFirst===null){state='BOTH';tone='warn';txt=`Stop and Target 1 were both touched today · the trade is over, wait for a fresh signal`}
-  else if(rec.sl&&(!rec.t1||slFirst)){state='SL';tone='down';txt=`Stop-loss hit${tm(rec.sl)?' at '+tm(rec.sl):''} · ${f(o.stop)} broke${rec.t1?' (Target 1 touched later)':''} · exit, wait for a fresh signal`}
-  else if(rec.t1){state='T1';tone='up';txt=`Target 1 hit${tm(rec.t1)?' at '+tm(rec.t1):''} · book part, move the stop to entry${rec.sl?' (stop touched later)':''}`}
-  else{state='ACTIVE';tone='mute';const toSl=Math.abs(pc(px,o.stop)),toT=Math.abs(pc(o.t1,px));txt=`Active · live ${f(px)} · ${toSl.toFixed(2)}% from the stop · ${toT.toFixed(2)}% to Target 1`}
-  /* reversal watch: the day's range says the market turned against this pick */
+  const f=v=>fmtP(v,o.dp==null?2:o.dp),pc=(a,b)=>((a-b)/b*100),nT=T.length;
+  const doneT=T.map((_,i)=>h['t'+(i+1)]).filter(Boolean).length;
+  let hint;
+  if(h.sl&&!doneT)hint='Exit · wait for a fresh signal';else if(h.sl&&doneT)hint='Trade is over · wait for a fresh signal';else if(doneT>=nT)hint='Book the rest · trade done';else if(doneT)hint='Book part · move the stop to entry';
+  else hint=`Live ${f(px)} · ${Math.abs(pc(px,o.stop)).toFixed(2)}% to stop · ${Math.abs(pc(T[0],px)).toFixed(2)}% to T1`;
   let rev='';const hi=s.hi,lo=s.lo;
-  if(state==='ACTIVE'&&hi>0&&lo>0&&hi>lo&&(hi-lo)/px>=0.002){const rg=hi-lo;
-    if(!L&&px>=lo+rg*0.5&&px>o.entry)rev=`Reversal watch: price bounced ${pc(px,lo).toFixed(2)}% off the day low ${f(lo)} — this bearish pick is losing grip, the buy side may be taking over`;
-    if(L&&px<=hi-rg*0.5&&px<o.entry)rev=`Reversal watch: price fell ${Math.abs(pc(px,hi)).toFixed(2)}% from the day high ${f(hi)} — this bullish pick is losing grip, the sell side may be taking over`}
-  else if(state==='SL'||state==='BOTH'){rev=L?'The market went against this long idea.':'The market went against this short idea.'}
-  return{state,tone,txt,rev}}
+  if(!h.sl&&!doneT&&hi>0&&lo>0&&hi>lo&&(hi-lo)/px>=0.002){const rg=hi-lo;
+    if(!L&&px>=lo+rg*0.5&&px>o.entry)rev=`Reversal watch: bounced ${pc(px,lo).toFixed(2)}% off the day low ${f(lo)} — this bearish pick is losing grip, buyers may be taking over`;
+    if(L&&px<=hi-rg*0.5&&px<o.entry)rev=`Reversal watch: fell ${Math.abs(pc(px,hi)).toFixed(2)}% from the day high ${f(hi)} — this bullish pick is losing grip, sellers may be taking over`}
+  else if(h.sl&&!doneT)rev=L?'The market went against this long idea.':'The market went against this short idea.';
+  return{chips:pkChipsHTML(rec.m,h),hint,rev,story:pkStory(rec.m,h,rec.best)}}
 function pkLiveHTML(o){const r=pkLiveEval(o);if(!r)return'';
-  return`<span class="pkl-b ${r.tone}">${r.state==='ACTIVE'?'ACTIVE':r.state==='SL'?'SL HIT':r.state==='T1'?'TARGET 1 HIT':r.state==='T2'?'TARGET 2 HIT':'STOP + TARGET TOUCHED'}</span> <span class="pkl-t">${esc(r.txt)}</span>${r.rev?`<div class="pkl-r">${esc(r.rev)}</div>`:''}`}
+  return`<div class="pkc-row">${r.chips}</div><div class="pkl-t">${esc(r.hint)}</div>${r.rev?`<div class="pkl-r">${esc(r.rev)}</div>`:''}`}
 function pkMorning(){const a=App.picks&&App.picks.asOf;if(!a)return false;const d=new Date(new Date(a).getTime()+330*60000),m=d.getUTCHours()*60+d.getUTCMinutes();return m>=555&&m<=565}   /* list built in the first minutes of the session */
 function pkLiveLv(p,L){const P=p.plans,sel=PK_HZ[App.pk.hz],x=P?(sel?P[sel[0]]:P.intraday):null,ok=x&&x.side!=='WAIT'&&x.stop>0;
   const dir=ok?(x.side==='BUY'?'L':'S'):(L?'L':'S');
-  return{sym:p.s,dir,entry:ok?x.entry:p.ltp,stop:ok?x.stop:p.stop,t1:ok?x.t1:p.target,t2:ok?x.t2:p.target2,key:'st|'+p.s+'|'+dir+'|'+(sel?sel[0]:'intraday'),morning:pkMorning()}}
+  const hzn=sel?sel[1]:'Intraday';return{sym:p.s,dir,entry:ok?x.entry:p.ltp,stop:ok?x.stop:p.stop,ts:ok?[x.t1,x.t2,x.t3]:[p.target,p.target2],label:p.s+' '+(dir==='L'?'Buy':'Sell')+(hzn==='Intraday'?'':' · '+hzn),kind:'stock',key:'st|'+p.s+'|'+dir+'|'+(sel?sel[0]:'intraday'),morning:pkMorning()}}
+/* FRESH BUY: reversal setups found from the live day range and a short price memory - a CALL when an index / F&O stock took support (bounced off its
+   day low and is turning up), a PUT when it was rejected at its day high. Zero server calls: it reads the quotes the screen already polls.
+   Once found, an idea is kept for the day with its own stop and targets (entry, stop just under the low / over the high, T1 = 1R, T2 = 2R). */
+const PKF_CFG={index:{rng:.35,bnc:.18,rmax:1.0},stock:{rng:1.0,bnc:.45,rmax:2.5}};
+function pkfKey(){return'pkf-'+new Date(Date.now()+330*60000).toISOString().slice(0,10)}
+function pkfLoad(){const k=pkfKey();if(!App.pkf||App.pkf._k!==k){let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]')||[]}catch(e){}App.pkf={_k:k,a};
+  try{const cut=new Date(Date.now()+330*60000-14*864e5).toISOString().slice(0,10);for(let i=localStorage.length-1;i>=0;i--){const n=localStorage.key(i);if(n&&/^pkf-\d{4}-\d\d-\d\d$/.test(n)&&n.slice(4)<cut)localStorage.removeItem(n)}}catch(e){}}return App.pkf.a}
+function pkfSave(){try{localStorage.setItem(App.pkf._k,JSON.stringify(App.pkf.a))}catch(e){}}
+function pkfRing(sym,p){const R=App.pkRing||(App.pkRing={}),a=R[sym]||(R[sym]=[]),t=Date.now();if(!a.length||t-a[a.length-1][0]>=10000){a.push([t,p]);if(a.length>240)a.shift()}return a}
+function pkfDetect(p){const s=SYM(p.s);if(!s||!(s.last>0)||!(s.hi>0)||!(s.lo>0)||s.hi<=s.lo||s.last>s.hi*1.0005||s.last<s.lo*.9995)return null;
+  const isI=p.kind==='index',C=PKF_CFG[isI?'index':'stock'],L=s.last,hi=s.hi,lo=s.lo,rg=hi-lo,ref=s.prev>0?s.prev:L;
+  const ring=pkfRing(p.s,L);if(rg/ref*100<C.rng)return null;
+  const t3=Date.now()-180000,old=ring.find(x=>x[0]>=t3-20000&&x[0]<=t3+20000),have=ring.length>=18&&ring[0][0]<=Date.now()-170000,since=ring.filter(x=>x[0]>=Date.now()-2400000).map(x=>x[1]);
+  const up=L-lo,dn=hi-L;let dir=null;
+  if(up/lo*100>=C.bnc&&up>=rg*(have?.35:.4)&&up<=rg*(have?.8:.7)&&(!have||(L>(old?old[1]:L-1)&&Math.min(...since)<=lo*1.0015)))dir='L';
+  else if(dn/hi*100>=C.bnc&&dn>=rg*(have?.35:.4)&&dn<=rg*(have?.8:.7)&&(!have||(L<(old?old[1]:L+1)&&Math.max(...since)>=hi*.9985)))dir='S';
+  if(!dir)return null;
+  const buf=L*.0005,stop=dir==='L'?lo-buf:hi+buf,R=Math.abs(L-stop);if(R/L*100>C.rmax||R<=0)return null;
+  const dp=s.dp==null?2:s.dp,r2=v=>+v.toFixed(dp),side=dir==='L'?1:-1;
+  const sg=p.signal,trend=isI?(dir==='L'?(p.intraday==='Bullish'||sg==='BUY'):(p.intraday==='Bearish'||sg==='SELL')):(dir==='L'?sg==='BUY':sg==='SELL');
+  return{sym:p.s,dir,kind:isI?'index':'stock',entry:r2(L),stop:r2(stop),t:[r2(L+side*R),r2(L+side*2*R)],lvl:dir==='L'?r2(lo):r2(hi),pct:dir==='L'?(up/lo*100):(dn/hi*100),trend:!!trend,confirmed:have,at:Date.now(),dp,n:p.n}}
+function pkfScan(){if(typeof App==='undefined'||document.hidden||!App.picks||!MKT.open)return false;
+  const m=(d=>d.getUTCHours()*60+d.getUTCMinutes())(new Date(Date.now()+330*60000));if(m<570||m>885)return false;     /* 09:30 - 14:45 */
+  const list=pkfLoad(),st=pkLiveStore();let ch=false;
+  (App.picks.picks||[]).filter(p=>p.kind==='index'||p.universe!=='cash').forEach(p=>{const d=pkfDetect(p);if(!d)return;
+    const prev=list.filter(x=>x.sym===d.sym&&x.dir===d.dir).pop();
+    if(prev){const rec=st['fr|'+prev.sym+'|'+prev.dir+'|'+prev.at],h=rec&&rec.h||{},done=h.sl||prev.t.every((_,i)=>h['t'+(i+1)]);if(!(done&&Date.now()-prev.at>20*60000))return}   /* one live idea per name and side; a finished one may be replaced after 20 min */
+    list.push(d);ch=true});
+  if(ch)pkfSave();return ch}
+function pkfCard(x){const f=v=>fmtP(v,x.dp),call=x.dir==='L',step=x.sym==='BANKNIFTY'||x.sym==='SENSEX'?100:50,s=SYM(x.sym),atm=Math.round(((s&&s.last)||x.entry)/step)*step;
+  const contract=x.kind==='index'?`${x.sym} ${atm} ${call?'CE':'PE'}`:`${x.sym} ${call?'CE':'PE'} (ATM)`;
+  const tm=new Date(x.at+330*60000).toISOString().slice(11,16);
+  return`<article class="pkfr ${call?'up':'down'}"><div class="pkfr-h"><b>${esc(x.sym)}</b><span class="pkfr-b">FRESH BUY ${call?'CALL':'PUT'}</span><span class="pkr-tag">${x.trend?'With the trend':'Against the trend'}</span><small class="muted">found ${tm}</small></div>
+   <div class="pkfr-l"><span><small>Buy</small><b>${esc(contract)}</b></span><span><small>Index/stock entry</small><b class="num">${f(x.entry)}</b></span><span><small>Stop</small><b class="num down">${f(x.stop)}</b></span><span><small>T1 · T2</small><b class="num up">${f(x.t[0])} · ${f(x.t[1])}</b></span></div>
+   <div class="pkfr-w">${call?`Took support: bounced ${x.pct.toFixed(2)}% off the day low ${f(x.lvl)} and is turning up`:`Rejected at resistance: fell ${x.pct.toFixed(2)}% from the day high ${f(x.lvl)} and is turning down`}${x.confirmed?'':' · app opened after the move, confirm on the chart'}</div>
+   ${pkLiveBox({sym:x.sym,dir:x.dir,entry:x.entry,stop:x.stop,ts:x.t,label:x.sym+' fresh '+(call?'call':'put'),kind:'fresh',dp:x.dp,key:'fr|'+x.sym+'|'+x.dir+'|'+x.at,morning:false})}
+   <div class="pk-f"><span class="muted">Premium stop / targets: use the chain</span><span><button class="btn-xs" data-sym="${esc(x.sym)}">Chart</button> <button class="btn-xs pri" data-ocq="${esc(x.sym)}">Option Chain</button></span></div></article>`}
+function pkFreshHTML(){const list=pkfLoad().slice().sort((a,b)=>(b.trend-a.trend)||(b.at-a.at)).slice(0,8);
+  return`<section class="card pkfs"><div class="pkfs-h"><b>⚡ Fresh buys</b><small class="muted">${list.length?list.length+' reversal setup'+(list.length>1?'s':''):'reversals found live'}</small></div>
+   ${list.length?`<div class="pkfs-g">${list.map(pkfCard).join('')}</div>`:`<p class="muted pkfs-e">${MKT.open?'No fresh setup right now.':'Starts when the market opens.'} A <b>call</b> shows when an index or F&amp;O stock takes support (bounces off its day low and turns up), a <b>put</b> when it is rejected at its day high. Checked every few seconds from 09:30 to 14:45.</p>`}</section>`}
+function pkFreshTick(){const e=document.getElementById('pkFresh');if(!e)return;const h=pkFreshHTML();if(e._h!==h){e._h=h;e.innerHTML=h}}
 function pkLiveBox(o){const h=pkLiveHTML(o);return`<div class="pk-live ${h?'':'empty'}" data-pkl="${esc(JSON.stringify(o))}">${h}</div>`}
-function pkLiveTick(){if(typeof App==='undefined'||App.view!=='picks'||document.hidden)return;
-  document.querySelectorAll('.pk-live[data-pkl]').forEach(e=>{let o;try{o=JSON.parse(e.dataset.pkl)}catch(x){return}
-    const h=pkLiveHTML(o);if(e._h!==h){e._h=h;e.innerHTML=h;e.classList.toggle('empty',!h)}})}
-setInterval(()=>{try{pkLiveTick()}catch(e){}},4000);
+function pkLiveTick(){if(typeof App==='undefined'||document.hidden)return;const syms=new Set();
+  document.querySelectorAll('.pk-live[data-pkl]').forEach(e=>{let o;try{o=JSON.parse(e.dataset.pkl)}catch(x){return}syms.add(o.sym);
+    const h=pkLiveHTML(o);if(e._h!==h){e._h=h;e.innerHTML=h;e.classList.toggle('empty',!h)}});App.pkSyms=[...syms].slice(0,40)}
+/* Picks log: everything the pick cards tracked, kept per day on this device (last 14 days) - shown in Journal > Picks log */
+function pkLogDays(){const out=[];try{for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&/^pkl-\d{4}-\d\d-\d\d$/.test(n)){let d={};try{d=JSON.parse(localStorage.getItem(n))||{}}catch(e){}
+  const rows=Object.entries(d).filter(([k,v])=>v&&v.m).map(([k,v])=>({k,m:v.m,h:v.h||{},best:v.best}));out.push({date:n.slice(4),rows})}}}catch(e){}
+  return out.sort((a,b)=>a.date<b.date?1:-1)}
+function pkLogHTML(){const days=pkLogDays();if(!days.length)return'<div class="empty">Nothing tracked yet. Open Today\'s Picks while the market is open: every pick card on screen is followed against its stop and targets, and the result is kept here.</div>';
+  const KIND={index:'Index option',call:'Index call',stock:'Stock / stock option',fresh:'Fresh buy'};
+  return days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
+    const tg=rows.filter(r=>Object.keys(r.h).some(k=>k!=='sl')).length,sl=rows.filter(r=>r.h.sl).length;
+    const x=new Date(d.date+'T12:00:00Z'),lab=x.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',timeZone:'UTC'});
+    return`<section class="pkg"><h4>${di===0?'Today · ':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks tracked</span><span class="up">✅ ${tg} reached a target</span><span class="down">🚫 ${sl} hit the stop</span></div>
+      ${rows.map(r=>`<div class="pkr"><div class="pkr-h"><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best))}</div></div>`).join('')}</section>`}).join('')}
+window.pkLogHTML=pkLogHTML;
+setInterval(()=>{try{if(pkfScan())pkFreshTick();pkLiveTick();pkFreshTick()}catch(e){}},4000);
 function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
   const hz=(k,v)=>`<span class="hz ${v==='Bullish'?'bu':v==='Bearish'?'be':''}"><i>${k}</i>${v}</span>`;
   const c=(App.calls&&App.calls.calls)?App.calls.calls.find(x=>x.instrument===p.s):null;
@@ -3330,7 +3407,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
      <div class="pk-sig"><span class="badge ${isPut?'b-down':'b-up'}">${esc(optSignal)}</span><div class="bar"><i style="width:${p.strength||80}%;background:${isPut?'var(--down)':'var(--up)'}"></i></div><small class="muted">Strength ${p.strength||80}</small></div>
      <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
      <div class="pk-act ${isPut?'be-dn':'be-up'}"><b>${esc(optSignal)}</b> — ${esc(contract)} @ Premium <b>₹${fmtP(optEntry)}</b></div>
-     ${pkLiveBox({sym:p.s,dir:isPut?'S':'L',entry:p.ltp,stop:p.stop,t1:p.target,t2:0,key:'ix|'+p.s+'|'+(isPut?'S':'L'),morning:pkMorning()})}
+     ${pkLiveBox({sym:p.s,dir:isPut?'S':'L',entry:p.ltp,stop:p.stop,ts:[p.target,p.target2],label:p.s+' '+optSignal,kind:'index',key:'ix|'+p.s+'|'+(isPut?'S':'L'),morning:pkMorning()})}
      <div class="pk-lv" style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:8px 0">
       <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:3px">🎯 OPTION PREMIUM LEVELS (${hzText})</div>
       <div><small>Premium Entry</small><b class="num">₹${fmtP(optEntry)}</b></div>
@@ -3387,7 +3464,7 @@ function callCard(c){const go=c.signal==='BUY CALL'||c.signal==='BUY PUT',up=c.s
   const flow=(c.callPct==null?'':`<div class="muted" style="font-size:12px;margin-top:6px">Option flow: ${c.callPct}% calls · ${c.putPct}% puts · chart ${esc(c.tech||'—')}</div>`)+inv;
   return`<article class="pk"><div class="pk-h"><div class="pk-t"><b>${esc(c.instrument)}</b><small>${go?esc(c.contract):'Index option'}${c.expiry?' · exp '+esc(c.expiry):''}</small></div><div class="pk-p"><b class="num" data-px="${esc(c.instrument)}">${fmtP(c.spot)}</b></div></div>
    <div class="pk-sig"><span class="badge ${cls2}">${esc(c.signal)}</span>${c.confidence==='medium'?`<small class="muted" title="${esc(c.basis||'')}">Flow-led · medium confidence</small>`:c.strength!=null?`<small class="muted">Strength ${c.strength}</small>`:''}</div>
-   ${lv}${go&&u.stop&&u.target?pkLiveBox({sym:c.instrument,dir:up?'L':'S',entry:c.spot,stop:u.stop,t1:u.target,t2:0,key:'call|'+c.instrument+'|'+(up?'L':'S'),morning:pkMorning()}):''}${flow}
+   ${lv}${go&&u.stop&&u.target?pkLiveBox({sym:c.instrument,dir:up?'L':'S',entry:c.spot,stop:u.stop,ts:[u.target,u.target2],label:c.instrument+' '+(c.contract||c.signal),kind:'call',key:'call|'+c.instrument+'|'+(up?'L':'S'),morning:pkMorning()}):''}${flow}
    <ul class="pk-why">${[c.basis&&go?'Basis: '+c.basis:'',...(c.reasons||[c.reason||''])].filter(Boolean).slice(0,5).map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
    <div class="pk-f"><span class="muted">${c.lot?'Lot '+c.lot:''}</span><span><button class="btn-xs" data-sym="${esc(c.instrument)}">Chart</button></span></div></article>`}
 function callsBlock(){const C=App.calls;
@@ -3489,6 +3566,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
   const _keep=!!App.pkKeep;App.pkKeep=false;const _sp=pkScroller(el),_st=_sp.scrollTop,_pa=el.querySelector('.pkf'),_t0=_pa?_pa.getBoundingClientRect().top:null;   // keep the filter panel where it is on screen when the list below changes length
   const _tpl=`<div class="page">${window.geTabsHTML?geTabsHTML({upd:App.pkBusy?'Refreshing picks…':'Picks updated '+((P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')),busy:App.pkBusy}):pageHead('Today’s picks',`${MKT.open?'Market is open':'Market closed'} · Last updated ${(P&&P.asOf)?new Date(P.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):(MKT.asOf?new Date(MKT.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30')}`,`<button class="btn" data-act="rpicks" ${App.pkBusy?'disabled':''} title="Refresh picks and God's Eye">${I('reset',14)} ${App.pkBusy?'Refreshing…':'Refresh'}</button>`)}
    ${window.geOverviewHTML?geOverviewHTML():`<div class="ixs-h"><b>Indices</b></div><div class="ixs">${idxHtml}</div>`}
+   <div id="pkFresh">${pkFreshHTML()}</div>
    <div class="card pkf" id="pkPanel">
      <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['STOCK','Stocks'],['INDEX','Index calls']],f.kind,'kind')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
      <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):chips([['TOP','Top 10-15'],['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig')}</div></div>
@@ -4500,7 +4578,7 @@ function quotesURL(){POLLN++;const heavy=App.view==='godseye'||App.view==='picks
   if(!firstQuotes||POLLN%(heavy?3:10)===1)return'/api/m/quotes';
   const set=new Set(['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','INDIAVIX']);
   if(App.sym&&!App.sym.tv&&!App.sym.ikey)set.add(App.sym.s);
-  App.watch.forEach(s=>set.add(s));App.positions.forEach(p=>set.add(p.sym));App.alerts.forEach(a=>{if(a.on)set.add(a.sym)});
+  (App.pkSyms||[]).forEach(s=>set.add(s));App.watch.forEach(s=>set.add(s));App.positions.forEach(p=>set.add(p.sym));App.alerts.forEach(a=>{if(a.on)set.add(a.sym)});
   if(typeof OPT!=='undefined'&&OPT.sym)set.add(OPT.sym);
   if(window.JV&&typeof window.JV.trades==='function'){try{window.JV.trades().forEach(t=>{if(t.status==='Open'||(t.status!=='Closed'&&t.status!=='Planned')){const sym=t.instrument||t.symbol;if(sym&&!sym.includes(' '))set.add(String(sym).trim().toUpperCase())}})}catch(e){}}
   return'/api/m/quotes?symbols='+encodeURIComponent([...set].filter(s=>SYMS.some(x=>x.s===s)||(EXTRA[s]&&EXTRA[s].xstk)).join(','))}
@@ -4687,7 +4765,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028g';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028h';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;

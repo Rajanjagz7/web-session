@@ -14,9 +14,9 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['stocks', 'Stock trader']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['picklog', 'Picks log'], ['stocks', 'Stock trader']];
    const GROUPS = {};
-   const TAB_TIPS = { new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading status, exits and trade outcomes', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
+   const TAB_TIPS = { picklog: 'What every pick hit today and on earlier days: SL 🚫 stop-loss hit, T1/T2 ✅ targets reached', new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading status, exits and trade outcomes', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
   const effTab = () => GROUPS[ui.tab] ? ui.sub[ui.tab] : ui.tab;
 
@@ -533,6 +533,7 @@ function paperList() {
   function refreshLive() {
     const host = document.getElementById('v-journal');
     if (!host || !host.offsetParent || document.querySelector('.modal-bg') || document.hidden) return;
+    if (ui.tab === 'picklog') { const b = document.getElementById('jvPickLog'), h = window.pkLogHTML ? window.pkLogHTML() : ''; if (b && b._h !== h) { b._h = h; b.innerHTML = h; } return; }
     if (ui.tab === 'positions') { liveCap(); if (!livePositions()) render(); return; }
     if (ui.tab === 'algo' || ui.tab === 'stocks') { liveCap(); return; }
     if (ui.tab !== 'portfolio') return;
@@ -1419,9 +1420,9 @@ function paperList() {
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.filter(([k]) => k !== 'stocks' || !stockHidden()).map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, stocks: () => sbCard(), new: viewNew };
+    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, picklog: () => `<section class="jv-card" style="padding:12px 14px"><h3 style="margin:0 0 4px">Picks log</h3><p class="muted" style="margin:0 0 8px;font-size:12px">SL 🚫 = stop-loss hit · T1 / T2 ✅ = target reached. Followed while the app is open and kept on this device for 14 days.</p><div id="jvPickLog">${window.pkLogHTML ? window.pkLogHTML() : ''}</div></section>`, stocks: () => sbCard(), new: viewNew };
     if (!bodies[ui.tab] || (ui.tab === 'stocks' && stockHidden())) ui.tab = 'portfolio';   // the Stock trader tab is hidden while it is switched off - never land on it
-    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' || ui.tab === 'stocks' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
+    el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' || ui.tab === 'stocks' || ui.tab === 'picklog' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
     if (ui.tab === 'portfolio') {
       const dEl = document.getElementById('jvChartData'); let d = { curve: [], dd: [], daily: [] };
       try { d = JSON.parse(dEl.textContent); } catch (e) { }
