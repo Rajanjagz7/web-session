@@ -91,3 +91,49 @@ def test_a_quote_failure_never_breaks_the_status(env, monkeypatch):
     monkeypatch.setattr(at, "_quotes", boom)
     s = at.status()
     assert len(s["open"]) == 1
+
+
+def _ladder_trade():
+    lad = [round(22900 + r * 100, 2) for r in at.TARGET_LADDER]                 # entryU 22900, riskU 100
+    return trade(tgts=lad, tHit=0, targetU=lad[-1])
+
+
+def test_target_ladder_moves_the_stop_one_target_behind_and_closes_at_10r(env):
+    clock, prices = env
+    st = json.load(open(at.FILE)); st["trades"] = [_ladder_trade()]; json.dump(st, open(at.FILE, "w"))
+    seen = []
+    for und, expect_hit, expect_stop in ((23000.0, 0, 22800.0),                 # +1R: nothing yet
+                                         (23060.0, 1, 22900.0),                 # T1 (1.5R = 23050): stop to breakeven
+                                         (23110.0, 2, 23050.0),                 # T2 (2R = 23100): stop at T1
+                                         (23260.0, 3, 23100.0),                 # T3 (3R = 23200): stop at T2
+                                         (23600.0, 6, 23400.0)):                # 7R: T6 (6R = 23500) reached, stop at T5 (5R = 23400)
+        prices["und"] = und; prices["opt"] = 120.0
+        clock["now"] = clock["now"] + timedelta(minutes=5)
+        at._MARK_AT = 0.0
+        st = at.status()
+        t = (st["open"] or st["closed"])[0]
+        seen.append((t["tHit"], t["stopU"]))
+    assert seen[0] == (0, 22800.0) and seen[1] == (1, 22900.0) and seen[2] == (2, 23050.0) and seen[3] == (3, 23100.0)
+    assert seen[4][0] == 6 and seen[4][1] == 23400.0                           # T6 reached: stop sits at T5 (5R = 23400)
+    prices["und"] = 24000.0                                                     # 10R = 23900
+    clock["now"] = clock["now"] + timedelta(minutes=5); at._MARK_AT = 0.0
+    s = at.status()
+    assert s["closed"] and s["closed"][0]["exitReason"] == "TARGET" and s["closed"][0]["tHit"] == 7
+
+
+def test_ladder_trade_exits_on_the_trailed_stop(env):
+    clock, prices = env
+    st = json.load(open(at.FILE)); st["trades"] = [_ladder_trade()]; json.dump(st, open(at.FILE, "w"))
+    prices["und"] = 23110.0; prices["opt"] = 125.0
+    clock["now"] += timedelta(minutes=5); at._MARK_AT = 0.0; at.status()        # T2 reached -> stop 23050
+    prices["und"] = 23040.0; prices["opt"] = 118.0
+    clock["now"] += timedelta(minutes=5); at._MARK_AT = 0.0
+    s = at.status()
+    assert s["closed"] and s["closed"][0]["exitReason"] == "TSL"
+
+
+def test_trades_opened_before_the_ladder_keep_the_old_single_target(env):
+    clock, prices = env
+    prices["und"] = 23100.0; prices["opt"] = 140.0                              # old trade: target 23100
+    s = at.status()
+    assert s["closed"] and s["closed"][0]["exitReason"] == "TARGET"

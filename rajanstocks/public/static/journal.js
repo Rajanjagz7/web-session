@@ -81,11 +81,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       symbol: `${a.sym} ${Number(a.strike).toFixed(0)} ${a.opt} ${a.expiry}`, dir: sh ? 'Short' : 'Long',
       setup: a.source || a.strategy, tf: '1D', ind: inds.join(', '), entry: a.entry,
       sl: a.premSL > 0 ? +(+a.premSL).toFixed(2) : +(a.entry - k * riskP).toFixed(2), sl0: +(a.entry - k * riskP).toFixed(2),
-      t1: +Math.max(0.05, a.entry + k * riskP).toFixed(2), t2: +Math.max(0.05, a.entry + k * 2 * riskP).toFixed(2), t3: +Math.max(0.05, a.entry + k * 3 * riskP).toFixed(2),
+      t1: +Math.max(0.05, a.entry + k * (a.tgts ? 1.5 : 1) * riskP).toFixed(2), t2: +Math.max(0.05, a.entry + k * 2 * riskP).toFixed(2), t3: +Math.max(0.05, a.entry + k * 3 * riskP).toFixed(2),   /* ladder trades: 1.5R / 2R / 3R shown here, T4-T7 (4R 5R 6R 10R) in the plan text */
       qty: a.lots, mult: a.lot, initRisk: a.initialRisk, raw: a,
       tsl: a.tsl ? ({ trail: 'Distance Trail', breakeven: 'Breakeven', step: 'Step Trail' }[a.tsl.mode] || 'Off / Fixed SL') : (a.variant === 'trail' ? 'Distance Trail' : 'Off / Fixed SL'),
       why: `Auto-executed ${sh ? 'SELL of the ' + (a.opt === 'PE' ? 'put' : 'call') + ' (paired with ' + a.pairOf + ')' : (a.side === 'BUY' ? 'call' : 'put')} on ${a.sym}: ${inds.length} indicator(s) — ${inds.join(', ')}. ` +
-           `Underlying entry ${a.entryU}, stop ${a.stopU}${a.targetU ? ', target ' + a.targetU : ', trailing exit'}.`,
+           `Underlying entry ${a.entryU}, stop ${a.stopU}${a.tgts ? '. Targets (underlying): ' + a.tgts.map((x, i) => 'T' + (i + 1) + ' ' + x).join(' · ') + ' = 1.5R 2R 3R 4R 5R 6R 10R; the stop trails one target behind' : a.targetU ? ', target ' + a.targetU : ', trailing exit'}.`,
       status: closed ? 'Closed' : 'Open', exits: [], hits: [], hitOrder: [], stops: [{ at: a.openedAt || d.toISOString(), from: null, to: a.stopU, note: 'underlying stop at entry' }],
       rule: (a.initialRisk || 0) > S.capital * S.riskPct / 100 + 1e-9 ? 'Partial' : 'Yes', emotion: 'Automated',
       mistakes: (a.initialRisk || 0) > S.capital * S.riskPct / 100 + 1e-9 ? 'Risk above budget (1-lot minimum)' : '', reviewer: '', ref: '', created: a.openedAt,
@@ -96,10 +96,11 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       t.exits = [{ qty: a.lots, price: a.exit, type, date: istDay(ex), time: istTime(ex) }];
       t.exitType = type; t.costOverride = a.cost || 0; t.slipOverride = 0;
       if (type === 'T2') { t.hits = ['T1', 'T2']; t.hitOrder = ['T1', 'T2']; }
+      if (a.tgts && a.tHit) { const hh = ['T1', 'T2', 'T3'].slice(0, Math.min(3, a.tHit)); t.hits = hh; t.hitOrder = hh.slice(); }
       t.reviewed = true;
       t.lesson = `Automated. Exit: ${a.exitReason}. Net ${a.net >= 0 ? '+' : ''}₹${Math.round(a.net)}${a.R != null ? ' (' + (a.R >= 0 ? '+' : '') + a.R + 'R)' : ''}. ` +
                  (t.rule === 'Yes' ? 'Within the per-trade risk budget; stop set.' : `Stop set, but one lot risks about ₹${Math.round(a.initialRisk)} - above the ₹${Math.round(S.capital * S.riskPct / 100)} budget (1-lot minimum).`);
-    } else { t.reviewed = false; t.lesson = ''; }
+    } else { t.reviewed = false; t.lesson = ''; if (a.tgts && a.tHit) { const hh = ['T1', 'T2', 'T3'].slice(0, Math.min(3, a.tHit)); t.hits = hh; t.hitOrder = hh.slice(); } }
     return t;
   }
   async function syncAuto(force) {

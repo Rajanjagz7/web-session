@@ -10,7 +10,7 @@ Rules (identical to the backtest in backtest.py, so results are comparable):
   * Risk per trade = 1.0% of its sleeve's equity (0.5% until 28 Oct 11:16); lots = floor(budget / (lot x 0.5 delta x stop distance)), minimum 1.
   * Stop = the indicator's signal candle (beyond its low/high, 0.5-1.0 ATR) but never more than 12.5% of the option
     premium (backtest.plan_risk). Exit when the underlying hits that stop OR the option bid falls 12.5% below entry,
-    2R target, 10 sessions, or one day before expiry; square-off check 15:15.
+    target ladder 1.5R 2R 3R 4R 5R 6R 10R (stop trails one target behind; 10R closes), 10 sessions, or one day before expiry; square-off check 15:15.
   * Stock picks are chosen automatically: proven-strategy signal agreeing with the stock's screen score.
 """
 import json
@@ -44,6 +44,7 @@ IDX_V = 20261028       # one-time: index options are bought too (not only stock 
 SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
 PREM_SL_PCT = 0.125                      # option premium stop: at most this share of the premium (30% until 28 Oct, 20% for a few hours, then 12.5%)
+TARGET_LADDER = (1.5, 2, 3, 4, 5, 6, 10)    # targets in R (user, 28 Oct): the stop trails one target behind, the last one closes the trade
 SL_V = 1                                 # one-time: premium stop 12.5% + risk per trade 1.0% (bigger trades) from 28 Oct 11:16
 DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
@@ -688,7 +689,7 @@ def _premium_plan(entry, risk_u, delta=0.5):
     """Option stop and targets in premium terms: 1R = delta x underlying stop distance."""
     rp = round(delta * risk_u, 2)
     return {"premRisk": rp, "premSL": round(max(0.05, entry - rp), 2),
-            "premT": [round(entry + k * rp, 2) for k in (1, 2, 3)]}
+            "premT": [round(entry + k * rp, 2) for k in TARGET_LADDER]}
 
 
 def _replan(t):
@@ -726,7 +727,8 @@ def open_trade(st, c, today):
     # means more lots for the same money at risk.
     risk_u = min(risk_u, float(cfg.get("premSlPct", PREM_SL_PCT)) * ct["premium"] / 0.5)
     stop_u = entry_u - d * risk_u
-    target_u = entry_u + d * backtest.TARGET_R * risk_u if variant == "fixed" else None
+    tgts = [round(entry_u + d * r * risk_u, 2) for r in TARGET_LADDER] if variant == "fixed" else None     # T1..T7 on the underlying
+    target_u = tgts[-1] if tgts else None                                                                    # the last one (10R) ends the trade
     sl_name = _sleeve_of(c.get("key"))
     sl_eq = _sleeve_equity(st, sl_name)
     base_eq = sl_eq if sl_eq else _equity(st)                # a sleeve sizes its own trades (risk % and the 20% position cap)
@@ -751,6 +753,7 @@ def open_trade(st, c, today):
         "opt": "CE" if c["side"] == "BUY" else "PE", "strike": ct["strike"], "expiry": ct["expiry"], "key": ct["key"],
         "lot": ct["lot"], "lots": lots, "entry": round(ct["premium"], 2), "entryU": round(entry_u, 2),
         "stopU": round(stop_u, 2), "targetU": round(target_u, 2) if target_u is not None else None, "riskU": round(risk_u, 2),
+        **({"tgts": tgts, "tHit": 0} if tgts else {}),
         "variant": variant, "filter": c.get("filter", "none"), "bestU": round(entry_u, 2), "mode": c.get("label", ""),
         "initialRisk": round(min(lots * per_lot, lots * ct["lot"] * ct["premium"]), 0), "riskBudget": round(budget, 0),
         "strategy": c["key"], "sleeve": sl_name, "agree": c.get("agree", 1), **({"why": c["why"]} if c.get("why") else {}),
@@ -1000,13 +1003,27 @@ def manage(st, now, t_end=None):
                 if new != t["stopU"]:
                     t["stopU"] = round(new, 2)
                     t["stopMoved"] = _now().isoformat()
-        _profit_lock(t, opt_px if opt_px > 0 else exit_px, st["cfg"].get("lockMode", "old"))
+        tg = t.get("tgts")
+        if tg and variant == "fixed" and not short:        # target ladder: each target reached moves the stop up (T1 -> breakeven, then one target behind)
+            n0 = n = int(t.get("tHit") or 0)
+            while n < len(tg) and d * (und_px - tg[n]) >= 0:
+                n += 1
+            if n > n0:
+                t["tHit"] = n
+                ns = t["entryU"] if n == 1 else tg[n - 2]
+                new = max(t["stopU"], ns) if d > 0 else min(t["stopU"], ns)
+                if new != t["stopU"]:
+                    t["stopU"] = round(new, 2)
+                    t["stopMoved"] = _now().isoformat()
+                st["log"].append({"at": _now().isoformat(), "msg": f"T{n} reached on {t['sym']} {t['strike']:.0f}{t['opt']} ({TARGET_LADDER[n - 1]}R) - stop moved to {t['stopU']}"})
+        if not tg:                                          # ladder trades trail on the underlying; the old rupee profit lock is for trades opened before it
+            _profit_lock(t, opt_px if opt_px > 0 else exit_px, st["cfg"].get("lockMode", "old"))
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if t.get("premSL") and (exit_px >= t["premSL"] if short else exit_px <= t["premSL"]):
             why = "TSL" if t.get("lock") else "STOP"   # option premium stop (30% cap) - catches time decay too
             exit_px = float(t["premSL"])               # filled at the stop (a stop order), not at the price seen minutes later
         elif d * (und_px - t["stopU"]) <= 0:
-            why = "TSL" if (tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) else "STOP"
+            why = "TSL" if ((tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) or t.get("tHit")) else "STOP"
         elif t.get("targetU") is not None and d * (und_px - t["targetU"]) >= 0:
             why = "TARGET"
         elif (date.fromisoformat(t["expiry"]) - date.fromisoformat(today)).days <= 1:
