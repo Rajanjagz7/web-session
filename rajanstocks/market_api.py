@@ -1810,7 +1810,10 @@ def _picks_kick():
 
 
 def warm_picks():
-    """Called at server start so the first user request finds the screen ready."""
+    """Called at server start so the first user request finds the screen ready. On Vercel every cold start would otherwise launch a ~200-quote
+    build (even at night, even on a holiday); the request path builds inline and caches for an hour when the market is shut, so nothing is warmed there."""
+    if os.environ.get("VERCEL"):
+        return
     try:
         ensure_universe()
     except Exception:

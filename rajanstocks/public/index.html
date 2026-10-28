@@ -2538,7 +2538,17 @@ const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
 /* every same-origin /api request gets a 40 s limit (unless the caller set its own): a stalled mobile connection left God's Eye / Observer / Picks "Refreshing..." and "Stale" forever because their busy flag never cleared */
-(()=>{const f=window.fetch.bind(window);window.fetch=(u,o)=>{try{const url=typeof u==='string'?u:(u&&u.url)||'';if(!/^(\/api\/|https?:\/\/[^/]+\/api\/)/.test(url)||(o&&o.signal)||(u&&u.signal))return f(u,o);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),40000);return f(u,Object.assign({},o,{signal:ac.signal})).finally(()=>clearTimeout(t))}catch(e){return f(u,o)}}})();
+/* Off-hours cache (user, 28 Oct): while the market is shut, a repeated GET of the same /api/ URL is answered from a 10-minute browser copy, so timers and
+   tab switches stop hitting Vercel / Upstox for data that cannot change. NOT cached (they trade or move after 15:30): GIFT / US futures + global markets,
+   the futures board, health, the auto trader / stock trader state, push and cron, and anything asked with refresh=true. The copy is dropped when the market opens. */
+const OFFC=new Map(),OFF_TTL=600000,OFF_SKIP=/\/api\/(m\/(global|gcandles|futures|health|quotes|oquote)|auto|stockbot|push|cron|cache-version)|refresh=true|[?&]nocache/;
+let offWasOpen=null;
+function offKey(u,o){const url=typeof u==='string'?u:(u&&u.url)||'';const m=((o&&o.method)||(u&&u.method)||'GET').toUpperCase();if(m!=='GET'||!/^\/api\//.test(url)||OFF_SKIP.test(url))return null;try{if(typeof MKT==='undefined'||MKT.open!==false||!MKT.asOf)return null}catch(e){return null}return url}
+(()=>{const f=window.fetch.bind(window);window.fetch=(u,o)=>{try{const url=typeof u==='string'?u:(u&&u.url)||'';
+if(typeof MKT!=='undefined'&&MKT.open){if(offWasOpen!==true){OFFC.clear();offWasOpen=true}}else if(typeof MKT!=='undefined'&&MKT.asOf)offWasOpen=false;
+const ok=offKey(u,o);if(ok){const h=OFFC.get(ok);if(h&&Date.now()-h.t<OFF_TTL)return Promise.resolve(new Response(h.b,{status:200,headers:{'Content-Type':'application/json','X-Off-Cache':'1'}}))}
+if(ok&&!(o&&o.signal)&&!(u&&u.signal)){const ac0=new AbortController(),t0=setTimeout(()=>ac0.abort(),40000);return f(u,Object.assign({},o,{signal:ac0.signal})).then(r=>{if(r.ok&&/json/.test(r.headers.get('content-type')||'')){r.clone().text().then(b=>{if(b.length<2e6){if(OFFC.size>80)OFFC.delete(OFFC.keys().next().value);OFFC.set(ok,{t:Date.now(),b})}}).catch(()=>{})}return r}).finally(()=>clearTimeout(t0))}
+if(!/^(\/api\/|https?:\/\/[^/]+\/api\/)/.test(url)||(o&&o.signal)||(u&&u.signal))return f(u,o);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),40000);return f(u,Object.assign({},o,{signal:ac.signal})).finally(()=>clearTimeout(t))}catch(e){return f(u,o)}}})();
 async function api(path){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),25000);   /* a stalled mobile connection used to leave one request pending forever: pollBusy stayed true and prices froze until a reload */
   let r;try{r=await fetch(path,{cache:'no-store',signal:ac.signal})}finally{clearTimeout(to)}if(!r.ok){const e=new Error(path+' '+r.status);e.status=r.status;try{const j=await r.json();if(j&&typeof j.detail==='string')e.detail=j.detail}catch(x){}throw e}return r.json()}
 const STORE='rs-paper-v1';
@@ -5205,7 +5215,7 @@ window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h!==
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTheme();chart.req()});
 
 /* ======================= Boot ======================= */
-(async function boot(){loadPaper();loadTrades();rehydrateMeta();setInterval(()=>{if(!document.hidden)pollOptPositions()},8000);let th='dark';try{th=localStorage.getItem('mer-theme')||th}catch(e){}document.documentElement.dataset.theme=th;readTheme();
+(async function boot(){loadPaper();loadTrades();rehydrateMeta();setInterval(()=>{if(!document.hidden&&(MKT.open||!MKT.asOf))pollOptPositions()},8000);let th='dark';try{th=localStorage.getItem('mer-theme')||th}catch(e){}document.documentElement.dataset.theme=th;readTheme();
   $('#logoI').innerHTML=I('trendup',16,2.4);$('#searchI').innerHTML=I('search',15);$('#themeBtn').innerHTML=I(th==='dark'?'sun':'moon');renderBell();renderNav();
   $('#pwaBtn').innerHTML=I('download',17);pwaRefresh();window.addEventListener('resize',pwaRefresh);
   chart=new Chart($('#chart'),{onTool:()=>renderTools(),onLegend:(uid,a)=>{const i=chart.ind.findIndex(x=>x.uid===uid);if(i<0)return;
