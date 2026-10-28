@@ -2300,7 +2300,7 @@ function rztLabels(ctx,ind,g){const o=ind.out,{X,Y,i0,i1}=g;ctx.font='700 11px I
     ctx.fillStyle=up?T.up:T.down;roundRect(ctx,x-9,y-9,18,18,4);ctx.fill();ctx.fillStyle='#fff';ctx.fillText(up?'B':'S',x,y+.5)}ctx.font=FONT}
 function rztPane(ctx,ind,g){const m=ind.out.mb,{X,i0,i1,bw,top,h}=g,w=Math.max(1,Math.ceil(bw));
   const col={2:'#16a34a',1:'#86efac','0':'#6b7280','-1':'#fca5a5','-2':'#dc2626'};for(let i=i0;i<=i1;i++){ctx.fillStyle=col[m[i]]||'#6b7280';ctx.fillRect(Math.round(X(i)-w/2),top+18,w,h-22)}}
-const CATS=['Trend','Momentum','Volatility','Volume','Rajan'];
+const CATS=['Trend','Momentum','Volatility','Volume','Rajan','Gann'];
 const TEMPLATES=[
  {n:'Trend following',d:'EMA 9 · EMA 21 · MACD',ind:[['vol'],['ema',{len:9}],['ema',{len:21}],['macd']]},
  {n:'Mean reversion',d:'Bollinger Bands · RSI',ind:[['vol'],['bb'],['rsi']]},
@@ -2852,7 +2852,7 @@ function addInd(key,params,silent){const d=DEFS[key];
   const p={};d.params.forEach(x=>p[x.k]=params?.[x.k]??x.v);
   chart.ind.push({uid:++UID,key,params:p,colors:d.lines.map(l=>l.c??(d.pane==='main'?base:0)),hidden:false});if(!silent){chart.indChanged();renderToolbar()}return true}
 function indSettings(uid){const ind=chart.ind.find(i=>i.uid===uid);if(!ind)return;const d=DEFS[ind.key],orig=JSON.parse(JSON.stringify({p:ind.params,c:ind.colors}));let applied=false;
-  const lineName=ln=>({v:d.short,up:'Upper',mid:'Basis',lo:'Lower',m:'MACD',sig:'Signal',h:'Histogram',k:'%K',d:'%D',adx:'ADX',pdi:'+DI',mdi:'−DI'})[ln.k]||ln.k;
+  const lineName=ln=>ln.label||({v:d.short,up:'Upper',mid:'Basis',lo:'Lower',m:'MACD',sig:'Signal',h:'Histogram',k:'%K',d:'%D',adx:'ADX',pdi:'+DI',mdi:'−DI'})[ln.k]||ln.label||ln.k;
   modal(d.name+' settings',`<p class="m2" style="margin-bottom:12px">${d.read}</p><div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">${d.params.map(p=>`<div class="fld"><label for="ip-${p.k}">${p.l}</label><input class="inp" type="number" id="ip-${p.k}" data-pk="${p.k}" value="${ind.params[p.k]}" min="${p.min}" max="${p.max}" step="${p.step||1}"></div>`).join('')||'<p class="muted">This indicator has no inputs.</p>'}</div>
    <div style="margin-top:14px;display:grid;gap:10px">${d.lines.filter(l=>!['vol','hist'].includes(l.style)).map(ln=>{const j=d.lines.indexOf(ln);return`<div style="display:flex;align-items:center;justify-content:space-between"><span>${lineName(ln)} colour</span><div class="swatches" data-line="${j}">${T.s.map((c,k)=>`<button style="background:${c}" data-sw="${k}" class="${ind.colors[j]===k?'on':''}" aria-label="Colour ${k+1}"></button>`).join('')}</div></div>`}).join('')}</div>`,
    {foot:`<button class="btn" id="isReset" style="margin-right:auto">Reset to defaults</button><button class="btn" data-close>Cancel</button><button class="btn pri" id="isOk">Apply</button>`,onClose:()=>{if(!applied){ind.params=orig.p;ind.colors=orig.c;chart.indChanged()}}});
@@ -4663,6 +4663,26 @@ function registerStratDefs(list){list.forEach(m=>{const sp=STRAT_SPECIAL[m.key];
     const lines=sp.lines.map(([k],i)=>({k,c:STPAL[i%STPAL.length]}));
     DEFS['S:'+m.key]={name:m.name,short:m.name.split(' ').slice(0,2).join(' '),cat:'Rajan',pane:'main',params:[],lines,calc:sp.calc,desc:m.desc,
       read:'Calculated on the chart you are viewing, so it follows the selected timeframe.'}}}
+
+/* ---- Gann time-price angles: a slanted support / resistance line drawn from the last confirmed swing low / high (user, 28 Oct) ----
+   1x1 = the diagonal that crosses the whole chart corner to corner (price range / number of bars per bar); 2x1 climbs twice as fast, 1x2 half as fast.
+   A line starts from a swing confirmed `swing` bars later, so it never repaints. Picked from the indicator list (Gann group). */
+function gannCalc(d,p,mode,ratios){const n=d.length,out=ratios.map(()=>NA(n));if(n<12)return out;const low=mode==='sup',k=Math.max(2,Math.round(p.swing||5));let ai=-1;
+  for(let i=n-1-k;i>=k;i--){const v=low?d[i].l:d[i].h;let ok=true;for(let j=i-k;j<=i+k;j++){if(low?d[j].l<v:d[j].h>v){ok=false;break}}if(ok){ai=i;break}}
+  if(ai<0){ai=0;for(let i=1;i<n;i++)if(low?d[i].l<d[ai].l:d[i].h>d[ai].h)ai=i}
+  const ap=low?d[ai].l:d[ai].h;let hi=-Infinity,lo=Infinity;for(const b of d){if(b.h>hi)hi=b.h;if(b.l<lo)lo=b.l}
+  const unit=p.scale>0?p.scale:(hi-lo)/Math.max(1,n);
+  ratios.forEach((r,j)=>{const sl=unit*(p.ratio>0&&ratios.length===1?p.ratio:r);for(let i=ai;i<n;i++){const v=ap+(low?1:-1)*sl*(i-ai);if(v>0)out[j][i]=v}});return out}
+(function(){const G=[['sup','1x1',[1],'Gann support 1x1','Gann Sup 1x1'],['sup','2x1',[2],'Gann support 2x1 (steep)','Gann Sup 2x1'],['sup','1x2',[0.5],'Gann support 1x2 (gentle)','Gann Sup 1x2'],['sup','fan',[0.5,1,2],'Gann support fan (1x2, 1x1, 2x1)','Gann Fan'],
+  ['res','1x1',[1],'Gann resistance 1x1','Gann Res 1x1'],['res','fan',[0.5,1,2],'Gann resistance fan (1x2, 1x1, 2x1)','Gann Res Fan']];
+  G.forEach(([mode,tag,ratios,name,short])=>{const sup=mode==='sup',single=ratios.length===1;
+    DEFS['gann-'+mode+'-'+tag]={name,short,cat:'Gann',pane:'main',
+      params:[{k:'swing',l:'Swing strength (bars)',v:5,min:2,max:50}].concat(single?[{k:'ratio',l:'Steepness (1 = 1x1)',v:ratios[0],min:.05,max:10,step:.05}]:[]).concat([{k:'scale',l:'Price per bar (0 = auto)',v:0,min:0,max:100000,step:.01}]),
+      lines:ratios.map((r,j)=>({k:'a'+j,label:ratios.length===1?name:(r===1?'1x1':r===2?'2x1':'1x2'),c:ratios.length===1?(sup?4:5):[2,1,3][j]})),
+      calc:(d,p)=>{const o=gannCalc(d,p,mode,ratios),r={};o.forEach((a,j)=>r['a'+j]=a);return r},
+      desc:sup?'A rising Gann time-price line from the last swing low: where a pullback often finds support.':'A falling Gann time-price line from the last swing high: where a bounce often meets resistance.',
+      read:sup?'Starts at the last confirmed swing low and climbs one price step per bar (1x1 = corner to corner of the chart). Buy when price touches the line and closes back above it, stop just under the line, first target the next fan line or the last high. If a bar closes under the line, the support has failed.'
+              :'Starts at the last confirmed swing high and falls one price step per bar. Sell (or buy a put) when price rises to the line and closes back under it, stop just above the line. A close above the line means the resistance has failed.'}})})();
 
 /* ---- timeframe dropdown (replaces the row of buttons) ---- */
 const TF_STD=[['Minutes',['1m','2m','3m','5m','10m','15m','30m','45m']],['Hours',['1H','2H','3H','4H']],['Days and longer',['1D','1W','1M']]];
