@@ -1850,14 +1850,37 @@ def stock_lookup(q: str = ""):
     if len(q) < 2:
         return {"q": q, "items": []}
     names = dict(NAME)
+    src = "master"
     try:
-        for s, n in (nse_service.upstox.eq_names() or {}).items():
-            names.setdefault(s, n)
+        eq = nse_service.upstox.eq_names() or {}
     except Exception:
-        pass
+        eq = {}
+    if eq:
+        for s, n in eq.items():
+            names.setdefault(s, n)
+        try:
+            if not shared_cache.get("eq-names"):
+                shared_cache.set("eq-names", eq, 12 * 3600)          # a copy for instances whose own instrument-master download fails
+        except Exception:
+            pass
+    else:
+        try:
+            eq = shared_cache.get("eq-names") or {}
+        except Exception:
+            eq = {}
+        for s, n in eq.items():
+            names.setdefault(s, n)
+        if not eq:                                                   # last resort: symbols from the newest stored bhavcopy (symbol search only)
+            src = "symbols"
+            try:
+                for d in sorted(shared_cache.get("bhav:sessions") or [])[-1:]:
+                    for s in (shared_cache.get(f"bhav:day2|{d}") or {}):
+                        names.setdefault(s, "")
+            except Exception:
+                pass
     hits = [(s, n) for s, n in names.items() if q in s.lower() or q in (n or "").lower()]
     hits.sort(key=lambda x: (not x[0].lower().startswith(q), not (x[1] or "").lower().startswith(q), len(x[0]), x[0]))
-    return {"q": q, "items": [{"s": s, "n": n, "ind": industry.of(s, n) or SECTOR.get(s, "")} for s, n in hits[:8]]}
+    return {"q": q, "src": src, "items": [{"s": s, "n": n, "ind": industry.of(s, n) or SECTOR.get(s, "")} for s, n in hits[:8]]}
 
 
 def _inject_cash_seed_if_needed(data):
