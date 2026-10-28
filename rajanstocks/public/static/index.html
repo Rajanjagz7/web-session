@@ -3020,7 +3020,7 @@ const M2_BASE = [
   {from:'14:50',to:'15:01',a:890,b:901,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Sun in Dhanishta · square-off equilibrium'},
   {from:'15:01',to:'15:30',a:901,b:930,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Moon in Dhanishta · final market on close (MOC) strength'}
 ];
-function computeAstroMethod2Slices(dateStr){
+function computeAstroMethod2Slices(dateStr,m1){
   const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
   const anchorDate = new Date('2026-10-26T00:00:00');
   const diffDays = Math.round((targetDate - anchorDate) / 86400000);
@@ -3044,6 +3044,11 @@ function computeAstroMethod2Slices(dateStr){
       });
     }
   });
+  /* the 26-Oct table slides ~4 min a day, so the start or end of the session can fall outside it: fill those stretches from Method 1 */
+  const m1s = (m1 && m1.available && m1.slices) || [];
+  const fillGap = (from, to) => { m1s.forEach(x => { const a = Math.max(from, x.a), b = Math.min(to, x.b); if (a < b) slices.push({from: fmtM(a), to: fmtM(b), a, b, projection: x.projection, tone: x.tone, why: 'Outside the curated table for this date - projection follows Method 1'}) }) };
+  if (slices.length) { const a0 = slices[0].a, b0 = slices[slices.length - 1].b; if (a0 > 555) fillGap(555, a0); if (b0 < 930) fillGap(b0, 930); slices.sort((p, q) => p.a - q.a) }
+  else fillGap(555, 930);
   return {
     available: true,
     date: dateStr || '2026-10-26',
@@ -3059,7 +3064,7 @@ function vxAstroSlices(reportOrSlices){
   let t = null;
   if (r) {
     if (mth === 'm2') {
-      t = r.astro_slices_method2 || computeAstroMethod2Slices(r.header && r.header.report_date);
+      t = r.astro_slices_method2 || computeAstroMethod2Slices(r.header && r.header.report_date, r.astro_slices);
     } else {
       t = r.astro_slices;
     }
@@ -3157,7 +3162,7 @@ function vdPaint(){const el=$('#v-vedic');if(!el)return;
       <div class="vx-meta">${esc(h.report_date)} · <span class="vx-chip ${h.session_phase==='During session'?'up':'mute'}">${esc(h.session_phase)}</span>${h.nse_trading_day.available&&h.nse_trading_day.value!=='No'?' · '+esc(h.nse_trading_day.value):''}</div></div>
     <div id="vxLean">${vxLeanHTML(r)}</div>
     <div class="vx-today"><div><small>Tithi</small><b>${esc(p.tithi)}</b></div><div><small>Nakshatra</small><b>${esc(p.nakshatra)}</b></div><div class="${rk.in_session?'rahu':''}"><small>Rahu Kaal · today</small><b>${esc(p.mumbai_rahu_kaal_ist)}</b><span>${rk.in_session?'during market hours':'outside market hours'}</span></div>
-      <button class="btn-xs" data-act="vedic-retry" title="Recalculate now">${I('reset',14)} Refresh</button></div>
+      <button class="btn-xs" data-act="vedic-retry" title="Build the report again with the latest prices">${I('reset',14)} Get Report</button></div>
    </div>
    ${h.is_weekend||h.session_phase==='Market closed'?`<div class="vx-closed">${esc(h.weekend_message||'Market closed today.')} Panchang, planets and Gann levels below are live calculations, ready for the next session.</div>`:''}
    <div class="vx-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" class="${VD.tab===k?'on':''}" data-vxtab="${k}">${l}</button>`).join('')}</div>
@@ -3243,9 +3248,9 @@ async function renderVedic(){const el=$('#v-vedic');if(!el)return;
   if(!VD.data&&!VD.err){vdPaint();await loadVedic(false)}
   vdPaint()}
 document.addEventListener('click',async e=>{const vr=e.target.closest('[data-act="vedic-retry"]');if(!vr||VD.busy)return;
-  vr.disabled=true;vr.innerHTML='Refreshing…';VD.err=null;
+  vr.disabled=true;vr.innerHTML='Getting report…';VD.err=null;
   await loadVedic(true);vdPaint();
-  toast(VD.err||'Vedic Astro report refreshed',VD.err?'bad':'ok')});
+  toast(VD.err||'Vedic Astro report updated',VD.err?'bad':'ok')});
 
 let mob={tf:3,sheet:false,qty:5};const MTF=[['1D',1],['1W',2],['1M',3],['3M',5],['1Y',5],['5Y',6]];/* bars shown per range: 1D 5m, 1W 15m, 1M 1H, 3M/1Y daily, 5Y weekly */
 function renderMobile(){const s=App.sym;

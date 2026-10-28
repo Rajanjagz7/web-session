@@ -27,7 +27,7 @@ def _ttl():
 @router.get("/report")
 def report(refresh: bool = False, symbol: str = "NIFTY"):
     symbol = symbol.upper()
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=5, minutes=30))).date().isoformat()     # the report is for the IST day
     cached = _cache.get(symbol)
     if refresh or not cached or cached[0] != today or time.time() - cached[1] > _ttl():
         try:

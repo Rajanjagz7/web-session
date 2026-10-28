@@ -159,35 +159,77 @@ METHOD2_BASE_SLICES = [
     {"from": "15:01", "to": "15:30", "a": 15 * 60 + 1, "b": 15 * 60 + 30, "projection": "Volatile Positive", "tone": "up", "why": "KP Sub-Lord: Moon in Dhanishta · final market on close (MOC) strength"}
 ]
 
-def build_method2(session_date):
+YEARS = {"Ketu": 7, "Venus": 20, "Sun": 6, "Moon": 10, "Mars": 7, "Rahu": 18, "Jupiter": 16, "Saturn": 19, "Mercury": 17}
+
+
+def kp_sub_at(dt_utc):
+    """(nakshatra, sub-lord) of the rising degree - the real KP Lagna Sub-Lord (Vimshottari split of the nakshatra)."""
+    lon = ascendant_sidereal(dt_utc)
+    nak = 360 / 27
+    i = int(lon // nak)
+    frac = (lon - i * nak) / nak * 120                     # position inside the nakshatra, in Vimshottari years (of 120)
+    acc = 0
+    for k in range(9):
+        lord = VIM[(i % 9 + k) % 9]
+        acc += YEARS[lord]
+        if frac < acc:
+            return NAKS[i], lord
+    return NAKS[i], VIM[i % 9]
+
+
+def _m1_at(m1, minute):
+    for s in (m1 or {}).get("slices") or []:
+        if s["a"] <= minute < s["b"]:
+            return s
+    return None
+
+
+def _fill(session_date, a, b, m1):
+    """Rows for the minutes [a, b) that the curated 26-Oct table does not reach on this date (it slides ~4 min a day, so the
+    session start or end falls outside it). The KP sub-lord is the real one for that minute; the projection is the Method 1
+    reading for the same minutes (hora + choghadiya + kaal + lagna), so there is never a hole in the table."""
+    rows, base = [], datetime(session_date.year, session_date.month, session_date.day, tzinfo=IST)
+    m = a
+    while m < b:
+        nak, lord = kp_sub_at((base + timedelta(minutes=m + 0.5)).astimezone(timezone.utc))
+        end, ref = m + 1, _m1_at(m1, m)
+        while end < b:
+            if (_m1_at(m1, end) or {}).get("projection") != (ref or {}).get("projection"):   # one row per stretch of the same reading
+                break
+            end += 1
+        proj = (ref or {}).get("projection", "Sideways/Volatile")
+        rows.append({"from": VT._hm(m), "to": VT._hm(end), "a": m, "b": end, "projection": proj, "tone": TONE.get(proj, "flat"),
+                     "why": f"KP Sub-Lord: {lord} in {nak} · outside the curated table for this date - projection follows Method 1"})
+        m = end
+    return rows
+
+
+def build_method2(session_date, m1=None):
     diff_days = (session_date - METHOD2_ANCHOR_DATE).days
-    if diff_days == 0:
-        slices = list(METHOD2_BASE_SLICES)
+    shift_mins = round(diff_days * 3.9333333)             # the rising degree reaches the same point ~3 min 56 s earlier each day
+    slices = []
+    for s in METHOD2_BASE_SLICES:
+        start_m = max(OPEN, min(CLOSE, s["a"] - shift_mins))
+        end_m = max(OPEN, min(CLOSE, s["b"] - shift_mins))
+        if start_m < end_m:
+            slices.append({
+                "from": VT._hm(start_m), "to": VT._hm(end_m), "a": start_m, "b": end_m,
+                "projection": s["projection"], "tone": s["tone"],
+                "why": s["why"] + (f" (adjusted by {abs(shift_mins)}m sidereal shift)" if shift_mins else "")
+            })
+    if slices:                                            # close the holes the sliding table leaves at the start / end of the session
+        lead = _fill(session_date, OPEN, slices[0]["a"], m1) if slices[0]["a"] > OPEN else []
+        tail = _fill(session_date, slices[-1]["b"], CLOSE, m1) if slices[-1]["b"] < CLOSE else []
+        slices = lead + slices + tail
     else:
-        shift_mins = round(diff_days * 3.9333333)
-        slices = []
-        for s in METHOD2_BASE_SLICES:
-            raw_a = s["a"] - shift_mins
-            raw_b = s["b"] - shift_mins
-            start_m = max(OPEN, min(CLOSE, raw_a))
-            end_m = max(OPEN, min(CLOSE, raw_b))
-            if start_m < end_m:
-                slices.append({
-                    "from": VT._hm(start_m),
-                    "to": VT._hm(end_m),
-                    "a": start_m,
-                    "b": end_m,
-                    "projection": s["projection"],
-                    "tone": s["tone"],
-                    "why": s["why"] + (f" (adjusted by {abs(shift_mins)}m sidereal shift)" if shift_mins else "")
-                })
+        slices = _fill(session_date, OPEN, CLOSE, m1)
     return {
         "available": True,
         "date": session_date.isoformat(),
         "slices": slices,
         "count": len(slices),
-        "method": "Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 16 time slices.",
-        "note": "KP Ascendant Sub-Lord timing guide. Keeps every Sub-Lord transition as its own row (curated 16 slices)."
+        "method": "Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) - curated slices, slid to the date by the sidereal shift.",
+        "note": "KP Ascendant Sub-Lord timing guide (curated 26-Oct table moved ~4 min a day). Rows at the edges that the table does not reach use the real sub-lord and the Method 1 reading."
     }
 
 if __name__ == "__main__":
