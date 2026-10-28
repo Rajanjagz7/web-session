@@ -7,9 +7,9 @@ Rules (identical to the backtest in backtest.py, so results are comparable):
   * Only strategies that PASSED the out-of-sample backtest are used, ranked by in-sample average R.
   * Signal = the fresh BUY/SELL on the last COMPLETED daily bar, acted on from 09:16 (the first full minute after the open).
   * BUY -> ATM call, SELL -> ATM put, nearest expiry that is at least 3 days away.
-  * Risk per trade = 0.5% of equity; lots = floor(budget / (lot x 0.5 delta x stop distance)), minimum 1.
-  * Stop = the indicator's signal candle (beyond its low/high, 0.5-1.0 ATR) but never more than 20% of the option
-    premium (backtest.plan_risk). Exit when the underlying hits that stop OR the option bid falls 20% below entry,
+  * Risk per trade = 1.0% of its sleeve's equity (0.5% until 28 Oct 11:16); lots = floor(budget / (lot x 0.5 delta x stop distance)), minimum 1.
+  * Stop = the indicator's signal candle (beyond its low/high, 0.5-1.0 ATR) but never more than 12.5% of the option
+    premium (backtest.plan_risk). Exit when the underlying hits that stop OR the option bid falls 12.5% below entry,
     2R target, 10 sessions, or one day before expiry; square-off check 15:15.
   * Stock picks are chosen automatically: proven-strategy signal agreeing with the stock's screen score.
 """
@@ -43,11 +43,12 @@ PLAN_V = 20261028      # one-time switch from 28 Oct 2026: Rs 15 L, buy-only, th
 IDX_V = 20261028       # one-time: index options are bought too (not only stock options) - stockOnly stays a setting that can be turned back on
 SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
-DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
+PREM_SL_PCT = 0.125                      # option premium stop: at most this share of the premium (30% until 28 Oct, 20% for a few hours, then 12.5%)
+SL_V = 1                                 # one-time: premium stop 12.5% + risk per trade 1.0% (bigger trades) from 28 Oct 11:16
+DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
-PREM_SL_PCT = 0.20                       # option premium stop: at most this share of the premium (was 30%)
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
@@ -94,6 +95,9 @@ def _load(cached=False):
             st["_dirty"] = True
         if saved.get("idxV") != IDX_V:                          # one-time: index options are bought as well as stock options
             st["cfg"].update(stockOnly=False, idxV=IDX_V)
+            st["_dirty"] = True
+        if saved and saved.get("slV") != SL_V:                  # one-time (user, 28 Oct): 10-15% option stop and bigger trades; the settings API can change both later
+            st["cfg"].update(premSlPct=PREM_SL_PCT, riskPct=1.0, slV=SL_V)
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -717,7 +721,7 @@ def open_trade(st, c, today):
     risk_u = backtest.plan_risk(bars, atr, len(bars) - 1, c["side"], entry_u, ct["premium"], ind_stop=c.get("indStop"))
     if risk_u <= 0:
         raise RuntimeError("no valid stop")
-    # 28 Oct (user: the stops were too big - up to 30% of the premium): the option stop is capped at premSlPct (default 20%) of the premium.
+    # 28 Oct (user: the stops were too big - up to 30% of the premium): the option stop is capped at premSlPct (default 12.5%) of the premium.
     # The target keeps its 2R distance, so the reward shrinks with the risk; position size is set from the risk budget, so a tighter stop
     # means more lots for the same money at risk.
     risk_u = min(risk_u, float(cfg.get("premSlPct", PREM_SL_PCT)) * ct["premium"] / 0.5)
@@ -1321,6 +1325,7 @@ class Cfg(BaseModel):
     enabled: bool | None = None
     researchMode: bool | None = None
     riskPct: float | None = None
+    premSlPct: float | None = None
     maxPerDay: int | None = None
     dayPnlLimit: float | None = None
     zTrendHedge: bool | None = None
@@ -1532,6 +1537,10 @@ def config(c: Cfg):
             if c.lockMode not in LOCKS:
                 raise HTTPException(400, "lockMode must be 'old' or 'new'")
             st["cfg"]["lockMode"] = c.lockMode
+        if c.premSlPct is not None:
+            if not (0.05 <= c.premSlPct <= 0.5):
+                raise HTTPException(400, "premSlPct must be between 0.05 and 0.5 (5% to 50% of the premium)")
+            st["cfg"]["premSlPct"] = c.premSlPct
         if c.riskPct is not None:
             if not (0.05 <= c.riskPct <= 2):
                 raise HTTPException(400, "riskPct must be between 0.05 and 2")
