@@ -1070,6 +1070,7 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-lad span{font-size:11px;font-weight:700;color:var(--text-3)}.vx-lad em{font-style:normal;font-size:11.5px;text-align:right;color:var(--text-3)}
 .vx-lad.up{border-left:3px solid var(--down)}.vx-lad.up b{color:var(--down)}.vx-lad.dn{border-left:3px solid var(--up)}.vx-lad.dn b{color:var(--up)}
 .vx-lad.base{border-left:3px solid var(--gold);background:color-mix(in srgb,var(--gold) 12%,transparent)}.vx-lad.base b,.vx-lad.base span{color:var(--gold)}
+.vx-lad.vx-band{outline:1px dashed var(--gold);background:color-mix(in srgb,var(--gold) 8%,var(--panel-2))}.vx-fxw{color:var(--gold)}
 .vx-lad.now{background:var(--brand);color:#fff;font-weight:700}.vx-lad.now span,.vx-lad.now em{color:#fff}
 .vx-setups{display:grid;grid-template-columns:1fr 1fr;gap:8px}.vx-setup{border-radius:10px;padding:10px 12px;display:grid;gap:6px}
 .vx-setup.long{background:var(--up-bg);border:1px solid color-mix(in srgb,var(--up) 35%,transparent)}.vx-setup.short{background:var(--down-bg);border:1px solid color-mix(in srgb,var(--down) 35%,transparent)}
@@ -2968,6 +2969,21 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-vxcopy]');
 function vxSpot(g,sym){const s=typeof SYM==='function'?SYM(sym||'NIFTY'):null;return s&&s.last>0&&(typeof MKT!=='undefined'&&MKT.open||!g.spot)?s.last:g.spot}
 function vxGrid(g){if(g.grid&&g.grid.length)return g.grid;const b=g.base.price,r=Math.sqrt(b),out=[];for(let n=-24;n<=24;n++){const x=r+n*0.25;if(x>0)out.push({n,level:+(x*x).toFixed(2)})}return out}
 function vxAround(g,spot,k){const gr=vxGrid(g),up=gr.filter(x=>x.level>spot).slice(0,k),dn=gr.filter(x=>x.level<spot).slice(-k);return{up,dn}}
+/* Fixed Square of 9 grid: the same formula as the ladder above, but anchored on whole roots (0.25 step on the root = 45 deg), so the levels
+   never move from day to day. Trigger band = a 45-deg level up to the 22.5-deg step above it (the "no trade zone" of the Dr Gann style chart):
+   long above the band, short below it, nothing inside it. A guide - confirm with price and volume. */
+function vxFixedGrid(spot,sym){if(!(spot>0))return'';
+  const lv=q=>q*q/16,           /* q = root in 1/4 units: root = q/4 ... lv(q)=(q/4)^2 with q counted in quarter-roots */
+        root=Math.sqrt(spot),q0=Math.floor(root*4),L=lv(q0),M=Math.pow((q0+.5)/4,2),U=lv(q0+1);
+  const rows=[];for(let q=q0+5;q>=q0-4;q--){rows.push({q,v:lv(q),half:false});if(q>q0-4)rows.push({q:q-.5,v:Math.pow((q-.5)/4,2),half:true})}
+  const f=v=>fmtP(v,2),pct=v=>{const d=(v-spot)/spot*100;return(d>=0?'+':'')+d.toFixed(2)+'%'};
+  const inside=spot<M, status=inside?`<b class="vx-fxw">Inside the no-trade band ${f(L)} – ${f(M)}</b> · wait for a close above ${f(M)} (long) or below ${f(L)} (short)`:`Above the band · long above <b>${f(M)}</b> (stop <b>${f(L)}</b>, target <b>${f(U)}</b>) · short only below <b>${f(L)}</b>`;
+  let html='';let placed=false;
+  rows.forEach((r,i)=>{if(!placed&&r.v<spot){html+=`<div class="vx-lad now"><span>${esc(sym||'NIFTY')}</span><b class="num">${f(spot)}</b><em>${typeof MKT!=='undefined'&&MKT.open?'live':'last'}</em></div>`;placed=true}
+    if(r.half&&!(r.v>=L&&r.v<=U+.01&&Math.abs(r.v-M)<.01))return;      /* 22.5 deg steps only where they matter: the trigger band */
+    const isBand=Math.abs(r.v-M)<.01||Math.abs(r.v-L)<.01,magic=!r.half&&Number.isInteger(r.q/4),cls=r.v>spot?'up':'dn';
+    html+=`<div class="vx-lad ${cls}${isBand?' vx-band':''}" title="${r.half?'22.5° step (edge of the trigger band)':'45° step · root '+(r.q/4)}"><span>${r.half?'22.5° · band':(magic?'★ root '+(r.q/4):'root '+(r.q/4))}</span><b class="num">${f(r.v)}</b><em class="num">${pct(r.v)}</em></div>`});
+  return`<div class="vx-ladder">${html}</div><p class="vx-note">${status}</p><p class="vx-note">Fixed grid: (root ÷ 4)² on whole roots, so it is the same every day. ★ marks the whole-root levels (Gann's "magic numbers"). The previous-close ladder above moves with each day's close.</p>`}
 function vxLadder(g,sym){if(!g||!g.available)return`<div class="empty">${esc(g&&g.reason||'Gann levels not available')}</div>`;
   sym=sym||'NIFTY';const spot=vxSpot(g,sym),{up,dn}=vxAround(g,spot,4),live=typeof MKT!=='undefined'&&MKT.open;
   const row=l=>{const d=(l.level-spot)/spot*100,isUp=l.level>spot,ang=Math.abs(l.n)*45;
@@ -2994,7 +3010,7 @@ function vxCtx(mc,symName){
 setInterval(async()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden||VD.busy||typeof MKT==='undefined'||!MKT.open)return;
   if(Date.now()-(VD._ts||0)<120000)return;const y=window.scrollY;await loadVedic(false);VD._lastSpot=null;if(App.view==='vedic'){vdPaint();window.scrollTo(0,y)}}catch(e){}},30000);
 setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden)return;const lb=document.getElementById('vxLadBox'),pb=document.getElementById('vxPlanBox');if(!VD||!VD.data)return;
-  const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le)le.innerHTML=vxLeanHTML(r);if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
+  const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le)le.innerHTML=vxLeanHTML(r);if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);{const fb=document.getElementById('vxFixBox');if(fb)fb.innerHTML=vxFixedGrid(sp,r.header.symbol)}if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
 /* Day Power: Vedic + Gann bias for the next 3 sessions (day_power.py) - every ingredient listed under "How it's worked out" */
 function vxDpMore(x){if(x.bullPts==null)return'';
   const half=(w,v)=>v?`${w} <b class="${v}">${v==='bullish'?'▲ bullish':v==='bearish'?'▼ bearish':'● neutral'}</b>`:'';
@@ -3033,6 +3049,7 @@ function vxAstroSlices(reportOrSlices){
 function vxTabPlan(r){const g=r.gann,mc=r.market_context,symName=r.header.symbol_name;
   return `<div class="vx-grid2"><section class="vx-card"><h3>Gann intraday levels <span class="vx-tip" title="Square of 9 levels around the Gann base. Resistance above, support below, live ${esc(symName)} marked.">?</span></h3><div id="vxLadBox">${vxLadder(g,r.header.symbol)}</div></section>
     <section class="vx-card"><h3>Trade plan</h3><div id="vxPlanBox">${vxPlanCards(g,r.header.symbol)}</div><h3 style="margin-top:14px">Market context</h3><div class="vx-kvs">${vxCtx(mc,symName)}</div></section></div>
+    <section class="vx-card"><h3>Fixed Square of 9 grid <span class="vx-tip" title="Same levels every day (whole-root Square of 9, 45° steps) with the no-trade band between a level and the 22.5° step above it.">?</span></h3><div id="vxFixBox">${vxFixedGrid(vxSpot(r.gann||{},r.header.symbol),r.header.symbol)}</div></section>
     ${vxDayPower(r.day_power)}${vxAstroSlices(r)}
     <section class="vx-card"><h3>Special timing</h3>${vxSpecial(r.special_timing)}</section>${vdNewsPanel(4)}`}
 function vxTabVedic(r){const p=r.panchang,pl=r.sidereal_positions.planets_deg,bias=r.day_bias;
