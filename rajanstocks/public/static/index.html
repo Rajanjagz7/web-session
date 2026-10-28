@@ -3567,8 +3567,21 @@ function patchPicks(el,tpl){const t=document.createElement('div');t.innerHTML=tp
   if(typing){const lf=lp.querySelector('#pkFoot'),nf=np.querySelector('#pkFoot');if(lf&&nf)lf.innerHTML=nf.innerHTML}else{lp.innerHTML=np.innerHTML;pkAlign(el)}
   ['#pkRes','#pkPanel','#pkFresh'].forEach(i=>{const a=el.querySelector(i),b=t.querySelector(i);if(a&&b)a.hidden=b.hidden});const lt=el.querySelector('.pk-sec'),nt=t.querySelector('.pk-sec');if(lt&&nt)lt.innerHTML=nt.innerHTML;
   return true}
+/* Rider (user, 29 Oct): a sudden volume spike (>= 2x the 20-day average) AND price breaking out of its range - above the 20-day high or pressed to today's high
+   (buy side), below the 20-day low or pressed to today's low (sell side). Stocks and indices; sorted by the size of the spike. */
+function pkRiders(picks,sig,q){const out=[];const qq=(q||'').trim().toUpperCase();
+  for(const p of picks||[]){const v=p.volx||0,L=p.ltp||0;if(v<2||!(L>0)||p.high==null||p.low==null)continue;if(qq&&!(p.s||'').toUpperCase().includes(qq))continue;
+    const rg=(p.high-p.low)||0,ch=p.chg||0;let side=null,why='';
+    if(p.hi20&&L>=p.hi20*0.998&&ch>0){side='BUY';why='broke the 20-day high'}else if(p.lo20&&L<=p.lo20*1.002&&ch<0){side='SELL';why='broke the 20-day low'}
+    else if(rg>0&&ch>=1&&L>=p.high-0.2*rg){side='BUY';why='pressing today\'s high'}else if(rg>0&&ch<=-1&&L<=p.low+0.2*rg){side='SELL';why='pressing today\'s low'}
+    if(!side)continue;if(sig==='BUY'&&side!=='BUY'||sig==='SELL'&&side!=='SELL')continue;
+    if(p.kind==='index'){const s0=pkIdxSide(p);if(s0&&s0!==side)continue}
+    const d=side==='BUY'?1:-1,risk=Math.max(side==='BUY'?L-p.low:p.high-L,p.atr||L*0.01,L*0.003),dp=L<100?2:1;
+    out.push({...p,signal:side,plans:null,entry:+L.toFixed(2),stop:+(L-d*risk).toFixed(2),target:+(L+d*1.5*risk).toFixed(2),target2:+(L+d*2.5*risk).toFixed(2),risk:+risk.toFixed(2),rr:1.5,
+      reasons:[`Rider: volume ${v.toFixed(1)}x the 20-day average and price ${why}`].concat(p.reasons||[])})}
+  return out.sort((a,b)=>(b.volx||0)-(a.volx||0))}
 function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
-  if(f.kind!=='INDEX'&&f.mkt!=='CASH')f.mkt='FNO';   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
+  if(f.kind!=='INDEX'&&f.mkt!=='CASH'&&f.mkt!=='RIDER')f.mkt='FNO';if(f.mkt==='RIDER'){f.hz='ALL';f.str='ALL'}   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
   if(f.kind==='INDEX'){f.hz='ALL';f.mkt='ALL';f.str='ALL';f.q='';if(f.sig==='EVERY')f.sig='TOP'}else if(f.sig==='TOP')f.sig='ALL'   // stocks have no Top 10-15 chip any more (it leads Fresh picks); index calls only have the Show filter: nothing hidden can empty the list
   const isIdx=f.kind==='INDEX';
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
@@ -3618,6 +3631,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
       return(SORTS[f.sort]||SORTS.strength)(a,b);
     });
 
+    if(f.mkt==='RIDER'&&f.kind!=='INDEX')l=pkRiders(P.picks,f.sig,f.q);
     const size=f.size>0?f.size:l.length||1,pages=Math.max(1,Math.ceil(l.length/size));f.page=Math.min(Math.max(0,f.page||0),pages-1);
     const part=l.slice(f.page*size,(f.page+1)*size);
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
@@ -3635,9 +3649,9 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
    <div class="seg pk-sec" role="tablist" aria-label="Picks sections"><button type="button" role="tab" class="${pkSec()==='fresh'?'on':''}" aria-selected="${pkSec()==='fresh'}" data-pksec="fresh">⚡ Fresh picks${pkfLoad().length?` <i class="pk-n">${pkfLoad().length}</i>`:''}</button><button type="button" role="tab" class="${pkSec()==='browse'?'on':''}" aria-selected="${pkSec()==='browse'}" data-pksec="browse">🔎 Browse &amp; filter</button></div>
    <div id="pkFresh" ${pkSec()==='fresh'?'':'hidden'}>${pkFreshHTML()}</div>
    <div class="card pkf" id="pkPanel" ${pkSec()==='browse'?'':'hidden'}>
-     <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['OPT','Options'],['SOPT','Stock options'],['STK','Stock only']],isIdx?'OPT':f.mkt==='CASH'?'STK':'SOPT','tab')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
-     <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):(f.mkt==='CASH'?chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig'):chips([['ALL','All ideas'],['BUY','Buy · call'],['SELL','Sell · put / short'],['EVERY','All F&O stocks']],f.sig,'sig'))}</div></div>
-     ${isIdx?'':`<div class="pkf-row"><span class="pkf-l">Horizon</span><div class="seg pkf-seg">${segs([['ALL','Any'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>`}
+     <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['OPT','Options'],['SOPT','Stock options'],['STK','Stock only'],['RID','Rider']],isIdx?'OPT':f.mkt==='CASH'?'STK':f.mkt==='RIDER'?'RID':'SOPT','tab')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
+     <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):(f.mkt==='RIDER'?chips([['ALL','All riders'],['BUY','Breaking up'],['SELL','Breaking down']],f.sig,'sig'):f.mkt==='CASH'?chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig'):chips([['ALL','All ideas'],['BUY','Buy · call'],['SELL','Sell · put / short'],['EVERY','All F&O stocks']],f.sig,'sig'))}</div></div>
+     ${isIdx||f.mkt==='RIDER'?'':`<div class="pkf-row"><span class="pkf-l">Horizon</span><div class="seg pkf-seg">${segs([['ALL','Any'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>`}
      ${isIdx?'':`<div class="pkf-sel"><label>Strength<select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong ≥65%</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High ≥75%</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker &lt;65%</option></select></label><label>Sort<select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Per page<select class="inp" id="pkSize" aria-label="Per page">${[10,15,30,100,500,1000].map(k=>`<option value="${k}" ${f.size===k?'selected':''}>${k}</option>`).join('')}</select></label></div>`}
      <div id="pkFoot">${pkDirty(f)?'<div class="pkf-foot"><span>Filters applied</span><button type="button" class="pkf-rst" data-pkreset="1">Reset filters</button></div>':''}</div>
    </div>
@@ -3648,7 +3662,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
   el.innerHTML=_tpl;pkAlign(el);
   if(!GL.items&&!GL.busy)loadGlobal(true);
   if(_t0!==null){_sp.scrollTop=_st;const pa=_keep&&el.querySelector('.pkf');if(pa){const d=pa.getBoundingClientRect().top-_t0;if(Math.abs(d)>1)_sp.scrollTop=_st+d}}liveUpdate();if(window.geTags)geTags(el);drawPkFut()}   /* Index futures block removed: it repeated NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY from the Indices cards just above (and polled /api/m/futures/board every 15s) */
-document.addEventListener('click',e=>{const rs=e.target.closest('[data-pkreset]');if(rs){Object.assign(App.pk,{sig:'ALL',kind:'STOCK',hz:'ALL',mkt:'FNO',sort:'strength',size:15,page:0,q:'',str:'ALL'});App.pkKeep=true;renderPicks(true);return}const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');if(k==='tab'){App.pk.kind=v==='OPT'?'INDEX':'STOCK';App.pk.mkt=v==='STK'?'CASH':'FNO';App.pk.page=0;if(v==='OPT'&&App.pk.sig==='EVERY')App.pk.sig='TOP';if(v!=='OPT'&&App.pk.sig==='TOP')App.pk.sig='ALL';App.pkKeep=true;renderPicks(true);return}App.pk[k]=v;App.pk.page=0;if(k==='mkt'&&v==='CASH'&&App.pk.sig==='TOP')App.pk.sig='ALL';if(k==='kind'&&v==='INDEX')App.pk.sig=App.pk.sig==='EVERY'?'TOP':App.pk.sig;App.pkKeep=true;renderPicks(true)}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
+document.addEventListener('click',e=>{const rs=e.target.closest('[data-pkreset]');if(rs){Object.assign(App.pk,{sig:'ALL',kind:'STOCK',hz:'ALL',mkt:'FNO',sort:'strength',size:15,page:0,q:'',str:'ALL'});App.pkKeep=true;renderPicks(true);return}const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');if(k==='tab'){App.pk.kind=v==='OPT'?'INDEX':'STOCK';App.pk.mkt=v==='STK'?'CASH':v==='RID'?'RIDER':'FNO';if(v==='RID'&&(App.pk.sig==='EVERY'||App.pk.sig==='TOP'))App.pk.sig='ALL';App.pk.page=0;if(v==='OPT'&&App.pk.sig==='EVERY')App.pk.sig='TOP';if(v!=='OPT'&&App.pk.sig==='TOP')App.pk.sig='ALL';App.pkKeep=true;renderPicks(true);return}App.pk[k]=v;App.pk.page=0;if(k==='mkt'&&v==='CASH'&&App.pk.sig==='TOP')App.pk.sig='ALL';if(k==='kind'&&v==='INDEX')App.pk.sig=App.pk.sig==='EVERY'?'TOP':App.pk.sig;App.pkKeep=true;renderPicks(true)}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 
 
