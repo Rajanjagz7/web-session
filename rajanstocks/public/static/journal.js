@@ -7,7 +7,7 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   'use strict';
   const KEY = 'rj-journal-v1', SKEY = 'rj-journal-settings-v1';
   const DEFAULTS = {
-    capital: 1500000, maxTrades: 5, riskPct: 0.5, dailyLossPct: 2, maxOpen: 1, minRR: 2,
+    capital: 1000000, maxTrades: 5, riskPct: 0.5, dailyLossPct: 2, maxOpen: 1, minRR: 2,
     cost: 0, slip: 0, t1: 1, t2: 2, t3: 3, allowOverride: true,
     labTrigger: 1, labStep: 0.5, labTrail: 1,
   };
@@ -23,7 +23,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   let S = Object.assign({}, DEFAULTS, load(SKEY, {}));
-  if (S.capV !== 20261028) { if (S.capital === 1000000) S.capital = 1500000; S.capV = 20261028; save(SKEY, S); }      // 28 Oct 2026: options paper money is Rs 15 L (three Rs 5 L sleeves)
+  if (S.capV !== 202610282) { if (S.capital === 1500000) S.capital = 1000000; S.capV = 202610282; save(SKEY, S); }      // 28 Oct 2026: option buying paper money is Rs 10 L (the share trader has its own Rs 5 L)
     let T = load(KEY, []);
   /* fresh start: from 28 Oct 2026 the books begin at zero - drop journal trades created before 09:00 that morning (nothing newer is touched) */
   (function freshStart() {
@@ -1180,7 +1180,7 @@ function paperList() {
   function viewSettings() {
     const n = (k, l, step, hint) => `<label class="fld"><span>${l}</span><input class="inp" data-jset="${k}" type="number" step="${step || 'any'}" value="${S[k]}"><small>${hint || ''}</small></label>`;
     return `<div class="card"><div class="card-h"><h3>Risk &amp; limits</h3></div><div class="jv-form">
-      ${n('capital', 'Starting virtual capital (₹)', 1000, 'Default ₹15,00,000')}${n('maxTrades', 'Max entries per day', 1, 'Each entry / re-entry counts; partial exits do not')}
+      ${n('capital', 'Starting virtual capital (₹)', 1000, 'Default ₹10,00,000')}${n('maxTrades', 'Max entries per day', 1, 'Each entry / re-entry counts; partial exits do not')}
       ${n('riskPct', 'Risk per trade (% of equity)', 0.05, 'Illustrative default 0.50%')}${n('dailyLossPct', 'Daily loss limit (% of start-of-day equity)', 0.1, 'Realised + unrealised')}
       ${n('maxOpen', 'Max open positions', 1)}${n('minRR', 'Minimum planned R:R', 0.1, 'Below this needs an override reason')}
       ${n('cost', 'Estimated cost per unit (₹)', 'any', '0 is only a placeholder — enter realistic costs')}${n('slip', 'Slippage per unit (₹)', 'any')}
@@ -1353,7 +1353,7 @@ function paperList() {
         <div class="jv-actions" style="padding:0"><button class="btn ${c.enabled ? '' : 'pri'}" data-jv="autotoggle">${c.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>
         <button class="btn" data-jv="autoresearch">${c.researchMode ? 'Research mode: ON (click to switch off)' : 'Research mode: OFF (click to switch on)'}</button>
         <button class="btn" data-jv="autoeagle">${c.eagleOn ? 'Eagle Trades: ON (click to stop)' : 'Eagle Trades: OFF (click to start)'}</button>
-        <button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Off since 28 Oct: the Rs 15 L options book is the whole book.">${c.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>
+        <button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Rs 5 L of its own, next to the Rs 10 L option-buying book.">${c.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>
         <button class="btn" data-jv="autopair">${c.pairSell === false ? 'Option SELL leg: OFF (buy-only) - switch on' : 'Option SELL leg: ON (buy + paired sell) - switch to buy-only'}</button>
         <button class="btn" data-jv="autolock">${c.lockMode === 'new' ? 'Profit lock: NEW (lock 2.5k, trail 3.5k+) - switch to old' : 'Profit lock: OLD (lock 1.5k, trail 2k+) - switch to new'}</button>
         <button class="btn" data-jv="autorefresh">Refresh</button></div></div></div>
@@ -1840,9 +1840,9 @@ function paperList() {
      return `<table class="jv-t"><thead><tr>${headers.map(h => `<th${h === 'Exit' ? ' class="jv-xc"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
    }
 
-   /* ---- Stock paper trader (server, its own Rs 10 L): intraday / swing / positional plans from Picks ---- */
+   /* ---- Stock paper trader (server, its own Rs 5 L): intraday / swing / positional plans from Picks ---- */
    const SB = { d: null, ts: 0, busy: false };
-   /* the share paper trader is switched off (Rs 15 L options only): hide its book and tab while it holds nothing */
+   /* the share paper trader is switched off (switched off in settings): hide its book and tab while it holds nothing */
    function stockHidden() { const off = !!(AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.stockTrader === false); const d = SB.d && SB.d.byHorizon ? SB.d : null; return off && !!d && !(d.used || d.booked || d.unrealised); }
    async function sbLoad(force) {
      if (SB.busy || (!force && Date.now() - SB.ts < 60000)) return;
@@ -1880,7 +1880,7 @@ function paperList() {
      else if (b.dataset.sb === 'reset') smallForm('Reset stock trader', '<p>Close the record of every stock-trader trade and start again with full paper capital? This cannot be undone.</p>', 'Reset', () => { jpost('/api/stockbot/reset').then(() => { window.closeModal && window.closeModal(); sbLoad(true); }); });
    }, true);
 
-   /* two separate paper books: options / Trade screen (this journal) and the stock trader - each Rs 10 L, Rs 20 L together */
+   /* two separate paper books: options / Trade screen (this journal) and the stock trader - options Rs 10 L, stock trader Rs 5 L */
    /* "Today" card: today's profit split by book into what is BOOKED (closed trades - locked in) and what is still OPEN (moves with
       price until the trade closes). Options Buy / Options Sell come from the journal trades; the stock trader from its own server book. */
    function todayRows() {
@@ -1958,7 +1958,7 @@ function paperList() {
    function booksCard() {
      const d = SB.d && SB.d.byHorizon ? SB.d : null; if (!d) sbLoad(false);
      const day = today(), L = liveTotals(day), c = capUse(), ds = dayStats(day), oToday = ds.pnl + L.autoToday + L.unr;
-     const sCap = d ? d.capital : 1000000;
+     const sCap = d ? d.capital : 500000;
      // compact: name, equity (+change), then Open, Booked, In use, Free - two cards per row on phones
      const v = (k, x, cl, fmt) => `<div><small>${k}</small><b class="${x == null ? '' : cl === 'pl' ? cc(x) : cl || ''}">${x == null ? '…' : fmt(x)}</b></div>`;
      const amt = x => inr(x, 0);
@@ -2023,7 +2023,7 @@ function paperList() {
          </div>
          <div class="jv-actions">
            ${srv ? `<button class="btn ${srv.enabled ? '' : 'pri'}" data-jv="autotoggle">${srv.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>` : ''}
-           ${srv && srv.cfg ? `<button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Off since 28 Oct: the Rs 15 L options book is the whole book.">${srv.cfg.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>` : ''}
+           ${srv && srv.cfg ? `<button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Rs 5 L of its own, next to the Rs 10 L option-buying book.">${srv.cfg.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>` : ''}
            <button class="btn" data-jv="autorefresh">Refresh</button>
          </div>
        </div>

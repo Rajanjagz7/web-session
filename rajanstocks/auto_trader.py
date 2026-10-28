@@ -39,15 +39,15 @@ def _cap(cfg, key):
     return NO_LIMIT if not v else int(v)
 
 
-PLAN_V = 20261028      # one-time switch from 28 Oct 2026: Rs 15 L, buy-only, three Rs 5 L sleeves
+PLAN_V = 202610282     # one-time switch (28 Oct 2026): Rs 10 L option buying (stock options + index, calls and puts) in three sleeves, the Rs 5 L share trader on
 IDX_V = 20261028       # one-time: index options are bought too (not only stock options) - stockOnly stays a setting that can be turned back on
-SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
+SLEEVES = {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0}      # Rs 10 L of option buying; the share trader has its own Rs 5 L
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
 PREM_SL_PCT = 0.125                      # option premium stop: at most this share of the premium (30% until 28 Oct, 20% for a few hours, then 12.5%)
 MAX_OUTLAY = {"BANKNIFTY": 15000.0}     # most one trade may spend on premium, per symbol (user, 28 Oct: Bank Nifty options 10-15k max) - a dearer ATM strike moves to the nearest OTM one that fits
 TARGET_LADDER = (1.5, 2, 3, 4, 5, 6, 10)    # targets in R (user, 28 Oct): the stop trails one target behind, the last one closes the trade
 SL_V = 1                                 # one-time: premium stop 12.5% + risk per trade 1.0% (bigger trades) from 28 Oct 11:16
-DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
+DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
@@ -92,8 +92,8 @@ def _load(cached=False):
         if saved.get("pairV") != 1:                            # one-time: paired option SELL leg off (buy-only); the settings API can turn it back on
             st["cfg"].update(pairSell=False, pairV=1)
             st["_dirty"] = True
-        if saved and saved.get("planV") != PLAN_V:              # one-time: from 28 Oct 2026 - Rs 15 L in three Rs 5 L sleeves, buy-only
-            st["cfg"].update(capital=1500000.0, buyOnly=True, stockTrader=False, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
+        if saved and saved.get("planV") != PLAN_V:              # one-time: Rs 10 L option buying in three sleeves + the Rs 5 L share trader on
+            st["cfg"].update(capital=1000000.0, buyOnly=True, stockTrader=True, sleeves=dict(SLEEVES), pairSell=False, zTrendHedge=False, planV=PLAN_V)
             st["_dirty"] = True
         if saved.get("idxV") != IDX_V:                          # one-time: index options are bought as well as stock options
             st["cfg"].update(stockOnly=False, idxV=IDX_V)
@@ -188,7 +188,7 @@ def _sleeve_of(key):
 
 
 def _sleeve_equity(st, name):
-    """Rs 5 L start + what that sleeve has closed so far; None when sleeves are off (the old single-pool sizing then applies)."""
+    """The sleeve's start + what that sleeve has closed so far; None when sleeves are off (the old single-pool sizing then applies)."""
     base = (st["cfg"].get("sleeves") or {}).get(name)
     if not base:
         return None

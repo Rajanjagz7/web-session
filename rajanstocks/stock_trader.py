@@ -5,7 +5,7 @@ Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
     market_api._horizon_fit) are taken in order of that horizon's score, BUY or SELL as the plan says.
   * Up to 3 new trades per horizon per day; at most 6 intraday, 10 swing and 10 positional trades open at once.
     One open trade per stock per horizon.
-  * Size: risk 0.5% of capital (Rs 5,000 on Rs 10 L) between entry and stop, position value capped at 10% of capital.
+  * Size: risk 0.5% of capital (Rs 2,500 on Rs 5 L) between entry and stop, position value capped at 10% of capital.
     Capital blocked: delivery buys (swing / positional BUY) the full value; intraday trades and swing / positional SELLs
     (a futures short - cash stocks cannot be held short overnight) 20% margin. Skipped when the free capital is not enough,
     or when the plan's stop is more than 12% away.
@@ -35,7 +35,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 KEY = "rajanone:stockbot:v1"
 FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "stockbot_state.json")
 HZ = ("intraday", "swing", "positional")
-CFG = {"capital": 1000000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
+CFG = {"capital": 500000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
        "maxOpen": {"intraday": 6, "swing": 10, "positional": 10}, "maxSessions": {"swing": 15, "positional": 40},
        "windowStart": "09:15", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
 _lock = threading.Lock()
@@ -407,6 +407,6 @@ def reset():
     if _load().get("_readonly"):
         raise HTTPException(503, "The state store is not answering - reset refused so nothing is lost")
     with _lock:
-        _save({"trades": [], "log": [{"at": _now().isoformat(), "msg": "Reset to Rs 10,00,000"}], "seq": 0,
+        _save({"trades": [], "log": [{"at": _now().isoformat(), "msg": "Reset to Rs 5,00,000"}], "seq": 0,
                "resetAt": _now().isoformat()})
     return {"ok": True}

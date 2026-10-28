@@ -79,19 +79,19 @@ def test_stock_only_skips_the_index_screen(monkeypatch):
     monkeypatch.setattr(at, "_picks", lambda: {"picks": []})
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: called.append(n) or calls)
     st = {"cfg": {**at.DEFAULT_CFG, "stockOnly": True}, "trades": [], "log": []}
-    assert not at.DEFAULT_CFG["stockOnly"] and at.DEFAULT_CFG["buyOnly"] and at.DEFAULT_CFG["capital"] == 1500000.0
+    assert not at.DEFAULT_CFG["stockOnly"] and at.DEFAULT_CFG["buyOnly"] and at.DEFAULT_CFG["capital"] == 1000000.0
     assert at.fill_slots(st, "2026-10-28", []) == [] and not called
 
 
-def test_sleeves_are_three_5_lakh_pools():
-    assert at.DEFAULT_CFG["sleeves"] == {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
+def test_sleeves_split_the_10_lakh_option_book():
+    assert at.DEFAULT_CFG["sleeves"] == {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0}
     assert sum(at.DEFAULT_CFG["sleeves"].values()) == at.DEFAULT_CFG["capital"]
     assert at._sleeve_of("morning-pick") == "picks" and at._sleeve_of("Eagle Trades") == "eagle" and at._sleeve_of("Z Trend") == "signals"
     st = {"cfg": {**at.DEFAULT_CFG}, "trades": [
         {"sleeve": "picks", "status": "CLOSED", "net": -12000.0}, {"sleeve": "eagle", "status": "CLOSED", "net": 5000.0},
         {"status": "CLOSED", "net": 99999.0},                                  # an old trade with no sleeve moves no sleeve
         {"sleeve": "picks", "status": "OPEN", "entry": 50.0, "lots": 2, "lot": 500, "last": 55.0}], "log": []}
-    assert at._sleeve_equity(st, "picks") == 488000.0 and at._sleeve_equity(st, "eagle") == 505000.0 and at._sleeve_equity(st, "signals") == 500000.0
+    assert at._sleeve_equity(st, "picks") == 388000.0 and at._sleeve_equity(st, "eagle") == 205000.0 and at._sleeve_equity(st, "signals") == 400000.0
     assert at._sleeve_deployed(st, "picks") == 50000.0
     rows = {r["key"]: r for r in at.sleeve_report(st)}
     assert rows["picks"]["open"] == 1 and rows["picks"]["openPnL"] == 5000.0 and rows["eagle"]["net"] == 5000.0
@@ -99,7 +99,7 @@ def test_sleeves_are_three_5_lakh_pools():
 
 def test_share_trader_opens_nothing_while_switched_off(monkeypatch):
     import stock_trader as sb, nse_calendar
-    assert at.DEFAULT_CFG["stockTrader"] is False
+    assert at.DEFAULT_CFG["stockTrader"] is True
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
     monkeypatch.setattr(sb.shared_cache, "lock", lambda *a, **k: True)
     monkeypatch.setattr(sb.shared_cache, "unlock", lambda *a, **k: None)
@@ -108,9 +108,9 @@ def test_share_trader_opens_nothing_while_switched_off(monkeypatch):
     monkeypatch.setattr(sb, "manage", lambda st, now: None)
     calls = []
     monkeypatch.setattr(sb, "enter", lambda st, now: calls.append(1) or ["X"])
-    monkeypatch.setattr(at, "_load", lambda cached=False: {"cfg": {**at.DEFAULT_CFG}})
+    monkeypatch.setattr(at, "_load", lambda cached=False: {"cfg": {**at.DEFAULT_CFG, "stockTrader": False}})
     assert sb.run_cycle()["entered"] == [] and not calls
-    monkeypatch.setattr(at, "_load", lambda cached=False: {"cfg": {**at.DEFAULT_CFG, "stockTrader": True}})
+    monkeypatch.setattr(at, "_load", lambda cached=False: {"cfg": {**at.DEFAULT_CFG}})
     assert sb.run_cycle()["entered"] == ["X"] and calls
 
 
