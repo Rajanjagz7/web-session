@@ -3652,6 +3652,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
       const bIsIdx=b.kind==='index'?0:1;
       if(aIsIdx!==bIsIdx)return aIsIdx-bIsIdx;
       if(f.sort==='strength'&&hi75(a)!==hi75(b))return hi75(b)-hi75(a);   // strength >= 75% first, in every view
+      if(f.sort==='strength'&&hi75(a)&&hi75(b)&&(b.strength||0)!==(a.strength||0))return(b.strength||0)-(a.strength||0);   // inside the 75%+ group the highest strength (100, 95, 90 ...) comes first, in every horizon
       if(hzKey&&f.sort==='strength'){const fa=(a.plans&&a.plans[hzKey]&&a.plans[hzKey].fit)||0,fb=(b.plans&&b.plans[hzKey]&&b.plans[hzKey].fit)||0;if(fa!==fb)return fb-fa}   // a horizon is ranked by its own score
       return(SORTS[f.sort]||SORTS.strength)(a,b);
     });
