@@ -256,3 +256,25 @@ def test_option_stop_is_capped_at_12_5_percent_of_the_premium(monkeypatch):
     st2 = {"cfg": {**auto_trader.DEFAULT_CFG, "premSlPct": 0.1}, "trades": [], "log": []}
     t2 = auto_trader.open_trade(st2, {"key": "x", "sym": "ABC", "side": "BUY", "kind": "stock", "variant": "fixed", "score": 1}, "2026-10-28")
     assert t2["premSL"] == pytest.approx(180.0, abs=0.01)                          # the setting wins
+
+
+def test_banknifty_premium_budget_moves_to_the_nearest_otm_strike_that_fits(monkeypatch):
+    """User 28 Oct: Bank Nifty options 10-15k max per trade -> ATM (~1,000 x lot 30 = 30k) is replaced by the nearest OTM strike under 15k."""
+    import market_api
+    centre = 54000
+
+    def mk(k):
+        ce = max(centre - k, 0) + max(1000 - 0.45 * max(k - centre, 0), 20)          # OTM calls cheaper by 0.45 per point
+        pe = max(k - centre, 0) + max(1000 - 0.45 * max(centre - k, 0), 20)
+        return {"strike": float(k), "ce": {"key": f"C{k}", "ltp": ce, "bid": ce - 1, "ask": ce + 1}, "pe": {"key": f"P{k}", "ltp": pe, "bid": pe - 1, "ask": pe + 1}}
+    ch = {"rows": [mk(k) for k in range(centre - 3000, centre + 3001, 100)], "spot": 54010.0, "atm": 54000, "expiry": "2026-11-23", "expiries": ["2026-11-23"], "lot": 30}
+    monkeypatch.setattr(market_api, "chain", lambda sym, exp="": ch)
+    monkeypatch.setattr(auto_trader, "_live_spot", lambda sym, fb=0: 54010.0)
+    atm = auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3)                    # no budget: ATM
+    assert atm["strike"] == 54000.0 and atm["premium"] * 30 > 15000
+    ce = auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3, 15000.0)
+    assert ce["strike"] > 54000.0 and ce["premium"] * 30 <= 15000 and ce["premium"] * 30 > 12000      # nearest OTM that fits, not a far lottery ticket
+    pe = auto_trader._contract("BANKNIFTY", "SELL", "2026-10-28", 3, 15000.0)            # bearish signal: put, strikes go DOWN
+    assert pe["strike"] < 54000.0 and pe["key"].startswith("P") and pe["premium"] * 30 <= 15000
+    with pytest.raises(RuntimeError, match="premium budget"):
+        auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3, 100.0)

@@ -44,9 +44,10 @@ IDX_V = 20261028       # one-time: index options are bought too (not only stock 
 SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
 PREM_SL_PCT = 0.125                      # option premium stop: at most this share of the premium (30% until 28 Oct, 20% for a few hours, then 12.5%)
+MAX_OUTLAY = {"BANKNIFTY": 15000.0}     # most one trade may spend on premium, per symbol (user, 28 Oct: Bank Nifty options 10-15k max) - a dearer ATM strike moves to the nearest OTM one that fits
 TARGET_LADDER = (1.5, 2, 3, 4, 5, 6, 10)    # targets in R (user, 28 Oct): the stop trails one target behind, the last one closes the trade
 SL_V = 1                                 # one-time: premium stop 12.5% + risk per trade 1.0% (bigger trades) from 28 Oct 11:16
-DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
+DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
@@ -632,7 +633,7 @@ def _live_spot(sym, fallback=0.0):
     return float(fallback or 0)
 
 
-def _contract(sym, side, today, min_days):
+def _contract(sym, side, today, min_days, max_outlay=None):
     import market_api
     ch = market_api.chain(sym, "")
     exps = [e for e in (ch.get("expiries") or [ch.get("expiry")]) if e]
@@ -660,6 +661,16 @@ def _contract(sym, side, today, min_days):
         itm = (ce_ - pe_ if side == "BUY" else pe_ - ce_) - 0.08 * spot * days / 365     # allow for carry / dividends
         if itm > 1.5 * step:
             raise RuntimeError(f"skipped: {row['strike']:.0f} {'CE' if side == 'BUY' else 'PE'} looks in the money (~{itm:.0f} pts) - ATM / OTM only")
+    lot_ = int(ch.get("lot") or 1)
+    if max_outlay:                                       # premium budget per trade: walk OTM (calls up, puts down) from the ATM strike until one lot fits
+        side_k = "ce" if side == "BUY" else "pe"
+        order = sorted(rows, key=lambda r: r["strike"]) if side == "BUY" else sorted(rows, key=lambda r: -r["strike"])
+        start = next((i for i, r in enumerate(order) if r["strike"] == row["strike"]), 0)
+        fit = next((r for r in order[start:] if (lambda lg: (lg.get("key") and (float(lg.get("ask") or 0) or float(lg.get("ltp") or 0)) > 0
+                                                          and (float(lg.get("ask") or 0) or float(lg.get("ltp") or 0)) * lot_ <= max_outlay))(r.get(side_k) or {})), None)
+        if not fit:
+            raise RuntimeError(f"skipped: no strike fits the Rs {max_outlay:,.0f} premium budget")
+        row = fit
     leg = row.get("ce" if side == "BUY" else "pe") or {}
     ask, bid, ltp = float(leg.get("ask") or 0), float(leg.get("bid") or 0), float(leg.get("ltp") or 0)
     px = ask or ltp
@@ -714,7 +725,8 @@ def open_trade(st, c, today):
     cfg = st["cfg"]
     import backtest
     atr, last_close, bars = _atr_for(c["sym"])
-    ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"])
+    cap = float((cfg.get("maxOutlay") or MAX_OUTLAY).get(c["sym"]) or 0) or None
+    ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap)
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
     variant = c.get("variant", "fixed")
@@ -740,6 +752,8 @@ def open_trade(st, c, today):
     lots = max(1, int(budget // per_lot)) if per_lot > 0 else 1
     max_out = base_eq * 0.2
     while lots > 1 and lots * ct["lot"] * ct["premium"] > max_out:
+        lots -= 1
+    while cap and lots > 1 and lots * ct["lot"] * ct["premium"] > cap:       # per-symbol premium budget (Bank Nifty 15k)
         lots -= 1
     if sl_eq:                                                # never spend more premium than the sleeve has free
         free = sl_eq - _sleeve_deployed(st, sl_name)
