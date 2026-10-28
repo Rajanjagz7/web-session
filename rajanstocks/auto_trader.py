@@ -541,6 +541,30 @@ TC_TRIGGER_TOL = 0.0015          # price within 0.15% of the zone at the cycle t
 TC_MIN_RR = 1.2                  # only take a cycle trigger when the zone-to-zone reward is worth the risk
 
 
+def _gann_cands(now):
+    """Gann time-price angle bounce on NIFTY / BANKNIFTY 15-minute bars (see gann_angle.py): the latest CLOSED bar dipped to the slanted
+    1x1 line and closed back off it. Buy-only - a call for a support bounce, a put for a resistance rejection."""
+    import gann_angle
+    import market_api
+    now_m = _mins(now)
+    if not (9 * 60 + 45 <= now_m <= 15 * 60):
+        return []
+    out = []
+    for s in ("NIFTY", "BANKNIFTY"):
+        try:
+            bars = market_api.candles(symbol=s, tf="15m", recent=10)["bars"]
+        except Exception:
+            continue
+        bars = [b for b in bars if b["t"] + 15 * 60 * 1000 <= now.timestamp() * 1000]            # closed bars only
+        if not bars or now.timestamp() * 1000 - (bars[-1]["t"] + 15 * 60 * 1000) > 20 * 60 * 1000:
+            continue                                                                          # the signal bar must be the one that just closed
+        g = gann_angle.bounce(bars)
+        if g:
+            out.append({"key": "gann-angle", "sym": s, "side": g["side"], "asOf": now.date().isoformat(), "score": 0.6, "indStop": g["stop"],
+                        "variant": "fixed", "filter": "none", "kind": "index", "source": g["why"], "label": "Gann angle"})
+    return out[:1]
+
+
 def _timecycle_cands(now):
     """Gann time cycle trigger (indices only): at a strong / medium cycle time, price sitting at the
     vibration zone (support) or the next resistance is the traditional 'price confirms time' entry.
@@ -1234,6 +1258,16 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(tc_extra)} time-cycle trigger(s)"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"timecycle trigger failed: {str(e)[:80]}"})
+            try:                                      # Gann time-price angle bounce (chart indicator "Gann", user 28 Oct)
+                if cfg.get("gannOn", True):
+                    g_extra = _gann_cands(now)
+                    gseen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                    groom = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
+                    chosen = chosen + [c for c in g_extra if c["sym"] not in gseen][:groom]
+                    if g_extra:
+                        rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(g_extra)} Gann-angle trigger(s)"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"gann angle failed: {str(e)[:80]}"})
             filled = []
             if cfg.get("fillSlots", True) and time.time() >= max(st.get("fillBackoff", 0), st.get("fillNext", 0)):
                 st["fillNext"] = time.time() + FILL_EVERY          # live screens every 3 minutes (each costs ~40 Upstox calls)
@@ -1365,6 +1399,7 @@ class Cfg(BaseModel):
     zTrendHedge: bool | None = None
     pairSell: bool | None = None
     eagleOn: bool | None = None
+    gannOn: bool | None = None
     lockMode: str | None = None
     buyOnly: bool | None = None
     stockOnly: bool | None = None
@@ -1567,6 +1602,8 @@ def config(c: Cfg):
             st["cfg"]["researchMode"] = c.researchMode
         if c.eagleOn is not None:
             st["cfg"]["eagleOn"] = c.eagleOn
+        if c.gannOn is not None:
+            st["cfg"]["gannOn"] = c.gannOn
         if c.lockMode is not None:
             if c.lockMode not in LOCKS:
                 raise HTTPException(400, "lockMode must be 'old' or 'new'")
