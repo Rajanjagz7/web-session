@@ -34,3 +34,32 @@ def test_close_under_the_line_is_no_trade():
 
 def test_too_few_bars():
     assert g.bounce(_bars()[:10]) is None
+
+
+def test_classic_mode_shadows_the_extras(monkeypatch):
+    import datetime as dt
+    import auto_trader as a
+    monkeypatch.setattr(a, "_live_spot", lambda s, fallback=0.0: 100.0)
+    st = {"shadow": []}
+    now = dt.datetime(2026, 10, 29, 10, 0)
+    a.shadow_record(st, [{"key": "gann-angle", "sym": "NIFTY", "side": "BUY", "indStop": 98.0},
+                         {"key": a.EAGLE, "sym": "TCS", "side": "SELL", "indStop": 102.0},
+                         {"key": "rzt-intraday", "sym": "SBIN", "side": "BUY", "indStop": 99.0}], now)
+    assert {x["key"] for x in st["shadow"]} == {"gann-angle", a.EAGLE, "rzt"}
+    assert all(x["target"] != x["entry"] for x in st["shadow"])
+    assert {"morning-pick", a.EAGLE, "gann-angle", "timecycle"} <= a.SHADOW_KEYS
+    assert a.shadow_summary(st)[0]["n"] == 1
+
+
+def test_classic_stock_screen_candidates(monkeypatch):
+    import market_api
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import auto_trader as a
+    monkeypatch.setattr(market_api, "quick_index_calls", lambda n: [])
+    row = dict(s="AAA", kind="stock", universe="fno", signal="BUY", strength=70, ltp=100.0, op=100.0, lo=99.0, hi=101.0, volx=1.5, h20=110.0, l20=90.0, atr=2.0)
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [row]})
+    monkeypatch.setattr(a, "_now", lambda: datetime(2026, 10, 29, 11, 0, tzinfo=ZoneInfo("Asia/Kolkata")))
+    st = {"cfg": dict(a.DEFAULT_CFG), "trades": [], "log": []}
+    out = a.fill_slots(st, "2026-10-29", [])
+    assert all(c["key"] != "morning-pick" for c in out)

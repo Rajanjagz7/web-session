@@ -50,7 +50,7 @@ SL_V = 1                                 # one-time: premium stop 12.5% + risk p
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
-               "lockMode": "old", "eagleOn": True, "eagleV": 1}
+               "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1}
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
@@ -103,6 +103,9 @@ def _load(cached=False):
             st["_dirty"] = True
         if saved and saved.get("eagleV") != 1:                  # one-time (user, 28 Oct): Eagle Trades back ON - buy-only like everything else (call for Open = Low, put for Open = High); the Algo button / settings API can switch it off again
             st["cfg"].update(eagleOn=True, eagleV=1)
+            st["_dirty"] = True
+        if saved and saved.get("classicV") != 1:                # one-time (user, 28 Oct): auto trade ONLY the four classic entry types (1 / 2 indicators agree, stock screen, index call/put); Picks, Eagle, Gann angle, time cycle and Z Trend run as paper-only "shadow" signals for a week of testing
+            st["cfg"].update(classicOnly=True, classicV=1)
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -416,6 +419,21 @@ def fill_slots(st, today, already):
             # the morning shortlist (morning_picks.py, same ranking as the Picks screen's `top`): strength >= 75 with good risk/reward first
             # (+ Open = Low / High agreeing), then Open = Low BUY / Open = High SELL, then fill-up - 10 to 15 stock trades a day in all
             import morning_picks
+            if cfg.get("classicOnly", True):                                   # the classic "stock screen (trend + volume + RSI)": the Picks engine's BUY / SELL stock signals with good risk/reward
+                took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "stock-screen") + sum(1 for c in already if c.get("key") == "stock-screen")
+                rows = []
+                for p in _picks().get("picks", []):
+                    if p.get("s") in INDEX_SYMS or p.get("universe") == "cash" or p.get("s") in used or p.get("signal") not in ("BUY", "SELL"):
+                        continue
+                    if (p.get("strength") or 0) >= morning_picks.FILL_STRENGTH_MIN and morning_picks.good_rr(p, p["signal"]):
+                        rows.append(p)
+                rows.sort(key=lambda p: -(p.get("strength") or 0))
+                for p in rows[:max(0, min(need["stock"], morning_picks.MAX_PICKS - took))]:
+                    d = 1 if p["signal"] == "BUY" else -1
+                    out.append({"key": "stock-screen", "sym": p["s"], "side": p["signal"], "kind": "stock", "variant": "fixed", "filter": "none",
+                                "indStop": round(p["ltp"] - d * morning_picks.swing_risk(p, p["signal"]), 2), "score": (p.get("strength") or 0) / 100,
+                                "rank": (p.get("strength") or 0) / 100, "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
+                return out[:room]
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
             left = morning_picks.MAX_PICKS - took
             picks = [p for p in _picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
@@ -626,6 +644,76 @@ def _timecycle_cands(now):
                             "source": f"Gann cycle {cyc['time']} ({cyc['strength']}) · price at resistance {res:,.2f} · target {vib:,.2f} · R:R 1:{reward / risk:.1f}",
                             "label": "time cycle"})
     return out[:1]                   # at most one cycle trade per cycle - it is a timing cherry-pick, not a machine gun
+
+
+SHADOW_KEYS = {"morning-pick", EAGLE, "gann-angle", "timecycle"}          # tested on paper only while classicOnly is on
+SHADOW_MAX = 800
+
+
+def shadow_record(st, cands, now):
+    """Paper-only log of the signals classic mode does not trade (Picks shortlist, Eagle, Gann angle, time cycle, Z Trend): entry = the
+    underlying's live price, stop = the signal's own stop, target = 1.5R. Resolved by shadow_resolve(); summary in status()['shadow']."""
+    sh = st.setdefault("shadow", [])
+    today = now.date().isoformat()
+    have = {(x["date"], x["sym"], x["key"]) for x in sh}
+    for c in cands:
+        k = "rzt" if str(c.get("key", "")).startswith("rzt") else c.get("key")
+        if (today, c["sym"], k) in have or not c.get("indStop"):
+            continue
+        try:
+            px = _live_spot(c["sym"])
+        except Exception:
+            px = 0
+        d = 1 if c["side"] == "BUY" else -1
+        risk = (px - c["indStop"]) * d
+        if px <= 0 or risk <= 0 or risk > px * 0.08:
+            continue
+        sh.append({"id": f"{today}-{c['sym']}-{k}", "date": today, "at": now.isoformat(), "key": k, "sym": c["sym"], "side": c["side"], "entry": round(px, 2),
+                   "stop": round(c["indStop"], 2), "target": round(px + d * 1.5 * risk, 2), "status": "OPEN"})
+        st["_dirty"] = True
+    del sh[:-SHADOW_MAX]
+
+
+def shadow_resolve(st, now):
+    """Close shadow signals on their stop / 1.5R target (live underlying price); anything still open is closed at the 15:25 mark at that day's last price."""
+    opens = [x for x in st.get("shadow", []) if x["status"] == "OPEN"]
+    if not opens:
+        return
+    import market_api
+    keys = {x["sym"]: market_api._key(x["sym"]) for x in opens}
+    try:
+        q = _quotes(set(keys.values()))
+    except Exception:
+        return
+    for x in opens:
+        px = _last(q.get(keys[x["sym"]]))
+        if px <= 0:
+            continue
+        d = 1 if x["side"] == "BUY" else -1
+        risk = abs(x["entry"] - x["stop"]) or 1
+        end = x["date"] < now.date().isoformat() or _mins(now) >= 15 * 60 + 25
+        why = "stop" if (px - x["stop"]) * d <= 0 else "target" if (px - x["target"]) * d >= 0 else "close" if end else None
+        if why:
+            x.update(status="CLOSED", exit=round(px, 2), why=why, R=round((px - x["entry"]) * d / risk, 2), closedAt=now.isoformat())
+            st["_dirty"] = True
+
+
+def shadow_summary(st):
+    out = {}
+    for x in st.get("shadow", []):
+        o = out.setdefault(x["key"], {"key": x["key"], "n": 0, "open": 0, "wins": 0, "sumR": 0.0})
+        o["n"] += 1
+        if x["status"] == "OPEN":
+            o["open"] += 1
+        else:
+            o["sumR"] += x.get("R") or 0
+            o["wins"] += 1 if (x.get("R") or 0) > 0 else 0
+    for o in out.values():
+        c = o["n"] - o["open"]
+        o["winRate"] = round(o["wins"] / c, 2) if c else 0
+        o["avgR"] = round(o["sumR"] / c, 2) if c else 0
+        o["sumR"] = round(o["sumR"], 2)
+    return sorted(out.values(), key=lambda o: -o["n"])
 
 
 def choose(cands, st, today):
@@ -1233,6 +1321,11 @@ def _run_cycle(now, force, dry):
         if not dry:
             manage(st, now, t0 + CYCLE_BUDGET * 0.5)
         rep["closed"] = [t["id"] for t in st["trades"] if t["status"] == "CLOSED" and t["id"] not in before]
+        if not dry:
+            try:
+                shadow_resolve(st, now)
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"shadow check failed: {str(e)[:80]}"})
         today = now.date().isoformat()
         in_window = _hm(cfg["windowStart"]) <= _mins(now) <= _hm(cfg["lastEntry"])
         todays = [t for t in st["trades"] if t["date"] == today]
@@ -1307,6 +1400,13 @@ def _run_cycle(now, force, dry):
                 chosen, filled = [c for c in chosen if c["sym"] not in have], [c for c in filled if c["sym"] not in have]
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
             entries = sorted(eagles + chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
+            if cfg.get("classicOnly", True):                                  # only the four classic entry types trade; the rest are logged as paper "shadow" signals (testing week)
+                allow = lambda c: c.get("key") not in SHADOW_KEYS and not str(c.get("key", "")).startswith("rzt")
+                shadow_record(st, [c for c in entries if not allow(c)], now)
+                n0 = len(entries)
+                entries = [c for c in entries if allow(c)]
+                if n0 != len(entries):
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} shadow-only (classic mode)"
             # only good risk/reward (user rule): every STOCK entry - strategy signal, Eagle, screen - must pass the same check as
             # Today's Picks (risk <= 5% of the price, >= 1R of room to the 20-session high / low); a stock without a Picks row passes
             try:
@@ -1420,6 +1520,7 @@ class Cfg(BaseModel):
     pairSell: bool | None = None
     eagleOn: bool | None = None
     gannOn: bool | None = None
+    classicOnly: bool | None = None
     lockMode: str | None = None
     buyOnly: bool | None = None
     stockOnly: bool | None = None
@@ -1597,6 +1698,7 @@ def status():
     return {
         "activeStrategies": [{"key": k, "variant": chosen.get(k, ("fixed", "none"))[0], "filter": chosen.get(k, ("fixed", "none"))[1]} for k in keys],
         "mode": label,
+        "shadow": {"summary": shadow_summary(st), "recent": st.get("shadow", [])[-60:][::-1]},
         "cfg": st["cfg"], "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
         "dayPnl": {"value": round(_day_pnl(st, today), 0), "limit": st["cfg"].get("dayPnlLimit", 0), "mode": guard, "note": guard_note},
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
@@ -1624,6 +1726,8 @@ def config(c: Cfg):
             st["cfg"]["eagleOn"] = c.eagleOn
         if c.gannOn is not None:
             st["cfg"]["gannOn"] = c.gannOn
+        if c.classicOnly is not None:
+            st["cfg"]["classicOnly"] = c.classicOnly
         if c.lockMode is not None:
             if c.lockMode not in LOCKS:
                 raise HTTPException(400, "lockMode must be 'old' or 'new'")
