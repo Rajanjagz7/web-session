@@ -93,3 +93,14 @@ def test_share_trader_takes_only_the_stock_only_tab(monkeypatch):
     except Exception:
         pass
     assert "FNOSTK" not in seen.get("syms", [])
+
+
+def test_index_backing_points(monkeypatch):
+    import auto_trader as a
+    import stocks_api
+    monkeypatch.setattr(stocks_api, "_constituents", lambda k: [{"s": s} for s in ("A", "B", "C", "D")])
+    monkeypatch.setattr(a, "_picks", lambda: {"picks": [{"s": s, "signal": "BUY", "strength": 80} for s in ("A", "B", "C")] + [{"s": "D", "signal": "BUY", "strength": 50}]})
+    pts, bits = a._index_backing({"instrument": "NIFTY", "strength": 80, "callPct": 78, "putPct": 22}, "BUY")
+    assert pts == 3 and len(bits) == 3
+    pts, _ = a._index_backing({"instrument": "NIFTY", "strength": 60, "callPct": 55}, "BUY")
+    assert pts == 1

@@ -364,6 +364,35 @@ def _picks():
             shared_cache.set("auto:picks-backoff", 1, 180)
         raise
 
+INDEX_MEMBERS = {"NIFTY": "nifty50", "BANKNIFTY": "bank", "FINNIFTY": "finance", "SENSEX": "sensex", "MIDCPNIFTY": "midcap50"}
+
+
+def _index_backing(c, side):
+    """Index call/put confirmation (user, 29 Oct): (points 0-3, text). One point each for: the index's own strength >= 75%, the index option flow
+    (the calls / puts share of volume near ATM) >= 75% on the trade's side, and at least 3 of the index's own stocks with a strength >= 75% signal
+    the same way on the Picks list. Used to rank index entries - the more of them, the earlier the entry."""
+    pts, bits = 0, []
+    if (c.get("strength") or 0) >= 75:
+        pts += 1
+        bits.append(f"index strength {c['strength']:.0f}%")
+    pct = c.get("callPct") if side == "BUY" else c.get("putPct")
+    if (pct or 0) >= 75:
+        pts += 1
+        bits.append(f"option flow {pct:.0f}%")
+    try:
+        import stocks_api
+        key = INDEX_MEMBERS.get(c.get("instrument"))
+        if key:
+            mem = {r["s"] for r in stocks_api._constituents(key)}
+            n = sum(1 for p in _picks().get("picks", []) if p.get("s") in mem and p.get("signal") == side and (p.get("strength") or 0) >= 75)
+            if n >= 3:
+                pts += 1
+                bits.append(f"{n} index stocks >= 75%")
+    except Exception:
+        pass
+    return pts, bits
+
+
 def fill_slots(st, today, already):
     """Entries beyond the strategy signals come from the app's own screens:
        index slots  <- index CALL / PUT where the daily chart and the live option flow agree
@@ -400,15 +429,17 @@ def fill_slots(st, today, already):
                     continue                                                   # weak risk/reward on the screen's own levels
                 if c.get("signal") in ("BUY CALL", "BUY PUT"):
                     tier = 0 if c.get("confidence") == "high" else 1               # tier 0: chart + flow agree; tier 1: flow-led
-                    ranked.append((tier, -(c.get("strength") or 0), c, "BUY" if c["signal"] == "BUY CALL" else "SELL",
-                                   f"index call/put ({c.get('basis', 'chart + option flow agree')})"))
-            ranked.sort(key=lambda r: (r[0], r[1]))
-            for tier, neg, c, side, why in ranked:
+                    sd = "BUY" if c["signal"] == "BUY CALL" else "SELL"
+                    pts, bits = _index_backing(c, sd)
+                    ranked.append((tier, -(c.get("strength") or 0), c, sd,
+                                   f"index call/put ({c.get('basis', 'chart + option flow agree')})" + (f" · backed by {', '.join(bits)}" if bits else ""), pts))
+            ranked.sort(key=lambda r: (r[0], -r[5], r[1]))                  # chart + flow agree first, then the most backing, then strength
+            for tier, neg, c, side, why, pts in ranked:
                 if need["index"] <= 0:
                     break
                 score = (-neg) / 100 if tier == 0 else (-neg) / 200
                 out.append({"key": "index-call-put", "sym": c["instrument"], "side": side, "kind": "index", "variant": "fixed",
-                            "filter": "none", "score": score, "rank": (1.0 if tier == 0 else 0.5) + score, "agree": 1,
+                            "filter": "none", "score": score, "rank": (1.0 if tier == 0 else 0.5) + score + 0.3 * pts, "agree": 1,
                             "source": why, "label": "index call/put screen"})
                 used.add(c["instrument"])
                 need["index"] -= 1
