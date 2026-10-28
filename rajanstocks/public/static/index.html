@@ -742,6 +742,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(min-width:900px){.pkf{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}.pkf-top,.pkf-show,.pkf-sel,.pkf-foot{grid-column:1/-1}.pkf-top{max-width:none}.pkf-sel{grid-template-columns:repeat(3,minmax(0,220px))}}
 @media(max-width:380px){.pkf-l{flex-basis:48px}.pkf-kind button{padding:0 10px}}
 .pk-sec{display:flex;gap:6px;margin:10px 0;padding:4px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.10));border:1px solid rgba(99,102,241,.3);border-radius:14px}.pk-sec button{display:flex!important;align-items:center;justify-content:center;gap:6px;height:auto!important;min-height:44px;line-height:1.2!important;padding:10px 8px!important;overflow:visible!important;background:transparent!important;color:var(--text-3,#8b97ab)!important;border:1px solid transparent!important;border-radius:9px!important;opacity:.85}.pk-sec button.on{background:linear-gradient(135deg,#2563eb 0%,#7c3aed 55%,#06b6d4 100%)!important;color:#fff!important;border-color:var(--accent,#3b82f6)!important;box-shadow:0 2px 10px rgba(59,130,246,.45);opacity:1}.pk-sec button.on::before{content:'✓ '}.pk-sec button{flex:1;padding:11px 8px;font-weight:600}.pk-sec .pk-n{font-style:normal;background:var(--accent,#3b82f6);color:#fff;border-radius:9px;padding:0 6px;margin-left:4px;font-size:11px}[hidden]{display:none!important}
+.pkl-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}.pkl-tile{padding:9px 4px;border-radius:12px;text-align:center;background:linear-gradient(160deg,rgba(99,102,241,.14),rgba(6,182,212,.07));border:1px solid rgba(99,102,241,.22)}.pkl-tile b{display:block;font-size:19px;line-height:1.1}.pkl-tile small{font-size:9.5px;color:var(--text-3);letter-spacing:.02em}.pkl-tile.up b{color:var(--up)}.pkl-tile.down b{color:var(--down)}.pkl-tile.gold b{color:var(--gold)}.pkl-bar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 4px;flex-wrap:wrap}.pkl-f{display:flex;gap:4px}.pkl-f button{padding:7px 10px;border-radius:9px;font-size:12px;font-weight:600}.pkl-f button i{font-style:normal;opacity:.7;margin-left:2px}.pkl-f button.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}.pkl-reset{padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;background:transparent;color:var(--down);border:1px solid var(--down)}.pkl-reset.arm{background:var(--down);color:#fff}.pkr{border-left:3px solid transparent}.pkr.o-win{border-left-color:var(--up)}.pkr.o-loss{border-left-color:var(--down)}.pkr.o-mixed{border-left-color:var(--gold)}.pkr-n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:var(--panel);color:var(--text-2);font-size:11px;font-weight:800}
 </style>
 <script id="scrJV" src="/static/journal.js?v=20261028n"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
@@ -3385,13 +3386,29 @@ function pkLiveTick(){if(typeof App==='undefined'||document.hidden)return;const 
 function pkLogDays(){const out=[];try{for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&/^pkl-\d{4}-\d\d-\d\d$/.test(n)){let d={};try{d=JSON.parse(localStorage.getItem(n))||{}}catch(e){}
   const rows=Object.entries(d).filter(([k,v])=>v&&v.m).map(([k,v])=>({k,m:v.m,h:v.h||{},best:v.best}));out.push({date:n.slice(4),rows})}}}catch(e){}
   return out.sort((a,b)=>a.date<b.date?1:-1)}
-function pkLogHTML(){const days=pkLogDays();if(!days.length)return'<div class="empty">Nothing tracked yet. Open Today\'s Picks while the market is open: every pick card on screen is followed against its stop and targets, and the result is kept here.</div>';
-  const KIND={index:'Index option',call:'Index call',stock:'Stock / stock option',fresh:'Fresh buy'};
-  return days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
-    const tg=rows.filter(r=>Object.keys(r.h).some(k=>k!=='sl')).length,sl=rows.filter(r=>r.h.sl).length;
+function pkOutcome(r){const t=Object.keys(r.h).some(k=>k!=='sl'),l=!!r.h.sl;return t&&!l?'win':l&&!t?'loss':t&&l?'mixed':'open'}
+function pkLogOK(r){const T=(r.m.t||[])[0];if(!(r.m.sl>0)||!(T>0))return true;return r.m.d==='L'?r.m.sl<T:r.m.sl>T}   /* a card whose stop and targets point the wrong way was never a trade */
+function pkLogHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLogOK)})).filter(d=>d.rows.length);
+  if(!days.length)return'<div class="empty">Nothing tracked yet. Open Today\'s Picks while the market is open: every pick card on screen is followed against its stop and targets, and the result is kept here.</div>';
+  const KIND={index:'Index option',call:'Index call',stock:'Stock / stock option',fresh:'Fresh buy'},F=App.pkLogF||'ALL',armed=App.pkLogArm&&Date.now()-App.pkLogArm<6000;
+  const all=days.flatMap(d=>d.rows),n={win:0,loss:0,mixed:0,open:0};all.forEach(r=>n[pkOutcome(r)]++);
+  const done=n.win+n.loss,rate=done?Math.round(n.win/done*100):null;
+  const tile=(v,l,c)=>`<div class="pkl-tile ${c||''}"><b>${v}</b><small>${l}</small></div>`;
+  const chip=(k,l,c)=>`<button type="button" class="${F===k?'on':''}" data-pklf="${k}">${l} <i>${c}</i></button>`;
+  const head=`<div class="pkl-stats">${tile(all.length,'Tracked')}${tile(n.win,'Target hit','up')}${tile(n.loss,'Stopped out','down')}${tile(n.open+n.mixed,'No result yet')}${tile(rate==null?'–':rate+'%','Hit rate','gold')}</div>
+   <div class="pkl-bar"><div class="seg pkl-f">${chip('ALL','All',all.length)}${chip('WIN','Targets',n.win)}${chip('LOSS','Stops',n.loss)}${chip('OPEN','Open',n.open+n.mixed)}</div><button type="button" class="pkl-reset ${armed?'arm':''}" data-pklreset="1">${armed?'Tap again to confirm':'↺ Reset log'}</button></div>`;
+  const keep=r=>{const o=pkOutcome(r);return F==='ALL'||(F==='WIN'&&o==='win')||(F==='LOSS'&&o==='loss')||(F==='OPEN'&&(o==='open'||o==='mixed'))};
+  return head+days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
+    const shown=rows.filter(keep);if(!shown.length)return'';
+    const tg=rows.filter(r=>pkOutcome(r)==='win').length,sl=rows.filter(r=>pkOutcome(r)==='loss').length;
     const x=new Date(d.date+'T12:00:00Z'),lab=x.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',timeZone:'UTC'});
-    return`<section class="pkg"><h4>${di===0?'Today · ':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks tracked</span><span class="up">✅ ${tg} reached a target</span><span class="down">🚫 ${sl} hit the stop</span></div>
-      ${rows.map(r=>`<div class="pkr"><div class="pkr-h"><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best))}</div></div>`).join('')}</section>`}).join('')}
+    return`<section class="pkg"><h4>${di===0?'Today · ':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks</span><span class="up">✅ ${tg} target</span><span class="down">🚫 ${sl} stop</span></div>
+      ${shown.map((r,i)=>`<div class="pkr o-${pkOutcome(r)}"><div class="pkr-h"><span class="pkr-n">${i+1}</span><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best))}</div></div>`).join('')}</section>`}).join('')||'<div class="empty">Nothing in this view.</div>'}
+function pkLogRefresh(){const b=document.getElementById('jvPickLog');if(b){const h=pkLogHTML();b._h=h;b.innerHTML=h}}
+document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('[data-pklf]'),r=e.target.closest&&e.target.closest('[data-pklreset]');
+  if(f){App.pkLogF=f.dataset.pklf;pkLogRefresh();return}
+  if(r){if(App.pkLogArm&&Date.now()-App.pkLogArm<6000){App.pkLogArm=0;try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&/^pkl-\d{4}-\d\d-\d\d$/.test(k))ks.push(k)}ks.forEach(k=>localStorage.removeItem(k))}catch(x){}App.pkl=null;pkLogRefresh();toast('Picks log cleared')}
+    else{App.pkLogArm=Date.now();pkLogRefresh();setTimeout(pkLogRefresh,6100)}}});
 window.pkLogHTML=pkLogHTML;
 setInterval(()=>{try{if(pkfScan())pkFreshTick();pkLiveTick();pkFreshTick()}catch(e){}},4000);
 /* an index's side for the Buy / Sell filters: a clear signal, or - when it is only WATCH - the way its three horizons lean (intraday counts double) */
