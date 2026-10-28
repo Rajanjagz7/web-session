@@ -384,10 +384,8 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
     try:                                                     # minute-level astro time slices for the same session
         import astro_slices
         astro_table = astro_slices.build(sdate, s_pan) if s_pan else {"available": False, "reason": "no panchang"}
-        astro_table_m2 = astro_slices.build_method2(sdate, astro_table if astro_table.get('available') else None)
     except Exception as e:
         astro_table = {"available": False, "reason": f"Astro timings unavailable: {str(e)[:160]}"}
-        astro_table_m2 = {"available": False, "reason": f"Method 2 timings unavailable: {str(e)[:160]}"}
 
     # The three network-bound parts run in parallel, each with a time budget, so one slow source can never
     # push the whole report past the serverless time limit - that part just says it is unavailable.
@@ -527,7 +525,6 @@ def generate_report(now_utc: datetime | None = None, symbol: str = "NIFTY") -> d
         "watch_windows": windows,
         "special_timing": special_timing,
         "astro_slices": astro_table,
-        "astro_slices_method2": astro_table_m2,
         "day_power": day_power_block,
         "stocks_to_watch": _stw_result(f_stw, _left()),
         "risk_management": RISK_MANAGEMENT,

@@ -3001,76 +3001,9 @@ function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&
 let ASB=null;function asbLoad(){if(ASB!==null)return;ASB=0;fetch('/static/astro_slices_backtest.json?d='+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():null).then(j=>{ASB=j||0;const b=document.getElementById('vxAsAcc');if(b)b.innerHTML=asbHTML()}).catch(()=>{})}
 function asbHTML(){const j=ASB;if(!j||!j.byLabel)return'<span class="muted">Accuracy check runs after market close each weekday.</span>';
   return`Tested on ${j.sessions} sessions (${esc(j.from)} → ${esc(j.to)}): direction right <b>${Math.round((j.directionalHitRate||0)*100)}%</b> of ${j.directionalSlices} up/down slices · Nifty rose in ${Math.round(j.baseRateUp*100)}% of all slices. <details><summary>By projection</summary><ul>${Object.entries(j.byLabel).map(([k,v])=>`<li><b>${esc(k)}</b> · ${v.slices} slices · ${v.rightDirection==null?'no direction':'right '+Math.round(v.rightDirection*100)+'%'} · avg ${v.avgPts>0?'+':''}${v.avgPts} pts · moves ${v.avgAbsPtsPerHour} pts/hr</li>`).join('')}</ul></details>`}
-const M2_ANCHOR = '2026-10-26';
-const M2_BASE = [
-  {from:'09:15',to:'09:22',a:555,b:562,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Rahu in Anuradha · early session sideways transition'},
-  {from:'09:22',to:'09:51',a:562,b:591,projection:'Volatile Negative',tone:'down',why:'KP Sub-Lord: Jupiter in Anuradha · opening pressure & sharp moves'},
-  {from:'09:51',to:'10:00',a:591,b:600,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Mercury in Jyeshtha · sub-transition 1 (positive bias)'},
-  {from:'10:00',to:'10:15',a:600,b:615,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Ketu in Jyeshtha · sub-transition 2 (continuation)'},
-  {from:'10:15',to:'10:25',a:615,b:625,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Venus in Jyeshtha · sub-transition 3 (morning crest)'},
-  {from:'10:25',to:'10:52',a:625,b:652,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Sun/Moon in Jyeshtha · consolidation before mid-morning'},
-  {from:'10:52',to:'11:55',a:652,b:715,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Mars/Rahu & Jupiter/Saturn in Mula · wide-range oscillation & institutional churn'},
-  {from:'11:55',to:'12:08',a:715,b:728,projection:'Sideways to Negative',tone:'down',why:'KP Sub-Lord: Mercury/Venus in Purva Ashadha · softening midday drift'},
-  {from:'12:08',to:'12:43',a:728,b:763,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Sun/Moon in Purva Ashadha · European market open cross-waves'},
-  {from:'12:43',to:'13:11',a:763,b:791,projection:'Negative',tone:'down',why:'KP Sub-Lord: Mars & Rahu in Uttara Ashadha · afternoon distribution wave'},
-  {from:'13:11',to:'13:23',a:791,b:803,projection:'Negative',tone:'down',why:'KP Sub-Lord: Jupiter in Uttara Ashadha · afternoon distribution wave 2'},
-  {from:'13:23',to:'13:55',a:803,b:835,projection:'Volatile',tone:'flat',why:'KP Sub-Lord: Saturn in Shravana · base building & two-way swings'},
-  {from:'13:55',to:'14:23',a:835,b:863,projection:'Sideways to Negative',tone:'down',why:'KP Sub-Lord: Mercury/Ketu in Shravana · late shakeout before power hour'},
-  {from:'14:23',to:'14:50',a:863,b:890,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Venus in Dhanishta · initial closing rally push'},
-  {from:'14:50',to:'15:01',a:890,b:901,projection:'Sideways/Volatile',tone:'flat',why:'KP Sub-Lord: Sun in Dhanishta · square-off equilibrium'},
-  {from:'15:01',to:'15:30',a:901,b:930,projection:'Volatile Positive',tone:'up',why:'KP Sub-Lord: Moon in Dhanishta · final market on close (MOC) strength'}
-];
-function computeAstroMethod2Slices(dateStr,m1){
-  const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
-  const anchorDate = new Date('2026-10-26T00:00:00');
-  const diffDays = Math.round((targetDate - anchorDate) / 86400000);
-  const shiftMins = Math.round(diffDays * 3.9333333);
-  const fmtM = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(Math.floor(m%60)).padStart(2,'0')}`;
-  const slices = [];
-  M2_BASE.forEach(s => {
-    const rawA = s.a - shiftMins;
-    const rawB = s.b - shiftMins;
-    const startM = Math.max(555, Math.min(930, rawA));
-    const endM = Math.max(555, Math.min(930, rawB));
-    if (startM < endM) {
-      slices.push({
-        from: fmtM(startM),
-        to: fmtM(endM),
-        a: startM,
-        b: endM,
-        projection: s.projection,
-        tone: s.tone,
-        why: s.why + (shiftMins ? ` (shifted ${Math.abs(shiftMins)}m sidereal)` : '')
-      });
-    }
-  });
-  /* the 26-Oct table slides ~4 min a day, so the start or end of the session can fall outside it: fill those stretches from Method 1 */
-  const m1s = (m1 && m1.available && m1.slices) || [];
-  const fillGap = (from, to) => { m1s.forEach(x => { const a = Math.max(from, x.a), b = Math.min(to, x.b); if (a < b) slices.push({from: fmtM(a), to: fmtM(b), a, b, projection: x.projection, tone: x.tone, why: 'Outside the curated table for this date - projection follows Method 1'}) }) };
-  if (slices.length) { const a0 = slices[0].a, b0 = slices[slices.length - 1].b; if (a0 > 555) fillGap(555, a0); if (b0 < 930) fillGap(b0, 930); slices.sort((p, q) => p.a - q.a) }
-  else fillGap(555, 930);
-  return {
-    available: true,
-    date: dateStr || '2026-10-26',
-    count: slices.length,
-    slices: slices,
-    method: 'Method 2: KP Lagna Sub-Lord transits over Mumbai (18.975° N, 72.825° E) — 16 time slices.',
-    note: 'Trading ideas by Darshan Jain (Method 2). Keeps every KP Sub-Lord transition as its own row (unmerged).'
-  };
-}
 function vxAstroSlices(reportOrSlices){
   const r = (reportOrSlices && reportOrSlices.header) ? reportOrSlices : null;
-  const mth = (typeof VD !== 'undefined' && VD.asmth) ? VD.asmth : (()=>{try{return localStorage.getItem('vx-asmth')}catch(e){return null}})() || 'm1';
-  let t = null;
-  if (r) {
-    if (mth === 'm2') {
-      t = r.astro_slices_method2 || computeAstroMethod2Slices(r.header && r.header.report_date, r.astro_slices);
-    } else {
-      t = r.astro_slices;
-    }
-  } else {
-    t = reportOrSlices;
-  }
+  const t = r ? r.astro_slices : reportOrSlices;
   if(!t||!t.available)return t&&t.reason?`<section class="vx-card"><h3>Astro intraday timings</h3><p class="vx-note">${esc(t.reason)}</p></section>`:'';asbLoad();
   const now=vxNowMin(),today=new Date(Date.now()+330*60000).toISOString().slice(0,10)===t.date,d=new Date(t.date+'T00:00:00');
   const ds=d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'2-digit'});
@@ -3080,12 +3013,6 @@ function vxAstroSlices(reportOrSlices){
      <div>
        <h3 style="margin:0">Astro intraday timings · Nifty 50</h3>
        <p class="muted" style="margin:2px 0 0">${esc(ds)}</p>
-     </div>
-     <div>
-       <select class="inp" id="vxAsMthSelect" style="width:auto;padding:5px 12px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer" aria-label="Astro Calculation Method">
-         <option value="m1" ${mth==='m1'?'selected':''}>Method 1 (12 Slices - Standard)</option>
-         <option value="m2" ${mth==='m2'?'selected':''}>Method 2 (16 Slices - KP Sub-Lord)</option>
-       </select>
      </div>
    </div>
    <div class="vx-astbl"><table><thead><tr><th>From</th><th>To</th><th>Projection</th></tr></thead><tbody>${t.slices.map(s=>{const on=today&&now>=s.a&&now<s.b;
@@ -3240,7 +3167,6 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-tclvl]');i
 document.addEventListener('change',e=>{if(e.target.id==='tcMode'){const s=document.getElementById('tcStrike');if(s)s.disabled=e.target.value==='underlying'}});
 
 document.addEventListener('click',e=>{const t=e.target.closest('[data-vxtab]');if(!t)return;VD.tab=t.dataset.vxtab;try{localStorage.setItem('vx-tab',VD.tab)}catch(x){}vdPaint()});
-document.addEventListener('change',e=>{if(e.target&&e.target.id==='vxAsMthSelect'){if(typeof VD==='undefined')window.VD={};VD.asmth=e.target.value;try{localStorage.setItem('vx-asmth',VD.asmth)}catch(x){}vdPaint()}});
 document.addEventListener('click',async e=>{const t=e.target.closest('[data-vxsym]');if(!t||VD.busy)return;const sym=t.dataset.vxsym;if(sym===VD.symbol)return;
   VD.symbol=sym;try{localStorage.setItem('vx-symbol',sym)}catch(x){}VD.data=null;VD.err=null;vdPaint();
   await loadVedic(false);vdPaint()});
