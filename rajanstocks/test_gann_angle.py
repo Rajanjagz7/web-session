@@ -75,3 +75,21 @@ def test_classic_filter_extras_need_a_classic_agreement():
     assert sorted((c["sym"], c["key"]) for c in kept) == [("NIFTY", "gann-angle"), ("SBIN", "stock-screen")]
     assert "agrees with" in kept[0]["source"] or "agrees with" in kept[1]["source"]
     assert sorted((c["sym"], c["side"]) for c in paper) == [("SBIN", "BUY"), ("TCS", "BUY")]
+
+
+def test_share_trader_takes_only_the_stock_only_tab(monkeypatch):
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    import market_api
+    import stock_trader as s
+    plan = {"ok": True, "side": "BUY", "fit": 5, "entry": 100.0, "stop": 98.0, "t1": 103.0, "t2": 106.0}
+    mk = lambda sym, u: {"s": sym, "kind": "stock", "universe": u, "ltp": 100.0, "plans": {"intraday": dict(plan), "swing": dict(plan), "positional": dict(plan)}}
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [mk("FNOSTK", "fno"), mk("CASHSTK", "cash")]})
+    seen = {}
+    monkeypatch.setattr(s, "_quotes", lambda syms: seen.setdefault("syms", list(syms)) and {x: {"last": 100.0} for x in syms})
+    st = {"trades": [], "cash": 500000.0}
+    try:
+        s.enter(st, dt.datetime(2026, 10, 29, 10, 0, tzinfo=ZoneInfo("Asia/Kolkata")))
+    except Exception:
+        pass
+    assert "FNOSTK" not in seen.get("syms", [])

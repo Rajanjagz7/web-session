@@ -1,4 +1,4 @@
-"""Stock paper trader - its own Rs 10 lakh, cash stocks only, trading the Picks plans for each holding period.
+"""Stock paper trader - its own Rs 5 lakh, cash stocks only (the Picks screen's "Stock only" tab: whole-market cash stocks that are not in F&O; CFG cashOnly), trading the Picks plans for each holding period.
 
 Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
   * For each horizon (intraday / swing / positional) the stocks whose own entry test passes (plans[h].ok, see
@@ -37,7 +37,7 @@ FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__
 HZ = ("intraday", "swing", "positional")
 CFG = {"capital": 500000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
        "maxOpen": {"intraday": 6, "swing": 10, "positional": 10}, "maxSessions": {"swing": 15, "positional": 40},
-       "windowStart": "09:15", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
+       "cashOnly": True, "windowStart": "09:15", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
 _lock = threading.Lock()
 
 
@@ -263,7 +263,8 @@ def enter(st, now):
     except Exception as e:
         print(f"[stockbot] picks failed: {e}")
         return []
-    picks = [p for p in (P or {}).get("picks") or [] if p.get("kind") != "index" and p.get("plans")]
+    picks = [p for p in (P or {}).get("picks") or [] if p.get("kind") != "index" and p.get("plans")
+             and (not CFG.get("cashOnly", True) or p.get("universe") == "cash")]      # the Picks screen's "Stock only" tab = cash stocks outside F&O (user, 28 Oct); F&O stocks are traded as options by the option auto trader
     if not picks:
         return []
     cash, _, _ = _cash(st)
