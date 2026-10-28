@@ -63,3 +63,13 @@ def test_classic_stock_screen_candidates(monkeypatch):
     st = {"cfg": dict(a.DEFAULT_CFG), "trades": [], "log": []}
     out = a.fill_slots(st, "2026-10-29", [])
     assert all(c["key"] != "morning-pick" for c in out)
+
+
+def test_classic_filter_extras_need_a_classic_agreement():
+    import auto_trader as a
+    ent = [dict(sym="NIFTY", side="BUY", key="index", label="index call/put screen"), dict(sym="NIFTY", side="BUY", key="gann-angle", source="Gann"),
+           dict(sym="TCS", side="BUY", key=a.EAGLE), dict(sym="SBIN", side="SELL", key="stock-screen"), dict(sym="SBIN", side="BUY", key="gann-angle")]
+    kept, paper = a.classic_filter(ent)
+    assert sorted((c["sym"], c["key"]) for c in kept) == [("NIFTY", "gann-angle"), ("SBIN", "stock-screen")]
+    assert "agrees with" in kept[0]["source"] or "agrees with" in kept[1]["source"]
+    assert sorted((c["sym"], c["side"]) for c in paper) == [("SBIN", "BUY"), ("TCS", "BUY")]

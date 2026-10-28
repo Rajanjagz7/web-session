@@ -716,6 +716,26 @@ def shadow_summary(st):
     return sorted(out.values(), key=lambda o: -o["n"])
 
 
+def classic_filter(entries):
+    """Classic mode: (traded, paper-only). Picks / Eagle / Gann angle / time cycle / Z Trend trade only when a classic entry on the same symbol
+    and side agrees (the extra is taken instead of the classic one, tagged 'agrees with ...'); unconfirmed extras stay paper-only."""
+    is_extra = lambda c: c.get("key") in SHADOW_KEYS or str(c.get("key", "")).startswith("rzt")
+    classic = {(c["sym"], c["side"]): c for c in entries if not is_extra(c)}
+    agreed = {(c["sym"], c["side"]) for c in entries if is_extra(c) and (c["sym"], c["side"]) in classic}
+    kept, paper = [], []
+    for c in entries:
+        k = (c["sym"], c["side"])
+        if not is_extra(c):
+            if k not in agreed:
+                kept.append(c)
+        elif k in classic:
+            base = classic[k]
+            kept.append(dict(c, source=f"{c.get('source') or c.get('label') or c['key']} · agrees with {base.get('label') or base.get('key')}", agree=max(c.get("agree", 1), 2)))
+        else:
+            paper.append(c)
+    return kept, paper
+
+
 def choose(cands, st, today):
     cfg = st["cfg"]
     taken_today = [t for t in st["trades"] if t["date"] == today]
@@ -1400,13 +1420,13 @@ def _run_cycle(now, force, dry):
                 chosen, filled = [c for c in chosen if c["sym"] not in have], [c for c in filled if c["sym"] not in have]
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
             entries = sorted(eagles + chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
-            if cfg.get("classicOnly", True):                                  # only the four classic entry types trade; the rest are logged as paper "shadow" signals (testing week)
-                allow = lambda c: c.get("key") not in SHADOW_KEYS and not str(c.get("key", "")).startswith("rzt")
-                shadow_record(st, [c for c in entries if not allow(c)], now)
+            if cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
+                kept, paper = classic_filter(entries)
+                shadow_record(st, paper, now)
                 n0 = len(entries)
-                entries = [c for c in entries if allow(c)]
-                if n0 != len(entries):
-                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} shadow-only (classic mode)"
+                entries = kept
+                if paper:
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(paper)} not confirmed by a classic signal (paper only)"
             # only good risk/reward (user rule): every STOCK entry - strategy signal, Eagle, screen - must pass the same check as
             # Today's Picks (risk <= 5% of the price, >= 1R of room to the 20-session high / low); a stock without a Picks row passes
             try:
