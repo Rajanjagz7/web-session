@@ -182,13 +182,40 @@ def score_day(d, holidays, bars=None):
     res = {"date": d.isoformat(), "weekday": d.strftime("%A"), "score": round(s, 1), "label": label, "side": side, "dots": dots,
             "note": note, "parts": parts,
             "halves": {"first": round(first, 2) if first is not None else None, "second": round(second, 2) if second is not None else None}}
+    # both sides of the day: the bullish and the bearish points on their own, and which half of the session leans which way
+    bull = sum(x["pts"] for x in parts if x["pts"] > 0)
+    bear = sum(x["pts"] for x in parts if x["pts"] < 0)
+    lean = lambda v: None if v is None else ("bullish" if v > 0.3 else "bearish" if v < -0.3 else "neutral")
+    res["bullPts"], res["bearPts"] = round(bull, 1), round(bear, 1)
+    res["morning"], res["afternoon"] = lean(first), lean(second)
+    res["source"] = "calculated"
+    res["formula"] = {"label": label, "side": side, "score": round(s, 1)}
     if d.isoformat() in WEEKLY_ANCHOR_DAYS:
         anc = WEEKLY_ANCHOR_DAYS[d.isoformat()]
+        res["source"] = "weekly chart"
         res["label"] = anc["label"]
         res["side"] = anc["side"]
         res["dots"] = anc["dots"]
         res["note"] = anc["note"]
     return res
+
+
+def _caveat():
+    """The honest accuracy line, read from the latest backtest file (not a typed-in number)."""
+    txt = "Traditional market astrology and Gann time work - not a validated forecast."
+    try:
+        import json, os
+        here = os.path.dirname(os.path.abspath(__file__))
+        for sub in ("public/static", "static"):
+            f = os.path.join(here, sub, "day_power_backtest.json")
+            if os.path.exists(f):
+                j = json.load(open(f))
+                txt += (f" Backtest on {j['sessions']} Nifty sessions ({j['from']} to {j['to']}): the bullish/bearish calls matched Nifty's "
+                        f"direction {round(j['directionalHitRate'] * 100, 1)}% of the time - no better than a coin flip.")
+                break
+    except Exception:
+        pass
+    return txt + " Use it as a mood guide only and act on price confirmation."
 
 
 def build(holidays, bars=None, n=5, start=None):
@@ -197,6 +224,4 @@ def build(holidays, bars=None, n=5, start=None):
     days = _trading_days(first, n, holidays)
     return {"available": True, "days": [score_day(d, holidays, bars) for d in days],
             "method": __doc__.split("Traditional")[0].strip(),
-            "caveat": "Traditional market astrology and Gann time work - not a validated forecast. Backtest on 494 Nifty sessions "
-                      "(Oct 2024-Oct 2026): the bullish/bearish calls matched Nifty's direction 49.8% of the time - no better than a coin "
-                      "flip. Use it as a mood guide only and act on price confirmation."}
+            "caveat": _caveat()}

@@ -1014,6 +1014,11 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-dpc .lab{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:28px;line-height:1.05;text-align:center;margin:6px 0}
 .vx-dpc.bull .lab,.vx-dpc .bull{color:#22c55e}
 .vx-dpc.bear .lab,.vx-dpc .bear{color:#ef4444}
+.vx-dpc .dp-sides{display:flex;justify-content:center;gap:10px;font-size:12px;font-weight:700;flex-wrap:wrap}.vx-dpc .dp-sides .bull{color:#22c55e}.vx-dpc .dp-sides .bear{color:#ef4444}
+.vx-dpc .dp-half{font-size:11.5px;text-align:center;color:var(--mute,#8a94a6)}.vx-dpc .dp-half b.bullish{color:#22c55e}.vx-dpc .dp-half b.bearish{color:#ef4444}
+.vx-dpc .dp-src{font-size:10.5px;text-align:center;opacity:.8}.vx-dpc .dp-fx{color:#f59e0b}
+.vx-dpc details{text-align:left}.vx-dpc details summary{cursor:pointer;text-align:center;font-size:11.5px;opacity:.85}.vx-dpc details li{margin:2px 0}
+.vx-dpcav{font-size:11px;margin:12px 2px 0;opacity:.75}
 .vx-dpc .dots{display:flex;gap:8px;justify-content:center}
 .vx-dpc .dots i{width:13px;height:13px;border-radius:50%;border:1.5px solid currentColor}
 .vx-dpc .dots i.on.bull{background:#22c55e;border-color:#22c55e}
@@ -2991,13 +2996,21 @@ setInterval(async()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||docum
 setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden)return;const lb=document.getElementById('vxLadBox'),pb=document.getElementById('vxPlanBox');if(!VD||!VD.data)return;
   const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le)le.innerHTML=vxLeanHTML(r);if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
 /* Day Power: Vedic + Gann bias for the next 3 sessions (day_power.py) - every ingredient listed under "How it's worked out" */
+function vxDpMore(x){if(x.bullPts==null)return'';
+  const half=(w,v)=>v?`${w} <b class="${v}">${v==='bullish'?'▲ bullish':v==='bearish'?'▼ bearish':'● neutral'}</b>`:'';
+  const fx=x.formula&&x.source==='weekly chart'&&x.formula.label!==x.label?`<div class="dp-src dp-fx">Calculation says <b>${esc(x.formula.label)}</b> (${x.formula.score>0?'+':''}${x.formula.score})</div>`:'';
+  const src=`<div class="dp-src muted">${x.source==='weekly chart'?'Source: weekly chart (typed in)':'Source: calculated'}</div>`;
+  const parts=(x.parts||[]).map(p=>`<li><b>${esc(p.name)}</b> <span class="${p.pts>0?'bull':p.pts<0?'bear':'muted'}">${p.pts>0?'+':''}${p.pts}</span> <small class="muted">${esc(p.why)}</small></li>`).join('');
+  return`<div class="dp-sides"><span class="bull">Bull +${x.bullPts}</span><span class="bear">Bear ${x.bearPts}</span></div>
+   <div class="dp-half">${half('Morning',x.morning)}${x.morning&&x.afternoon?' · ':''}${half('Afternoon',x.afternoon)}</div>${fx}${src}
+   <details><summary>Why</summary><ul style="padding-left:16px;margin:6px 0 0">${parts}</ul></details>`}
 function vxDayPower(dp){if(!dp||!dp.available||!(dp.days||[]).length)return dp&&dp.reason?`<section class="vx-card"><h3>Day power</h3><p class="muted">${esc(dp.reason)}</p></section>`:'';
   const d0=dp.days[0].date,d1=dp.days[dp.days.length-1].date,mon=d=>{const x=new Date(d+'T12:00:00Z');return x.getUTCDate()+' '+MON[x.getUTCMonth()]};
   return`<section class="vx-card vx-dp"><div class="vx-dph"><div><small>DAY POWER · NIFTY 50</small><div class="dp-t">Weekly day power · ${mon(d0)} - ${mon(d1)}</div><p class="muted">Vedic Moon + day-lord + timing, and Gann time cycles, mapped to market bias</p></div></div>
    <div class="vx-dpg">${dp.days.map(x=>{const col=x.side==='bull'?'bull':x.side==='bear'?'bear':'mix';
      const dots=Array.from({length:5},(_,i)=>`<i class="${i<x.dots?(x.side==='mix'?(i<Math.ceil(x.dots/2)+1?'on bull':'on bear'):'on '+col):''}"></i>`).join('');
      return`<article class="vx-dpc ${col}"><small>${mon(x.date).toUpperCase()}</small><b class="wd">${esc(x.weekday.toUpperCase())}</b>
-       <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p></article>`}).join('')}</div></section>`}
+       <div class="lab">${x.side==='mix'?'<span class="bull">BULLISH /</span><br><span class="bear">BEARISH MIX</span>':esc(x.label)}</div><div class="dots">${dots}</div><p>${esc(x.note)}</p>${vxDpMore(x)}</article>`}).join('')}</div>${dp.caveat?`<p class="vx-dpcav muted">${esc(dp.caveat)}</p>`:''}</section>`}
 let ASB=null;function asbLoad(){if(ASB!==null)return;ASB=0;fetch('/static/astro_slices_backtest.json?d='+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():null).then(j=>{ASB=j||0;const b=document.getElementById('vxAsAcc');if(b)b.innerHTML=asbHTML()}).catch(()=>{})}
 function asbHTML(){const j=ASB;if(!j||!j.byLabel)return'<span class="muted">Accuracy check runs after market close each weekday.</span>';
   return`Tested on ${j.sessions} sessions (${esc(j.from)} → ${esc(j.to)}): direction right <b>${Math.round((j.directionalHitRate||0)*100)}%</b> of ${j.directionalSlices} up/down slices · Nifty rose in ${Math.round(j.baseRateUp*100)}% of all slices. <details><summary>By projection</summary><ul>${Object.entries(j.byLabel).map(([k,v])=>`<li><b>${esc(k)}</b> · ${v.slices} slices · ${v.rightDirection==null?'no direction':'right '+Math.round(v.rightDirection*100)+'%'} · avg ${v.avgPts>0?'+':''}${v.avgPts} pts · moves ${v.avgAbsPtsPerHour} pts/hr</li>`).join('')}</ul></details>`}
