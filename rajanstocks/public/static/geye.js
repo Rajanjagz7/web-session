@@ -55,7 +55,8 @@
     const d = G.data, open = typeof MKT !== 'undefined' ? MKT.open : d && d.marketOpen;
     const stale = d && Date.now() - Date.parse(d.asOf) > (open ? 10 * 60e3 : 6 * 3600e3);
     const s = G.err && !d ? ['Unavailable', 'off'] : stale ? ['Stale', 'stale'] : typeof MKT !== 'undefined' && MKT.stale ? ['Delayed', 'stale'] : open ? ['Market Live', 'on'] : ['Market Closed', 'closed'];
-    return `<span class="ge-pill ${s[1]}"><i></i>${s[0]}</span>`;
+    const why = s[0] === 'Delayed' && typeof MKT !== 'undefined' && MKT.reason ? ` title="${E(MKT.reason.slice(0, 160))}"` : '';
+    return `<span class="ge-pill ${s[1]}"${why}><i></i>${s[0]}</span>${why ? `<small class="muted" style="margin-left:6px;font-size:11px">${E(MKT.reason.replace(/^.*?(429|401|timed? ?out|rate|too many|expired|invalid|no quotes)/i, '$1').slice(0, 60))}</small>` : ''}`;
   }
   function ticker(cards) {
     const l = (cards || []).filter(c => isN(c.price));

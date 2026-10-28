@@ -747,7 +747,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
-<script src="/static/geye.js?v=20261028e"></script>
+<script src="/static/geye.js?v=20261028f"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -4969,7 +4969,7 @@ function profitLock(p,s){if(!p||!(s.last>0)||!p.q)return;{const m=App.meta[p.sym
 function setStatus(){const t=$('#liveTxt'),d=$('#liveDot'),b=$('#liveBox');if(!t)return;const S=(w,full,c)=>{const k=w.indexOf(' · ');if(k>0){t.textContent=w.slice(0,k);const sp=document.createElement('span');sp.className='lv-t';sp.textContent=w.slice(k);t.appendChild(sp)}else t.textContent=w;d.style.background=c;if(b)b.title=full};
   if(netOff())return S('Offline','No internet — prices are not live and trading is disabled','var(--down)');
   if(MKT.err)return S('No feed','Live prices unavailable — retrying','var(--down)');
-  if(MKT.stale)return S('Delayed','Delayed by the data provider · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false}),'var(--warn)');
+  if(MKT.stale)return S('Delayed','Delayed by the data provider'+(MKT.reason?' ('+MKT.reason.slice(0,90)+')':'')+' · prices as of '+new Date(MKT.staleAt||Date.now()).toLocaleTimeString('en-IN',{hour12:false}),'var(--warn)');
   const asOf=(App.picks&&App.picks.asOf)||MKT.asOf;
   const tm=asOf?new Date(asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}):'15:30';
   const liveTm=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -4990,7 +4990,7 @@ async function pollQuotes(){if(pollBusy)return;pollBusy=true;
   try{let url=quotesURL(),r;
     try{r=await api(url)}catch(e1){if(url!=='/api/m/quotes'&&!(e1&&e1.name==='TypeError'))r=await api('/api/m/quotes');else throw e1}   // one retry on the full-list call (its own cache key) before calling it a feed failure
     if(!r||!Array.isArray(r.quotes))throw new Error('quotes: bad response');
-    if(!NET.ok){NET.ok=true;netBanner()}MKT.open=r.marketOpen;MKT.asOf=r.asOf;MKT.err=null;MKT.fails=0;MKT.stale=!!r.stale;MKT.staleAt=r.quotesAsOf||null;
+    if(!NET.ok){NET.ok=true;netBanner()}MKT.open=r.marketOpen;MKT.asOf=r.asOf;MKT.err=null;MKT.fails=0;MKT.stale=!!r.stale;MKT.staleAt=r.quotesAsOf||null;MKT.reason=r.stale?(r.reason||''):'';
     for(const q of r.quotes){try{const s=SYM(q.s);if(!s||!(q.last>0))continue;const pv=s.last;
       s.last=q.last;s.p=q.last;s.prev=q.prev>0?q.prev:(s.prev||q.last);s.hi=q.high||q.last;s.lo=q.low||q.last;s.open=q.open;s.yh=q.yh||s.yh;s.yl=q.yl||s.yl;
       const dv=Math.max(0,q.vol-(s.dvol||0));s.dvol=q.vol;s.turn=q.vol*q.last;s.bid=q.bid;s.ask=q.ask;s.vb=Math.max(200,(q.vol||0)/375);
