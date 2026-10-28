@@ -1056,6 +1056,17 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
 .vx-lean b{font-size:20px;letter-spacing:.02em}.vx-lean.up b{color:var(--up)}.vx-lean.down b{color:var(--down)}.vx-lean.mute b{color:var(--gold)}
 .vx-meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--line) 50%,var(--up))}.vx-meter i{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
 .vx-factors{display:flex;flex-wrap:wrap;gap:4px}
+.vx-lean{cursor:default}.vx-lsay{margin:2px 0 0;font-size:13px;line-height:1.35;color:var(--text-2)}
+.vx-mw{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:10.5px;color:var(--text-3);margin-top:4px}
+.vx-tally{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;font-weight:700;color:var(--text-3)}.vx-tally .up{color:var(--up)}.vx-tally .down{color:var(--down)}
+.vx-lwin{font-size:12.5px;padding:6px 10px;border-radius:8px;background:var(--panel-2)}.vx-lwin.up{border-left:3px solid var(--up)}.vx-lwin.down{border-left:3px solid var(--down)}
+.vx-lean .vx-lwin b{font-size:12.5px;letter-spacing:0;color:var(--text)}
+.vx-why summary{cursor:pointer;font-size:12px!important;font-weight:700;text-transform:none!important;letter-spacing:0!important;color:var(--brand)!important;padding:4px 0}
+.vx-why ul{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.vx-why li{display:grid;grid-template-columns:84px 1fr;gap:8px;align-items:start;font-size:12.5px}
+.vx-why .vx-lv{font-size:11px;font-weight:700}.vx-why li.up .vx-lv{color:var(--up)}.vx-why li.down .vx-lv{color:var(--down)}.vx-why li.mute .vx-lv{color:var(--gold)}
+.vx-why .vx-ln b{display:block;font-size:12.5px;letter-spacing:0;color:var(--text)}.vx-why .vx-ln small{display:block;text-transform:none;letter-spacing:0;font-size:11.5px;color:var(--text-3)}
+
 .vx-today{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;align-content:start;position:relative}.vx-today small{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em}.vx-today b{display:block;font-size:13px}.vx-today span{font-size:11px;color:var(--text-3)}
 .vx-today .rahu b{color:var(--down)}.vx-today .btn-xs{position:absolute;right:10px;bottom:10px}
 .vx-closed{padding:8px 12px;border-radius:10px;margin-bottom:10px;font-size:12.5px;background:color-mix(in srgb,var(--gold) 10%,transparent);border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);color:var(--text)}
@@ -3010,7 +3021,8 @@ function vxCtx(mc,symName){
 setInterval(async()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden||VD.busy||typeof MKT==='undefined'||!MKT.open)return;
   if(Date.now()-(VD._ts||0)<120000)return;const y=window.scrollY;await loadVedic(false);VD._lastSpot=null;if(App.view==='vedic'){vdPaint();window.scrollTo(0,y)}}catch(e){}},30000);
 setInterval(()=>{try{if(typeof App==='undefined'||App.view!=='vedic'||document.hidden)return;const lb=document.getElementById('vxLadBox'),pb=document.getElementById('vxPlanBox');if(!VD||!VD.data)return;
-  const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le)le.innerHTML=vxLeanHTML(r);if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);{const fb=document.getElementById('vxFixBox');if(fb)fb.innerHTML=vxFixedGrid(sp,r.header.symbol)}if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
+  const r=VD.data,g=r.gann;const le=document.getElementById('vxLean');if(le){const lh=vxLeanHTML(r);if(le._h!==lh){le.innerHTML=lh;le._h=lh}}if(!lb||!g||!g.available)return;const sp=vxSpot(g,r.header.symbol);if(sp===VD._lastSpot)return;VD._lastSpot=sp;lb.innerHTML=vxLadder(g,r.header.symbol);{const fb=document.getElementById('vxFixBox');if(fb)fb.innerHTML=vxFixedGrid(sp,r.header.symbol)}if(pb)pb.innerHTML=vxPlanCards(g,r.header.symbol)}catch(e){}},3000);
+document.addEventListener('toggle',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('vx-why'))VD._whyOpen=t.open},true);
 /* Day Power: Vedic + Gann bias for the next 3 sessions (day_power.py) - every ingredient listed under "How it's worked out" */
 function vxDpMore(x){if(x.bullPts==null)return'';
   const half=(w,v)=>v?`${w} <b class="${v}">${v==='bullish'?'▲ bullish':v==='bearish'?'▼ bearish':'● neutral'}</b>`:'';
@@ -3100,11 +3112,19 @@ function vxLean(r){const c=r.confluence||{factors:[]},mc=r.market_context||{},g=
   const score=f.reduce((a,x)=>a+x.vote,0),max=Math.max(1,f.reduce((a,x)=>a+(x.name==="God's Eye"?2:1),0));   /* God's Eye counts double */
   const lean=score>=3?'BULLISH LEAN':score===2?'MILD BULLISH':score<=-3?'BEARISH LEAN':score===-2?'MILD BEARISH':'MIXED / WAIT';
   return{lean,score,max,factors:f,win,nxt,spot,live}}
+const VX_LEAN_SAY={'BULLISH LEAN':'Most signals point up. Prefer buying dips, and only once price confirms.','MILD BULLISH':'A few more signals point up than down. Keep size small and wait for price to confirm.','MIXED / WAIT':'Signals disagree. Wait: trade only after price breaks the opening range with VWAP agreeing.','MILD BEARISH':'A few more signals point down than up. Keep size small and avoid chasing longs.','BEARISH LEAN':'Most signals point down. Avoid fresh longs; sell rallies only once price confirms.'};
+const VX_FNAME={"God's Eye":"God's Eye (counts double)",'Day Power':'Day Power (today)','Vedic lunar bias':'Moon and weekday bias','Gann HiLo trend (daily)':'Gann daily trend','Price vs Gann base (0°)':'Price vs Gann base','Time (hora/choghadiya)':'Time of day'};
 function vxLeanHTML(r){const L=vxLean(r),cls=/BULL/.test(L.lean)?'up':/BEAR/.test(L.lean)?'down':'mute';
-  const t=new Date(Date.now()+330*60000).toISOString().slice(11,19);
-  const nowTxt=L.win?`<span class="vx-chip ${L.win.side==='Buyers'?'up':'down'}">Now: ${esc(L.win.side)} ${esc(L.win.start)}–${esc(L.win.end)}</span>`:L.nxt?`<span class="vx-chip mute">Next: ${esc(L.nxt.side)} ${esc(L.nxt.start)}–${esc(L.nxt.end)}</span>`:'';
-  return `<div class="vx-lean ${cls}" title="God's Eye (counts double), Day Power, lunar bias, Gann trend, and live price vs Gann base / VWAP / opening range and the current time window. Not a signal - act only on price action and volume."><small>Today's lean · ${L.live?'live '+t:'last session'}</small><b>${esc(L.lean)}</b> <small class="muted">score ${L.score>0?'+':''}${L.score} of ±${L.max}</small><div class="vx-meter"><i style="left:${Math.max(2,Math.min(98,50+(L.score/L.max)*50))}%"></i></div>
-    <div class="vx-factors">${nowTxt}${L.factors.map(x=>`<span class="vx-chip ${x.vote>0?'up':x.vote<0?'down':'mute'}" title="${esc(x.detail)}">${x.vote>0?'▲':x.vote<0?'▼':'•'} ${esc(x.name)}</span>`).join('')}</div></div>`}
+  const t=new Date(Date.now()+330*60000).toISOString().slice(11,16);
+  const nb=L.factors.filter(x=>x.vote>0).length,nr=L.factors.filter(x=>x.vote<0).length,nn=L.factors.length-nb-nr;
+  const win=L.win?`<div class="vx-lwin ${L.win.side==='Buyers'?'up':'down'}"><b>Right now:</b> ${L.win.side==='Buyers'?'buyers':'sellers'} have the edge until ${esc(L.win.end)}</div>`
+    :L.nxt?`<div class="vx-lwin ${L.nxt.side==='Buyers'?'up':'down'}"><b>Next:</b> ${L.nxt.side==='Buyers'?'buyers':'sellers'} have the edge ${esc(L.nxt.start)}–${esc(L.nxt.end)}</div>`:'';
+  const rows=L.factors.map(x=>`<li class="${x.vote>0?'up':x.vote<0?'down':'mute'}"><span class="vx-lv">${x.vote>0?'▲ Bullish':x.vote<0?'▼ Bearish':'● Neutral'}</span><span class="vx-ln"><b>${esc(VX_FNAME[x.name]||x.name)}</b><small>${esc(x.detail||'')}</small></span></li>`).join('');
+  return `<div class="vx-lean ${cls}"><small>Today's lean · ${L.live?'live '+t:'last session'}</small><b>${esc(L.lean)}</b>
+    <p class="vx-lsay">${esc(VX_LEAN_SAY[L.lean]||'')}</p>
+    <div class="vx-mw"><span>Bearish</span><div class="vx-meter"><i style="left:${Math.max(2,Math.min(98,50+(L.score/L.max)*50))}%"></i></div><span>Bullish</span></div>
+    <div class="vx-tally"><span class="up">▲ ${nb} bullish</span><span class="down">▼ ${nr} bearish</span><span>● ${nn} neutral</span></div>${win}
+    <details class="vx-why"${VD&&VD._whyOpen?' open':''}><summary>Why this lean</summary><ul>${rows}</ul><p class="vx-note">Not a signal. Act only on price action and volume.</p></details></div>`}
 function vdPaint(){const el=$('#v-vedic');if(!el)return;
   if(VD.err){el.innerHTML=`<div class="page">${pageHead('Vedic + Gann','')}<div class="empty">${esc(VD.err)} <button class="btn-xs" data-act="vedic-retry">Retry</button></div></div>`;return}
   const r=VD.data;if(!r){el.innerHTML=`<div class="page vx"><div class="vx-hero vx-skel"></div><div class="empty">Calculating today's Panchang, planets and Gann levels…</div></div>`;return}
