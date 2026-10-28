@@ -407,6 +407,8 @@ th[data-sort]{cursor:pointer} th[data-sort]:hover{color:var(--text)}
   .chart-wrap{height:min(62vh,460px)}
   .tbl-wrap table{font-size:12px}
   .modal{width:calc(100vw - 20px);max-height:88vh}
+  .modal-bg{padding:12px 10px calc(12px + env(safe-area-inset-bottom));align-items:center}.modal{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - env(safe-area-inset-bottom))}   /* phone: the modal fits the VISIBLE screen (100vh ignores the browser bars), so its Exit / Move stop / Close buttons are never cut off */
+  .modal-f{flex-wrap:wrap}.modal-f .btn{flex:1 1 auto}
 }
 @media (max-width:600px){.sb-stat{display:none}.symbar{padding:6px 12px;min-height:0}.lg-hdr{font-size:10.5px;gap:6px}.toolbar{padding:4px 8px}.chart-wrap{height:min(66vh,500px)}}
 @media (max-width:600px){.toolbar{flex-wrap:wrap;overflow:visible;gap:6px}.toolbar .sep{display:none}.toolbar .seg.rng{order:20;flex:1 1 100%;margin:0;overflow-x:auto;scrollbar-width:none}.toolbar .seg.rng button{flex:0 0 auto}.toolbar #ctype{max-width:84px}.toolbar .tb-btn{padding-left:8px;padding-right:8px}.plan-wrap{top:46px;left:8px;right:auto;max-width:calc(100% - 76px)}}
