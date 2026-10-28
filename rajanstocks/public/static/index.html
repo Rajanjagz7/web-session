@@ -3606,13 +3606,14 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
     if(f.str==='STRONG')l=l.filter(p=>p.kind==='index'||(p.strength||0)>=65);
     else if(f.str==='WEAK')l=l.filter(p=>p.kind!=='index'&&(p.strength||0)<65);
     else if(f.str==='HIGH')l=l.filter(p=>p.kind==='index'||(p.strength||0)>=75);
-    const SORTS={strength:(a,b)=>(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
+    const hi75=x=>(x.strength||0)>=75?1:0,SORTS={strength:(a,b)=>(hi75(b)-hi75(a))||(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
     
     // Sort indices strictly to the top
     if(f.sig!=='TOP')l.sort((a,b)=>{
       const aIsIdx=a.kind==='index'?0:1;
       const bIsIdx=b.kind==='index'?0:1;
       if(aIsIdx!==bIsIdx)return aIsIdx-bIsIdx;
+      if(f.sort==='strength'&&hi75(a)!==hi75(b))return hi75(b)-hi75(a);   // strength >= 75% first, in every view
       if(hzKey&&f.sort==='strength'){const fa=(a.plans&&a.plans[hzKey]&&a.plans[hzKey].fit)||0,fb=(b.plans&&b.plans[hzKey]&&b.plans[hzKey].fit)||0;if(fa!==fb)return fb-fa}   // a horizon is ranked by its own score
       return(SORTS[f.sort]||SORTS.strength)(a,b);
     });

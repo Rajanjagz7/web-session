@@ -427,12 +427,12 @@ def fill_slots(st, today, already):
                         continue
                     if (p.get("strength") or 0) >= morning_picks.FILL_STRENGTH_MIN and morning_picks.good_rr(p, p["signal"]):
                         rows.append(p)
-                rows.sort(key=lambda p: -(p.get("strength") or 0))
+                rows.sort(key=lambda p: -_quality(p))                    # strength >= 75% first, then strength and volume
                 for p in rows[:max(0, min(need["stock"], morning_picks.MAX_PICKS - took))]:
                     d = 1 if p["signal"] == "BUY" else -1
                     out.append({"key": "stock-screen", "sym": p["s"], "side": p["signal"], "kind": "stock", "variant": "fixed", "filter": "none",
                                 "indStop": round(p["ltp"] - d * morning_picks.swing_risk(p, p["signal"]), 2), "score": (p.get("strength") or 0) / 100,
-                                "rank": (p.get("strength") or 0) / 100, "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
+                                "rank": 1.0 + _quality(p), "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
                 return out[:room]
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
             left = morning_picks.MAX_PICKS - took
@@ -752,6 +752,15 @@ def classic_filter(entries, extras_agree=False):
     return kept, paper
 
 
+def _quality(p):
+    """How good a stock's Picks row looks for the entry ranking (user, 29 Oct): strength >= 75% first, then more strength, then more volume
+    (volume vs its own average, capped at 3x). Added to a candidate's rank so strong, busy stocks are bought before weak, quiet ones."""
+    if not p:
+        return 0.0
+    st_ = float(p.get("strength") or 0)
+    return (0.5 if st_ >= 75 else 0.0) + min(st_, 100) / 400 + min(float(p.get("volx") or 0), 3.0) / 6
+
+
 def choose(cands, st, today):
     cfg = st["cfg"]
     taken_today = [t for t in st["trades"] if t["date"] == today]
@@ -780,7 +789,7 @@ def choose(cands, st, today):
     for c in clean:
         p = screen.get(c["sym"])
         c["screenAgrees"] = bool(p and ((c["side"] == "BUY" and p["signal"] == "BUY") or (c["side"] == "SELL" and p["signal"] == "SELL")))
-        c["rank"] = c["score"] + 0.5 * (c["agree"] - c.get("against", 0) - 1) + (0.3 if c["screenAgrees"] else 0)
+        c["rank"] = c["score"] + 0.5 * (c["agree"] - c.get("against", 0) - 1) + (0.3 if c["screenAgrees"] else 0) + (_quality(p) if c["kind"] == "stock" else 0)
     idx = sorted([c for c in clean if c["kind"] == "index"], key=lambda c: -c["rank"])[:max(0, _cap(cfg, "indexSlots") - have_idx)]
     stk = sorted([c for c in clean if c["kind"] == "stock" and c["screenAgrees"]], key=lambda c: -c["rank"])
     if len(stk) < max(0, _cap(cfg, "stockSlots") - have_stk):              # fall back to any proven stock signal
