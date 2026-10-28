@@ -691,28 +691,44 @@ def shadow_resolve(st, now):
             continue
         d = 1 if x["side"] == "BUY" else -1
         risk = abs(x["entry"] - x["stop"]) or 1
+        r_now = (px - x["entry"]) * d / risk
+        if r_now > x.get("peakR", 0):
+            x["peakR"] = round(r_now, 2)                                  # best the trade reached before it ended (how far a target ladder could have run)
+            st["_dirty"] = True
         end = x["date"] < now.date().isoformat() or _mins(now) >= 15 * 60 + 25
-        why = "stop" if (px - x["stop"]) * d <= 0 else "target" if (px - x["target"]) * d >= 0 else "close" if end else None
+        why = "stop" if r_now <= -1 else "close" if end else None
         if why:
-            x.update(status="CLOSED", exit=round(px, 2), why=why, R=round((px - x["entry"]) * d / risk, 2), closedAt=now.isoformat())
+            x.update(status="CLOSED", exit=round(px, 2), why=why, R=round(r_now, 2), closedAt=now.isoformat())
             st["_dirty"] = True
 
 
 def shadow_summary(st):
+    """Per strategy: signals, win %, average R if held to the stop / 15:25, how often it reached 1.5R / 2R / 3R first (peak R before the stop),
+    the planned risk:reward to the 1.5R first target, the profit factor of the 1.5R-or-stop outcome - the numbers to tune the stops and targets on."""
     out = {}
     for x in st.get("shadow", []):
-        o = out.setdefault(x["key"], {"key": x["key"], "n": 0, "open": 0, "wins": 0, "sumR": 0.0})
+        o = out.setdefault(x["key"], {"key": x["key"], "n": 0, "open": 0, "wins": 0, "sumR": 0.0, "h15": 0, "h2": 0, "h3": 0, "gain": 0.0, "loss": 0.0, "stopPct": 0.0})
         o["n"] += 1
         if x["status"] == "OPEN":
             o["open"] += 1
-        else:
-            o["sumR"] += x.get("R") or 0
-            o["wins"] += 1 if (x.get("R") or 0) > 0 else 0
+            continue
+        r = x.get("R") or 0
+        pk = x.get("peakR") or 0
+        o["sumR"] += r
+        o["wins"] += 1 if r > 0 else 0
+        o["h15"] += 1 if pk >= 1.5 else 0
+        o["h2"] += 1 if pk >= 2 else 0
+        o["h3"] += 1 if pk >= 3 else 0
+        r15 = 1.5 if pk >= 1.5 else r                      # take-profit at 1.5R, otherwise whatever the day gave
+        o["gain" if r15 > 0 else "loss"] += abs(r15)
+        o["stopPct"] += abs(x["entry"] - x["stop"]) / x["entry"] * 100
     for o in out.values():
         c = o["n"] - o["open"]
-        o["winRate"] = round(o["wins"] / c, 2) if c else 0
-        o["avgR"] = round(o["sumR"] / c, 2) if c else 0
+        pct = lambda v: round(v / c, 2) if c else 0
+        o.update(winRate=pct(o["wins"]), avgR=round(o["sumR"] / c, 2) if c else 0, hit15=pct(o.pop("h15")), hit2=pct(o.pop("h2")), hit3=pct(o.pop("h3")),
+                 pf=round(o["gain"] / o["loss"], 2) if o["loss"] else (None if not o["gain"] else 99), avgStopPct=round(o.pop("stopPct") / c, 2) if c else 0, plannedRR="1 : 1.5")
         o["sumR"] = round(o["sumR"], 2)
+        o.pop("gain"); o.pop("loss")
     return sorted(out.values(), key=lambda o: -o["n"])
 
 
