@@ -1821,6 +1821,45 @@ def warm_picks():
     _picks_kick()
 
 
+def _add_industry(data):
+    """Every pick row gets an industry: the F&O core keeps its hand-made sector, all other names get one from industry.py (explicit table, then company-name keywords)."""
+    try:
+        import industry
+        for r in (data.get("picks") or []) if isinstance(data, dict) else []:
+            if r.get("kind") == "index":
+                continue
+            if r.get("sec") in (None, "", "F&O") or r.get("s") in industry.EXPLICIT:
+                ind = industry.of(r.get("s"), r.get("n") or NAME.get(r.get("s"), ""))
+                if ind:
+                    r["sec"] = ind
+                    r["ind"] = ind
+            else:
+                r["ind"] = r["sec"]
+    except Exception:
+        pass
+    return data
+
+
+@router.get("/stock-lookup")
+def stock_lookup(q: str = ""):
+    """Find ANY listed NSE equity by symbol or company name (also names with no setup today, which the Picks list hides): symbol, name, industry, and
+    whether it is in today's picks. The screen then asks /quotes for the live price."""
+    import industry
+    ensure_universe()
+    q = (q or "").strip().lower()
+    if len(q) < 2:
+        return {"q": q, "items": []}
+    names = dict(NAME)
+    try:
+        for s, n in (nse_service.upstox.eq_names() or {}).items():
+            names.setdefault(s, n)
+    except Exception:
+        pass
+    hits = [(s, n) for s, n in names.items() if q in s.lower() or q in (n or "").lower()]
+    hits.sort(key=lambda x: (not x[0].lower().startswith(q), not (x[1] or "").lower().startswith(q), len(x[0]), x[0]))
+    return {"q": q, "items": [{"s": s, "n": n, "ind": industry.of(s, n) or SECTOR.get(s, "")} for s, n in hits[:8]]}
+
+
 def _inject_cash_seed_if_needed(data):
     if not isinstance(data, dict):
         return data
@@ -1929,6 +1968,7 @@ def picks(refresh: bool = False, response: Response = None):
             v.pop("bhav_diag", None)
             _inject_cash_seed_if_needed(v)
             _add_shortlist(v)
+            _add_industry(v)
         return v
     if os.environ.get("VERCEL"):
         # serverless freezes background threads after the response: build inline within the 30s cap

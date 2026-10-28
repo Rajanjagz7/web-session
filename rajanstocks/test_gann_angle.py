@@ -137,3 +137,17 @@ def test_shadow_record_premium_dedup():
     at.shadow_record_premium(st, [g], now)
     at.shadow_record_premium(st, [g], now)
     assert len(st["shadow"]) == 1 and st["shadow"][0]["key"] == "premium-rider" and st["shadow"][0]["ikey"] == "NSE_FO|1"
+
+
+# ---- industry labels / stock lookup ----
+def test_industry_labels_and_lookup():
+    import industry, market_api as m
+    assert industry.of("VISAKAIND", "Visaka Industries") == "Cement & Cement Products"
+    assert industry.of("XYZ", "Foo Cements Ltd") == "Cement & Cement Products"
+    assert industry.of("ABC", "Sun Pharma Labs") == "Pharma & Healthcare"
+    assert industry.of("Q", "Random Holdings") == ""
+    d = {"picks": [{"s": "ULTRACEMCO", "n": "UltraTech Cement", "sec": "Materials", "kind": "stock"}, {"s": "TCS", "n": "TCS", "sec": "IT", "kind": "stock"}]}
+    m._add_industry(d)
+    assert d["picks"][0]["sec"] == "Cement & Cement Products" and d["picks"][1]["ind"] == "IT"
+    m.NAME["VISAKAIND"] = "Visaka Industries"
+    assert [x["s"] for x in m.stock_lookup("visak")["items"]] == ["VISAKAIND"]
