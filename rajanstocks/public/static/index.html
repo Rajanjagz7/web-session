@@ -3383,11 +3383,16 @@ function pkfCard(x){const f=v=>fmtP(v,x.dp),call=x.dir==='L',step=x.sym==='BANKN
    <div class="pk-f"><span class="muted">Premium stop / targets: use the chain</span><span><button class="btn-xs" data-sym="${esc(x.sym)}">Chart</button> <button class="btn-xs pri" data-ocq="${esc(x.sym)}">Option Chain</button></span></div></article>`}
 const PKF_SIZES=[10,15,30,0];   /* Fresh picks shown: top 15 by default (user, 28 Oct) / 10 / 30 / all (0) */
 function pkfPg(){const a=App.pkfPg||(App.pkfPg={n:15,p:0});if(!a._r){a._r=1;try{const v=parseInt(localStorage.getItem('pkf-size2'),10);if(PKF_SIZES.includes(v))a.n=v}catch(e){}}return a}
+/* the Top 10-15 stock list (strength + good risk/reward, same list as Browse & filter > Top 10-15) also leads the Fresh picks section (user, 28 Oct) */
+function pkTopBlock(){const P=App.picks;if(!P||P.error)return'';if(pkTopBlock._k===P&&pkTopBlock._o===MKT.open)return pkTopBlock._h;
+  const by=new Map((P.picks||[]).map(x=>[x.s,x])),l=(P.top||[]).slice(0,15).map(t=>{const b=by.get(t.s)||{};return{...b,...t,kind:'stock',universe:'fno',signal:t.side,plans:null,reasons:[t.why].concat(b.reasons||[])}});
+  const h=l.length?`<div class="pkfs-top"><div class="pkfs-h"><b>🏆 Top 10-15</b><small class="muted">${l.length} strongest with good risk/reward</small></div><div class="pk-grid">${l.map(p=>pickCard(p)).join('')}</div></div>`:`<p class="muted pkfs-e" style="margin:0 0 10px">🏆 Top 10-15: no stock passes the strength + risk/reward filter right now.</p>`;
+  pkTopBlock._k=P;pkTopBlock._o=MKT.open;return pkTopBlock._h=h}
 function pkFreshHTML(){const all=pkfLoad().slice().sort((a,b)=>(b.trend-a.trend)||(b.at-a.at)),pg=pkfPg();
   const n=pg.n||all.length||1,pages=Math.max(1,Math.ceil(all.length/n));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const list=all.slice(pg.p*n,pg.p*n+n);
   const pager=all.length>10?`<div class="pkfs-pg"><span class="pkfs-sz">${PKF_SIZES.map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pkfn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pkfp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${pg.p*n+1}–${Math.min(all.length,pg.p*n+n)} of ${all.length}</small><button data-pkfp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
-  return`<section class="card pkfs"><div class="pkfs-h"><b>⚡ Fresh picks</b><small class="muted">${all.length?all.length+' reversal setup'+(all.length>1?'s':''):'reversals found live'}</small></div>
+  return`<section class="card pkfs">${pkTopBlock()}<div class="pkfs-h" style="margin-top:12px"><b>⚡ Fresh picks</b><small class="muted">${all.length?all.length+' reversal setup'+(all.length>1?'s':''):'reversals found live'}</small></div>
    ${list.length?`<div class="pkfs-g">${list.map(pkfCard).join('')}</div>${pager}`:`<p class="muted pkfs-e">${MKT.open?'No fresh setup right now.':'Starts when the market opens.'} A <b>call</b> shows when an index or F&amp;O stock takes support (bounces off its day low and turns up), a <b>put</b> when it is rejected at its day high. Checked every few seconds from 09:20 to 14:45.</p>`}</section>`}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pkfn],[data-pkfp]');if(!b)return;const pg=pkfPg();
   if(b.dataset.pkfn!==undefined){pg.n=parseInt(b.dataset.pkfn,10)||0;pg.p=0;try{localStorage.setItem('pkf-size2',String(pg.n))}catch(x){}}else pg.p+=parseInt(b.dataset.pkfp,10);pkFreshTick()});
