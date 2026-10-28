@@ -3426,7 +3426,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
     const atm=Math.round(p.ltp/step)*step;
     const contract=(c&&c.contract)?c.contract:`${p.s} ${atm} ${side}`;
     const baseEntry=(c&&c.entry)?c.entry:Math.round(p.ltp*(p.s==='NIFTY'?0.0075:(p.s==='BANKNIFTY'?0.006:0.005)));
-    const optSignal=c?c.signal:(p.signal==='BUY'||p.signal==='SELL')?`BUY ${side==='CE'?'CALL':'PUT'}`:`WATCH · ${side==='CE'?'CALL':'PUT'} bias`;
+    const optSignal=c?c.signal:(p.signal==='BUY'||p.signal==='SELL')?`BUY ${side==='CE'?'CALL':'PUT'}`:ps?`WATCH · ${side==='CE'?'CALL':'PUT'} bias`:'NO SIGNAL';
     const isPut=optSignal.includes('PUT')||side==='PE';
     
     let optEntry=baseEntry,optSl,optT1,optT2,hzText='INTRADAY';
