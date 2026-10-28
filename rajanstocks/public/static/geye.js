@@ -6,7 +6,7 @@
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LS = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const SS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
-  const G = { data: LS('ge-cache', null), busy: false, err: null, ts: 0, seq: 0, tab: LS('ge-tab', 'overview'), open: null, sort: 'score', filt: 'ALL', opt: null, optExp: '', sec: null, secBusy: false, secErr: null, secTs: 0, secSel: null, sigSec: LS('ge-sigsec', 'ALL'), sq: '', ssort: 'opp', slim: 25, stock: null };
+  const G = { data: LS('ge-cache', null), busy: false, err: null, ts: 0, seq: 0, tab: LS('ge-tab', 'overview'), open: null, sort: 'score', filt: 'ALL', opt: null, optExp: '', sec: null, secBusy: false, secErr: null, secTs: 0, secSel: null, sigSec: LS('ge-sigsec', 'ALL'), sq: '', ssort: 'opp', ssig: 'ALL', slim: 25, stock: null };
   const NA = '<span class="ge-na" title="Not available right now">N/A</span>';
   const isN = v => v != null && isFinite(v);
   const n0 = v => isN(v) ? Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : NA;
@@ -322,7 +322,7 @@
   const rangeMini = r => isN(r.rangePos) ? `<i class="ge-rgm" title="52-week range: ${n2(r.yl)} – ${n2(r.yh)}"><b style="left:${r.rangePos}%"></b></i>` : NA;
   function stockRows() {
     const d = G.sec, q = G.sq.trim().toUpperCase();
-    const l = d.stocks.filter(r => (G.sigSec === 'ALL' || r.sec === G.sigSec) && (!q || r.s.includes(q) || String(r.n).toUpperCase().includes(q)));
+    const l = d.stocks.filter(r => (G.sigSec === 'ALL' || r.sec === G.sigSec) && (G.ssig === 'ALL' || (G.ssig === 'ANY' ? r.signal === 'BUY' || r.signal === 'SELL' : r.signal === G.ssig)) && (!q || r.s.includes(q) || String(r.n).toUpperCase().includes(q)));
     const key = { opp: r => -(r.opp ?? -1), chg: r => -(r.chg ?? -99), ret20: r => -(r.ret20 ?? -99), volx: r => -(r.volx ?? -1), name: r => r.s }[G.ssort] || (r => -(r.opp ?? -1));
     return l.slice().sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
   }
@@ -341,6 +341,7 @@
     return `<section class="ge-p ge-stocks"><h3>Stocks by sector · ${E(d.universe)} <small class="muted">${d.count} stocks · ${d.adv} up / ${d.dec} down</small></h3>
       <div class="ge-secchips" role="group" aria-label="Sector"><button type="button" class="${G.sigSec === 'ALL' ? 'on' : ''}" data-gessec="ALL">All <small>${d.count}</small></button>${secs.map(x => `<button type="button" class="${G.sigSec === x.sec ? 'on' : ''}" data-gessec="${E(x.sec)}"><i style="background:${secCol(x.sec)}"></i>${E(x.sec)} <small class="${cc(x.chg)}">${pc(x.chg)}</small></button>`).join('')}</div>
       <div class="ge-stools"><input class="inp" id="geSq" placeholder="Search stock" value="${E(G.sq)}" aria-label="Search stock">
+        <select class="inp" id="geSsig" aria-label="Signal">${[['ALL', 'All signals'], ['BUY', 'Buy only'], ['SELL', 'Sell only'], ['ANY', 'Buy + Sell']].map(([k, l]) => `<option value="${k}" ${G.ssig === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <select class="inp" id="geSsort" aria-label="Sort">${[['opp', 'Opportunity'], ['chg', 'Day change'], ['ret20', '1-month return'], ['volx', 'Volume surge'], ['name', 'A to Z']].map(([k, l]) => `<option value="${k}" ${G.ssort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div id="geStk">${stockTable()}</div></section>`;
   }
@@ -509,6 +510,7 @@
     if (e.target.id === 'geSq') { G.sq = e.target.value; G.slim = 25; clearTimeout(sqT); sqT = setTimeout(() => { const h = document.getElementById('geStk'); if (h) h.innerHTML = stockTable(); }, 150); }
   });
   document.addEventListener('change', e => {
+    if (e.target.id === 'geSsig') { G.ssig = e.target.value; G.slim = 25; const h = document.getElementById('geStk'); if (h) h.innerHTML = stockTable(); }
     if (e.target.id === 'geSsort') { G.ssort = e.target.value; G.slim = 25; const h = document.getElementById('geStk'); if (h) h.innerHTML = stockTable(); }
   });
   document.addEventListener('keydown', e => {
