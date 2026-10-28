@@ -3343,7 +3343,7 @@ function pkfScan(){if(typeof App==='undefined'||document.hidden||!App.picks||!MK
   const list=pkfLoad(),st=pkLiveStore();let ch=false;
   (App.picks.picks||[]).filter(p=>p.kind==='index'||p.universe!=='cash').forEach(p=>{const d=pkfDetect(p);if(!d)return;
     const prev=list.filter(x=>x.sym===d.sym&&x.dir===d.dir).pop();
-    if(prev){const rec=st['fr|'+prev.sym+'|'+prev.dir+'|'+prev.at],h=rec&&rec.h||{},done=h.sl||prev.t.every((_,i)=>h['t'+(i+1)]);if(!(done&&Date.now()-prev.at>3*60000))return}   /* one live idea per name and side; a finished one may be replaced after 3 min */
+    if(prev){const rec=st['fr|'+prev.sym+'|'+prev.dir+'|'+prev.at],h=rec&&rec.h||{},done=h.sl||prev.t.every((_,i)=>h['t'+(i+1)]);if(!(done&&Date.now()-prev.at>10*60000))return}   /* one live idea per name and side; a finished one may be replaced after 10 min */
     list.push(d);ch=true});
   if(ch)pkfSave();return ch}
 function pkfCard(x){const f=v=>fmtP(v,x.dp),call=x.dir==='L',step=x.sym==='BANKNIFTY'||x.sym==='SENSEX'?100:50,s=SYM(x.sym),atm=Math.round(((s&&s.last)||x.entry)/step)*step;
