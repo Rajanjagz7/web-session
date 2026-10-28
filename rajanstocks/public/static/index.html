@@ -2535,6 +2535,8 @@ const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000
   mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'TOP',kind:'STOCK',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
+/* every same-origin /api request gets a 40 s limit (unless the caller set its own): a stalled mobile connection left God's Eye / Observer / Picks "Refreshing..." and "Stale" forever because their busy flag never cleared */
+(()=>{const f=window.fetch.bind(window);window.fetch=(u,o)=>{try{const url=typeof u==='string'?u:(u&&u.url)||'';if(!/^(\/api\/|https?:\/\/[^/]+\/api\/)/.test(url)||(o&&o.signal)||(u&&u.signal))return f(u,o);const ac=new AbortController(),t=setTimeout(()=>ac.abort(),40000);return f(u,Object.assign({},o,{signal:ac.signal})).finally(()=>clearTimeout(t))}catch(e){return f(u,o)}}})();
 async function api(path){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),25000);   /* a stalled mobile connection used to leave one request pending forever: pollBusy stayed true and prices froze until a reload */
   let r;try{r=await fetch(path,{cache:'no-store',signal:ac.signal})}finally{clearTimeout(to)}if(!r.ok){const e=new Error(path+' '+r.status);e.status=r.status;try{const j=await r.json();if(j&&typeof j.detail==='string')e.detail=j.detail}catch(x){}throw e}return r.json()}
 const STORE='rs-paper-v1';
