@@ -3339,7 +3339,7 @@ function pkfDetect(p){const s=SYM(p.s);if(!s||!(s.last>0)||!(s.hi>0)||!(s.lo>0)|
   const sg=p.signal,trend=isI?(dir==='L'?(p.intraday==='Bullish'||sg==='BUY'):(p.intraday==='Bearish'||sg==='SELL')):(dir==='L'?sg==='BUY':sg==='SELL');
   return{sym:p.s,dir,kind:isI?'index':'stock',entry:r2(L),stop:r2(stop),t:[r2(L+side*R),r2(L+side*2*R)],lvl:dir==='L'?r2(lo):r2(hi),pct:dir==='L'?(up/lo*100):(dn/hi*100),trend:!!trend,confirmed:have,at:Date.now(),dp,n:p.n}}
 function pkfScan(){if(typeof App==='undefined'||document.hidden||!App.picks||!MKT.open)return false;
-  const m=(d=>d.getUTCHours()*60+d.getUTCMinutes())(new Date(Date.now()+330*60000));if(m<570||m>885)return false;     /* 09:30 - 14:45 */
+  const m=(d=>d.getUTCHours()*60+d.getUTCMinutes())(new Date(Date.now()+330*60000));if(m<560||m>885)return false;     /* 09:20 - 14:45 */
   const list=pkfLoad(),st=pkLiveStore();let ch=false;
   (App.picks.picks||[]).filter(p=>p.kind==='index'||p.universe!=='cash').forEach(p=>{const d=pkfDetect(p);if(!d)return;
     const prev=list.filter(x=>x.sym===d.sym&&x.dir===d.dir).pop();
@@ -3356,7 +3356,7 @@ function pkfCard(x){const f=v=>fmtP(v,x.dp),call=x.dir==='L',step=x.sym==='BANKN
    <div class="pk-f"><span class="muted">Premium stop / targets: use the chain</span><span><button class="btn-xs" data-sym="${esc(x.sym)}">Chart</button> <button class="btn-xs pri" data-ocq="${esc(x.sym)}">Option Chain</button></span></div></article>`}
 function pkFreshHTML(){const list=pkfLoad().slice().sort((a,b)=>(b.trend-a.trend)||(b.at-a.at)).slice(0,8);
   return`<section class="card pkfs"><div class="pkfs-h"><b>⚡ Fresh buys</b><small class="muted">${list.length?list.length+' reversal setup'+(list.length>1?'s':''):'reversals found live'}</small></div>
-   ${list.length?`<div class="pkfs-g">${list.map(pkfCard).join('')}</div>`:`<p class="muted pkfs-e">${MKT.open?'No fresh setup right now.':'Starts when the market opens.'} A <b>call</b> shows when an index or F&amp;O stock takes support (bounces off its day low and turns up), a <b>put</b> when it is rejected at its day high. Checked every few seconds from 09:30 to 14:45.</p>`}</section>`}
+   ${list.length?`<div class="pkfs-g">${list.map(pkfCard).join('')}</div>`:`<p class="muted pkfs-e">${MKT.open?'No fresh setup right now.':'Starts when the market opens.'} A <b>call</b> shows when an index or F&amp;O stock takes support (bounces off its day low and turns up), a <b>put</b> when it is rejected at its day high. Checked every few seconds from 09:20 to 14:45.</p>`}</section>`}
 function pkFreshTick(){const e=document.getElementById('pkFresh');if(!e)return;const h=pkFreshHTML();if(e._h!==h){e._h=h;e.innerHTML=h}}
 function pkLiveBox(o){const h=pkLiveHTML(o);return`<div class="pk-live ${h?'':'empty'}" data-pkl="${esc(JSON.stringify(o))}">${h}</div>`}
 function pkLiveTick(){if(typeof App==='undefined'||document.hidden)return;const syms=new Set();
