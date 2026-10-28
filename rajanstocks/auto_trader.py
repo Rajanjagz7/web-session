@@ -705,19 +705,34 @@ def shadow_record(st, cands, now):
     del sh[:-SHADOW_MAX]
 
 
+def shadow_record_premium(st, signals, now):
+    """Paper-only log of Premium Rider signals (premium_rider.py): the entry / stop / target are PREMIUM prices of the contract itself."""
+    sh = st.setdefault("shadow", [])
+    today = now.date().isoformat()
+    have = {x["id"] for x in sh}
+    for g in signals:
+        sid = f"{today}-{g['contract']}-{g['pattern']}"
+        if sid in have or not g.get("key") or not (g["entry"] > g["stop"] > 0):
+            continue
+        sh.append({"id": sid, "date": today, "at": now.isoformat(), "key": "premium-rider", "sym": g["contract"], "ikey": g["key"], "side": "BUY", "entry": g["entry"],
+                   "stop": g["stop"], "target": g["target"], "pattern": g["pattern"], "status": "OPEN"})
+        st["_dirty"] = True
+    del sh[:-SHADOW_MAX]
+
+
 def shadow_resolve(st, now):
     """Close shadow signals on their stop / 1.5R target (live underlying price); anything still open is closed at the 15:25 mark at that day's last price."""
     opens = [x for x in st.get("shadow", []) if x["status"] == "OPEN"]
     if not opens:
         return
     import market_api
-    keys = {x["sym"]: market_api._key(x["sym"]) for x in opens}
+    keys = {x["id"]: (x.get("ikey") or market_api._key(x["sym"])) for x in opens}
     try:
         q = _quotes(set(keys.values()))
     except Exception:
         return
     for x in opens:
-        px = _last(q.get(keys[x["sym"]]))
+        px = _last(q.get(keys[x["id"]]))
         if px <= 0:
             continue
         d = 1 if x["side"] == "BUY" else -1
@@ -1457,6 +1472,14 @@ def _run_cycle(now, force, dry):
                         rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(g_extra)} Gann-angle trigger(s)"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"gann angle failed: {str(e)[:80]}"})
+            try:                                      # Premium Rider (option premium support bounce / heavy selling + volume surge): paper-tracked for the testing week
+                import premium_rider
+                pr = premium_rider.scan()
+                if pr.get("signals"):
+                    shadow_record_premium(st, pr["signals"], now)
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(pr['signals'])} premium-rider signal(s) (paper)"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"premium rider failed: {str(e)[:80]}"})
             filled = []
             if cfg.get("fillSlots", True) and time.time() >= max(st.get("fillBackoff", 0), st.get("fillNext", 0)):
                 st["fillNext"] = time.time() + FILL_EVERY          # live screens every 3 minutes (each costs ~40 Upstox calls)

@@ -725,7 +725,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 /* God's Eye picks filter panel */
 #v-picks,#v-picks *{overflow-anchor:none}   /* the page never moves by itself when tiles / news / picks refresh */
 .pkf{display:flex;flex-direction:column;gap:12px;padding:14px;margin:12px 0}
-.pkf-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pkf-kind{flex:1 1 100%}.pkf-kind button{flex:1}.pkf-top .pkf-q{flex:1 1 100%}
+.pkprem{padding:12px}.pkprem-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.pkprem-n{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:13px}.pkf-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pkf-kind{flex:1 1 100%}.pkf-kind button{flex:1}.pkf-top .pkf-q{flex:1 1 100%}
 .pkf .seg{background:var(--panel-2)}.pkf-kind button{height:32px;padding:0 14px;font-weight:600}
 .pkf-q{position:relative;flex:1;min-width:0}.pkf-q svg{position:absolute;left:11px;top:50%;width:15px;height:15px;transform:translateY(-50%);fill:none;stroke:var(--text-3);stroke-width:2;stroke-linecap:round;pointer-events:none}
 .pkf-q .inp{height:36px;padding-left:34px;border-radius:10px;background:var(--panel-2)}
@@ -3569,6 +3569,18 @@ function patchPicks(el,tpl){const t=document.createElement('div');t.innerHTML=tp
   return true}
 /* Rider (user, 29 Oct): a sudden volume spike (>= 2x the 20-day average) AND price breaking out of its range - above the 20-day high or pressed to today's high
    (buy side), below the 20-day low or pressed to today's low (sell side). Stocks and indices; sorted by the size of the spike. */
+/* Rider: option-premium patterns (support bounce / heavy selling + volume surge) on index options, from /api/m/rider/premium; the Testing week table paper-trades them */
+const PKP={d:null,ts:0,busy:false};
+function pkPremLoad(){if(PKP.busy||Date.now()-PKP.ts<60000||document.hidden)return;PKP.busy=true;
+  api('/api/m/rider/premium').then(r=>{PKP.d=r;PKP.ts=Date.now()}).catch(()=>{PKP.ts=Date.now()-45000}).finally(()=>{PKP.busy=false;if(App.view==='picks'&&App.pk.mkt==='RIDER')renderPicks(true)})}
+function pkPremHTML(){pkPremLoad();const d=PKP.d,sg=d&&d.signals||[];
+  const head='<div class="pk-meta muted" style="margin:0 0 6px"><b>Option premium riders</b> · NIFTY and BANKNIFTY near-ATM, 5-minute candles</div>';
+  if(!d)return head+'<div class="empty" style="padding:10px">Reading option premiums…</div>';
+  if(d.open===false)return head+'<div class="empty" style="padding:10px">Premium riders show while the market is open.</div>';
+  if(!sg.length)return head+'<div class="empty" style="padding:10px">No premium is bouncing from support or being dumped on a volume surge right now.</div>';
+  return head+'<div class="pk-grid">'+sg.map(g=>`<div class="card pkprem"><div class="pkprem-h"><b>${esc(g.contract)}</b><span class="badge b-up">BUY</span></div><div class="muted" style="font-size:12px">${esc(g.label)} · volume ${g.volx}x</div>
+    <div class="pkprem-n"><span>Entry <b class="num">${g.entry}</b></span><span>SL <b class="num" style="color:var(--down)">${g.stop}</b></span><span>Target <b class="num" style="color:var(--up)">${g.target}</b></span><span>R:R <b>1:${g.rr}</b></span></div>
+    <div class="muted" style="font-size:12px;margin-top:4px">${esc(g.why||'')}</div></div>`).join('')+'</div>'}
 function pkRiders(picks,sig,q){const out=[];const qq=(q||'').trim().toUpperCase();
   for(const p of picks||[]){const v=p.volx||0,L=p.ltp||0;if(v<2||!(L>0)||p.high==null||p.low==null)continue;if(qq&&!(p.s||'').toUpperCase().includes(qq))continue;
     const rg=(p.high-p.low)||0,ch=p.chg||0;let side=null,why='';
@@ -3656,7 +3668,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
      <div id="pkFoot">${pkDirty(f)?'<div class="pkf-foot"><span>Filters applied</span><button type="button" class="pkf-rst" data-pkreset="1">Reset filters</button></div>':''}</div>
    </div>
    
-   <div id="pkRes" ${pkSec()==='browse'?'':'hidden'}>${body}</div>
+   <div id="pkRes" ${pkSec()==='browse'?'':'hidden'}>${f.mkt==='RIDER'&&f.kind!=='INDEX'?pkPremHTML():''}${body}</div>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws" id="pkNews">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;
   if(partial===true&&patchPicks(el,_tpl)){liveUpdate();if(window.geTags)geTags(el);return}
   el.innerHTML=_tpl;pkAlign(el);

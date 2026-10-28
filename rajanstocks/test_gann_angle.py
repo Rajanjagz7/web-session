@@ -104,3 +104,36 @@ def test_index_backing_points(monkeypatch):
     assert pts == 3 and len(bits) == 3
     pts, _ = a._index_backing({"instrument": "NIFTY", "strength": 60, "callPct": 55}, "BUY")
     assert pts == 1
+
+
+# ---- premium rider ----
+def _pbars(closes, vols):
+    out = []
+    for i, (c, v) in enumerate(zip(closes, vols)):
+        o = closes[i - 1] if i else c
+        out.append({"open": o, "high": max(o, c) * 1.01, "low": min(o, c) * 0.99, "close": c, "volume": v})
+    return out
+
+
+def test_premium_bounce_and_dump():
+    import premium_rider as pr
+    closes = [40, 38, 36, 34, 33, 32, 31, 30.5, 30.2, 30.1, 30.3, 30.2, 30.3, 33]
+    b = pr.bounce(_pbars(closes, [100] * 13 + [500]))
+    assert b is None or (b["stop"] < b["entry"] < b["target"] and b["rr"] >= pr.MIN_RR)
+    assert pr.bounce(_pbars(closes, [100] * 14)) is None            # no volume surge, no signal
+    up = [60, 70, 80, 90, 100, 100, 99, 98, 97, 96, 95, 94, 93, 70]
+    d = pr.dump(_pbars(up, [100] * 13 + [600]))
+    assert d and d["close"] < d["peak"]
+    assert pr.dump(_pbars(up, [100] * 14)) is None
+    o = pr.opposite_levels(_pbars([30, 30.5, 31, 31.2, 31.5, 31.8, 32, 32.5], [100] * 8))
+    assert o and o["stop"] < o["entry"] < o["target"] and o["rr"] == 2.0
+
+
+def test_shadow_record_premium_dedup():
+    import auto_trader as at, datetime as dt
+    st = {}
+    now = dt.datetime(2026, 10, 29, 10, 0)
+    g = {"contract": "NIFTY 24500 CE", "pattern": "bounce", "key": "NSE_FO|1", "entry": 30, "stop": 27, "target": 36}
+    at.shadow_record_premium(st, [g], now)
+    at.shadow_record_premium(st, [g], now)
+    assert len(st["shadow"]) == 1 and st["shadow"][0]["key"] == "premium-rider" and st["shadow"][0]["ikey"] == "NSE_FO|1"
