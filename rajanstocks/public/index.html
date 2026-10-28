@@ -1976,7 +1976,7 @@ body.net-off #tkGo,body.net-off #opBuy,body.net-off #opSell,body.net-off #opExit
 .ot-sell{background:var(--down,#D93240);color:#fff}.ot-btns .pref{outline:2px solid var(--brand,#2a78d6);outline-offset:1px}
 .oc-btn{margin-left:6px;white-space:nowrap}
 .oc-pop{position:fixed;z-index:80;width:330px;max-width:calc(100vw - 16px);background:var(--panel,#fff);border:1px solid var(--line,#E2E6EC);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.28);padding:10px 12px;max-height:72vh;overflow:auto}
-.oc-pop.sheet{left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;border-radius:16px 16px 0 0;max-height:80vh;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.oc-pop.sheet{left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;border-radius:16px 16px 0 0;max-height:80vh;max-height:80dvh;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
 .oc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.oc-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 8px;font-size:13px}
 .oc-g{display:grid;grid-template-columns:1fr 84px 1fr;gap:6px;align-items:center;padding:3px 0;text-align:center}.oc-gh{font-size:11px;color:var(--text-3,#8592A6)}
 .oc-g button{height:32px;border-radius:8px;border:1px solid var(--line,#E2E6EC);background:var(--panel-2,#F6F7FA);font-variant-numeric:tabular-nums}
@@ -2687,7 +2687,7 @@ function drawOc(){if(!OC.open)return;let p=$('#ocPop');
 document.addEventListener('click',e=>{
   const uc=e.target.closest('[data-act="undchart"]');if(uc){e.preventDefault();if(SYM(OPT.sym))switchSym(OPT.sym);go('trade');return}
   const tg=e.target.closest('[data-act="optchain"]');if(tg){e.preventDefault();OPT.sym=App.sym.s;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;go('options');return}
-  const q=e.target.closest('[data-ocq]');if(q){e.preventDefault();switchSym(q.dataset.ocq);setTimeout(()=>{if(!OC.open)toggleOc()},60);return}
+  const q=e.target.closest('[data-ocq]');if(q){e.preventDefault();switchSym(q.dataset.ocq);setTimeout(()=>{if(App.view!=='options'&&!OC.open)toggleOc()},60);return}   /* an index / F&O stock opens the full Options page (that IS the chain): the pop-up chain only opens when the chart screen is shown, never on top of the Options page */
   const c=e.target.closest('[data-oc]');if(c&&OC.data&&!OC.data.error){const [side,strike]=c.dataset.oc.split(':');const ex=OC.data.expiry,sym=OC.sym;closeOc();openOptionFromScan(sym,ex,parseFloat(strike),side);return}
   if(OC.open){const p=$('#ocPop');if(p&&!p.contains(e.target))closeOc()}});
 document.addEventListener('change',e=>{if(e.target.id==='ocExp'){OC.expiry=e.target.value;OC.data=null;ocLoad()}});
