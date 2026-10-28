@@ -13,8 +13,14 @@ on:
     - cron: "29 3 * * 1-5"       # 08:59 IST
     - cron: "41 3 * * 1-5"       # 09:11 IST
     - cron: "53 3 * * 1-5"       # 09:23 IST
+    - cron: "23 3 * * 1-5"       # 08:53 IST  (28 Oct: every run from 08:47 to 09:11 was dropped by GitHub - more start times = better odds)
+    - cron: "35 3 * * 1-5"       # 09:05 IST
+    - cron: "47 3 * * 1-5"       # 09:17 IST
+    - cron: "59 3 * * 1-5"       # 09:29 IST
+    - cron: "11 4 * * 1-5"       # 09:41 IST
     - cron: "7 5 * * 1-5"        # 10:37 IST
     - cron: "7 7 * * 1-5"        # 12:37 IST - picks up after the morning run (a job lasts at most ~5h50m) until the close
+    - cron: "37 8 * * 1-5"       # 14:07 IST
 concurrency: { group: auto-trader, cancel-in-progress: false }
 jobs:
   beat:
