@@ -2533,7 +2533,8 @@ const App={view:'vedic',sym:SYM('RELIANCE'),tf:TFS.find(t=>t.k==='1D'),cash:1000
   mk:{},ord:'Open',indCat:'All',picks:null,calls:null,pk:{sig:'TOP',kind:'STOCK',hz:'ALL',mkt:'ALL',sort:'strength',size:15,page:0,q:''},news:null,watch:new Set(['NIFTY','BANKNIFTY','RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','SBIN'])};
 let OID=1000;
 const MKT={open:false,asOf:null,err:null};
-async function api(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok){const e=new Error(path+' '+r.status);e.status=r.status;try{const j=await r.json();if(j&&typeof j.detail==='string')e.detail=j.detail}catch(x){}throw e}return r.json()}
+async function api(path){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),25000);   /* a stalled mobile connection used to leave one request pending forever: pollBusy stayed true and prices froze until a reload */
+  let r;try{r=await fetch(path,{cache:'no-store',signal:ac.signal})}finally{clearTimeout(to)}if(!r.ok){const e=new Error(path+' '+r.status);e.status=r.status;try{const j=await r.json();if(j&&typeof j.detail==='string')e.detail=j.detail}catch(x){}throw e}return r.json()}
 const STORE='rs-paper-v1';
 function savePaper(){try{localStorage.setItem(STORE,JSON.stringify({cash:App.cash,positions:App.positions,orders:App.orders,history:App.history.slice(-200),alerts:App.alerts,meta:App.meta,watch:[...App.watch],oid:OID}))}catch(e){}}
 function loadPaper(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(!d)return;App.cash=d.cash;App.positions=d.positions||[];App.orders=d.orders||[];App.history=d.history||[];App.alerts=d.alerts||[];App.meta=d.meta||{};if(d.watch)App.watch=new Set(d.watch);OID=Math.max(OID,d.oid||0)}catch(e){}}
