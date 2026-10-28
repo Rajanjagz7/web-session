@@ -600,7 +600,7 @@ def _opportunity(r, r20, sec_med20):
     return round(sum(p[1] * p[2] for p in parts) / w * 100), [{"name": n_, "weight": round(wt / w * 100), "value": round(v * 100)} for n_, wt, v in parts]
 
 
-def sectors_build():
+def sectors_build(warm=True):
     import equity_bhav
     import stocks_api
     # Nifty Total Market = Nifty 500 + Nifty Microcap 250 (~750 stocks, every one with an NSE industry so it can be put in a sector).
@@ -614,7 +614,7 @@ def sectors_build():
     q = stocks_api._quote_rows([u["s"] for u in uni])
     try:
         days = equity_bhav.load_days()
-        if len(days) < 24 and not shared_cache.get("bhav:cooldown"):
+        if warm and len(days) < 24 and not shared_cache.get("bhav:cooldown"):
             # 1-month return / trend / volume need 21+ sessions of prices. The cache fills slowly (a few downloads per Picks
             # build), so top it up here too - a few sessions per call, time-boxed, advancing on every rebuild.
             try:
@@ -712,22 +712,59 @@ def sectors_build():
             "note": "Sector = NSE industry classification of the Nifty 500 + Microcap 250 (Nifty Total Market). Opportunity scores use prices only (no P/E, ROCE or supplier data)."}
 
 
+_sec_busy = threading.Event()
+
+
+def _sec_rebuild(warm):
+    """Build the sector table and keep it (fresh copy for ttl, last good copy for a day). One build at a time."""
+    import market_api
+    ttl = 120 if market_api.market_open() else 900
+    d = sectors_build(warm=warm)
+    d["_t"] = time.time()
+    shared_cache.set("ge:sec", d, ttl)
+    shared_cache.set("ge:sec:last", d, 86400)
+    with _lock:
+        _sec.update(t=time.time(), data=d)
+    return d
+
+
+def _sec_background():
+    if _sec_busy.is_set():
+        return
+    _sec_busy.set()
+
+    def run():
+        try:
+            _sec_rebuild(True)
+        except Exception:
+            pass
+        finally:
+            _sec_busy.clear()
+    threading.Thread(target=run, daemon=True, name="sec-build").start()
+
+
 @router.get("/sectors")
 def sectors(refresh: bool = False):
+    """Signals / Sectors tabs. The full build (~750 quotes + price history) can outlast a serverless request, so: a fresh copy is
+    served as is; an old copy is served at once (flagged stale) while a rebuild runs behind it; only with no copy at all does the
+    first request build - quotes only, no history download - so it always answers in time."""
     import market_api
     ttl = 120 if market_api.market_open() else 900
     with _lock:
-        if not refresh and _sec["data"] and time.time() - _sec["t"] < ttl:
-            return _sec["data"]
-    got = None if refresh else shared_cache.get("ge:sec")
-    if got and time.time() - got.get("_t", 0) < ttl:
-        d = got
-    else:
-        d = sectors_build()
-        d["_t"] = time.time()
-        shared_cache.set("ge:sec", d, ttl)
-    with _lock:
-        _sec.update(t=time.time(), data=d)
+        mem = _sec["data"], _sec["t"]
+    if not refresh and mem[0] and time.time() - mem[1] < ttl:
+        return mem[0]
+    got = shared_cache.get("ge:sec")
+    if not refresh and got and time.time() - got.get("_t", 0) < ttl:
+        with _lock:
+            _sec.update(t=got["_t"], data=got)
+        return got
+    last = shared_cache.get("ge:sec:last") or mem[0]
+    if last and not refresh:
+        _sec_background()
+        return {**last, "stale": True}
+    d = _sec_rebuild(False)
+    _sec_background()                      # history top-up afterwards, so the next build has 1M return / volume
     return d
 
 

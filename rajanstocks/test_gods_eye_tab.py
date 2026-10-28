@@ -49,3 +49,20 @@ def test_global_risk_unavailable_without_vix():
     assert g._global_risk([]) is None
     r = g._global_risk([{"name": "US VIX", "price": 30, "chgPct": 20}])
     assert r["label"] == "BEARISH"
+
+
+def test_sectors_serves_last_copy_while_rebuilding(monkeypatch):
+    import gods_eye_tab as g, shared_cache, market_api
+    monkeypatch.setattr(market_api, "market_open", lambda: True)
+    calls = []
+    monkeypatch.setattr(g, "sectors_build", lambda warm=True: calls.append(warm) or {"stocks": [], "sectors": [], "n": len(calls)})
+    monkeypatch.setattr(g, "_sec_background", lambda: None)
+    store = {}
+    monkeypatch.setattr(shared_cache, "get", lambda k: store.get(k))
+    monkeypatch.setattr(shared_cache, "set", lambda k, v, t=0: store.__setitem__(k, v))
+    g._sec.update(t=0, data=None)
+    d = g.sectors()                                   # no copy at all: quotes-only build, never the slow history download
+    assert calls == [False] and d["n"] == 1
+    g._sec.update(t=0, data=None); store["ge:sec"] = {**store["ge:sec"], "_t": 0}   # fresh copy expired, last good copy kept
+    d = g.sectors()
+    assert d.get("stale") is True and calls == [False]    # answered from the last copy, no build in the request
