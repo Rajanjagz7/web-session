@@ -238,3 +238,21 @@ def test_contract_refuses_an_in_the_money_strike(monkeypatch):
     monkeypatch.setattr(auto_trader, "_live_spot", lambda sym, fb=0: 52800.0)                          # wrong live price too
     with pytest.raises(RuntimeError, match="in the money"):
         auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3)
+
+
+def test_option_stop_is_capped_at_20_percent_of_the_premium(monkeypatch):
+    """28 Oct: stops of 30% of the premium were too wide. The premium stop is now at most premSLPct (20%) below the entry."""
+    import backtest
+    import market_api
+    bars = [{"date": f"2026-10-{d:02d}", "open": 100, "high": 102, "low": 98, "close": 100} for d in range(1, 28)]
+    monkeypatch.setattr(auto_trader, "_atr_for", lambda sym: (5.0, 100.0, bars))
+    monkeypatch.setattr(auto_trader, "_contract", lambda *a, **k: {"expiry": "2026-11-23", "strike": 100.0, "key": "K", "premium": 200.0, "lot": 100, "spot": 100.0, "bid": 199, "ltp": 200})
+    monkeypatch.setattr(auto_trader, "_now", lambda: __import__("datetime").datetime.fromisoformat("2026-10-28T10:00:00+05:30"))
+    monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 120.0)              # a wide signal-candle stop (30% of the premium would allow exactly this)
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}
+    t = auto_trader.open_trade(st, {"key": "x", "sym": "ABC", "side": "BUY", "kind": "stock", "variant": "fixed", "score": 1}, "2026-10-28")
+    assert t["premSL"] == pytest.approx(160.0, abs=0.01)                           # 200 - 20%
+    assert t["riskU"] == pytest.approx(80.0, abs=0.01)
+    st2 = {"cfg": {**auto_trader.DEFAULT_CFG, "premSlPct": 0.1}, "trades": [], "log": []}
+    t2 = auto_trader.open_trade(st2, {"key": "x", "sym": "ABC", "side": "BUY", "kind": "stock", "variant": "fixed", "score": 1}, "2026-10-28")
+    assert t2["premSL"] == pytest.approx(180.0, abs=0.01)                          # the setting wins
