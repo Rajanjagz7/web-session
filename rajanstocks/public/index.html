@@ -3290,24 +3290,31 @@ function pkLiveStore(){const k='pkl-'+new Date(Date.now()+330*60000).toISOString
 function pkLiveSave(){try{localStorage.setItem(App.pkl._k,JSON.stringify(App.pkl.d))}catch(e){}}
 const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
 /* SL 🚫 / T1 ✅ marks: a hit shows the mark (and the time if known), a level not reached yet shows its price */
-function pkChipsHTML(m,h){const f=v=>fmtP(v,m.dp==null?2:m.dp),c=(k,lvl,ts,isSl)=>ts?`<span class="pkc ${isSl?'sl':'tg'}">${k} ${isSl?'🚫':'✅'}${pkTm(ts)?' <i>'+pkTm(ts)+'</i>':''}</span>`:`<span class="pkc off">${k} <i>${f(lvl)}</i></span>`;
-  return c('SL',m.sl,h.sl,true)+(m.t||[]).map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false)).join('')}
+function pkChipsHTML(m,h,hp){hp=hp||{};const f=v=>fmtP(v,m.dp==null?2:m.dp),c=(k,lvl,ts,isSl,key)=>ts?`<span class="pkc ${isSl?'sl':'tg'}">${k} ${isSl?'🚫':'✅'}${pkTm(ts)?' <i>'+pkTm(ts)+'</i>':''} <i>@ ${f(hp[key]!=null?hp[key]:lvl)}</i></span>`:`<span class="pkc off">${k} <i>${f(lvl)}</i></span>`;
+  return c('SL',m.sl,h.sl,true,'sl')+(m.t||[]).map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false,'t'+(i+1))).join('')}
 /* what happened, in order: "SL 🚫 → T1 ✅" and a one-line story */
-function pkStory(m,h,best){const ev=[];if(h.sl)ev.push(['SL',h.sl]);(m.t||[]).forEach((v,i)=>{if(h['t'+(i+1)])ev.push(['T'+(i+1),h['t'+(i+1)]])});
+function pkStory(m,h,best,hp,post){hp=hp||{};const ev=[];if(h.sl)ev.push(['SL',h.sl]);(m.t||[]).forEach((v,i)=>{if(h['t'+(i+1)])ev.push(['T'+(i+1),h['t'+(i+1)]])});
   if(!ev.length){const T1=(m.t||[])[0],L=m.d==='L',pr=best!=null&&T1&&m.e?((L?best-m.e:m.e-best)/Math.abs(T1-m.e))*100:0;
     return pr>=60?`Went near T1 (${Math.min(99,Math.round(pr))}% of the way), not reached`:'No stop or target touched'}
   const known=ev.every(x=>x[1]>1);if(known)ev.sort((a,b)=>a[1]-b[1]);
   const top=Math.max(0,...ev.filter(x=>x[0]!=='SL').map(x=>+x[0].slice(1))),slI=ev.findIndex(x=>x[0]==='SL'),firstT=ev.findIndex(x=>x[0]!=='SL');
   let s;if(slI<0)s=`Target reached (T${top})`;else if(firstT<0)s='Stopped out';else if(!known)s=`Stop and T${top} both touched`;else s=slI<firstT?`Hit the stop, then went to T${top}`:`Reached T${ev[firstT][0].slice(1)}, then the stop went`;
+  const fp=v=>fmtP(v,m.dp==null?2:m.dp);
+  if(h.sl){const L=m.d==='L',T1=(m.t||[])[0],slAt=hp.sl!=null?hp.sl:m.sl,later=(m.t||[]).map((v,i)=>[i+1,h['t'+(i+1)]]).filter(x=>x[1]&&(h.sl<=1?false:x[1]>h.sl)),
+      ext=post!=null?post:best;
+    s+=` · stop hit at ${fp(slAt)}`;
+    if(later.length)s+=` · it tried again after the stop and reached T${later[later.length-1][0]}`;
+    else if(ext!=null&&T1){const pr=Math.max(0,Math.round(((L?ext-slAt:slAt-ext)/Math.abs(T1-slAt))*100));s+=` · after the stop it ${post!=null?'went':'peaked'} to ${fp(ext)} (${pr}% of the way to T1), target not reached`}}
   return s+(known?'':' (order unknown)')}
 function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).filter(v=>v>0);if(!px||!(o.stop>0)||!T.length)return null;
   if(o.dir==='L'?o.stop>=T[0]:o.stop<=T[0])return null;      /* levels that point the other way (a NO SIGNAL card with a bearish stop/targets) are not a trade: no SL/T marks */
   const L=o.dir==='L',st=pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec),h=rec.h||(rec.h={});
-  const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl),mark=(k,t)=>{if(!h[k])h[k]=t};
+  const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl),mark=(k,t,pp)=>{if(!h[k]){h[k]=t;(rec.hp||(rec.hp={}))[k]=pp!=null?pp:px}};
   if(beyond(px,o.stop,true))mark('sl',now);T.forEach((v,i)=>{if(beyond(px,v,false))mark('t'+(i+1),now)});
   if(o.morning&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
-    if(L?lo<=o.stop:hi>=o.stop)mark('sl',1);T.forEach((v,i)=>{if(L?hi>=v:lo<=v)mark('t'+(i+1),1)})}
+    if(L?lo<=o.stop:hi>=o.stop)mark('sl',1,o.stop);T.forEach((v,i)=>{if(L?hi>=v:lo<=v)mark('t'+(i+1),1,v)})}
   const ext=o.morning&&s.hi>0&&s.lo>0?(L?s.hi:s.lo):px;rec.best=rec.best==null?ext:(L?Math.max(rec.best,ext,px):Math.min(rec.best,ext,px));
+  if(h.sl>1)rec.post=rec.post==null?px:(L?Math.max(rec.post,px):Math.min(rec.post,px));   /* the furthest the price went in the pick's favour since the stop was hit */
   if(!rec.m||!Object.keys(h).length)rec.m={s:o.sym,l:o.label||o.sym,d:o.dir,k:o.kind||'stock',e:o.entry,sl:o.stop,t:T,at:(rec.m&&rec.m.at)||now,dp:o.dp==null?2:o.dp};
   if(JSON.stringify(rec)!==was)pkLiveSave();
   const f=v=>fmtP(v,o.dp==null?2:o.dp),pc=(a,b)=>((a-b)/b*100),nT=T.length;
@@ -3320,7 +3327,7 @@ function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).f
     if(!L&&px>=lo+rg*0.5&&px>o.entry)rev=`Reversal watch: bounced ${pc(px,lo).toFixed(2)}% off the day low ${f(lo)} — this bearish pick is losing grip, buyers may be taking over`;
     if(L&&px<=hi-rg*0.5&&px<o.entry)rev=`Reversal watch: fell ${Math.abs(pc(px,hi)).toFixed(2)}% from the day high ${f(hi)} — this bullish pick is losing grip, sellers may be taking over`}
   else if(h.sl&&!doneT)rev=L?'The market went against this long idea.':'The market went against this short idea.';
-  return{chips:pkChipsHTML(rec.m,h),hint,rev,story:pkStory(rec.m,h,rec.best)}}
+  return{chips:pkChipsHTML(rec.m,h,rec.hp),hint,rev,story:pkStory(rec.m,h,rec.best,rec.hp,rec.post)}}
 function pkLiveHTML(o){const r=pkLiveEval(o);if(!r)return'';
   return`<div class="pkc-row">${r.chips}</div><div class="pkl-t">${esc(r.hint)}</div>${r.rev?`<div class="pkl-r">${esc(r.rev)}</div>`:''}`}
 function pkMorning(){const a=App.picks&&App.picks.asOf;if(!a)return false;const d=new Date(new Date(a).getTime()+330*60000),m=d.getUTCHours()*60+d.getUTCMinutes();return m>=555&&m<=565}   /* list built in the first minutes of the session */
@@ -3384,7 +3391,7 @@ function pkLiveTick(){if(typeof App==='undefined'||document.hidden)return;const 
     const h=pkLiveHTML(o);if(e._h!==h){e._h=h;e.innerHTML=h;e.classList.toggle('empty',!h)}});App.pkSyms=[...syms].slice(0,40)}
 /* Picks log: everything the pick cards tracked, kept per day on this device (last 14 days) - shown in Journal > Picks log */
 function pkLogDays(){const out=[];try{for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&/^pkl-\d{4}-\d\d-\d\d$/.test(n)){let d={};try{d=JSON.parse(localStorage.getItem(n))||{}}catch(e){}
-  const rows=Object.entries(d).filter(([k,v])=>v&&v.m).map(([k,v])=>({k,m:v.m,h:v.h||{},best:v.best}));out.push({date:n.slice(4),rows})}}}catch(e){}
+  const rows=Object.entries(d).filter(([k,v])=>v&&v.m).map(([k,v])=>({k,m:v.m,h:v.h||{},best:v.best,hp:v.hp,post:v.post}));out.push({date:n.slice(4),rows})}}}catch(e){}
   return out.sort((a,b)=>a.date<b.date?1:-1)}
 function pkOutcome(r){const t=Object.keys(r.h).some(k=>k!=='sl'),l=!!r.h.sl;return t&&!l?'win':l&&!t?'loss':t&&l?'mixed':'open'}
 function pkLogOK(r){const T=(r.m.t||[])[0];if(!(r.m.sl>0)||!(T>0))return true;return r.m.d==='L'?r.m.sl<T:r.m.sl>T}   /* a card whose stop and targets point the wrong way was never a trade */
@@ -3403,7 +3410,7 @@ function pkLogHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLog
     const tg=rows.filter(r=>pkOutcome(r)==='win').length,sl=rows.filter(r=>pkOutcome(r)==='loss').length;
     const x=new Date(d.date+'T12:00:00Z'),lab=x.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',timeZone:'UTC'});
     return`<section class="pkg"><h4>${di===0?'Today · ':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks</span><span class="up">✅ ${tg} target</span><span class="down">🚫 ${sl} stop</span></div>
-      ${shown.map((r,i)=>`<div class="pkr o-${pkOutcome(r)}"><div class="pkr-h"><span class="pkr-n">${i+1}</span><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best))}</div></div>`).join('')}</section>`}).join('')||'<div class="empty">Nothing in this view.</div>'}
+      ${shown.map((r,i)=>`<div class="pkr o-${pkOutcome(r)}"><div class="pkr-h"><span class="pkr-n">${i+1}</span><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h,r.hp)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best,r.hp,r.post))}</div></div>`).join('')}</section>`}).join('')||'<div class="empty">Nothing in this view.</div>'}
 function pkLogRefresh(){const b=document.getElementById('jvPickLog');if(b){const h=pkLogHTML();b._h=h;b.innerHTML=h}}
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('[data-pklf]'),r=e.target.closest&&e.target.closest('[data-pklreset]');
   if(f){App.pkLogF=f.dataset.pklf;pkLogRefresh();return}
