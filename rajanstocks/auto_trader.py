@@ -412,7 +412,7 @@ def fill_slots(st, today, already):
             # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:16; tier 2 rests on Open = Low / High,
             # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
             early = _mins(_now()) < EAGLE_FROM
-            for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2) and not (cfg.get("buyOnly") and x["side"] != "BUY")][:max(0, min(need["stock"], left))]:
+            for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2)][:max(0, min(need["stock"], left))]:
                 out.append({"key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
@@ -613,6 +613,19 @@ def choose(cands, st, today):
 
 
 # ───────────────────────── entries / exits ─────────────────────────
+def _live_spot(sym, fallback=0.0):
+    """Live price of the underlying (index or stock); the option chain's own spot is only the fallback."""
+    try:
+        import market_api
+        k = market_api._key(sym)
+        v = _last(_quotes({k}).get(k))
+        if v > 0:
+            return v
+    except Exception:
+        pass
+    return float(fallback or 0)
+
+
 def _contract(sym, side, today, min_days):
     import market_api
     ch = market_api.chain(sym, "")
@@ -620,10 +633,27 @@ def _contract(sym, side, today, min_days):
     pick = next((e for e in sorted(exps) if (date.fromisoformat(e) - date.fromisoformat(today)).days >= min_days), None)
     if pick and pick != ch.get("expiry"):
         ch = market_api.chain(sym, pick)
-    rows, atm = ch.get("rows") or [], ch.get("atm")
-    if not rows or atm is None:
+    rows = ch.get("rows") or []
+    chain_spot = float(ch.get("spot") or 0)
+    # The strike is chosen from the LIVE price of the underlying, not the chain's own spot field: that field can lag at the open, and a
+    # stale spot after a gap bought a call far in the money (28 Oct, Bank Nifty). Rule: at-the-money only (nearest strike to the live
+    # price); a trade is never opened in the money.
+    spot = _live_spot(sym, chain_spot)
+    if not rows or spot <= 0:
         raise RuntimeError("no chain")
-    row = min(rows, key=lambda r: abs(r["strike"] - atm))
+    row = min(rows, key=lambda r: abs(r["strike"] - spot))
+    strikes = sorted({r["strike"] for r in rows})
+    step = min((b - a for a, b in zip(strikes, strikes[1:]) if b > a), default=0) or max(1.0, spot * 0.005)
+    if abs(row["strike"] - spot) > step:
+        raise RuntimeError(f"skipped: no strike near the price ({row['strike']:.0f} vs {spot:.0f})")
+    # second check from the option prices themselves (put-call parity: call - put at a strike = forward - strike): a call that is clearly
+    # in the money (or a put that is) is refused even if both price feeds agree on a wrong spot
+    ce_, pe_ = (row.get("ce") or {}).get("ltp") or 0, (row.get("pe") or {}).get("ltp") or 0
+    if ce_ > 0 and pe_ > 0:
+        days = max(0, (date.fromisoformat(ch["expiry"]) - date.fromisoformat(today)).days) if ch.get("expiry") else 30
+        itm = (ce_ - pe_ if side == "BUY" else pe_ - ce_) - 0.08 * spot * days / 365     # allow for carry / dividends
+        if itm > 1.5 * step:
+            raise RuntimeError(f"skipped: {row['strike']:.0f} {'CE' if side == 'BUY' else 'PE'} looks in the money (~{itm:.0f} pts) - ATM / OTM only")
     leg = row.get("ce" if side == "BUY" else "pe") or {}
     ask, bid, ltp = float(leg.get("ask") or 0), float(leg.get("bid") or 0), float(leg.get("ltp") or 0)
     px = ask or ltp
@@ -637,7 +667,7 @@ def _contract(sym, side, today, min_days):
     if ask > 0 and bid <= 0:
         raise RuntimeError("skipped: no bid in the market")
     return {"expiry": ch["expiry"], "strike": row["strike"], "key": leg["key"], "premium": px, "lot": int(ch.get("lot") or 1),
-            "spot": float(ch.get("spot") or 0), "bid": bid, "ltp": ltp}
+            "spot": spot, "bid": bid, "ltp": ltp}
 
 
 def _atr_for(sym):
@@ -1192,10 +1222,10 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(weak)} skipped for weak risk/reward"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"risk/reward check failed: {str(e)[:80]}"})
-            if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: bought only - no bearish / written legs (stock options only too when stockOnly is switched on)
+            if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: options are only BOUGHT (call for a bullish signal, put for a bearish one) - nothing is written / sold (stock options only too when stockOnly is switched on)
                 n0 = len(entries)
                 entries = [c for c in entries if not (cfg.get("stockOnly") and c.get("kind") != "stock")
-                           and not (cfg.get("buyOnly") and (c.get("side") != "BUY" or c.get("key") == "rzt-hedge" or c.get("pos") == "short"))]
+                           and not (cfg.get("buyOnly") and (c.get("key") == "rzt-hedge" or c.get("pos") == "short"))]
                 if n0 != len(entries):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} skipped (buy-only / stock-options-only)"
             slots = len(entries)
@@ -1474,7 +1504,7 @@ def config(c: Cfg):
             if c.dayPnlLimit < 0:
                 raise HTTPException(400, "dayPnlLimit must be 0 (guard off) or a positive rupee amount")
             st["cfg"]["dayPnlLimit"] = float(c.dayPnlLimit)
-        if c.buyOnly is not None:                                       # true: only BUY signals (calls), no puts, no written / spread legs
+        if c.buyOnly is not None:                                       # true: options are only bought (calls AND puts), no written / spread legs
             st["cfg"]["buyOnly"] = c.buyOnly
         if c.stockOnly is not None:                                     # true: stock options only, no index trades
             st["cfg"]["stockOnly"] = c.stockOnly

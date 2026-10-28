@@ -1,3 +1,4 @@
+import pytest
 """Morning shortlist: strength >= 75 first, Open = Low (BUY) / Open = High (SELL) second, 10-15 trades, good risk/reward only."""
 import auto_trader
 import morning_picks as mp
@@ -196,14 +197,44 @@ def test_eagle_is_skipped_when_switched_off(monkeypatch):
     assert not any(e["strategy"] == "Eagle Trades" for e in rep["entered"])
 
 
-def test_buy_only_takes_no_sell_side_stock_picks(monkeypatch):
+def test_buy_only_buys_puts_for_sell_side_stock_picks(monkeypatch):
+    """buy-only = options are only BOUGHT (never written): a bearish pick opens a PUT buy instead of being dropped."""
     import market_api
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: [])
     picks = [pick("OLY", signal="NEUTRAL", strength=25, op=100.0, lo=100.0, hi=101.0, ltp=100.6),
              pick("TOP", strength=100), pick("SHORT", signal="SELL", strength=95)]
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": picks})
-    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}            # default = buy-only, stock options only
+    st = {"cfg": dict(auto_trader.DEFAULT_CFG), "trades": [], "log": []}            # default = buy-only
     out = auto_trader.fill_slots(st, "2026-10-28", [])
-    assert out and all(c["side"] == "BUY" and c["kind"] == "stock" for c in out)
-    st["cfg"]["buyOnly"] = False
-    assert any(c["side"] == "SELL" for c in auto_trader.fill_slots(st, "2026-10-28", []))
+    assert out and all(c["kind"] == "stock" for c in out)
+    assert any(c["side"] == "SELL" for c in out)                                    # bearish pick -> put buy
+    assert not any(c.get("key") == "rzt-hedge" or c.get("pos") == "short" for c in out)
+
+
+def _chain(spot_field, step=100, centre=54000, expiry="2026-11-23"):
+    rows = []
+    for k in range(centre - 30 * step, centre + 31 * step, step):
+        ce, pe = max(centre - k, 0) + 700, max(k - centre, 0) + 700                 # forward ~ centre
+        rows.append({"strike": float(k), "ce": {"key": f"C{k}", "ltp": ce, "bid": ce - 1, "ask": ce + 1},
+                     "pe": {"key": f"P{k}", "ltp": pe, "bid": pe - 1, "ask": pe + 1}})
+    return {"rows": rows, "spot": spot_field, "atm": 0, "expiry": expiry, "expiries": [expiry], "lot": 30}
+
+
+def test_contract_uses_live_spot_not_stale_chain_spot(monkeypatch):
+    """28 Oct: a stale chain spot after a gap-up bought a deep in-the-money call. The strike now follows the live price."""
+    import market_api
+    monkeypatch.setattr(market_api, "chain", lambda sym, exp="": _chain(spot_field=52800.0))        # stale: previous close
+    monkeypatch.setattr(auto_trader, "_live_spot", lambda sym, fb=0: 54010.0)                          # live: gapped up
+    ct = auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3)
+    assert ct["strike"] == 54000.0 and ct["spot"] == 54010.0                                          # ATM, not 52800
+    ct = auto_trader._contract("BANKNIFTY", "SELL", "2026-10-28", 3)                                  # SELL signal = PUT bought
+    assert ct["strike"] == 54000.0 and ct["key"].startswith("P")
+
+
+def test_contract_refuses_an_in_the_money_strike(monkeypatch):
+    """Even if the price feed is wrong, the option prices (call - put parity) show a strike far in the money: refuse it."""
+    import market_api
+    monkeypatch.setattr(market_api, "chain", lambda sym, exp="": _chain(spot_field=52800.0))
+    monkeypatch.setattr(auto_trader, "_live_spot", lambda sym, fb=0: 52800.0)                          # wrong live price too
+    with pytest.raises(RuntimeError, match="in the money"):
+        auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3)
