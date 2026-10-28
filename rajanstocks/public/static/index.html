@@ -740,7 +740,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 @media(min-width:900px){.pkf{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}.pkf-top,.pkf-show,.pkf-sel,.pkf-foot{grid-column:1/-1}.pkf-top{max-width:none}.pkf-sel{grid-template-columns:repeat(3,minmax(0,220px))}}
 @media(max-width:380px){.pkf-l{flex-basis:48px}.pkf-kind button{padding:0 10px}}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261028f"></script>
+<script id="scrJV" src="/static/journal.js?v=20261028g"></script>
 <script src="/static/ipo.js?v=20261018d"></script>
 <script src="/static/godseye.js?v=20261026a"></script>
 <script src="/static/observer.js?v=20261026b"></script>
@@ -3390,7 +3390,7 @@ function drawPkFut(noLoad){if(!noLoad)loadPkFut(false);const d=PKF.d;if(!d||!d.i
   const sgn=v=>v==null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(2);
   d.items.forEach(i=>{const n=i.contracts&&i.contracts[0];if(!n)return;
     document.querySelectorAll('[data-ixf="'+i.und+'"]').forEach(el=>{el.innerHTML=`<small>Fut <b class="num">${fmtP(n.last)}</b></small><small>Basis <b class="num ${n.basis>=0?'up':'down'}">${sgn(n.basis)}</b></small><small>OI <b class="num ${n.oiChgPct>=0?'up':'down'}">${n.oiChgPct==null?'—':sgn(n.oiChgPct)+'%'}</b></small>`;el.title='Near-month future '+fmtExp(n.expiry)+' · basis = future − spot'})})}
-setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadPkFut(false)}catch(e){}},30000);
+setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadPkFut(false)}catch(e){}},90000);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pkfut]');if(!b)return;const p=b.dataset.pkfut,i=p.indexOf('|'),und=p.slice(0,i),key=p.slice(i+1);
   OPT.sym=und;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.pendingFut=key;go('options')});
 function pkScroller(el){for(let n=el.parentElement;n&&n!==document.body;n=n.parentElement){const o=getComputedStyle(n).overflowY;if((o==='auto'||o==='scroll')&&n.scrollHeight>n.clientHeight+1)return n}return document.scrollingElement||document.documentElement}
@@ -4662,7 +4662,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028f';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028g';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
@@ -4884,11 +4884,11 @@ function uiRefresh(){if(!firstQuotes)return;
   liveUpdate()}
 setInterval(()=>{try{if(App.view==='trade'&&App.sym&&App.sym.tv&&!document.hidden){loadGlobal();refreshGlobalChart()}}catch(e){}},3000);
 /* GIFT Nifty / GIFT Bank Nifty tiles on Today's Picks: their own 10 s refresh (GIFT trades ~21 h a day, long after NSE closes), independent of the NSE quote feed - which pauses the other refreshes when it is closed or has no feed */
-setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadGlobal()}catch(e){}},10000);
+setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadGlobal()}catch(e){}},20000);
 function dockCheck(){const d=document.getElementById('tradeDock');if(!d)return;const seg=document.querySelector('#v-trade.on .side-seg');let vis=false;
   if(seg&&seg.offsetParent){const r=seg.getBoundingClientRect();vis=r.bottom>0&&r.top<innerHeight-60}d.classList.toggle('gone',vis)}   /* one Buy/Sell at a time: hide the dock while the order ticket's own Buy/Sell is on screen */
 addEventListener('scroll',dockCheck,{passive:true,capture:true});addEventListener('resize',dockCheck);setInterval(dockCheck,800);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
-function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?30000:MKT.err?10000:MKT.stale?20000:MKT.fails?4000:MKT.open?5000:60000))}
+function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?300000:MKT.err?10000:MKT.stale?20000:MKT.fails?4000:MKT.open?5000:180000))}
 /* Auto cache-clear: /api/cache-version flips twice a day (before market open, after market close).
    When it changes, drop every cache this origin holds and reload once so nobody is ever stuck
    on a stale build across those boundaries. */

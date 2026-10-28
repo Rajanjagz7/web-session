@@ -85,6 +85,9 @@ def test_fill_slots_takes_the_shortlist_in_priority_order_and_at_most_15_a_day(m
     picks = [pick("OLY", signal="NEUTRAL", strength=25, op=100.0, lo=100.0, hi=101.0, ltp=100.6),
              pick("TOP", strength=100), pick("MID", strength=80), pick("FILL", strength=60)]
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": picks})
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    monkeypatch.setattr(auto_trader, "_now", lambda: datetime(2026, 10, 27, 11, 0, tzinfo=ZoneInfo("Asia/Kolkata")))   # tier 2 only after 09:20: fix the clock
     st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False}, "trades": [], "log": []}
     out = auto_trader.fill_slots(st, "2026-10-27", [])
     ranked = sorted(out, key=lambda c: -c["rank"])

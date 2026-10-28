@@ -5,7 +5,7 @@ No broker is involved and no real order is ever sent. Trades are simulated at li
 
 Rules (identical to the backtest in backtest.py, so results are comparable):
   * Only strategies that PASSED the out-of-sample backtest are used, ranked by in-sample average R.
-  * Signal = the fresh BUY/SELL on the last COMPLETED daily bar, acted on from the 09:15 open.
+  * Signal = the fresh BUY/SELL on the last COMPLETED daily bar, acted on from 09:16 (the first full minute after the open).
   * BUY -> ATM call, SELL -> ATM put, nearest expiry that is at least 3 days away.
   * Risk per trade = 0.5% of equity; lots = floor(budget / (lot x 0.5 delta x stop distance)), minimum 1.
   * Stop = the indicator's signal candle (beyond its low/high, 0.5-1.0 ATR) but never more than 30% of the option
@@ -44,10 +44,10 @@ IDX_V = 20261028       # one-time: index options are bought too (not only stock 
 SLEEVES = {"picks": 500000.0, "eagle": 500000.0, "signals": 500000.0}
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
 DEFAULT_CFG = {"enabled": True, "capital": 1500000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": False, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 0.5, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
-               "windowStart": "09:15", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
+               "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": False}
-SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:15)
+SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
 # (1-2 minutes later) takes the rest - best-ranked first.
@@ -125,8 +125,8 @@ def _load(cached=False):
             st["resetAt"] = d["resetAt"]
         if d.get("cand"):
             st["cand"] = d["cand"]
-        if st["cfg"].get("windowStart") == "09:20":          # old default: entries may now start at the open
-            st["cfg"]["windowStart"] = "09:15"
+        if st["cfg"].get("windowStart") in ("09:15", "09:20"):   # entries (buying) start at 09:16 - the first full minute after the open
+            st["cfg"]["windowStart"] = "09:16"
     except FileNotFoundError:
         pass
     except Exception as e:
@@ -409,7 +409,7 @@ def fill_slots(st, today, already):
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
             left = morning_picks.MAX_PICKS - took
             picks = [p for p in _picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
-            # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:15; tier 2 rests on Open = Low / High,
+            # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:16; tier 2 rests on Open = Low / High,
             # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
             early = _mins(_now()) < EAGLE_FROM
             for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2) and not (cfg.get("buyOnly") and x["side"] != "BUY")][:max(0, min(need["stock"], left))]:
@@ -723,7 +723,7 @@ def open_trade(st, c, today):
     st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]"})
     if pair:
         if _mins(_now()) < SELL_FROM:
-            t["writePending"] = True          # option SELL legs wait until 09:20 (user rule); buys go at 09:15
+            t["writePending"] = True          # option SELL legs wait until 09:20 (user rule); buys go at 09:16
             st["log"].append({"at": _now().isoformat(), "msg": f"paired sell for {t['id']} deferred - option selling starts at 09:20"})
         else:
             try:
@@ -1167,7 +1167,7 @@ def _run_cycle(now, force, dry):
                 filled = fill_slots(st, today, chosen)
                 if any("rate-limiting" in (l.get("msg") or "") or "budget" in (l.get("msg") or "") for l in st["log"][-2:]):
                     st["fillBackoff"] = time.time() + 600        # Upstox pushed back: leave it alone for 10 minutes
-            # No limit on the day - only the opening burst is capped: in the first minute of the entry window (09:15) at most
+            # No limit on the day - only the opening burst is capped: in the first minute of the entry window (09:16) at most
             # `openBurstCap` (12) entries are taken (paired hedge legs -W belong to their entry and do not count). Best-ranked
             # first; the rest are picked up by the following cycles as normal.
             try:
@@ -1224,7 +1224,7 @@ def _run_cycle(now, force, dry):
                 if cool.get(ck, 0) > time.time():
                     continue
                 try:
-                    # Timing rule: option BUYING (CE for a BUY signal, PE for a SELL signal - stocks and indices) from 09:15;
+                    # Timing rule: option BUYING (CE for a BUY signal, PE for a SELL signal - stocks and indices) from 09:16;
                     # option SELLING (credit spreads, written legs) from 09:20. Paired written legs (-W) are deferred inside open_trade.
                     is_sell = c.get("key") == "rzt-hedge" or c.get("pos") == "short"
                     if is_sell and _mins(now) < SELL_FROM and not force:
@@ -1402,7 +1402,8 @@ def status():
     now = _now()
     try:
         import nse_calendar
-        if nse_calendar.session_open(now) and time.time() - getattr(run_cycle, "_last_ran", 0) >= 180:
+        gap = 30 if 9 * 60 + 16 <= _mins(now) <= 9 * 60 + 19 else 180      # opening minutes: buying must start at 09:16, do not wait for a 3-minute gap
+        if nse_calendar.session_open(now) and time.time() - getattr(run_cycle, "_last_ran", 0) >= gap:
             run_cycle._last_ran = time.time()
             run_cycle()
     except Exception as e:

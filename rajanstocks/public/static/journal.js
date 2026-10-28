@@ -103,13 +103,18 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     return t;
   }
   async function syncAuto(force) {
-    if (AUTO.busy || (!force && Date.now() - AUTO.ts < 10000)) return;
+    /* server load: the status read runs a mark-to-market (and, in market hours, an auto-trade cycle) - every 10 s on every screen was the biggest
+       single user of Vercel Active CPU. Now: not at all from a hidden tab, every 20 s while the Journal is on screen, every 60 s elsewhere. */
+    const jv = document.getElementById('v-journal'), nw = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })), mm = nw.getHours() * 60 + nw.getMinutes();
+    const opening = mm >= 556 && mm <= 559;          // 09:16-09:19: buying starts at 09:16 - poll faster on any screen, even a background tab
+    const every = opening ? 25000 : jv && jv.offsetParent ? 20000 : 60000;
+    if (AUTO.busy || (!force && ((document.hidden && !opening) || Date.now() - AUTO.ts < every))) return;
     AUTO.busy = true;
     const stBefore = JSON.stringify([AUTO.srv || null, !!AUTO.err]);
     try {
       const [r, rStock] = await Promise.all([
         fetch('/api/auto/status', { cache: 'no-store' }).catch(() => null),
-        fetch('/api/stockbot/status', { cache: 'no-store' }).catch(() => null)
+        (AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.stockTrader === false) ? Promise.resolve(null) : fetch('/api/stockbot/status', { cache: 'no-store' }).catch(() => null)     // the share trader is off: nothing to read
       ]);
       /* a redraw only when the list itself changes (new trade, exit, status); live prices / P&L are patched in place by refreshLive -
          a price tick used to redraw the whole table every sync (the open trades kept "refreshing") */
@@ -1327,13 +1332,13 @@ function paperList() {
       <td class="num">${px(t.stopU)}${t.targetU ? ' / ' + px(t.targetU) : ''}</td><td>${open ? 'Open' : E(t.exitReason)}</td></tr>`;
     const tbl = (list, open) => { if (!list.length) return '<div class="empty">None yet.</div>'; const { part, bar } = pagerBar(list, open ? 'auto-open' : 'auto-closed');
       return `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Date</th><th>Contract</th><th>Strategy</th><th>Entry ₹</th><th>${open ? 'Last' : 'Exit'} ₹</th><th>P&amp;L</th><th>Stop / target (underlying)</th><th>${open ? 'Status' : 'Exit reason'}</th></tr></thead><tbody>${part.map(t => trow(t, open)).join('')}</tbody></table></div>${bar}`; };
-    const activityList = log => { if (!log.length) return '<p class="muted" style="padding:0 14px 12px">No activity yet. The first entries are made from 09:15 on the next trading day.</p>';
+    const activityList = log => { if (!log.length) return '<p class="muted" style="padding:0 14px 12px">No activity yet. The first entries are made from 09:16 on the next trading day.</p>';
       const { part, bar } = pagerBar(log, 'activity');
       return `<ul class="jv-stops" style="padding:0 14px 12px 30px">${part.map(l => `<li>${new Date(l.at).toLocaleString('en-IN')} — ${E(l.msg)}</li>`).join('')}</ul>${bar}`; };
     return `<div class="card"><div class="card-h"><h3>Automated paper trades — every qualifying signal, no daily limit</h3></div>
       <div style="padding:0 14px 12px"><p>${unproven ? '<span class="badge b-down">UNPROVEN · forward test</span> ' : '<span class="badge b-up">Proven strategies</span> '}${E(A.mode)}.
         ${unproven ? 'No strategy passed the backtest, so these trades are a live, out-of-sample experiment: results here are the only evidence that can\'t be flattered by hindsight.' : ''}</p>
-        <p class="muted">Simulated at live option prices — no broker is connected and no real order is ever sent. Entries start at the 09:15 open: strategy signals come from the previous session, the other slots from live screens. Exits follow the rule on the underlying. At most 5 entries a day.</p>
+        <p class="muted">Simulated at live option prices — no broker is connected and no real order is ever sent. Buying starts at 09:16: strategy signals come from the previous session, the other slots from live screens. Exits follow the rule on the underlying. At most 5 entries a day.</p>
         <div class="jv-actions" style="padding:0"><button class="btn ${c.enabled ? '' : 'pri'}" data-jv="autotoggle">${c.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>
         <button class="btn" data-jv="autoresearch">${c.researchMode ? 'Research mode: ON (click to switch off)' : 'Research mode: OFF (click to switch on)'}</button>
         <button class="btn" data-jv="autoeagle">${c.eagleOn ? 'Eagle Trades: ON (click to stop)' : 'Eagle Trades: OFF (click to start)'}</button>
@@ -2241,7 +2246,6 @@ function paperList() {
   document.head.appendChild(st);
 
   setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent) applyManualTsl(); }, 15000);
-  setInterval(() => { if (document.getElementById('v-journal') && document.getElementById('v-journal').offsetParent && window.rjMkt()) syncAuto(true); }, 60000);
 function lastDayStats(currentDay) {
     const all = allTrades();
     const dayTotals = {};
