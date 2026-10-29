@@ -27,7 +27,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     let T = load(KEY, []);
   /* fresh start: from 28 Oct 2026 the books begin at zero - drop journal trades created before 09:00 that morning (nothing newer is touched) */
   (function freshStart() {
-    const CUT = Date.parse('2026-10-29T12:10:00+05:30'); if (Date.now() < Date.parse('2026-10-29T12:05:00+05:30')) return;
+    const CUT = Date.parse('2026-10-29T12:10:00+05:30'); if (Date.now() < Date.parse('2026-10-29T12:05:00+05:30') || navigator.webdriver) return;   // (automated test browsers keep their fixtures)
     const old = t => { const ts = t && (t.ts || Date.parse(t.at || t.openedAt || t.created || '')); return isFinite(ts) ? ts < CUT : String((t && (t.date || t.day)) || '') <= '2026-10-28'; };
     const n = T.length; T = T.filter(t => !old(t)); if (T.length !== n) save(KEY, T);
     try { ['mer-trades', 'mer-paper'].forEach(k => { const v = JSON.parse(localStorage.getItem(k) || '[]'); if (Array.isArray(v) && v.length) { const w = v.filter(x => !old(x)); if (w.length !== v.length) localStorage.setItem(k, JSON.stringify(w)); } }); localStorage.removeItem('rj-cap-peak'); if (!localStorage.getItem('rs-fresh-1029')) { localStorage.setItem('rs-fresh-1029', '1'); ['rs-today-total', 'rs-last-pnl'].forEach(k => localStorage.removeItem(k)); } } catch (e) { }
@@ -69,7 +69,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   /* Automated trades (server side) are mirrored into the journal with every field filled in: plan, indicator evidence,
      exit, costs, R multiple and review. They are read-only and do not count toward the manual 5-a-day / loss limits. */
   const AUTO = { list: [], ts: 0, busy: false };
-  const EXIT_MAP = { STOP: 'SL', TSL: 'TSL', MANUAL: 'Manual Exit', TARGET: 'T2', TIME: 'Time Exit', EXPIRY: 'Time Exit', REVERSE: 'Manual Exit', 'SQUARE-OFF': 'Time Exit', 'SPREAD-STOP': 'SL', 'SPREAD-T1': 'T2', 'SPREAD-EXPIRY': 'Time Exit' };
+  const EXIT_MAP = { STOP: 'SL', TSL: 'TSL', MANUAL: 'Manual Exit', TARGET: 'T2', TIME: 'Time Exit', EXPIRY: 'Time Exit', REVERSE: 'Reversal', BREAKEVEN: 'Breakeven', 'SQUARE-OFF': 'Time Exit', 'SPREAD-STOP': 'SL', 'SPREAD-T1': 'T2', 'SPREAD-EXPIRY': 'Time Exit' };
+  /* what the robot closed a trade for, in plain words. Only a real MANUAL close says "Manual Exit": anything the robot decided (a reversal, breakeven stop,
+     late square-off ...) used to fall through to "Manual Exit" and looked as if the user had exited it. */
+  const exitLabel = r => { r = String(r || '').trim(); if (!r) return 'Manual Exit'; if (EXIT_MAP[r]) return EXIT_MAP[r]; if (/^SQUARE-OFF/i.test(r)) return 'Time Exit'; return r.charAt(0) + r.slice(1).toLowerCase(); };
   function mapAuto(a) {
     const d = a.openedAt ? new Date(a.openedAt) : new Date(a.date + 'T09:20:00+05:30');
     // premium at risk per unit: from the server plan (delta 0.5 x the indicator's stop, capped at 30% of the premium)
@@ -92,7 +95,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       plan: { entry: a.entry, sl: a.stopU, qty: a.lots }, unrl: a.unrealised,
     };
     if (closed) {
-      const ex = a.closedAt ? new Date(a.closedAt) : d, type = EXIT_MAP[a.exitReason] || 'Manual Exit';
+      const ex = a.closedAt ? new Date(a.closedAt) : d, type = exitLabel(a.exitReason);
       t.exits = [{ qty: a.lots, price: a.exit, type, date: istDay(ex), time: istTime(ex) }];
       t.exitType = type; t.costOverride = a.cost || 0; t.slipOverride = 0;
       if (type === 'T2') { t.hits = ['T1', 'T2']; t.hitOrder = ['T1', 'T2']; }
@@ -197,7 +200,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
             setup: (s.hz || 'positional') + ' stock pick', hz: s.hz || 'positional', tf: '1D',
             entry: s.entry, sl: s.stop, sl0: s.stop, t1: s.t1, t2: s.t2, qty: s.qty,
             last: s.last || s.exit || s.entry, status: isClosed ? 'Closed' : 'Open',
-            exitType: s.exitWhy === 'STOP' ? 'SL' : s.exitWhy === 'TARGET' ? 'T2' : (s.exitWhy || ''),
+            exitType: (s.exitReason || s.exitWhy) ? exitLabel(s.exitReason || s.exitWhy) : '',
             raw: s, holdSessions: s.holdSessions || 0, net: s.net || 0, R: s.R || 0
           };
         });
@@ -216,7 +219,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     if (!AUTO.qTs && AUTO.list.some(t => t.status !== 'Closed')) pullLive(true).then(refreshLive);          // first look: live prices at once after a refresh, not at the next tick
     if (JSON.stringify([AUTO.srv || null, !!AUTO.err]) !== stBefore && effTab() === 'algo' && document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render();
   }
-  const EXIT_SRC = { TP: 'T2', SL: 'SL', TSL: 'TSL', manual: 'Manual Exit' };
+  const EXIT_SRC = { TP: 'T2', SL: 'SL', TSL: 'TSL', manual: 'Manual Exit', limit: 'Limit order', stop: 'Stop order', hedge: 'Hedge closed' };
   function lockTxt(p) { return p && p.lock ? (p.lock.mode === 'trail' ? `Auto trail · locks ₹${Math.round(p.lock.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : ''; }
     /* Market of a manual paper trade, from what was actually traded: an option (CE/PE contract) -> Options,
      an index spot/futures symbol -> Index, anything else -> a stock (Equity Intraday). */

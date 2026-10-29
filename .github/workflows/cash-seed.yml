@@ -9,10 +9,21 @@ concurrency: { group: cash-seed, cancel-in-progress: false }
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with: { ref: rajan-web-session }
+      - name: Make the live site build today's whole-market walk (it only runs when the picks screen is refreshed)
+        run: |
+          S=https://rajanstocks.vercel.app
+          for i in $(seq 1 12); do
+            curl -sS -m 40 "$S/api/m/picks?refresh=true" -o /dev/null || true
+            st=$(curl -sS -m 30 "$S/api/m/cash-seed" || echo '{}')
+            echo "round $i: $(echo "$st" | head -c 400)"
+            echo "$st" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('walk') and (d.get('today') or {}).get('changed',0)>=300 else 1)" && { echo "walk finished"; exit 0; }
+            sleep 40
+          done
+          echo "walk did not finish in time - exporting whatever the server holds (the size check below still protects the seed)"
       - name: Download today's cash rows from the live site
         run: |
           curl -fsS -m 90 --retry 3 https://rajanstocks.vercel.app/api/m/cash-seed/export -o /tmp/seed.json

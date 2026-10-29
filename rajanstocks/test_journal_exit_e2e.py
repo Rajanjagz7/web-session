@@ -529,7 +529,7 @@ def test_in_app_message_when_the_auto_trader_moves_a_stop_on_any_screen(server, 
     c.close()
 
 
-def test_options_screen_for_a_cash_stock_says_so_and_offers_the_stock_chart(server, browser):
+def test_options_screen_for_a_cash_stock_opens_its_cash_chart(server, browser):
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
     pg = c.new_page()
@@ -539,7 +539,25 @@ def test_options_screen_for_a_cash_stock_says_so_and_offers_the_stock_chart(serv
     pg.route("**/api/**", w.handle)
     pg.goto(BASE + "/#options")
     pg.wait_for_selector("#optChain", timeout=20000)
-    pg.evaluate("OPT.sym = 'SSWL'; OPT.chain = null; OPT.err = null; loadChain(true)")
-    pg.wait_for_selector('#optChain [data-sym="SSWL"]', timeout=15000)
-    assert "no options" in pg.inner_text("#optChain") and not errs
+    pg.evaluate("OPT.sym = 'SSWL'; OPT.chain = null; OPT.err = null; OPT.noOpt = null; OPT.noOptGo = null; loadChain(true)")
+    pg.wait_for_function("App.view === 'trade' && App.sym && App.sym.s === 'SSWL'", timeout=15000)   # no options -> the normal cash chart + trade ticket
+    assert not errs
+    c.close()
+
+
+def test_picking_an_underlying_survives_a_later_trade_tab_tap(server, browser):
+    """Video bug: pick ALKEM in the options screen, then any go('trade') threw the screen back to NIFTY and re-picked a CE (price jumped)."""
+    w = World()
+    c = browser.new_context(viewport={"width": 420, "height": 900})
+    pg = c.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route("**/api/m/chain**", lambda r: r.fulfill(status=400, json={"detail": "x has no option chain here"}))
+    pg.route("**/api/**", w.handle)
+    pg.goto(BASE + "/#options")
+    pg.wait_for_selector("#optChain", timeout=20000)
+    pg.evaluate("OPT.sym = 'NIFTY'; App.sym = SYM('NIFTY')")
+    pg.select_option("#optSym", "ADANIENT")
+    pg.evaluate("go('trade')")
+    assert pg.evaluate("OPT.sym") == "ADANIENT" and not errs
     c.close()

@@ -745,7 +745,7 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pk-sec{display:flex;gap:6px;margin:10px 0;padding:4px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.10));border:1px solid rgba(99,102,241,.3);border-radius:14px}.pk-sec button{display:flex!important;align-items:center;justify-content:center;gap:6px;height:auto!important;min-height:44px;line-height:1.2!important;padding:10px 8px!important;overflow:visible!important;background:transparent!important;color:var(--text-3,#8b97ab)!important;border:1px solid transparent!important;border-radius:9px!important;opacity:.85}.pk-sec button.on{background:linear-gradient(135deg,#2563eb 0%,#7c3aed 55%,#06b6d4 100%)!important;color:#fff!important;border-color:var(--accent,#3b82f6)!important;box-shadow:0 2px 10px rgba(59,130,246,.45);opacity:1}.pk-sec button.on::before{content:'✓ '}.pk-sec button{flex:1;padding:11px 8px;font-weight:600}.pk-sec .pk-n{font-style:normal;background:var(--accent,#3b82f6);color:#fff;border-radius:9px;padding:0 6px;margin-left:4px;font-size:11px}[hidden]{display:none!important}
 .pkl-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}.pkl-tile{padding:9px 4px;border-radius:12px;text-align:center;background:linear-gradient(160deg,rgba(99,102,241,.14),rgba(6,182,212,.07));border:1px solid rgba(99,102,241,.22)}.pkl-tile b{display:block;font-size:19px;line-height:1.1}.pkl-tile small{font-size:9.5px;color:var(--text-3);letter-spacing:.02em}.pkl-tile.up b{color:var(--up)}.pkl-tile.down b{color:var(--down)}.pkl-tile.gold b{color:var(--gold)}.pkl-bar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 4px;flex-wrap:wrap}.pkl-f{display:flex;gap:4px}.pkl-f button{padding:7px 10px;border-radius:9px;font-size:12px;font-weight:600}.pkl-f button i{font-style:normal;opacity:.7;margin-left:2px}.pkl-f button.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}.pkl-reset{padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;background:transparent;color:var(--down);border:1px solid var(--down)}.pkl-reset.arm{background:var(--down);color:#fff}.pkr{border-left:3px solid transparent}.pkr.o-win{border-left-color:var(--up)}.pkr.o-loss{border-left-color:var(--down)}.pkr.o-mixed{border-left-color:var(--gold)}.pkr-n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:var(--panel);color:var(--text-2);font-size:11px;font-weight:800}
 </style>
-<script id="scrJV" src="/static/journal.js?v=e065e2b7"></script>
+<script id="scrJV" src="/static/journal.js?v=3e1e2a79"></script>
 <script src="/static/ipo.js?v=e57a0080"></script>
 <script src="/static/godseye.js?v=66f9653f"></script>
 <script src="/static/observer.js?v=e6b0fb33"></script>
@@ -1643,7 +1643,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=4dacb1aa',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=75c7d888',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -2664,7 +2664,7 @@ function closeOverlays(){
 function go(v){if(v==='stocks'||v==='markets'){v='godseye';if(window.geOpenTab)geOpenTab('stocklist')}   /* the Markets screen now lives in God's Eye > Markets (no duplicate screen) */
      /* old #stocks links / bookmarks: there is no separate Stocks screen any more (it used to leave a blank page) */
   /* the old full-chart Trade screen (Order / Indicators panel) is retired: any stock or index with options opens the clean Trade screen */
-  if(v==='trade'||v==='mobile'){const sy=App.sym&&App.sym.s;if(sy&&typeof optUnderlyings==='function'&&optUnderlyings().some(x=>x.s===sy)){if(OPT.sym!==sy){OPT.sym=sy;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null}v='options'}}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+  if(v==='trade'||v==='mobile'){const sy=App.sym&&App.sym.s;if(sy&&typeof optUnderlyings==='function'&&optUnderlyings().some(x=>x.s===sy)&&!(OPT.noOptSet&&OPT.noOptSet.has(sy))){if(OPT.sym!==sy){OPT.sym=sy;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null}v='options'}}closeOverlays();App.view=v;location.hash=v;renderNav();$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
   ({daily:renderDaily,picks:renderPicks,options:renderOptions,markets:renderMarkets,portfolio:renderPortfolio,journal:renderJournal,orders:renderOrders,alerts:renderAlerts,indicators:renderIndicators,vedic:renderVedic,ipo:()=>window.renderIpo&&renderIpo(),mobile:renderMobile,godseye:()=>window.renderGodsEyeTab&&renderGodsEyeTab()})[v]?.();liveUpdate();window.scrollTo(0,0)}
 function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('mer-theme',t)}catch(e){}$('#themeBtn').innerHTML=I(t==='dark'?'sun':'moon');readTheme();chart.lgDirty=true;chart.req();mchart?.req();if(App.view!=='trade')go(App.view)}
 
@@ -3836,13 +3836,19 @@ const OCK=(sym,exp)=>'oc1:'+sym+':'+(exp||'');
 function ocGet(sym,exp){try{const v=JSON.parse(localStorage.getItem(OCK(sym,exp))||'null');const today=new Date(Date.now()+330*60000).toISOString().slice(0,10);
   return v&&v.rows&&v.rows.length&&(!v.expiry||v.expiry>=today)&&Date.now()-(v._saved||0)<3*86400000?v:null}catch(e){return null}}
 function ocPut(sym,exp,v){try{const o=Object.assign({},v,{_saved:Date.now()});localStorage.setItem(OCK(sym,exp),JSON.stringify(o));if(!exp)localStorage.setItem(OCK(sym,v.expiry),JSON.stringify(o))}catch(e){}}
+/* The Trade tab opens the options screen for the chart symbol (App.sym). Picking another underlying in the options screen used to leave App.sym on the old one (NIFTY), so ANY later
+   go('trade') - a nav tap, a refresh of the feed - threw the screen back to NIFTY and dropped the selected contract (PE became CE, price jumped). Keep them the same symbol. */
+function optKeepApp(sym){try{const s=SYM(sym);if(s&&App.sym!==s)App.sym=s}catch(e){}}
 async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const want=OPT.sym,wexp=OPT.expiry;
   if(!OPT.chain||OPT.chain.symbol!==want){const c=ocGet(want,wexp);if(c){OPT.chain=Object.assign({},c,{stale:true});OPT.expiry=c.expiry;OPT.err=null;
     if(App.view==='options'){drawChain();if(!OPT.sel&&!OPT.pending)opxAutoPick()}}}
   try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(wexp?'&expiry='+wexp:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null;ocPut(want,wexp,r)}
-  catch(e){if(!(OPT.chain&&OPT.chain.stale&&OPT.chain.symbol===want)){OPT.chain=null;OPT.noOpt=(e&&e.status===400&&/no option chain/i.test(e.detail||''))?want:null;
+  catch(e){if(!(OPT.chain&&OPT.chain.stale&&OPT.chain.symbol===want)){OPT.chain=null;OPT.noOpt=(e&&e.status===400&&/no option chain/i.test(e.detail||''))?want:null;if(OPT.noOpt){(OPT.noOptSet=OPT.noOptSet||new Set()).add(want)}
     OPT.err=OPT.noOpt?want+' is a cash-market stock - it has no options, so there is nothing to chain or signal here.':'The option chain is not available for '+want+' right now.'}}
-  OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}else if(OPT.chain&&!OPT.sel)opxAutoPick()}}
+  OPT.busy=false;
+  if(App.view==='options'&&OPT.noOpt&&OPT.noOpt===OPT.sym&&OPT.noOptGo!==OPT.sym){OPT.noOptGo=OPT.sym;   /* a cash-only stock has no chain: show its normal cash chart + trade ticket instead of an empty options screen */
+    try{toast(OPT.sym+' has no options - showing its cash chart','ok')}catch(x){}try{switchSym(OPT.sym);return}catch(x){}}
+  if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}else if(OPT.chain&&!OPT.sel)opxAutoPick()}}
 /* Open a contract straight away: the ATM strike on the side last used (CE by default) - no extra tap needed. */
 function opxAutoPick(){const c=OPT.chain;if(!c||!c.rows||!c.rows.length)return;let side='CE';try{side=localStorage.getItem('opx-side')||'CE'}catch(e){}
   const atm=c.atm||c.spot,row=c.rows.slice().sort((a,b)=>Math.abs(a.strike-atm)-Math.abs(b.strike-atm)).find(r=>r[side.toLowerCase()])||c.rows.find(r=>r.ce||r.pe);if(!row)return;
@@ -4008,13 +4014,13 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-hgplace]')
 setInterval(()=>{try{for(const p of App.positions.slice()){const m=App.meta[p.sym];if(!m||!m.spread||p.q>=0)continue;const h=posOf(m.spread.hedge),s1=SYM(p.sym),s2=SYM(m.spread.hedge);
     if(!h){closePos(p.sym,'TSL');continue}
     if(m.spread.stop&&s1&&s2&&s1.last>0&&s2.last>=0&&s1.last-s2.last>=m.spread.stop){closePos(p.sym,'SL');closePos(m.spread.hedge,'SL');toast(`${p.sym}: spread hit its stop - both legs closed`,'warn')}}
-  for(const p of App.positions.slice()){const m=App.meta[p.sym];if(m&&m.hedgeOf&&p.q>0&&!posOf(m.hedgeOf))closePos(p.sym,'manual')}}catch(e){}},5000);
+  for(const p of App.positions.slice()){const m=App.meta[p.sym];if(m&&m.hedgeOf&&p.q>0&&!posOf(m.hedgeOf))closePos(p.sym,'hedge')}}catch(e){}},5000);
 document.addEventListener('change',e=>{if(e.target.matches('[data-blps]')){OPT.blPs=+e.target.value;OPT.blPg={CE:0,PE:0};try{localStorage.setItem('bl-ps',OPT.blPs)}catch(x){}drawBuyList()}});
 try{OPT.blPs=+localStorage.getItem('bl-ps')||6;OPT.buyAll=localStorage.getItem('bl-all')!=='0'}catch(e){}
 document.addEventListener('click',e=>{const pgb=e.target.closest('[data-blpg]');if(pgb){const [sd,n]=pgb.dataset.blpg.split(':');OPT.blPg[sd]=Math.max(0,+n);drawBuyList();return}
   const b=e.target.closest('[data-buyall]');if(b){OPT.buyAll=b.dataset.buyall==='1';try{localStorage.setItem('bl-all',OPT.buyAll?'1':'0')}catch(x){}OPT.blPg={CE:0,PE:0};drawBuyList();return}
   if(e.target.closest('[data-act="buylist"]')){if(opxMobile())opxTab('signals');else{opxWtab('signals');const p=document.querySelector('.opx-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})}}});
-document.addEventListener('click',e=>{const b=e.target.closest('[data-optsym]');if(!b)return;OPT.sym=b.dataset.optsym;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.err=null;OPT.noOpt=null;try{loadChain(true)}catch(x){}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-optsym]');if(!b)return;OPT.sym=b.dataset.optsym;optKeepApp(OPT.sym);OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.err=null;OPT.noOpt=null;OPT.noOptGo=null;try{loadChain(true)}catch(x){}});
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
   if(!c){box.innerHTML=OPT.err?(OPT.noOpt&&OPT.noOpt===OPT.sym?`<div class="empty">${esc(OPT.err)}<br><button class="btn pri" data-sym="${esc(OPT.sym)}">Open ${esc(OPT.sym)} stock chart &amp; trade</button> <button class="btn" data-optsym="NIFTY">Back to NIFTY options</button></div>`:`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`):`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
   drawExpCtl(c);xpEnsureExps();
@@ -4321,7 +4327,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-opt]');if(
   const c=e.target.closest('[data-oind]');if(c&&OPT.ochart){const k=c.dataset.oind,i=OPT.ochart.ind.findIndex(x=>x.key===k);if(i>=0)OPT.ochart.ind.splice(i,1);else{if(DEFS[k].pane==='sub'&&OPT.ochart.ind.filter(x=>DEFS[x.key].pane==='sub').length>=3){toast('Up to 3 indicator panes. Remove one first.','warn');return}optAddInd(k,true)}OPT.ochart.indChanged();drawOptChips();saveOptInds();optReadings(false);return}
   if(e.target.id==='optRef'){OPT.chain=null;drawChain();loadChain(true)}});
 document.addEventListener('change',e=>{const id=e.target.id;
-  if(id==='optSym'){OPT.sym=e.target.value;OPT.expiry='';OPT.sel=null;OPT.osym=null;OPT.chain=null;OPT.shell=false;TC._userEdited=false;drawChain();drawDetail();loadChain(true)}
+  if(id==='optSym'){OPT.sym=e.target.value;optKeepApp(OPT.sym);OPT.expiry='';OPT.sel=null;OPT.osym=null;OPT.chain=null;OPT.shell=false;TC._userEdited=false;drawChain();drawDetail();loadChain(true)}
   else if(id==='optExp'){xpPickExpiry(e.target.value)}
   else if(id==='optSpan'){OPT.span=parseInt(e.target.value);drawChain()}});
 
@@ -4867,7 +4873,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=e065e2b7';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=3e1e2a79';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
