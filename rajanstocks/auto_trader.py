@@ -1003,13 +1003,19 @@ def classic_filter(entries, extras_agree=False):
     return kept, paper
 
 
+STRENGTH_BANDS = (99.5, 95.0, 85.0, 75.0)       # then index options, then 65+, 50+, the rest
+
+
 def entry_priority(c, pmap):
-    """Order in which entries are taken (user, 30 Oct): 0 = stock options at Picks strength 100, 1 = Eagle (Open = High -> put, Open = Low -> call),
-    2 = stock options at strength 75+, 3 = index options, 4 = the rest. Equal tiers keep their existing order (rank, volume)."""
+    """Order in which entries are taken (user, 30 Oct): by Picks strength, highest first - 100, then 95+, 85+, 75+; index options after those, then 65+, 50+ and
+    the rest last. Inside one band an Eagle trade (Open = High -> put, Open = Low -> call) goes before the others; equal entries keep their existing order."""
     if c.get("kind") == "index":
-        return 3
+        return (len(STRENGTH_BANDS), 1)
     stren = float((pmap.get(c.get("sym")) or {}).get("strength") or 0)
-    return 0 if stren >= 99.5 else 1 if c.get("key") == EAGLE else 2 if stren >= 75 else 4
+    band = next((i for i, lvl in enumerate(STRENGTH_BANDS) if stren >= lvl), None)
+    if band is None:
+        band = len(STRENGTH_BANDS) + 1 + (0 if stren >= 65 else 1 if stren >= 50 else 2)
+    return (band, 0 if c.get("key") == EAGLE else 1)
 
 
 def _quality(p):

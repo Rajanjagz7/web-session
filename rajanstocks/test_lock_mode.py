@@ -142,8 +142,7 @@ def test_index_options_are_bought_by_default(monkeypatch):
     assert at._sleeve_of(out[0]["key"]) == "signals"
 
 
-def test_entry_priority_strength_100_then_eagle_then_75_then_index():
-    pm = {"A": {"strength": 100}, "B": {"strength": 80}, "C": {"strength": 60}, "E": {"strength": 78}}
-    rows = [{"kind": "stock", "sym": "C", "key": "x"}, {"kind": "index", "sym": "NIFTY", "key": "x"}, {"kind": "stock", "sym": "B", "key": "x"},
-            {"kind": "stock", "sym": "E", "key": at.EAGLE}, {"kind": "stock", "sym": "A", "key": "x"}]
-    assert [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))] == ["A", "E", "B", "NIFTY", "C"]
+def test_entry_priority_by_strength_band_with_eagle_first_inside_a_band():
+    pm = {"A": {"strength": 100}, "B": {"strength": 96}, "C": {"strength": 88}, "D": {"strength": 80}, "E": {"strength": 80}, "F": {"strength": 70}, "G": {"strength": 55}, "H": {"strength": 30}}
+    rows = [{"kind": "stock", "sym": s, "key": "x"} for s in "HGFDCBA"] + [{"kind": "index", "sym": "NIFTY", "key": "x"}, {"kind": "stock", "sym": "E", "key": at.EAGLE}]
+    assert [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))] == ["A", "B", "C", "E", "D", "NIFTY", "F", "G", "H"]
