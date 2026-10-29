@@ -151,3 +151,15 @@ def test_non_dict_and_error_payloads_do_not_crash():
 
 def test_day_cache_is_kept_four_days_so_tomorrow_has_a_seed():
     assert m.CASH_DAY_TTL == 96 * 3600
+
+
+def test_cash_seed_status_endpoint_answers_at_the_top_level(monkeypatch):
+    import market_api
+    monkeypatch.setattr(market_api, "cash_seed", lambda today=None: ({"A": {}, "B": {}}, "2026-10-28", True))
+    monkeypatch.setattr(market_api, "_prev_trading_day", lambda d: __import__("datetime").date(2026, 10, 28))
+    monkeypatch.setattr(market_api.shared_cache, "get", lambda k: {"x": 1})
+    r = market_api.cash_seed_status()
+    assert (r["asOf"], r["fresh"], r["symbols"], r["wanted"], r["source"]) == ("2026-10-28", True, 2, "2026-10-28", "server day cache")
+    monkeypatch.setattr(market_api, "cash_seed", lambda today=None: ({}, None, False))
+    r = market_api.cash_seed_status()
+    assert r["fresh"] is False and r["symbols"] == 0 and r["source"] == "none" and "next session" in r["note"]

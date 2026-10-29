@@ -2008,6 +2008,21 @@ def _add_shortlist(v):
     return v
 
 
+@router.get("/cash-seed")
+def cash_seed_status():
+    """Is the cash-picks seed there? One small answer at the top level (the same data is in /picks as `cashSeed`, at the end of a big document):
+    which session it came from, whether it is the last FINISHED session (fresh) and how many symbols it holds."""
+    today = datetime.now(IST).date()
+    rows, asof, fresh = cash_seed()
+    try:
+        want = _prev_trading_day(today).isoformat()
+    except Exception:
+        want = None
+    return {"today": today.isoformat(), "wanted": want, "asOf": asof, "fresh": fresh, "symbols": len(rows or {}),
+            "source": "server day cache" if fresh and shared_cache.get(f"picks:cash|{want}") else ("file fallback" if fresh else "none"),
+            "note": "" if fresh else "No seed for the last finished session yet: it is written by the first full picks build of a trading day, so it appears from the next session."}
+
+
 @router.get("/picks")
 def picks(refresh: bool = False, response: Response = None):
     if response and not refresh:
