@@ -47,8 +47,8 @@ def world(monkeypatch):
     monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-28"}] * 30))
     monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 100.0)
 
-    def contract(*a, **k):
-        return {"expiry": "2026-11-10", "strike": 25000, "key": "OPT1", "premium": box["ask"], "lot": 75, "spot": 25000.0,
+    def contract(sym, *a, **k):
+        return {"expiry": "2026-11-10", "strike": 25000, "key": f"OPT-{sym}", "premium": box["ask"], "lot": 75, "spot": 25000.0,
                 "bid": box["bid"], "ask": box["ask"], "ltp": box["ask"]}
     monkeypatch.setattr(at, "_contract", contract)
     st = at._load()

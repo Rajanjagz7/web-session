@@ -59,7 +59,7 @@ def test_a_weak_reward_to_risk_and_a_held_index_are_explained(screen):
     at.fill_slots(st, TODAY, [])
     L = lines(st)
     assert any("NIFTY: BUY CALL skipped - reward to target 1" in m for m in L)
-    assert any("BANKNIFTY: not looked at - already holding" in m for m in L)
+    assert any("BANKNIFTY: not looked at - a trade in it is still open" in m for m in L)
 
 
 def test_a_good_signal_is_a_candidate_and_needs_no_excuse(screen):

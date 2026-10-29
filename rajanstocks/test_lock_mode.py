@@ -26,23 +26,40 @@ def test_defaults_eagle_off_old_lock():
     assert at.DEFAULT_CFG["eagleOn"] is True and at.DEFAULT_CFG["lockMode"] == "old"
 
 
-def test_index_screen_never_reenters_same_index_after_a_stop(monkeypatch):
+def _screen_world(monkeypatch, hh, mm):
     import market_api
+    from datetime import datetime
     calls = [{"instrument": "NIFTY", "signal": "BUY CALL", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 80, "confidence": "high"},
              {"instrument": "BANKNIFTY", "signal": "BUY PUT", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 70},
              {"instrument": "MIDCPNIFTY", "signal": "BUY CALL", "entry": 100, "stopLoss": 90, "target1": 120, "strength": 60}]
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: calls)
     monkeypatch.setattr(at, "_screen_score", lambda: {})
-    import morning_picks
     monkeypatch.setattr(at, "_picks", lambda: {"picks": []})
+    monkeypatch.setattr(at, "_now", lambda: datetime(2026, 10, 27, hh, mm, tzinfo=at.IST))
     today = "2026-10-27"
     stopped = {"id": "A-1", "sym": "NIFTY", "date": today, "status": "CLOSED", "closedAt": today + "T09:30:00+05:30", "kind": "index"}   # opened today, stopped out
     carried = {"id": "A-0", "sym": "MIDCPNIFTY", "date": "2026-10-23", "status": "CLOSED", "closedAt": today + "T09:07:00+05:30", "kind": "index"}   # opened earlier
-    st = {"cfg": {**at.DEFAULT_CFG, "stockOnly": False}, "trades": [stopped, carried], "log": []}      # the index screen itself (stock-only mode skips it)
-    out = at.fill_slots(st, today, [])
-    syms = {c["sym"] for c in out if c.get("kind") == "index"}
-    assert "NIFTY" not in syms                # no re-entry after today's stop
-    assert "MIDCPNIFTY" in syms               # a carried trade that exited at 09:07 does not block it
+    return today, {"cfg": {**at.DEFAULT_CFG, "stockOnly": False}, "trades": [stopped, carried], "log": []}
+
+
+def test_index_can_be_entered_again_after_a_stop_and_in_the_same_option(monkeypatch):
+    """user, 29 Oct: no restriction - the same index / stock option may be taken again once the earlier trade has closed."""
+    today, st = _screen_world(monkeypatch, 9, 45)                       # stopped at 09:30, 15 minutes ago
+    syms = {c["sym"] for c in at.fill_slots(st, today, []) if c.get("kind") == "index"}
+    assert {"NIFTY", "MIDCPNIFTY"} <= syms
+    st["trades"][0]["key"] = "NSE_FO|111"
+    monkeypatch.setattr(at, "_contract", lambda *a, **k: {"expiry": "2026-11-10", "strike": 25000, "key": "NSE_FO|111", "premium": 100.0, "lot": 75, "spot": 25000.0, "bid": 99.0, "ask": 100.0})
+    monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-26"}] * 30))
+    import backtest
+    monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 100.0)
+    t = at.open_trade(st, {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "x", "variant": "fixed"}, today)
+    assert t["key"] == "NSE_FO|111" and t["status"] == "OPEN"            # the very contract that was stopped out earlier today
+
+
+def test_a_symbol_with_an_open_trade_is_still_not_doubled(monkeypatch):
+    today, st = _screen_world(monkeypatch, 9, 45)
+    st["trades"][0].update(status="OPEN", closedAt=None)
+    assert "NIFTY" not in {c["sym"] for c in at.fill_slots(st, today, []) if c.get("kind") == "index"}
 
 
 def test_day_break_is_45k_and_works_in_research_mode():

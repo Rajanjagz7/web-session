@@ -469,6 +469,28 @@ def _index_backing(c, side):
     return pts, bits
 
 
+REENTRY_GAP_MIN = 0       # minutes after a trade closes before the same symbol can be entered again (user, 29 Oct: no restriction - a fresh signal re-enters at once)
+BLOCK_SAME_CONTRACT = False   # True would refuse an option contract already traded today (user, 29 Oct: the same index / stock option may be taken again)
+
+
+def _taken_syms(st, today, now=None):
+    """Symbols that cannot get a new entry right now: one with an open trade (one position per symbol at a time), and - only if REENTRY_GAP_MIN
+    is set - one whose trade (opened today) closed less than that many minutes ago. By default a closed symbol can be entered again at once
+    on a fresh signal, in any option. A trade carried from an earlier day that closes today never blocks its symbol."""
+    now = now or _now()
+    out = set()
+    for t in st["trades"]:
+        if t["status"] == "OPEN":
+            out.add(t["sym"])
+        elif REENTRY_GAP_MIN > 0 and t.get("date") == today and t.get("closedAt"):
+            try:
+                if (now - datetime.fromisoformat(t["closedAt"])).total_seconds() < REENTRY_GAP_MIN * 60:
+                    out.add(t["sym"])
+            except Exception:
+                out.add(t["sym"])
+    return out
+
+
 IDX_NOTE_EVERY = 900      # the "why no trade in this index" line is repeated at most every 15 minutes while the reason stays the same
 
 
@@ -494,7 +516,7 @@ def fill_slots(st, today, already):
     cfg = st["cfg"]
     todays = [t for t in st["trades"] if t["date"] == today]
     # same guard as choose(): a symbol stopped out today (even from a swing opened earlier) must not re-enter
-    used = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today} | {c["sym"] for c in already}
+    used = _taken_syms(st, today) | {c["sym"] for c in already}
     have = {"index": 0, "stock": 0}
     for k in [t["kind"] for t in todays] + [c["kind"] for c in already]:
         have[k] += 1
@@ -512,9 +534,9 @@ def fill_slots(st, today, already):
                 # an index is blocked while a trade in it is open, or once one was OPENED today (no re-entry after a stop - the 30-minute
                 # re-entry rule bought the same index again after a loss). A carried trade that merely exited today (opened on an earlier
                 # day, e.g. out at 09:07) does not count, so it never blocks the index all day.
-                busy_idx = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t.get("date") == today} | {x["sym"] for x in already} | {x["sym"] for x in out}
+                busy_idx = _taken_syms(st, today) | {x["sym"] for x in already} | {x["sym"] for x in out}
                 if c["instrument"] in busy_idx:
-                    _idx_note(st, c["instrument"], "not looked at - already holding it or traded it today (one entry per index a day)")
+                    _idx_note(st, c["instrument"], "not looked at - a trade in it is still open")
                     continue
                 e_, s_, t1_ = (c.get(k) for k in ("entry", "stopLoss", "target1"))
                 if e_ and s_ and t1_ and e_ > s_ and (t1_ - e_) / (e_ - s_) < MIN_INDEX_RR:
@@ -588,7 +610,7 @@ def eagle_cands(st, today, taken=()):
     now_m = _mins(_now())
     if not (EAGLE_FROM <= now_m <= EAGLE_TO):
         return []
-    used = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today} | set(taken)
+    used = _taken_syms(st, today) | set(taken)
     out = []
     for p in _picks().get("picks", []):
         if p.get("kind") == "index" or p.get("universe") == "cash" or p.get("s") in used:
@@ -924,7 +946,7 @@ def choose(cands, st, today):
     have_stk = sum(1 for t in taken_today if t["kind"] == "stock")
     # one entry per symbol a day - a swing trade that hit its stop TODAY counts too (it closed today, opened earlier),
     # which is exactly the re-entry-after-stop bug this set exists to prevent
-    open_syms = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t["date"] == today or (t.get("closedAt") or "") >= today}
+    open_syms = _taken_syms(st, today)
     by_sym = {}
     for c in cands:
         by_sym.setdefault(c["sym"], []).append(c)
@@ -1063,6 +1085,8 @@ def open_trade(st, c, today):
     atr, last_close, bars = _atr_for(c["sym"])
     cap = float((cfg.get("maxOutlay") or MAX_OUTLAY).get(c["sym"]) or 0) or None
     ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap)
+    if BLOCK_SAME_CONTRACT and any(t.get("key") == ct["key"] and (t.get("date") == today or (t.get("closedAt") or "") >= today) for t in st["trades"]):
+        raise RuntimeError("skipped: this option contract was already traded today (a new entry has to be in another option)")
     ask_, bid_ = float(ct.get("ask") or 0), float(ct.get("bid") or 0)
     if ask_ > 0 and bid_ > 0:                           # the stop is judged on the bid but the entry is paid at the ask: the spread must leave room for the stop
         sp_, lim_ = (ask_ - bid_) / ask_, MAX_SPREAD_OF_STOP * float(cfg.get("premSlPct", PREM_SL_PCT))
@@ -1561,7 +1585,7 @@ def _run_cycle(now, force, dry):
                     chosen = []
             try:                                      # Z Trend (intraday) flips join the daily-bar signals
                 import rzt as rzt_mod
-                seen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                seen = {c["sym"] for c in chosen} | _taken_syms(st, today)
                 room = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
                 extra = [c for c in rzt_mod.intraday_cands() if c["sym"] not in seen]
                 if guard == "soft":
@@ -1577,7 +1601,7 @@ def _run_cycle(now, force, dry):
                 tc_extra = _timecycle_cands(now)
                 # not just this cycle's picks: a symbol already traded / open today must not be bought again on every cycle
                 # while its time-cycle trigger stays active (BANKNIFTY went in 3 times in 3 minutes)
-                tseen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                tseen = {c["sym"] for c in chosen} | _taken_syms(st, today)
                 troom = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
                 chosen = chosen + [c for c in tc_extra if c["sym"] not in tseen][:troom]
                 if tc_extra:
@@ -1586,7 +1610,7 @@ def _run_cycle(now, force, dry):
                 st["log"].append({"at": now.isoformat(), "msg": f"timecycle trigger failed: {str(e)[:80]}"})
             try:                                      # Gann time-price angle bounce (chart indicator "Gann", user 28 Oct)
                 if cfg.get("gannOn", True):
-                    gseen = {c["sym"] for c in chosen} | {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                    gseen = {c["sym"] for c in chosen} | _taken_syms(st, today)
                     g_extra = _gann_cands(now, gseen)
                     groom = max(0, _cap(cfg, "maxPerDay") - len(todays) - len(chosen))
                     chosen = chosen + [c for c in g_extra if c["sym"] not in gseen][:groom]
@@ -1615,7 +1639,7 @@ def _run_cycle(now, force, dry):
             # time (or the opening cap) the rest were simply lost until the next screen - and index ones rank below the stock entries, so they
             # were the ones lost. Whatever was not tried is kept for CARRY_FOR seconds and offered again in the next cycles.
             try:
-                busy_ = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                busy_ = _taken_syms(st, today)
                 have_ = {(c["sym"], c["side"]) for c in chosen + filled}
                 back = [c for c in (st.get("carry") or []) if c.get("_exp", 0) > time.time() and c["sym"] not in busy_ and (c["sym"], c["side"]) not in have_]
                 if back:
