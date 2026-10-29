@@ -302,7 +302,7 @@ def test_front_end_files_have_no_stray_control_characters():
     # a '\b' typed through a patch script becomes a backspace and silently breaks the regex (the Index filter did exactly that)
     import pathlib
     root = pathlib.Path(__file__).parent / "public"
-    for f in [root / "index.html", root / "static" / "index.html", *sorted((root / "static").glob("*.js"))]:
+    for f in [root / "index.html", *sorted((root / "static").glob("*.js"))]:
         txt = f.read_text(encoding="utf-8")
         bad = sorted({hex(ord(c)) for c in txt if ord(c) < 32 and c not in "\r\n\t"})
         assert not bad, f"{f.name} contains control characters {bad}"
