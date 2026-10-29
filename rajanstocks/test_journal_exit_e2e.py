@@ -99,6 +99,9 @@ def server():
     proc.wait(timeout=20)
 
 
+OPT_SEED = "try{if(localStorage.getItem('rs-opt-sym')===null)localStorage.setItem('rs-opt-sym','NIFTY')}catch(e){}"      # a brand-new device is asked what to trade (30 Oct); these tests start with a choice made
+
+
 @pytest.fixture(scope="module")
 def browser():
     with pw.sync_playwright() as p:
@@ -109,6 +112,7 @@ def browser():
 
 def open_journal(browser, world, tab="positions", sym_prices=None, manual=None):
     c = browser.new_context(viewport={"width": 1366, "height": 800})
+    c.add_init_script(OPT_SEED)
     init = "window.rjMkt=function(){return true};new MutationObserver(()=>{const e=document.getElementById('pushAsk');if(e)e.remove()}).observe(document,{childList:true,subtree:true});"
     if manual:
         init += "try{localStorage.setItem('rj-journal-v1'," + json.dumps(json.dumps(manual)) + ")}catch(e){}"
@@ -534,6 +538,7 @@ def test_in_app_message_when_the_auto_trader_moves_a_stop_on_any_screen(server, 
 def test_options_screen_for_a_cash_stock_opens_its_cash_chart(server, browser):
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
+    c.add_init_script(OPT_SEED)
     pg = c.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -551,6 +556,7 @@ def test_picking_an_underlying_survives_a_later_trade_tab_tap(server, browser):
     """Video bug: pick ALKEM in the options screen, then any go('trade') threw the screen back to NIFTY and re-picked a CE (price jumped)."""
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
+    c.add_init_script(OPT_SEED)
     pg = c.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -569,6 +575,7 @@ def test_stale_hedge_tag_does_not_sell_a_new_manual_buy(server, browser):
     """Bug 29 Oct 13:16: 'Bought 20 ... Sold 20 ...' within seconds and no position. An old hedge tag left in App.meta made the 5 s hedge timer close any later buy of that contract."""
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
+    c.add_init_script(OPT_SEED)
     pg = c.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -586,6 +593,7 @@ def test_tapping_an_option_in_the_chain_selects_it_without_errors(server, browse
     """14:12 bug: `el is not defined` in updOptTrade stopped the chart opening after a tap on a chain row."""
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
+    c.add_init_script(OPT_SEED)
     pg = c.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -605,6 +613,7 @@ def test_tapping_an_option_in_the_chain_selects_it_without_errors(server, browse
 def test_options_screen_keeps_its_underlying_after_a_refresh(server, browser):
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
+    c.add_init_script(OPT_SEED)
     pg = c.new_page()
     pg.route("**/api/**", w.handle)
     pg.goto(BASE + "/#options")
@@ -619,6 +628,7 @@ def test_options_screen_keeps_its_underlying_after_a_refresh(server, browser):
 def test_sell_with_a_long_open_keeps_the_long_and_opens_a_separate_short(server, browser):
     w = World()
     c = browser.new_context(viewport={"width": 420, "height": 900})
+    c.add_init_script(OPT_SEED)
     pg = c.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))

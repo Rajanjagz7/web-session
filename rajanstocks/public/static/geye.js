@@ -329,7 +329,7 @@
   function bseRows() {
     const q = (G.sq || '').trim().toUpperCase(); if (q.length < 2) return '';
     const b = G.bse[q];
-    if (b === undefined) { loadBse(q); return '<p class="muted" style="margin:8px 4px;font-size:12px">Searching BSE…</p>'; }
+    if (b === undefined) { G.bse[q] = null; clearTimeout(G.bseT); G.bseT = setTimeout(() => loadBse(q), 600); return '<p class="muted" style="margin:8px 4px;font-size:12px">Searching BSE…</p>'; }
     if (!b || !b.length) return '';
     return `<h4 class="ge-h3" style="margin-top:12px">Listed on BSE only <small class="muted">${b.length} match${b.length > 1 ? 'es' : ''}</small></h4>
       <div class="ge-tw"><table class="ge-t ge-stk"><thead><tr><th>Stock</th><th class="r">Price</th><th class="r">Day</th><th>52W</th></tr></thead><tbody>

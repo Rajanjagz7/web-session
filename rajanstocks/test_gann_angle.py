@@ -77,7 +77,7 @@ def test_classic_filter_extras_need_a_classic_agreement():
     assert sorted((c["sym"], c["side"]) for c in paper) == [("SBIN", "BUY"), ("TCS", "BUY")]
 
 
-def test_share_trader_takes_only_the_stock_only_tab(monkeypatch):
+def test_share_trader_cash_only_switch_still_works(monkeypatch):      # 30 Oct: the default is the 22 Oct logic (every Picks stock, cashOnly False); cashOnly True is the Stock only tab
     import datetime as dt
     from zoneinfo import ZoneInfo
     import market_api
@@ -86,6 +86,7 @@ def test_share_trader_takes_only_the_stock_only_tab(monkeypatch):
     mk = lambda sym, u: {"s": sym, "kind": "stock", "universe": u, "ltp": 100.0, "plans": {"intraday": dict(plan), "swing": dict(plan), "positional": dict(plan)}}
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [mk("FNOSTK", "fno"), mk("CASHSTK", "cash")]})
     seen = {}
+    monkeypatch.setitem(s.CFG, "cashOnly", True)
     monkeypatch.setattr(s, "_quotes", lambda syms: seen.setdefault("syms", list(syms)) and {x: {"last": 100.0} for x in syms})
     st = {"trades": [], "cash": 500000.0}
     try:
@@ -151,3 +152,21 @@ def test_industry_labels_and_lookup():
     assert d["picks"][0]["sec"] == "Cement & Cement Products" and d["picks"][1]["ind"] == "IT"
     m.NAME["VISAKAIND"] = "Visaka Industries"
     assert [x["s"] for x in m.stock_lookup("visak")["items"]] == ["VISAKAIND"]
+
+
+def test_share_trader_default_trades_every_picks_stock(monkeypatch):
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    import market_api
+    import stock_trader as s
+    assert s.CFG["cashOnly"] is False and s.CFG["profitLock"] is False and s.CFG["windowStart"] == "09:20"
+    plan = {"ok": True, "side": "BUY", "fit": 5, "entry": 100.0, "stop": 98.0, "t1": 103.0, "t2": 106.0}
+    mk = lambda sym, u: {"s": sym, "kind": "stock", "universe": u, "ltp": 100.0, "plans": {"intraday": dict(plan), "swing": dict(plan), "positional": dict(plan)}}
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [mk("FNOSTK", "fno"), mk("CASHSTK", "cash")]})
+    seen = {}
+    monkeypatch.setattr(s, "_quotes", lambda syms: seen.setdefault("syms", list(syms)) and {x: {"last": 100.0} for x in syms})
+    try:
+        s.enter({"trades": [], "cash": 500000.0}, dt.datetime(2026, 10, 29, 10, 0, tzinfo=ZoneInfo("Asia/Kolkata")))
+    except Exception:
+        pass
+    assert "FNOSTK" in seen.get("syms", [])

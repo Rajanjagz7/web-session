@@ -101,6 +101,7 @@ def _equities():
 BSE_URL = "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz"
 BSE_TYPES = {"A", "B", "X", "XT", "T", "Z", "M", "MT"}     # equity groups; F / G / P / E ... are bonds, gilts, preference shares and funds
 _bse = {"t": 0.0, "rows": [], "by_sym": {}}
+_bse_q = {}
 
 
 def _bse_equities():
@@ -142,6 +143,10 @@ def stocks_bse(q: str = "", limit: int = 30):
     q = q.strip().upper()
     if len(q) < 2:
         return {"results": [], "total": 0}
+    ck = (q, max(1, min(limit, 60)))
+    hit_ = _bse_q.get(ck)
+    if hit_ and time.time() - hit_[0] < 60:                 # the same text again within a minute: no second Upstox call
+        return hit_[1]
     rows = _bse_equities()["rows"]
     limit = max(1, min(limit, 60))
     alt = q.replace("SH", "S").replace("KH", "K")           # "vishaka" for Visaka, "khaitan" for Kaitan: people spell these names both ways
@@ -159,7 +164,11 @@ def stocks_bse(q: str = "", limit: int = 30):
         last, prev = x.get("last") or 0, x.get("prev") or 0
         res.append({"s": r["s"], "n": r["n"], "ex": "BSE", "last": last or None, "chg": round((last / prev - 1) * 100, 2) if last and prev else None,
                     "yh": x.get("yh") or None, "yl": x.get("yl") or None, "vol": x.get("vol") or None})
-    return {"results": res, "total": len(hit)}
+    out_ = {"results": res, "total": len(hit)}
+    if len(_bse_q) > 200:
+        _bse_q.clear()
+    _bse_q[ck] = (time.time(), out_)
+    return out_
 
 
 @router.get("/stocks/all")
