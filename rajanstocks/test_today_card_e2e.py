@@ -4,6 +4,9 @@ import time
 
 import pytest
 
+SKIP_WHY = "Journal went back to the 28 Oct code on 29 Oct 10:30; this tests the 29 Oct version (git tag journal-before-revert-29oct)"
+pytestmark = pytest.mark.skip(reason=SKIP_WHY)
+
 from test_journal_exit_e2e import (BASE, TODAY, YDAY, World, browser, open_journal, pw, server, set_sym)  # noqa: F401
 
 CARRIED = dict(id="S-9", sym="TCS", side="BUY", hz="positional", status="OPEN", entry=80.0, stop=70.0, t1=110.0, t2=120.0, qty=1000, last=100.0,

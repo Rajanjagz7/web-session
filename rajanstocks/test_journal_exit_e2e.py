@@ -12,6 +12,9 @@ import urllib.request
 
 import pytest
 
+SKIP_WHY = "Journal went back to the 28 Oct code on 29 Oct 10:30; this tests the 29 Oct version (git tag journal-before-revert-29oct)"
+pytestmark = pytest.mark.skip(reason=SKIP_WHY)
+
 pw = pytest.importorskip("playwright.sync_api")
 
 PORT = 8897

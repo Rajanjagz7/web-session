@@ -1994,6 +1994,16 @@ def cash_seed_status():
     return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None}
 
 
+@router.get("/cash-seed/export")
+def cash_seed_export():
+    """Today's whole-market cash rows (the day's accumulating list the picks walk keeps in the shared cache) in the exact format of
+    static/picks_cash_seed.json - open it while the market is live, save the file and it can be committed as the next seed. Read only."""
+    d = shared_cache.get(f"picks:cash|{date.today().isoformat()}") or {}
+    d = d if isinstance(d, dict) else {}
+    return Response(content=json.dumps(d, separators=(",", ":")), media_type="application/json",
+                    headers={"Content-Disposition": "attachment; filename=picks_cash_seed.json", "Cache-Control": "no-store", "X-Rows": str(len(d))})
+
+
 @router.get("/picks")
 def picks(refresh: bool = False, response: Response = None):
     if response and not refresh:

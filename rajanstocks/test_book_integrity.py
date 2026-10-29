@@ -291,3 +291,13 @@ def test_verified_read_uses_the_copy_when_nothing_changed_and_when_the_store_is_
     gets.clear()
     at._load(cached=True, verify=True)
     assert gets == []
+
+
+def test_cash_seed_export_returns_the_days_cash_rows_in_seed_format(monkeypatch):
+    import json
+    import market_api, shared_cache
+    from datetime import date
+    rows = {"AAA": {"s": "AAA", "ltp": 10.0, "universe": "cash"}}
+    monkeypatch.setattr(shared_cache, "get", lambda k, *a, **kw: rows if k == f"picks:cash|{date.today().isoformat()}" else None)
+    r = market_api.cash_seed_export()
+    assert json.loads(r.body) == rows and r.headers["x-rows"] == "1" and "picks_cash_seed.json" in r.headers["content-disposition"]
