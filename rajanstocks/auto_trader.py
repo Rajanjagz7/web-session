@@ -118,6 +118,8 @@ def _load(cached=False, verify=False):
         if saved and saved.get("slV") != SL_V:                  # one-time (user, 28 Oct): 10-15% option stop and bigger trades; the settings API can change both later
             st["cfg"].update(premSlPct=PREM_SL_PCT, riskPct=1.0, slV=SL_V)
             st["_dirty"] = True
+        if GROUP == "C":                                        # this environment's settings are the 22 Oct ones, whatever was saved
+            st["cfg"].update(C_CFG)
         if saved and saved.get("eagleV") != 1:                  # one-time (user, 28 Oct): Eagle Trades back ON - buy-only like everything else (call for Open = Low, put for Open = High); the Algo button / settings API can switch it off again
             st["cfg"].update(eagleOn=True, eagleV=1)
             st["_dirty"] = True
@@ -1011,6 +1013,12 @@ def _quality(p):
 # Split alternates down the backtest ranking so both groups get a similar mix of stock and index sources and of good and weak ones.
 GROUP_A = ("rajan-rsi2-pullback", "rzt", "rajan-ibs-reversion", "Eagle Trades", "index-call-put", "rzt-intraday", "timecycle", "premium-rider")
 GROUP_B = ("rajan-ha-momentum", "ut-bot", "rajan-trend-rider", "morning-pick", "stock-screen", "rzt-hedge", "gann-angle", "z-timecycle")   # B tests the Z Trend + time cycle CONFLUENCE; A trades the two separately (rzt-intraday, timecycle)
+# Group C = the 22 Oct trader (the Setup filter in the first Journal: "N indicator(s) agree", "stock screen (trend + volume + RSI)", "index call/put
+# (daily chart and option flow agree)") PLUS three extras: Z Trend + time cycle confluence, Today's Picks tier 1, Eagle SELLs.
+# Its book also runs the 22 Oct settings (C_CFG): paired option sell on, 30% premium stop, 0.5% risk per trade.
+GROUP_C = ("ut-bot", "rajan-trend-rider", "rajan-ha-momentum", "rajan-rsi2-pullback", "rajan-ibs-reversion", "rzt", "stock-screen", "index-call-put",
+           "z-timecycle", "morning-pick", "Eagle Trades")
+C_CFG = {"buyOnly": False, "pairSell": True, "premSlPct": 0.30, "riskPct": 0.5, "classicOnly": False}
 GROUP = (os.environ.get("AUTO_GROUP") or "").strip().upper()          # "A" / "B" / "" (= every source, the original behaviour)
 
 
@@ -1019,8 +1027,15 @@ def profile_ok(c, group=None):
     and the 2-indicator rule: every source is judged on its own results, which is the point of the test. Risk/reward, spread, day-loss and
     contract checks still apply to both groups equally."""
     g = (group if group is not None else GROUP)
-    if g not in ("A", "B"):
+    if g not in ("A", "B", "C"):
         return True
+    if g == "C":                                      # the extras only in their backtested form
+        k = c.get("key")
+        if k == "morning-pick":
+            return "tier 1" in str(c.get("source") or "")
+        if k == EAGLE:
+            return c.get("side") == "SELL"
+        return k in GROUP_C
     allowed = GROUP_A if g == "A" else GROUP_B
     return c.get("key") in allowed
 

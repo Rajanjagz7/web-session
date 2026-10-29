@@ -227,3 +227,13 @@ def test_z_timecycle_needs_zone_time_and_trend_to_agree(monkeypatch):
     A, now = _fake_tc(monkeypatch, 22000.0, 22005.0, 22400.0, None, 0)           # no Z Trend flip today -> nothing
     assert A._ztc_cands(now) == []
     assert A.profile_ok({"key": "z-timecycle"}, "B") and not A.profile_ok({"key": "z-timecycle"}, "A")
+
+
+def test_group_c_is_the_22_oct_set_plus_backtested_extras():
+    import auto_trader as A
+    for k in ("stock-screen", "index-call-put", "ut-bot", "rajan-ha-momentum", "z-timecycle"):
+        assert A.profile_ok({"key": k, "kind": "stock", "side": "BUY"}, "C"), k
+    assert not A.profile_ok({"key": "gann-angle"}, "C") and not A.profile_ok({"key": "rzt-hedge"}, "C")
+    assert A.profile_ok({"key": "Eagle Trades", "side": "SELL"}, "C") and not A.profile_ok({"key": "Eagle Trades", "side": "BUY"}, "C")
+    assert A.profile_ok({"key": "morning-pick", "source": "Today's Picks · tier 1 · x"}, "C") and not A.profile_ok({"key": "morning-pick", "source": "Today's Picks · tier 2 · x"}, "C")
+    assert A.C_CFG["pairSell"] is True and A.C_CFG["premSlPct"] == 0.30
