@@ -48,8 +48,9 @@ def test_pnl_follows_the_option_price_when_the_status_is_read(env):
     prices["opt"] = 130.0
     s = at.status()
     t = s["open"][0]
-    assert t["last"] == 130.0 and t["unrealised"] == (130.0 - 100.0) * 2 * 65 and s["summary"]["openPnL"] == 3900
-    assert load()["last"] == 130.0                                  # and it is saved
+    assert t["last"] == 130.0 and t["mark"] == 129.8                # the LTP is shown as the LTP; the P&L is figured at the bid (what a stop or exit gets)
+    assert t["unrealised"] == pytest.approx(3874.0) and s["summary"]["openPnL"] == 3874
+    assert load()["last"] == 130.0 and load()["mark"] == 129.8      # and it is saved
 
 
 def test_a_second_read_inside_the_gap_does_not_hit_upstox_again(env, monkeypatch):
@@ -137,3 +138,32 @@ def test_trades_opened_before_the_ladder_keep_the_old_single_target(env):
     prices["und"] = 23100.0; prices["opt"] = 140.0                              # old trade: target 23100
     s = at.status()
     assert s["closed"] and s["closed"][0]["exitReason"] == "TARGET"
+
+
+def test_a_gaping_or_one_sided_book_is_marked_at_the_last_traded_price(env, monkeypatch):
+    clock, prices = env
+    for depth in ({"buy": [{"price": 80.0}], "sell": [{"price": 100.0}]},        # 20% spread: not a price anyone could trade at
+                  {"buy": [], "sell": [{"price": 100.0}]},                       # no bid at all
+                  {}):                                                           # no depth
+        monkeypatch.setattr(at, "_quotes", lambda keys, d=depth: {"NSE_FO|111": {"last_price": 120.0, "depth": d}, "NSE_INDEX|NIFTY": {"last_price": 22900.0}})
+        monkeypatch.setattr(at, "_MARK_AT", 0.0)
+        t = at.status()["open"][0]
+        assert t["mark"] == 120.0 and t["unrealised"] == (120.0 - 100.0) * 2 * 65
+
+
+def test_a_sold_option_is_marked_at_the_ask(env, monkeypatch):
+    clock, prices = env
+    st = json.load(open(at.FILE)); st["trades"][0].update(pos="short", premSL=130.0); json.dump(st, open(at.FILE, "w"))
+    monkeypatch.setattr(at, "_quotes", lambda keys: {"NSE_FO|111": {"last_price": 90.0, "depth": {"buy": [{"price": 89.0}], "sell": [{"price": 91.0}]}},
+                                                     "NSE_INDEX|NIFTY": {"last_price": 22900.0}})
+    monkeypatch.setattr(at, "_MARK_AT", 0.0)
+    t = at.status()["open"][0]
+    assert t["mark"] == 91.0 and t["unrealised"] == pytest.approx((100.0 - 91.0) * 2 * 65)
+
+
+def test_the_mark_and_the_stop_are_one_price(env):
+    """The running P&L and the stop test use the same price: a trade whose P&L shows -30% is the one the stop (-30%) closes."""
+    clock, prices = env
+    prices["opt"] = 70.2                                            # bid 70.0 -> at the stop (premSL 70)
+    s = at.status()
+    assert not s["open"] and s["closed"][0]["exitReason"] == "STOP"

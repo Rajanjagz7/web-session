@@ -260,15 +260,14 @@ def sleeve_report(st):
         out.append({"key": name, "name": label, "capital": float(st["cfg"]["sleeves"][name]), "equity": round(eq, 0),
                     "deployed": round(_sleeve_deployed(st, name), 0), "open": len(opens), "closed": len(closed),
                     "net": round(sum(t.get("net", 0.0) for t in closed), 0),
-                    "openPnL": round(sum((t["last"] - t["entry"]) * t["lots"] * t["lot"] for t in opens if t.get("pos") != "short"), 0),
+                    "openPnL": round(sum((_mk(t) - t["entry"]) * t["lots"] * t["lot"] for t in opens if t.get("pos") != "short"), 0),
                     "winRate": round(len(wins) / len(closed), 2) if closed else 0})
     return out
 
 
 def _open_pnl(t):
     sgn = -1 if t.get("pos") == "short" else 1
-    last = float(t.get("last") or t["entry"] or 0)
-    return (last - t["entry"]) * t["lots"] * t["lot"] * sgn
+    return (_mk(t) - t["entry"]) * t["lots"] * t["lot"] * sgn
 
 
 def _day_base(t, today):
@@ -276,7 +275,7 @@ def _day_base(t, today):
     opened today, the previous mark for a carried one - not everything since the entry."""
     if t.get("baseDate") != today:
         t["baseDate"] = today
-        t["basePx"] = round(float(t["entry"] if t.get("date") == today else (t.get("last") or t["entry"])), 2)
+        t["basePx"] = round(float(t["entry"] if t.get("date") == today else (_mk(t) or t["entry"])), 2)
 
 
 def _base_px(t, today):
@@ -284,7 +283,7 @@ def _base_px(t, today):
         return float(t["basePx"])
     if t.get("date") == today:
         return float(t["entry"])
-    return float(t.get("last") or t["entry"]) if t["status"] == "OPEN" else None
+    return _mk(t) if t["status"] == "OPEN" else None
 
 
 def _day_part(t, today):
@@ -300,7 +299,7 @@ def _day_part(t, today):
         if base is None:                                     # carried, and never marked today: its whole result is the best guess
             return float(t.get("net", 0.0))
         return (float(t.get("exit") or base) - base) * qty * sgn - float(t.get("cost", 0.0))
-    return (float(t.get("last") or t["entry"]) - _base_px(t, today)) * qty * sgn
+    return (_mk(t) - _base_px(t, today)) * qty * sgn
 
 
 def _day_pnl(st, today):
@@ -1305,6 +1304,8 @@ def manage(st, now, t_end=None):
         exit_px = (ask if ask > 0 else opt_px) if short else (bid if bid > 0 else opt_px)   # a short is bought back at the ask
         if bid > 0 and ask > 0 and (ask - bid) / ask > 0.10 and opt_px > 0:
             exit_px = opt_px                       # a gaping book (opening minutes, one-sided quote) is not a price anyone could trade at: judge the stop on the last traded price
+        if exit_px > 0:
+            t["mark"] = round(exit_px, 2)          # the same price drives the stop AND the running P&L the Journal shows (they used to disagree)
         if exit_px <= 0 or und_px <= 0:
             continue
         d = 1 if t["side"] == "BUY" else -1
@@ -1769,6 +1770,24 @@ def _exit_px(t, q):
     return side_px if side_px > 0 else _last(q)
 
 
+def _mark_px(t, q):
+    """The price an open option is MARKED at for its running P&L and for its stop: what it could be closed at right now - the bid for a bought
+    option, the ask for a sold one. The last traded price is used when that side of the book is empty or the book is gaping (spread over 10%,
+    typical of the opening minutes and of thin stock options), because then the bid/ask is not a price anyone could trade at. The last traded
+    price alone is stale or jumps on thin contracts and did not match what a stop or an exit books."""
+    bid, ask = _book(q)
+    ltp = _last(q)
+    if bid > 0 and ask > 0 and (ask - bid) / ask > 0.10 and ltp > 0:
+        return ltp
+    px = ask if t.get("pos") == "short" else bid
+    return px if px > 0 else ltp
+
+
+def _mk(t):
+    """The stored mark of an open trade (falls back to the last traded price for trades marked before marks existed)."""
+    return float(t.get("mark") or t.get("last") or t["entry"] or 0)
+
+
 MOVE_TOL = 0.03          # an exit is refused when the price moved more than this since the screen the user confirmed on
 
 
@@ -1813,10 +1832,11 @@ def live_prices():
         bid, ask = _book(qq)
         ltp = _last(qq)
         ex = _exit_px(t, qq)
+        mk = _mark_px(t, qq)
         qty = (t.get("lots") or 0) * (t.get("lot") or 0)
         sgn = -1 if t.get("pos") == "short" else 1
-        out["trades"].append({"id": t["id"], "ltp": round(ltp, 2), "bid": round(bid, 2), "ask": round(ask, 2), "exitPx": round(ex, 2),
-                              "unrealised": round((ltp - t["entry"]) * qty * sgn, 2) if ltp > 0 else None,
+        out["trades"].append({"id": t["id"], "ltp": round(ltp, 2), "bid": round(bid, 2), "ask": round(ask, 2), "exitPx": round(ex, 2), "mark": round(mk, 2),
+                              "unrealised": round((mk - t["entry"]) * qty * sgn, 2) if mk > 0 else None,
                               "exitGross": round((ex - t["entry"]) * qty * sgn, 2) if ex > 0 else None, "at": now.isoformat()})
     return out
 
@@ -1941,7 +1961,7 @@ def status():
     opens = [t for t in st["trades"] if t["status"] == "OPEN"]
     for t in opens:
         _replan(t)
-        t["unrealised"] = round((t["last"] - t["entry"]) * t["lots"] * t["lot"] * (-1 if t.get("pos") == "short" else 1), 2)
+        t["unrealised"] = round((_mk(t) - t["entry"]) * t["lots"] * t["lot"] * (-1 if t.get("pos") == "short" else 1), 2)
         t["costPctEff"] = t.get("costPct", st["cfg"]["costPct"])      # the Journal shows open P&L after the estimated exit cost (same % as _close charges)
     import backtest
     bt = backtest.get()["result"]

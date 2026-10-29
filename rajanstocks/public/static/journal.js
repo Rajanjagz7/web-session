@@ -129,6 +129,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       const q = AUTO.q[t.id]; if (!q || t.status === 'Closed' || !(q.ltp > 0) || !t.raw) return;
       if (t.raw.lastAt && q.at && q.at < t.raw.lastAt) return;
       t.raw.last = q.ltp; t.raw.lastAt = q.at;
+      if (q.mark > 0) t.raw.mark = q.mark;
       if (typeof q.unrealised === 'number') { t.unrl = q.unrealised; t.raw.unrealised = q.unrealised; }
     });
   }
@@ -170,7 +171,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
         AUTO.list.forEach(n => {
           const p = prevA[n.id], pa = p && p.raw && p.raw.lastAt, na = n.raw && n.raw.lastAt;
           if (p && n.status !== 'Closed' && p.status !== 'Closed' && pa && na && na < pa) {
-            n.unrl = p.unrl; n.raw.last = p.raw.last; n.raw.unrealised = p.raw.unrealised; n.raw.lastAt = pa;
+            n.unrl = p.unrl; n.raw.last = p.raw.last; n.raw.mark = p.raw.mark; n.raw.unrealised = p.raw.unrealised; n.raw.lastAt = pa;
           }
         });
         AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly), stockTrader: !(a.cfg && a.cfg.stockTrader === false) } };
@@ -652,6 +653,12 @@ function paperList() {
       return (t.raw && t.raw.last) || t.entry;
     }
     return live(t.symbol || t.instrument) || (t.raw && t.raw.last) || t.entry;
+  }
+  /* the price an open trade's P&L is figured at: for option trades the server's mark (what a stop / exit could actually get - the bid for a bought
+     option), the last traded price only when there is no mark; shares use their live price. The LTP column keeps showing the last traded price. */
+  function markPx(t) {
+    if (!t.isStock && t.auto && t.raw && t.raw.mark > 0) return t.raw.mark;
+    return curPx(t);
   }
   function liveCap() { const el = document.getElementById('jvCap'); if (!el) { capUse(); return; } const t = document.createElement('div'); t.innerHTML = capCard(); const n = t.firstElementChild; if (n && n.innerHTML !== el.innerHTML) el.innerHTML = n.innerHTML; }
   function livePositions() {
@@ -2038,7 +2045,7 @@ function paperList() {
      }
      if (t.date === day) return { b: 0, o: unrealisedNet(t) || 0 };
      const b0 = dayBase(t); if (b0 == null) return { b: 0, o: 0 };
-     const cur = curPx(t), pct = Number(r.costPctEff) || (t.isStock ? 0.1 : 0);
+     const cur = markPx(t), pct = Number(r.costPctEff) || (t.isStock ? 0.1 : 0);
      return { b: 0, o: sg * (cur - b0) * qty - pct / 100 * cur * qty };       // only the cost of closing is still ahead; the entry cost was paid on an earlier day
    }
    /* Manual journal trades and open Trade-screen positions: same rule - a position taken on an earlier day counts only the move since yesterday's

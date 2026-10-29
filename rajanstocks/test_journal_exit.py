@@ -68,8 +68,8 @@ def test_live_returns_ltp_bid_ask_exit_price_and_pnl(store, monkeypatch):
     assert r["ok"] is True and len(r["trades"]) == 1
     x = r["trades"][0]
     assert (x["ltp"], x["bid"], x["ask"], x["exitPx"]) == (110, 108, 112, 108)
-    assert x["unrealised"] == pytest.approx(10 * 150)             # at the last traded price (what the table shows)
-    assert x["exitGross"] == pytest.approx(8 * 150)               # at the price an exit books
+    assert x["mark"] == 108 and x["unrealised"] == pytest.approx(8 * 150)    # the running P&L is figured at the bid (what a stop / an exit gets)
+    assert x["exitGross"] == pytest.approx(8 * 150)               # = the price an exit books
     assert x["at"] and r["at"]
 
 
@@ -77,7 +77,7 @@ def test_live_short_trade_pnl_has_the_right_sign(store, monkeypatch):
     put(store, trade(pos="short", entry=100.0))
     feed(monkeypatch, {"OPT1": quote(90, bid=88, ask=92)})
     x = at.live_prices()["trades"][0]
-    assert x["exitPx"] == 92 and x["unrealised"] == pytest.approx(10 * 150) and x["exitGross"] == pytest.approx(8 * 150)
+    assert x["exitPx"] == 92 and x["unrealised"] == pytest.approx(8 * 150) and x["exitGross"] == pytest.approx(8 * 150)
 
 
 def test_live_ignores_closed_trades_and_does_not_call_the_broker_without_open_ones(store, monkeypatch):
@@ -209,3 +209,10 @@ def test_share_exit_unknown_trade(monkeypatch):
     with pytest.raises(HTTPException) as e:
         sb.manual_exit("nope")
     assert e.value.status_code == 404
+
+
+def test_live_gaping_book_marks_at_the_last_traded_price(store, monkeypatch):
+    put(store, trade(entry=100.0, lots=2, lot=75))
+    feed(monkeypatch, {"OPT1": quote(110, bid=90, ask=120)})        # 25% spread
+    x = at.live_prices()["trades"][0]
+    assert x["mark"] == 110 and x["unrealised"] == pytest.approx(10 * 150) and x["exitPx"] == 90
