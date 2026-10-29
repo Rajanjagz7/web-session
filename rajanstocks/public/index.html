@@ -5101,7 +5101,7 @@ setInterval(()=>{try{if(App.view==='picks'&&!document.hidden)loadGlobal()}catch(
 function dockCheck(){const d=document.getElementById('tradeDock');if(!d)return;const seg=document.querySelector('#v-trade.on .side-seg');let vis=false;
   if(seg&&seg.offsetParent){const r=seg.getBoundingClientRect();vis=r.bottom>0&&r.top<innerHeight-60}d.classList.toggle('gone',vis)}   /* one Buy/Sell at a time: hide the dock while the order ticket's own Buy/Sell is on screen */
 addEventListener('scroll',dockCheck,{passive:true,capture:true});addEventListener('resize',dockCheck);setInterval(dockCheck,800);   /* GIFT / US futures trade when NSE is shut: own 3 s live price, not the NSE poll */
-function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?300000:MKT.err?10000:MKT.stale?20000:MKT.fails?4000:MKT.open?5000:180000))}
+function schedulePoll(){pollQuotes().finally(()=>setTimeout(schedulePoll,document.hidden?300000:MKT.err?10000:MKT.stale?60000:MKT.fails?4000:MKT.open?5000:180000))}
 /* Auto cache-clear: /api/cache-version flips twice a day (before market open, after market close).
    When it changes, drop every cache this origin holds and reload once so nobody is ever stuck
    on a stale build across those boundaries. */

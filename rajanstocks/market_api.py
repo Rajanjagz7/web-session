@@ -2070,7 +2070,7 @@ def picks(refresh: bool = False, response: Response = None):
         return v
     if os.environ.get("VERCEL"):
         # serverless freezes background threads after the response: build inline within the 30s cap
-        if refresh and _allow_refresh("picks", 20, 120):
+        if refresh and _allow_refresh("picks", 90, 120):
             _cache.pop("picks", None)
 
         ttl_s = 600 if market_open() else 3600
@@ -2124,7 +2124,7 @@ def picks(refresh: bool = False, response: Response = None):
 
     ttl = 900 if market_open() else 3600
     d = _PK["data"]
-    if d is None or (refresh and _allow_refresh("picks", 20, 120)) or time.time() - _PK["t"] > ttl:
+    if d is None or (refresh and _allow_refresh("picks", 90, 120)) or time.time() - _PK["t"] > ttl:
         _picks_kick()                              # stale-while-revalidate: a refresh never blocks the user
     if d is not None:
         return _public({**d, "refreshing": _PK["busy"]})
@@ -2232,7 +2232,7 @@ def day_calls(refresh: bool = False):
                 "rule": f"Call/Put only when the daily chart signal and ATM±{FLOW_WINDOW} option-volume flow (>= {FLOW_MIN_PCT:.0f}%) agree. "
                         "Premium levels: T1 +9%, T2 +18%, SL -5%. Paper-trading aid, not advice."}
 
-    if refresh and _allow_refresh("daycalls", 15, 120):
+    if refresh and _allow_refresh("daycalls", 60, 120):
         _cache.pop("daycalls", None)
 
     def build_ok():
