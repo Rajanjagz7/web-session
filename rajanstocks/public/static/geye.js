@@ -152,7 +152,6 @@
     if (G.open && G.data) { if (!o) { o = document.createElement('div'); o.id = 'geOvDet'; o.className = 'ge'; document.body.appendChild(o); } o.innerHTML = detail(); }
     else if (o) o.remove();
     document.body.classList.toggle('ge-noscroll', !!G.open);
-    try { if (typeof drawPkFut === 'function') drawPkFut(true); } catch (e) { }
   }
   window.geOverviewHTML = () => {
     if ((!G.data || Date.now() - G.ts > 300e3) && !G.busy && Date.now() - (G.tryTs || 0) > 30e3) { G.tryTs = Date.now(); setTimeout(() => load(false), 0); }

@@ -526,7 +526,8 @@ function paperList() {
     const autoReal = AUTO.list.concat((AUTO.stockTrades || []).filter(t => t.status === 'Closed'), paperList().filter(t => t.status === 'Closed')).reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
     const booked = realised() + autoReal;
     const unr = allTrades().reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
-    const autoToday = AUTO.list.concat((AUTO.stockTrades || []), paperList()).reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
+    /* Trade-screen paper trades are NOT added here: dayStats() already books every non-auto trade (paper included) - adding them again doubled today's booked P&L */
+    const autoToday = AUTO.list.concat((AUTO.stockTrades || [])).reduce((a, t) => a + (entered(t) && statusOf(t) === 'Closed' && lastExit(t).slice(0, 10) === day ? calc(t).net : 0), 0);
     return { booked, unr, autoToday, eq: S.capital + booked + unr };
   }
   /* Capital in use: buys (premium / share value paid), margin blocked for sells (options: max(12% of the underlying, premium)

@@ -6,3 +6,4 @@ defusedxml
 websocket-client
 pywebpush>=2.0.0
 skyfield
+tzdata

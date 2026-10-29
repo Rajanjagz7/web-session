@@ -75,6 +75,8 @@ class World:
                 if frag in u:
                     return route.fulfill(status=code, json=js)
             return route.fulfill(json={"ok": True, "exit": body.get("seen") or 1, "net": 0, "R": 0, "closed": 0, "failed": []})
+        if "/api/m/quotes" in u or "/api/m/oquote" in u:        # no quote feed in the tests, whether or not this machine has Upstox credentials
+            return route.fulfill(status=503, json={"detail": "no feed in tests"})
         route.continue_()
 
 

@@ -179,7 +179,8 @@ def test_option_chart_paints_fast_and_indicators_are_finite(app):
     bad = app.ev("""(() => { const tf = OPT.tf, d = OPT.ochart.data, out = [];
       for (const k of Object.keys(DEFS).filter(k => !k.startsWith('S:'))) { const D = DEFS[k], p = {}; D.params.forEach(x => p[x.k] = x.v);
         const r = D.calc(d, p, {tf: tf.sec || 86400});
-        for (const l of D.lines) { const a = r[l.k]; if (!a || a.length !== d.length || a.filter(Number.isFinite).length < Math.min(d.length * 0.3, d.length - 30)) out.push(k + '.' + l.k); } }
+        for (const l of D.lines) { const a = r[l.k]; const sparse = k.startsWith('gann-');   // Gann angle lines are anchored at pivots: sparse by design, but never short or missing
+          if (!a || a.length !== d.length || (!sparse && a.filter(Number.isFinite).length < Math.min(d.length * 0.3, d.length - 30))) out.push(k + '.' + l.k); } }
       return out; })()""")
     assert not bad, f"indicators with empty/short output on an option chart: {bad}"
     app.check_clean()
