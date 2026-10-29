@@ -1597,8 +1597,8 @@ def _picks_compute_inner(deadline_s, progress=None):
                 bhav_diag = {"have": len(shared_cache.get("bhav:sessions") or []), "skipped": "cooldown"}
             else:
                 # on serverless the whole build must fit the 30 s cap: give the downloads at most ~1/3 of the budget
-                bhav_diag = equity_bhav.warm(max_downloads=8 if on_vercel else 10, target_sessions=60,
-                                             budget_s=max(4, deadline_s / 3) if on_vercel else None)
+                bhav_diag = equity_bhav.warm(max_downloads=14 if on_vercel else 10, target_sessions=60,       # 29 Oct: 5 sessions per build was too slow (25 needed): more per build, a build takes ~7 s of its 30
+                                             budget_s=max(4, deadline_s * 0.55) if on_vercel else None)
                 if on_vercel and not bhav_diag.get("downloaded") and bhav_diag.get("have", 0) < 25:
                     shared_cache.set("bhav:cooldown", 1, 300)      # archive blocked/slow: do not burn every request on it
         except Exception as e:
