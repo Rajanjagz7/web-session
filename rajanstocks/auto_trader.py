@@ -1162,6 +1162,19 @@ def contract_votes(bars):
     return bull, bear
 
 
+def stock_open_backs(sym, side):
+    """The stock's own Open = Low (BUY) / Open = High (SELL) from the Picks row - the user's open rule, for any stock or index entry."""
+    try:
+        import morning_picks
+        for p in _picks().get("picks", []):
+            if p.get("s") == sym:
+                ol, oh = morning_picks.open_flags(p)
+                return bool(ol if side == "BUY" else oh)
+    except Exception:
+        pass
+    return False
+
+
 def contract_blocked(ct, cfg=None):
     """A bought option is skipped when most of its own indicators point down (a premium that is falling is not a long to buy,
     even when the stock's strategies lean the right way). Unknown / too little data never blocks."""
@@ -1228,7 +1241,7 @@ def open_trade(st, c, today):
             raise RuntimeError(f"skipped: bid/ask spread {sp_ * 100:.1f}% is too wide for the {float(cfg.get('premSlPct', PREM_SL_PCT)) * 100:.1f}% stop (max {lim_ * 100:.1f}%)")
     # the bearish-contract veto does not apply when the open itself backs the trade: the option opened at its day low (premium Open = Low, stop low - 10),
     # or it is an Eagle trade (stock Open = Low for a BUY / Open = High for a SELL). Those are the user's own entry rules (29 Oct).
-    open_backed = bool(premium_oel(ct)) or c.get("key") == EAGLE
+    open_backed = bool(premium_oel(ct)) or c.get("key") == EAGLE or stock_open_backs(c["sym"], c["side"])
     if c.get("pos") != "short" and c.get("key") != "rzt-hedge" and not str(c.get("id", "")).endswith("-W") and not open_backed:
         why_ = contract_blocked(ct, cfg)
         if why_:

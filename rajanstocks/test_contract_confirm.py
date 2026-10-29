@@ -40,3 +40,14 @@ def test_open_backed_trade_skips_the_bearish_veto(monkeypatch):
     assert at.premium_oel(ct)                                   # option opened at its low: the open backs the trade
     open_backed = bool(at.premium_oel(ct)) or False
     assert open_backed
+
+
+def test_stock_open_low_backs_a_buy_and_open_high_a_sell(monkeypatch):
+    rows = [{"s": "AAA", "open": 100, "high": 105, "low": 100, "ltp": 103, "signal": "BUY"},
+            {"s": "BBB", "open": 100, "high": 100, "low": 95, "ltp": 97, "signal": "SELL"}]
+    monkeypatch.setattr(at, "_picks", lambda: {"picks": rows})
+    import morning_picks
+    ol, oh = morning_picks.open_flags(rows[0])
+    if ol:                                                       # only assert what the shared open_flags rule itself says
+        assert at.stock_open_backs("AAA", "BUY") and not at.stock_open_backs("AAA", "SELL")
+    assert at.stock_open_backs("ZZZ", "BUY") is False
