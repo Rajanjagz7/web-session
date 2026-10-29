@@ -2637,8 +2637,6 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;if(!window.__pfCl){win
     pl = t.today; isLast = false;
   } else if(t && typeof t.lastDayPnl === 'number' && t.lastDayPnl !== 0){
     pl = t.lastDayPnl; isLast = true;
-  } else if(hasToday && t.today !== 0){
-    pl = t.today; isLast = true;
   } else {
     try {
       const saved = JSON.parse(localStorage.getItem('rs-last-pnl') || 'null');
@@ -2658,7 +2656,7 @@ function renderPfChip(){const c=$('#pfChip');if(!c)return;if(!window.__pfCl){win
   c.title = `${isLast ? 'Last session' : "Today's"} P&L ${pl>=0?'+':'−'}₹${Math.round(Math.abs(pl)).toLocaleString('en-IN')} (${pc>=0?'+':'−'}${Math.abs(pc).toFixed(2)}%) · Portfolio ₹${Math.round(eq).toLocaleString('en-IN')} · capital ₹${Math.round(cap).toLocaleString('en-IN')} — click for the journal`;
 }
 function renderNav(){const cur=navKey(App.view);const subL=(SUBVIEWS[App.view]||[])[1]||'';$('#nav').innerHTML=VIEWS.map(([k,l])=>`<button data-view="${k}" class="${cur===k?'on':''} ${PRIMARY.includes(k)?'':'sec'}" ${cur===k?'aria-current="page"':''} ${cur===k?`title="You are here: ${esc(l+(subL?' › '+subL:''))}"`:''}><span class="ni">${NAVI[k]?I(NAVI[k],19):''}</span><span>${l}${cur===k&&subL?`<span class="nav-sub">› ${esc(subL)}</span>`:''}</span></button>`).join('');renderHere()}
-const NAVI={picks:'trendup',trade:'candle',options:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
+const NAVI={picks:'trendup',trade:'candle',markets:'search',options:'fx',portfolio:'list',journal:'download',stocks:'search',vedic:'moon',ipo:'coins',indicators:'log',godseye:'eye'};
 /* Close every open popup / menu / sheet. Called on every navigation so nothing stays open on top of the next screen. */
 function closeOverlays(){
   try{RN.closeAll()}catch(e){}try{closeOc()}catch(e){}try{closeTfPop()}catch(e){}try{closeModal()}catch(e){}
@@ -2674,9 +2672,6 @@ function setTheme(t){document.documentElement.dataset.theme=t;try{localStorage.s
 
 /* ======================= Trade view ======================= */
 let chart,mchart;
-function renderWatchlist(){const q=$('#wlFilter').value.toLowerCase();const groups={};
-  SYMS.filter(s=>App.watch.has(s.s)&&(s.s.toLowerCase().includes(q)||s.n.toLowerCase().includes(q))).forEach(s=>(groups[s.cls]||=[]).push(s));
-  $('#wlList').innerHTML=Object.entries(groups).map(([g,l])=>`<div class="wl-g">${g}</div>`+l.map(s=>`<button class="wl-row ${s===App.sym?'on':''}" data-sym="${esc(s.s)}"><span><b>${esc(s.s)}</b><small>${esc(s.n)}</small></span>${sparkSVG(spark7(s),54,22,s.last>=s.prev?'var(--up)':'var(--down)')}<span class="r"><span class="num" data-px="${esc(s.s)}"></span><br><span class="num" data-chg="${esc(s.s)}"></span><br><small class="num wl-hl" title="Today's low – high">L <span data-low="${esc(s.s)}"></span> · H <span data-high="${esc(s.s)}"></span></small></span></button>`).join('')).join('')||'<div class="empty">No matches</div>';liveUpdate()}
 /* ======================= Option chain picker on the chart (fewer clicks: symbol -> strike -> contract chart) ======================= */
 const OC={sym:null,expiry:'',data:null,busy:false,open:false};
 const ocHas=s=>!!s&&(s.cls==='Indices'||s.cls==='Stocks')&&!s.ikey&&!s.tv&&s.s!=='INDIAVIX';
@@ -2858,15 +2853,6 @@ function openSearch(){const b=modal('Search symbols',`<input class="inp" id="sq"
       $('#sres2').innerHTML=(r.results||[]).filter(x=>!have.has(x.s)).map(x=>`<button class="pick-row" data-xsym="${esc(x.s)}" data-xn="${esc(x.n)}"><span class="t"><b>${esc(x.s)}</b><small>${esc(x.n)} · NSE</small></span><span class="badge b-mute">Stock</span></button>`).join('')}catch(e){}},250)};
   $('#sq').addEventListener('input',()=>{act=0;list=draw();remote()});
   $('#sq').addEventListener('keydown',e=>{if(e.key==='ArrowDown'){act=Math.min(list.length-1,act+1);draw();e.preventDefault()}if(e.key==='ArrowUp'){act=Math.max(0,act-1);draw();e.preventDefault()}if(e.key==='Enter'&&list[act]){closeModal();switchSym(list[act].s)}})}
-function openIndicators(){let cat='All';
-  modal('Indicators',`<div style="margin-bottom:6px;font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Templates</div><div class="tpl">${TEMPLATES.map((t,i)=>`<button data-tpl="${i}"><b>${t.n}</b><small>${t.d}</small></button>`).join('')}</div>
-   <input class="inp" id="iq" placeholder="Search indicators" aria-label="Search indicators"><div class="chips" style="margin:10px 0" id="icats">${['All',...CATS].map(c=>`<button class="chip ${c==='All'?'on':''}" data-icat="${c}">${c}</button>`).join('')}</div><div id="ilist"></div>`,{wide:true});
-  const draw=()=>{const q=$('#iq').value.toLowerCase();$('#ilist').innerHTML=Object.entries(DEFS).filter(([k,d])=>(cat==='All'||d.cat===cat)&&(d.name.toLowerCase().includes(q)||d.short.toLowerCase().includes(q))).map(([k,d])=>{const n=chart.ind.filter(i=>i.key===k).length;
-    return`<button class="pick-row" data-addind="${k}"><span class="t"><b>${d.name} <span class="muted" style="font-weight:500">${d.short}</span></b><small>${d.desc}</small></span><span class="badge b-mute">${d.cat}</span><span class="badge ${d.pane==='sub'?'b-info':'b-mute'}">${d.pane==='sub'?'Own pane':'On price'}</span>${n?`<span class="badge b-up">${I('plus',11,2.5)}${n} on chart</span>`:''}</button>`}).join('')||'<div class="empty">No indicators match</div>'};
-  draw();$('#iq').addEventListener('input',draw);
-  $('#icats').addEventListener('click',e=>{const c=e.target.closest('[data-icat]');if(!c)return;cat=c.dataset.icat;$$('#icats .chip').forEach(x=>x.classList.toggle('on',x===c));draw()});
-  $('#ilist').addEventListener('click',e=>{const r=e.target.closest('[data-addind]');if(r&&addInd(r.dataset.addind)){draw();toast(DEFS[r.dataset.addind].name+' added','ok')}});
-  $('.tpl').addEventListener('click',e=>{const b=e.target.closest('[data-tpl]');if(!b)return;const t=TEMPLATES[+b.dataset.tpl];chart.ind=[];t.ind.forEach(([k,p])=>addInd(k,p,true));chart.indChanged();renderToolbar();closeModal();toast(`Template applied: ${t.n}`,'ok')})}
 function addInd(key,params,silent){const d=DEFS[key];
   if(key==='vol'&&chart.ind.some(i=>i.key==='vol')){if(!silent)toast('Volume is already on the chart','warn');return false}
   if(d.pane==='sub'&&chart.ind.filter(i=>DEFS[i.key].pane==='sub').length>=4){toast('Up to 4 indicator panes. Remove one first.','warn');return false}
@@ -4357,7 +4343,6 @@ const TF_RE=/^(\d{1,3})([mHDWM])$/,TF_LIM={m:720,H:24,D:30,W:8,M:12},TF_NAME={m:
 const tfValid=k=>{const m=TF_RE.exec(k);return !!m&&+m[1]>=1&&+m[1]<=TF_LIM[m[2]]};
 const tfSecOf=k=>{const m=TF_RE.exec(k);return m?+m[1]*({m:60,H:3600,D:86400,W:604800,M:2592000}[m[2]]):0};
 function saveCustomTfs(){try{localStorage.setItem('rs-tfs',JSON.stringify(TFS.filter(t=>t.custom).map(t=>t.k)))}catch(e){}}
-function addCustomTf(k,persist=true){if(!tfValid(k))return null;let t=TFS.find(x=>x.k===k);if(!t){t={k,sec:tfSecOf(k),custom:true};TFS.push(t);TFS.sort((a,b)=>a.sec-b.sec)}if(persist)saveCustomTfs();return t}
 try{JSON.parse(localStorage.getItem('rs-tfs')||'[]').forEach(k=>addCustomTf(k,false))}catch(e){}
 function applyTf(t){if(App.view==='options'){if(t.sec>86400){toast(tfLabel(t.k)+' added — it is available on the Trade chart','info');return}OPT.tf=t;drawOptTf();optLoad(false);return}
   App.tf=t;loadChart(false);renderToolbar()}
