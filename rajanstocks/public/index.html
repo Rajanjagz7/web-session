@@ -3298,6 +3298,9 @@ function pkLiveSave(){try{localStorage.setItem(App.pkl._k,JSON.stringify(App.pkl
 /* keys cleared with "Reset log" stay out of the log for the rest of the day (their cards are still shown, just not recorded again) */
 let _pkHid=null,_pkTmp={};
 function pkHidKeys(){const k='pkk-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);if(!_pkHid||_pkHid.k!==k){let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]')||[]}catch(e){}_pkHid={k,s:new Set(a)}}return _pkHid.s}
+/* "Reset log" = nothing is recorded again until tomorrow (a card that appears later - a new pick, another tab, a refresh - used to start the log again) */
+const pkOffKey=()=>'pkoff-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);
+function pkLogOff(){try{return localStorage.getItem(pkOffKey())==='1'}catch(e){return false}}
 function pkHidAdd(keys){const s=pkHidKeys();keys.forEach(x=>s.add(x));try{localStorage.setItem(_pkHid.k,JSON.stringify([...s]))}catch(e){}}
 const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
 /* SL 🚫 / T1 ✅ marks: a hit shows the mark (and the time if known), a level not reached yet shows its price */
@@ -3319,7 +3322,7 @@ function pkStory(m,h,best,hp,post){hp=hp||{};const ev=[];if(h.sl)ev.push(['SL',h
   return s+(known?'':' (order unknown)')}
 function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).filter(v=>v>0);if(!px||!(o.stop>0)||!T.length)return null;
   if(o.dir==='L'?o.stop>=T[0]:o.stop<=T[0])return null;      /* levels that point the other way (a NO SIGNAL card with a bearish stop/targets) are not a trade: no SL/T marks */
-  const L=o.dir==='L',hidK=pkHidKeys().has(o.key),st=hidK?_pkTmp:pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec),h=rec.h||(rec.h={});
+  const L=o.dir==='L',hidK=pkLogOff()||pkHidKeys().has(o.key),st=hidK?_pkTmp:pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec),h=rec.h||(rec.h={});
   const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl),mark=(k,t,pp)=>{if(!h[k]){h[k]=t;(rec.hp||(rec.hp={}))[k]=pp!=null?pp:px}};
   if(beyond(px,o.stop,true))mark('sl',now);T.forEach((v,i)=>{if(beyond(px,v,false))mark('t'+(i+1),now)});
   if(o.morning&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
@@ -3433,7 +3436,7 @@ document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest
   if(f){App.pkLogF=f.dataset.pklf;pkLogRefresh();return}
   if(r){if(App.pkLogArm&&Date.now()-App.pkLogArm<6000){App.pkLogArm=0;try{const ks=[],hid=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&/^pk[lf]-\d{4}-\d\d-\d\d$/.test(k))ks.push(k)}
     try{pkHidAdd(Object.keys(pkLiveStore()))}catch(y){}try{pkfLoad().forEach(x=>hid.push(x.sym+'|'+x.dir));(App.picks.picks||[]).forEach(q=>{const d=pkfDetect(q);if(d)hid.push(d.sym+'|'+d.dir)});localStorage.setItem('pkx-'+pkfKey().slice(4),JSON.stringify(hid))}catch(y){}   /* remember what was cleared so the same picks are not tracked again today */
-    ks.forEach(k=>localStorage.removeItem(k))}catch(x){}App.pkl=null;App.pkf=null;pkLogRefresh();toast('Picks log cleared')}
+    ks.forEach(k=>localStorage.removeItem(k));localStorage.setItem(pkOffKey(),'1');for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/^pkoff-\d{4}-\d\d-\d\d$/.test(k)&&k!==pkOffKey())localStorage.removeItem(k)}}catch(x){}App.pkl=null;App.pkf=null;pkLogRefresh();toast('Picks log cleared - it stays empty until tomorrow')}
     else{App.pkLogArm=Date.now();pkLogRefresh();setTimeout(pkLogRefresh,6100)}}});
 window.pkLogHTML=pkLogHTML;
 setInterval(()=>{try{if(pkfScan())pkFreshTick();pkLiveTick();pkFreshTick()}catch(e){}},4000);
