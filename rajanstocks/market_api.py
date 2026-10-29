@@ -304,24 +304,6 @@ def market_open():
     return nse_calendar.session_open(datetime.now(IST))      # exchange holidays count as closed
 
 
-# Share of a normal day's volume that has usually traded by a time of day (minutes after 09:15; the open is heavy, mid-day is quiet, the close picks up).
-_VOL_CURVE = ((0, 0.0), (15, 0.10), (45, 0.20), (75, 0.28), (135, 0.40), (195, 0.52), (255, 0.65), (315, 0.80), (375, 1.0))
-
-
-def day_volume_frac(now=None):
-    """0.10..1.0: the part of a full day's volume normally done by `now` (IST). Volume so far / (average day x this) = volume pace."""
-    now = now or datetime.now(IST)
-    m = now.hour * 60 + now.minute - (9 * 60 + 15)
-    if m >= 375:
-        return 1.0
-    if m <= 0:
-        return 0.10
-    for (m0, f0), (m1, f1) in zip(_VOL_CURVE, _VOL_CURVE[1:]):
-        if m <= m1:
-            return max(0.10, f0 + (f1 - f0) * (m - m0) / (m1 - m0))
-    return 1.0
-
-
 def _num(v, d=0.0):
     try:
         return float(v) if v is not None else d
@@ -1366,7 +1348,6 @@ def _pick(sym, q, rows):
     avgv = sum(r["volume"] for r in rows[-21:-1]) / max(1, len(rows[-21:-1]))
     vol = _num(q.get("volume")) or _num(o.get("volume"))
     volx = vol / avgv if avgv else 0.0
-    volx_pace = volx / day_volume_frac() if market_open() else volx          # volume so far vs what is normal BY NOW (9:15-10:15 holds ~1/4 of a day, so 2x "of the day" is impossible then)
 
     reasons, score = [], 0
     rng = hi - lo
@@ -1430,7 +1411,7 @@ def _pick(sym, q, rows):
         "open": round(op, 2), "high": round(hi, 2), "low": round(lo, 2),                     # today's range: the Open = Low / Open = High screens read these
         "hi20": round(max(r["high"] for r in rows[-21:-1]), 2), "lo20": round(min(r["low"] for r in rows[-21:-1]), 2),   # last 20 completed sessions: how much room is left to run
         "rsi": round(rsi, 1) if rsi is not None else None,
-        "volx": round(volx, 2), "volxPace": round(volx_pace, 2), "atr": round(atr, 2), "reasons": reasons,
+        "volx": round(volx, 2), "atr": round(atr, 2), "reasons": reasons,
         "spark": [round(c, 2) for c in closes[-20:]],
         "plans": plans,
     }
