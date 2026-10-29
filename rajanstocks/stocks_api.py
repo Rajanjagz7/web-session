@@ -98,6 +98,70 @@ def _equities():
         return _eq
 
 
+BSE_URL = "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz"
+BSE_TYPES = {"A", "B", "X", "XT", "T", "Z", "M", "MT"}     # equity groups; F / G / P / E ... are bonds, gilts, preference shares and funds
+_bse = {"t": 0.0, "rows": [], "by_sym": {}}
+
+
+def _bse_equities():
+    """Companies listed on BSE only (no NSE listing = same ISIN missing from the NSE list). Loaded on first use, kept for TTL."""
+    with _lock:
+        if _bse["rows"] and time.time() - _bse["t"] < TTL:
+            return _bse
+    nse = _equities()
+    try:
+        r = requests.get(BSE_URL, timeout=30, headers=UA)
+        r.raise_for_status()
+        data = json.loads(gzip.decompress(r.content))
+    except Exception:
+        if _bse["rows"]:
+            return _bse
+        raise HTTPException(502, "Could not load the BSE instrument list")
+    isins = {x["i"] for x in nse["rows"] if x.get("i")}
+    rows, by = [], {}
+    for x in data:
+        if x.get("segment") != "BSE_EQ" or x.get("instrument_type") not in BSE_TYPES or x.get("isin") in isins:
+            continue
+        sym = (x.get("trading_symbol") or "").upper()
+        if not sym:
+            continue
+        if sym in nse["by_sym"] or sym in by:
+            sym += ".BSE"                                   # same ticker as a different NSE company: keep both, tell them apart
+        row = {"s": sym, "n": (x.get("name") or sym).title().strip(), "k": x.get("instrument_key"), "i": x.get("isin"), "x": "BSE"}
+        rows.append(row)
+        by[sym] = row
+    rows.sort(key=lambda r: r["s"])
+    with _lock:
+        _bse.update(t=time.time(), rows=rows, by_sym=by)
+    return _bse
+
+
+@router.get("/stocks/bse")
+def stocks_bse(q: str = "", limit: int = 30):
+    """BSE-only companies matching q, with live quotes (one Upstox call for the matches). Used by the Markets search."""
+    q = q.strip().upper()
+    if len(q) < 2:
+        return {"results": [], "total": 0}
+    rows = _bse_equities()["rows"]
+    limit = max(1, min(limit, 60))
+    alt = q.replace("SH", "S").replace("KH", "K")           # "vishaka" for Visaka, "khaitan" for Kaitan: people spell these names both ways
+    qs = {q, alt}
+    hit = [r for r in rows if any(r["s"].startswith(x) for x in qs)] + [r for r in rows if not any(r["s"].startswith(x) for x in qs)
+                                                                       and any(x in r["s"] or x in r["n"].upper() for x in qs)]
+    out = hit[:limit]
+    try:
+        qt = _quote_rows([r["s"] for r in out])
+    except Exception:
+        qt = {}
+    res = []
+    for r in out:
+        x = qt.get(r["s"]) or {}
+        last, prev = x.get("last") or 0, x.get("prev") or 0
+        res.append({"s": r["s"], "n": r["n"], "ex": "BSE", "last": last or None, "chg": round((last / prev - 1) * 100, 2) if last and prev else None,
+                    "yh": x.get("yh") or None, "yl": x.get("yl") or None, "vol": x.get("vol") or None})
+    return {"results": res, "total": len(hit)}
+
+
 @router.get("/stocks/all")
 def stocks_all():
     """Compact list of every NSE equity: [[symbol, name], ...]."""
@@ -204,9 +268,10 @@ def index_stocks(index: str = "nifty50"):
 
 def _quote_rows(symbols: List[str]) -> Dict[str, dict]:
     eq = _equities()
+    bse = _bse["by_sym"] if _bse["rows"] else {}              # BSE-only names are known once the Markets search has loaded them
     keymap = {}
     for s in symbols:
-        r = eq["by_sym"].get(s)
+        r = eq["by_sym"].get(s) or bse.get(s)
         if r and r.get("k"):
             keymap[r["k"]] = s
     out = {}

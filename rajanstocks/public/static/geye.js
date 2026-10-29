@@ -6,7 +6,7 @@
   const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const LS = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const SS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
-  const G = { data: LS('ge-cache', null), busy: false, err: null, ts: 0, seq: 0, tab: LS('ge-tab', 'overview'), open: null, sort: 'score', filt: 'ALL', opt: null, optExp: '', sec: null, secBusy: false, secErr: null, secTs: 0, secSel: null, sigSec: LS('ge-sigsec', 'ALL'), sq: '', ssort: 'opp', ssig: 'ALL', slim: 25, stock: null };
+  const G = { data: LS('ge-cache', null), busy: false, err: null, ts: 0, seq: 0, tab: LS('ge-tab', 'overview'), open: null, sort: 'score', filt: 'ALL', opt: null, optExp: '', sec: null, secBusy: false, secErr: null, secTs: 0, secSel: null, sigSec: LS('ge-sigsec', 'ALL'), sq: '', bse: {}, ssort: 'opp', ssig: 'ALL', slim: 25, stock: null };
   const NA = '<span class="ge-na" title="Not available right now">N/A</span>';
   const isN = v => v != null && isFinite(v);
   const n0 = v => isN(v) ? Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 }) : NA;
@@ -325,6 +325,24 @@
     const key = { opp: r => -(r.opp ?? -1), chg: r => -(r.chg ?? -99), ret20: r => -(r.ret20 ?? -99), volx: r => -(r.volx ?? -1), name: r => r.s }[G.ssort] || (r => -(r.opp ?? -1));
     return l.slice().sort((a, b) => { const x = key(a), y = key(b); return x < y ? -1 : x > y ? 1 : 0; });
   }
+  /* BSE-only companies (no NSE listing, so not in the Nifty Total Market list): looked up on demand while searching, one quote call per search */
+  function bseRows() {
+    const q = (G.sq || '').trim().toUpperCase(); if (q.length < 2) return '';
+    const b = G.bse[q];
+    if (b === undefined) { loadBse(q); return '<p class="muted" style="margin:8px 4px;font-size:12px">Searching BSE…</p>'; }
+    if (!b || !b.length) return '';
+    return `<h4 class="ge-h3" style="margin-top:12px">Listed on BSE only <small class="muted">${b.length} match${b.length > 1 ? 'es' : ''}</small></h4>
+      <div class="ge-tw"><table class="ge-t ge-stk"><thead><tr><th>Stock</th><th class="r">Price</th><th class="r">Day</th><th>52W</th></tr></thead><tbody>
+      ${b.map(r => `<tr><td><b>${E(r.s)}</b><small>${E(r.n)} · BSE</small></td><td class="r num">${isN(r.last) ? n2(r.last) : NA}</td><td class="r num ${cc(r.chg)}">${pc(r.chg)}</td><td>${r.yh && r.yl && r.last ? rangeMini({ last: r.last, yh: r.yh, yl: r.yl, rangePos: r.yh > r.yl ? Math.round((r.last - r.yl) / (r.yh - r.yl) * 100) : null }) : ''}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  async function loadBse(q) {
+    G.bse[q] = null;                                         // in flight: no repeat calls for the same text
+    try {
+      const r = await (await fetch('/api/m/stocks/bse?q=' + encodeURIComponent(q) + '&limit=20', { cache: 'no-store' })).json();
+      G.bse[q] = r.results || [];
+    } catch (e) { G.bse[q] = []; }
+    const h = document.getElementById('geStk'); if (h && (G.sq || '').trim().toUpperCase() === q) h.innerHTML = stockTable();
+  }
   function stockTable() {
     const l = stockRows(), shown = l.slice(0, G.slim), all = G.sigSec === 'ALL';
     return `<div class="ge-tw ge-stw"><table class="ge-t ge-stk"><thead><tr><th>Stock</th>${all ? '<th>Sector</th>' : ''}<th class="r">Price</th><th class="r">Day</th><th class="r">1M</th><th>52W</th><th class="r">Vol x</th><th>Signal</th><th>Opportunity${tip('opportunity')}</th></tr></thead><tbody>
@@ -332,6 +350,7 @@
         <td class="r num">${n2(r.last)}</td><td class="r num ${cc(r.chg)}">${pc(r.chg)}</td><td class="r num ${cc(r.ret20)}">${pc(r.ret20)}</td><td>${rangeMini(r)}</td>
         <td class="r num">${isN(r.volx) ? r.volx.toFixed(1) + 'x' : NA}</td><td>${r.signal && r.signal !== 'NEUTRAL' ? `<span class="ge-badge ${r.signal === 'BUY' ? 'bull' : 'bear'}">${E(r.signal)}${isN(r.strength) ? ' ' + Math.round(r.strength) + '%' : ''}</span>` : '<span class="muted">—</span>'}</td><td>${oppB(r.opp)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">No stocks match.</td></tr>'}
       </tbody></table></div>
+      ${bseRows()}
       <div class="ge-more2"><span class="muted">${shown.length} of ${l.length} stocks</span>${l.length > shown.length ? '<button type="button" class="btn-xs" data-gemore="1">Show 25 more</button>' : ''}</div>`;
   }
   function stocksBlock() {
