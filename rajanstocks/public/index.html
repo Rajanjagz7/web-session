@@ -3568,44 +3568,19 @@ function patchPicks(el,tpl){const t=document.createElement('div');t.innerHTML=tp
   if(typing){const lf=lp.querySelector('#pkFoot'),nf=np.querySelector('#pkFoot');if(lf&&nf)lf.innerHTML=nf.innerHTML}else{lp.innerHTML=np.innerHTML;pkAlign(el)}
   ['#pkRes','#pkPanel','#pkFresh'].forEach(i=>{const a=el.querySelector(i),b=t.querySelector(i);if(a&&b)a.hidden=b.hidden});const lt=el.querySelector('.pk-sec'),nt=t.querySelector('.pk-sec');if(lt&&nt)lt.innerHTML=nt.innerHTML;
   return true}
-/* Rider (user, 29 Oct): a sudden volume spike (>= 2x the 20-day average) AND price breaking out of its range - above the 20-day high or pressed to today's high
-   (buy side), below the 20-day low or pressed to today's low (sell side). Stocks and indices; sorted by the size of the spike. */
-/* Rider: option-premium patterns (support bounce / heavy selling + volume surge) on index options, from /api/m/rider/premium; the Testing week table paper-trades them */
-const PKP={d:null,ts:0,busy:false};
-function pkPremLoad(){if(PKP.busy||Date.now()-PKP.ts<60000||document.hidden)return;PKP.busy=true;
-  api('/api/m/rider/premium').then(r=>{PKP.d=r;PKP.ts=Date.now()}).catch(()=>{PKP.ts=Date.now()-45000}).finally(()=>{PKP.busy=false;if(App.view==='picks'&&App.pk.mkt==='RIDER')renderPicks(true)})}
-function pkPremHTML(){pkPremLoad();const d=PKP.d,sg=d&&d.signals||[];
-  const head='<div class="pk-meta muted" style="margin:0 0 6px"><b>Option premium riders</b> · NIFTY and BANKNIFTY near-ATM, 5-minute candles</div>';
-  if(!d)return head+'<div class="empty" style="padding:10px">Reading option premiums…</div>';
-  if(d.open===false)return head+'<div class="empty" style="padding:10px">Premium riders show while the market is open.</div>';
-  if(!sg.length)return head+'<div class="empty" style="padding:10px">No premium is bouncing from support or being dumped on a volume surge right now.</div>';
-  return head+'<div class="pk-grid">'+sg.map(g=>`<div class="card pkprem"><div class="pkprem-h"><b>${esc(g.contract)}</b><span class="badge b-up">BUY</span></div><div class="muted" style="font-size:12px">${esc(g.label)} · volume ${g.volx}x</div>
-    <div class="pkprem-n"><span>Entry <b class="num">${g.entry}</b></span><span>SL <b class="num" style="color:var(--down)">${g.stop}</b></span><span>Target <b class="num" style="color:var(--up)">${g.target}</b></span><span>R:R <b>1:${g.rr}</b></span></div>
-    <div class="muted" style="font-size:12px;margin-top:4px">${esc(g.why||'')}</div></div>`).join('')+'</div>'}
 /* Search any listed stock by symbol or name, also the ones with no setup today (the list hides names below the strength / liquidity floors) */
 const PKL={q:'',items:[],px:{},busy:false,t:null};
 function pkLookGo(q){clearTimeout(PKL.t);PKL.t=setTimeout(async()=>{if(PKL.busy)return;PKL.busy=true;try{const r=await api('/api/m/stock-lookup?q='+encodeURIComponent(q));PKL.items=(r&&r.items)||[];PKL.q=q;PKL.err=false;PKL.src=(r&&r.src)||'';
     const need=PKL.items.filter(x=>!(window._pkShown&&window._pkShown.has(x.s))).map(x=>x.s);PKL.px={};
     if(need.length){try{const z=await api('/api/m/quotes?symbols='+encodeURIComponent(need.join(',')));for(const k of (z&&z.quotes)||[])PKL.px[k.s]=k}catch(e){}}}catch(e){PKL.items=[];PKL.q=q;PKL.err=true}
   PKL.busy=false;if(App.view==='picks'&&(App.pk.q||'').trim().toLowerCase()===q)renderPicks(true)},450)}
-function pkLookHTML(f){const q=(f.q||'').trim().toLowerCase();if(q.length<2||f.kind==='INDEX'||f.mkt==='RIDER')return '';
+function pkLookHTML(f){const q=(f.q||'').trim().toLowerCase();if(q.length<2||f.kind==='INDEX')return '';
   if(PKL.q!==q){pkLookGo(q);return '<div class="muted" style="font-size:12px;margin-top:10px">Searching all listed stocks…</div>'}
   const rows=PKL.items.filter(x=>!(window._pkShown&&window._pkShown.has(x.s)));if(PKL.err)return '<div class="pklook"><div class="muted" style="font-size:12px">Could not search the full stock list just now (market data is busy). <button type="button" class="btn-xs" data-pklretry="1">Try again</button></div></div>';if(!rows.length)return PKL.items.length?'':`<div class="pklook"><div class="muted" style="font-size:12px">No other listed stock matches “${esc(f.q.trim())}”${PKL.src==='symbols'?' (searching symbols only right now - try the exact symbol)':''}.</div></div>`;
   return `<div class="pklook"><div class="pklook-h">Other listed stocks matching “${esc(f.q.trim())}”</div>${rows.map(x=>{const k=PKL.px[x.s],c=k&&k.last>0&&k.prev>0?(k.last/k.prev-1)*100:null;
     return `<button class="pklook-r" data-sym="${esc(x.s)}"><span class="t"><b>${esc(x.s)}</b><small>${esc(x.n||'')}${x.ind?' · '+esc(x.ind):''}</small></span><span class="num">${k&&k.last>0?k.last.toFixed(2):''}</span><span class="badge ${c==null?'':c>=0?'b-up':'b-down'} num">${c==null?'–':(c>=0?'+':'')+c.toFixed(2)+'%'}</span></button>`}).join('')}<div class="muted" style="font-size:12px;margin-top:6px">These have no trade setup in the current list: strength below 55%, too little volume, or not scanned yet today. Tap one to open its chart.</div></div>`}
-function pkRiders(picks,sig,q){const out=[];const qq=(q||'').trim().toUpperCase();
-  for(const p of picks||[]){const v=p.volx||0,L=p.ltp||0;if(v<2||!(L>0)||p.high==null||p.low==null)continue;if(qq&&!(p.s||'').toUpperCase().includes(qq))continue;
-    const rg=(p.high-p.low)||0,ch=p.chg||0;let side=null,why='';
-    if(p.hi20&&L>=p.hi20*0.998&&ch>0){side='BUY';why='broke the 20-day high'}else if(p.lo20&&L<=p.lo20*1.002&&ch<0){side='SELL';why='broke the 20-day low'}
-    else if(rg>0&&ch>=1&&L>=p.high-0.2*rg){side='BUY';why='pressing today\'s high'}else if(rg>0&&ch<=-1&&L<=p.low+0.2*rg){side='SELL';why='pressing today\'s low'}
-    if(!side)continue;if(sig==='BUY'&&side!=='BUY'||sig==='SELL'&&side!=='SELL')continue;
-    if(p.kind==='index'){const s0=pkIdxSide(p);if(s0&&s0!==side)continue}
-    const d=side==='BUY'?1:-1,risk=Math.max(side==='BUY'?L-p.low:p.high-L,p.atr||L*0.01,L*0.003),dp=L<100?2:1;
-    out.push({...p,signal:side,plans:null,entry:+L.toFixed(2),stop:+(L-d*risk).toFixed(2),target:+(L+d*1.5*risk).toFixed(2),target2:+(L+d*2.5*risk).toFixed(2),risk:+risk.toFixed(2),rr:1.5,
-      reasons:[`Rider: volume ${v.toFixed(1)}x the 20-day average and price ${why}`].concat(p.reasons||[])})}
-  return out.sort((a,b)=>(b.volx||0)-(a.volx||0))}
 function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
-  if(f.kind!=='INDEX'&&f.mkt!=='CASH'&&f.mkt!=='RIDER')f.mkt='FNO';if(f.mkt==='RIDER'){f.hz='ALL';f.str='ALL'}   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
+  if(f.kind!=='INDEX'&&f.mkt!=='CASH')f.mkt='FNO'   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
   if(f.kind==='INDEX'){f.hz='ALL';f.mkt='ALL';f.str='ALL';f.q='';if(f.sig==='EVERY')f.sig='TOP'}else if(f.sig==='TOP')f.sig='ALL'   // stocks have no Top 10-15 chip any more (it leads Fresh picks); index calls only have the Show filter: nothing hidden can empty the list
   const isIdx=f.kind==='INDEX';
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
@@ -3657,7 +3632,6 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
       return(SORTS[f.sort]||SORTS.strength)(a,b);
     });
 
-    if(f.mkt==='RIDER'&&f.kind!=='INDEX')l=pkRiders(P.picks,f.sig,f.q);
     const size=f.size>0?f.size:l.length||1,pages=Math.max(1,Math.ceil(l.length/size));f.page=Math.min(Math.max(0,f.page||0),pages-1);
     const part=l.slice(f.page*size,(f.page+1)*size);window._pkShown=new Set(l.map(p=>p.s));
     const nums=[];for(let i=0;i<pages;i++){if(i===0||i===pages-1||Math.abs(i-f.page)<=1)nums.push(i);else if(nums[nums.length-1]!==-1)nums.push(-1)}
@@ -3675,20 +3649,20 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
    <div class="seg pk-sec" role="tablist" aria-label="Picks sections"><button type="button" role="tab" class="${pkSec()==='fresh'?'on':''}" aria-selected="${pkSec()==='fresh'}" data-pksec="fresh">⚡ Fresh picks${pkfLoad().length?` <i class="pk-n">${pkfLoad().length}</i>`:''}</button><button type="button" role="tab" class="${pkSec()==='browse'?'on':''}" aria-selected="${pkSec()==='browse'}" data-pksec="browse">🔎 Browse &amp; filter</button></div>
    <div id="pkFresh" ${pkSec()==='fresh'?'':'hidden'}>${pkFreshHTML()}</div>
    <div class="card pkf" id="pkPanel" ${pkSec()==='browse'?'':'hidden'}>
-     <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['OPT','Options'],['SOPT','Stock options'],['STK','Stock only'],['RID','Rider']],isIdx?'OPT':f.mkt==='CASH'?'STK':f.mkt==='RIDER'?'RID':'SOPT','tab')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
-     <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):(f.mkt==='RIDER'?chips([['ALL','All riders'],['BUY','Breaking up'],['SELL','Breaking down']],f.sig,'sig'):f.mkt==='CASH'?chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig'):chips([['ALL','All ideas'],['BUY','Buy · call'],['SELL','Sell · put / short'],['EVERY','All F&O stocks']],f.sig,'sig'))}</div></div>
-     ${isIdx||f.mkt==='RIDER'?'':`<div class="pkf-row"><span class="pkf-l">Horizon</span><div class="seg pkf-seg">${segs([['ALL','Any'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>`}
+     <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['OPT','Options'],['SOPT','Stock options'],['STK','Stock only'],['VOL','Volume surge']],isIdx?'OPT':f.mkt==='CASH'?'STK':f.sort==='volx'?'VOL':'SOPT','tab')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
+     <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):(f.mkt==='CASH'?chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig'):chips([['ALL','All ideas'],['BUY','Buy · call'],['SELL','Sell · put / short'],['EVERY','All F&O stocks']],f.sig,'sig'))}</div></div>
+     ${isIdx?'':`<div class="pkf-row"><span class="pkf-l">Horizon</span><div class="seg pkf-seg">${segs([['ALL','Any'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>`}
      ${isIdx?'':`<div class="pkf-sel"><label>Industry<select class="inp" id="pkInd" aria-label="Filter industry"><option value="ALL">All industries</option>${[...new Set(((P&&P.picks)||[]).filter(p=>p.kind!=='index').map(p=>p.ind||p.sec).filter(Boolean))].sort().map(k=>`<option value="${esc(k)}" ${f.ind===k?'selected':''}>${esc(k)}</option>`).join('')}</select></label><label>Strength<select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong ≥65%</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High ≥75%</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker &lt;65%</option></select></label><label>Sort<select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Per page<select class="inp" id="pkSize" aria-label="Per page">${[10,15,30,100,500,1000].map(k=>`<option value="${k}" ${f.size===k?'selected':''}>${k}</option>`).join('')}</select></label></div>`}
      <div id="pkFoot">${pkDirty(f)?'<div class="pkf-foot"><span>Filters applied</span><button type="button" class="pkf-rst" data-pkreset="1">Reset filters</button></div>':''}</div>
    </div>
    
-   <div id="pkRes" ${pkSec()==='browse'?'':'hidden'}>${f.mkt==='RIDER'&&f.kind!=='INDEX'?pkPremHTML():''}${body}${pkLookHTML(f)}</div>
+   <div id="pkRes" ${pkSec()==='browse'?'':'hidden'}>${body}${pkLookHTML(f)}</div>
    <div class="card" style="margin-top:14px"><div class="card-h"><h3>Market news</h3></div><div class="nws" id="pkNews">${news||'<div class="empty">Loading news…</div>'}</div></div></div>`;
   if(partial===true&&patchPicks(el,_tpl)){liveUpdate();if(window.geTags)geTags(el);return}
   el.innerHTML=_tpl;pkAlign(el);
   if(!GL.items&&!GL.busy)loadGlobal(true);
   if(_t0!==null){_sp.scrollTop=_st;const pa=_keep&&el.querySelector('.pkf');if(pa){const d=pa.getBoundingClientRect().top-_t0;if(Math.abs(d)>1)_sp.scrollTop=_st+d}}liveUpdate();if(window.geTags)geTags(el);drawPkFut()}   /* Index futures block removed: it repeated NIFTY / BANKNIFTY / FINNIFTY / MIDCPNIFTY from the Indices cards just above (and polled /api/m/futures/board every 15s) */
-document.addEventListener('click',e=>{if(e.target.closest('[data-pklretry]')){PKL.q='';renderPicks(true);return}const rs=e.target.closest('[data-pkreset]');if(rs){Object.assign(App.pk,{sig:'ALL',kind:'STOCK',hz:'ALL',mkt:'FNO',sort:'strength',size:15,page:0,q:'',str:'ALL',ind:'ALL'});App.pkKeep=true;renderPicks(true);return}const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');if(k==='tab'){App.pk.kind=v==='OPT'?'INDEX':'STOCK';App.pk.mkt=v==='STK'?'CASH':v==='RID'?'RIDER':'FNO';if(v==='RID'&&(App.pk.sig==='EVERY'||App.pk.sig==='TOP'))App.pk.sig='ALL';App.pk.page=0;if(v==='OPT'&&App.pk.sig==='EVERY')App.pk.sig='TOP';if(v!=='OPT'&&App.pk.sig==='TOP')App.pk.sig='ALL';App.pkKeep=true;renderPicks(true);return}App.pk[k]=v;App.pk.page=0;if(k==='mkt'&&v==='CASH'&&App.pk.sig==='TOP')App.pk.sig='ALL';if(k==='kind'&&v==='INDEX')App.pk.sig=App.pk.sig==='EVERY'?'TOP':App.pk.sig;App.pkKeep=true;renderPicks(true)}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
+document.addEventListener('click',e=>{if(e.target.closest('[data-pklretry]')){PKL.q='';renderPicks(true);return}const rs=e.target.closest('[data-pkreset]');if(rs){Object.assign(App.pk,{sig:'ALL',kind:'STOCK',hz:'ALL',mkt:'FNO',sort:'strength',size:15,page:0,q:'',str:'ALL',ind:'ALL'});App.pkKeep=true;renderPicks(true);return}const t=e.target.closest('[data-pkf],[data-act="rpicks"]');if(!t)return;if(t.dataset.pkf){const [k,v]=t.dataset.pkf.split(':');if(k==='tab'){App.pk.kind=v==='OPT'?'INDEX':'STOCK';App.pk.mkt=v==='STK'?'CASH':'FNO';if(v==='VOL')App.pk.sort='volx';else if(App.pk.sort==='volx')App.pk.sort='strength';App.pk.page=0;if(v==='OPT'&&App.pk.sig==='EVERY')App.pk.sig='TOP';if(v!=='OPT'&&App.pk.sig==='TOP')App.pk.sig='ALL';App.pkKeep=true;renderPicks(true);return}App.pk[k]=v;App.pk.page=0;if(k==='mkt'&&v==='CASH'&&App.pk.sig==='TOP')App.pk.sig='ALL';if(k==='kind'&&v==='INDEX')App.pk.sig=App.pk.sig==='EVERY'?'TOP':App.pk.sig;App.pkKeep=true;renderPicks(true)}else{if(App.pkBusy)return;App.pkBusy=true;if(!App.picks||App.picks.error)App.picks=null;renderPicks();
     Promise.all([loadPicks(true),window.obsRefresh?window.obsRefresh():window.godseyeRefresh?window.godseyeRefresh():null]).catch(()=>{}).finally(()=>{App.pkBusy=false;if(App.view==='picks')renderPicks()})}});
 
 
