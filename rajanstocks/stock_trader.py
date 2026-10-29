@@ -1,4 +1,8 @@
-"""Stock paper trader - its own Rs 5 lakh, cash stocks only (the Picks screen's "Stock only" tab: whole-market cash stocks that are not in F&O; CFG cashOnly), trading the Picks plans for each holding period.
+"""Stock paper trader - its own Rs 5 lakh, trading the Picks plans for each holding period.
+
+22 Oct logic restored (user, 30 Oct, to find why the book lost more since): EVERY Picks stock (F&O and cash, "cashOnly": False), entries from 09:20, and no automatic
+profit lock ("profitLock": False - the lock moved stops to breakeven at Rs 2,500 open profit and trailed from Rs 3,500, which stopped trades out of runners).
+Set CFG["cashOnly"] / ["profitLock"] back to True / True for the 28-29 Oct behaviour.
 
 Entries (09:20-14:30 on NSE trading days; intraday entries until 13:30):
   * For each horizon (intraday / swing / positional) the stocks whose own entry test passes (plans[h].ok, see
@@ -38,7 +42,7 @@ FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__
 HZ = ("intraday", "swing", "positional")
 CFG = {"capital": 500000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
        "maxOpen": {"intraday": 6, "swing": 10, "positional": 10}, "maxSessions": {"swing": 15, "positional": 40},
-       "cashOnly": True, "windowStart": "09:15", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
+       "cashOnly": False, "profitLock": False, "windowStart": "09:20", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
 _lock = threading.Lock()
 
 
@@ -263,7 +267,8 @@ def manage(st, now):
         d = 1 if t["side"] == "BUY" else -1
         t["unrealised"] = round(d * (px - t["entry"]) * t["qty"], 2)
         hi, lo = float(x.get("high") or px), float(x.get("low") or px)
-        _profit_lock(st, t, now)
+        if CFG.get("profitLock"):
+            _profit_lock(st, t, now)
         if not t.get("t1Hit") and d * ((hi if d > 0 else lo) - t["t1"]) >= 0:
             t["t1Hit"] = True
             t["stop"] = t["entry"]                                    # Target 1 reached: stop to breakeven

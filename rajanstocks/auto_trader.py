@@ -44,8 +44,8 @@ def _cap(cfg, key):
 
 PLAN_V = 202610282     # one-time switch (28 Oct 2026): Rs 10 L option buying (stock options + index, calls and puts) in three sleeves, the Rs 5 L share trader on
 IDX_V = 20261028       # one-time: index options are bought too (not only stock options) - stockOnly stays a setting that can be turned back on
-SLEEVES = {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0}      # Rs 10 L of option buying; the share trader has its own Rs 5 L
-SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
+SLEEVES = {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0, "old": 500000.0}      # Rs 10 L of option buying for the NEW IND sources + Rs 5 L for the OLD FILT filter (30 Oct); the cash share trader has its own Rs 5 L
+SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals", "old": "OLD FILT"}
 STOP_GAP_TOL = 0.02                      # a premium stop fills AT the stop unless the price seen is more than this far beyond it (a gap / fast move between two cycles): then it fills at that price
 MAX_SPREAD_OF_STOP = 0.8                 # an option is only bought when its bid/ask spread is at most this share of the premium stop (12.5% stop -> 10% spread, same limit as _contract; 0.4 blocked every opening-minute entry)
 SCAN_RETRIES = 3                         # a symbol whose indicator run failed is retried this many times (cycles) before it is closed for the day
@@ -125,6 +125,9 @@ def _load(cached=False, verify=False):
             st["_dirty"] = True
         if saved and saved.get("classicV") != 1:                # one-time (user, 28 Oct): auto trade ONLY the four classic entry types (1 / 2 indicators agree, stock screen, index call/put); Picks, Eagle, Gann angle, time cycle and Z Trend run as paper-only "shadow" signals for a week of testing
             st["cfg"].update(classicOnly=True, classicV=1)
+            st["_dirty"] = True
+        if saved and saved.get("splitV") != 1:                  # one-time (user, 30 Oct): OLD FILT trades in their own Rs 5 L sleeve, and every NEW IND source trades live (classic mode off) so the two filters can be compared
+            st["cfg"].update(classicOnly=False, splitV=1, sleeves={**(saved.get("sleeves") or dict(SLEEVES)), "old": SLEEVES["old"]})
             st["_dirty"] = True
         if saved.get("dayLimitV") != 45000:                    # one-time: the day P&L break is Rs 45,000 (later changes through the settings API stay)
             st["cfg"].update(dayPnlLimit=45000.0, dayLimitV=45000)
@@ -244,7 +247,12 @@ def _equity(st):
     return st["cfg"]["capital"] + sum(t.get("net", 0.0) for t in st["trades"] if t["status"] == "CLOSED")
 
 
-def _sleeve_of(key):
+def _sleeve_of(c):
+    """The sleeve an entry is sized and capped in. Every OLD FILT entry (the 22 Oct filter) has its own Rs 5 L; the NEW IND sources split into
+    Picks / Eagle / Indicator signals. Takes the candidate (or just its key: a bare key is never OLD FILT)."""
+    key = c.get("key") if isinstance(c, dict) else c
+    if isinstance(c, dict) and filter_set(c) == "OLD FILT":
+        return "old"
     return "picks" if key == "morning-pick" else "eagle" if key == "Eagle Trades" else "signals"
 
 
@@ -997,6 +1005,15 @@ def classic_filter(entries, extras_agree=False):
     return kept, paper
 
 
+def entry_priority(c, pmap):
+    """Order in which entries are taken (user, 30 Oct): 0 = stock options at Picks strength 100, 1 = Eagle (Open = High -> put, Open = Low -> call),
+    2 = stock options at strength 75+, 3 = index options, 4 = the rest. Equal tiers keep their existing order (rank, volume)."""
+    if c.get("kind") == "index":
+        return 3
+    stren = float((pmap.get(c.get("sym")) or {}).get("strength") or 0)
+    return 0 if stren >= 99.5 else 1 if c.get("key") == EAGLE else 2 if stren >= 75 else 4
+
+
 def _quality(p):
     """How good a stock's Picks row looks for the entry ranking (user, 29 Oct): strength >= 75% first, then more strength, then more volume
     (volume vs its own average, capped at 3x). Added to a candidate's rank so strong, busy stocks are bought before weak, quiet ones."""
@@ -1019,7 +1036,8 @@ GROUP_B = ("rajan-ha-momentum", "ut-bot", "rajan-trend-rider", "morning-pick", "
 GROUP_C = ("ut-bot", "rajan-trend-rider", "rajan-ha-momentum", "rajan-rsi2-pullback", "rajan-ibs-reversion", "rzt", "stock-screen", "index-call-put",
            "z-timecycle", "morning-pick", "Eagle Trades")
 C_CFG = {"buyOnly": False, "pairSell": True, "premSlPct": 0.30, "riskPct": 0.5, "classicOnly": False}
-GROUP = (os.environ.get("AUTO_GROUP") or "").strip().upper()          # "A" / "B" / "" (= every source, the original behaviour)
+GROUP = (os.environ.get("AUTO_GROUP") or "").strip().upper()          # "A" / "B" / "C" = an indicator subset for the retired A/B test; anything else (or empty) = every source
+GROUP = GROUP if GROUP in ("A", "B", "C") else ""
 
 
 def profile_ok(c, group=None):
@@ -1343,7 +1361,7 @@ def open_trade(st, c, today):
     stop_u = entry_u - d * risk_u
     tgts = [round(entry_u + d * r * risk_u, 2) for r in TARGET_LADDER] if variant == "fixed" else None     # T1..T7 on the underlying
     target_u = tgts[-1] if tgts else None                                                                    # the last one (10R) ends the trade
-    sl_name = _sleeve_of(c.get("key"))
+    sl_name = _sleeve_of(c)
     sl_eq = _sleeve_equity(st, sl_name)
     base_eq = sl_eq if sl_eq else _equity(st)                # a sleeve sizes its own trades (risk % and the 20% position cap)
     budget = base_eq * cfg["riskPct"] / 100
@@ -1987,6 +2005,11 @@ def _run_cycle(now, force, dry):
                            and not (cfg.get("buyOnly") and (c.get("key") == "rzt-hedge" or c.get("pos") == "short"))]
                 if n0 != len(entries):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} skipped (buy-only / stock-options-only)"
+            try:
+                _pm = _screen_score()
+                entries = sorted(entries, key=lambda c: entry_priority(c, _pm))          # stable: strength 100 first, then Eagle, strength 75+, index, the rest
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"entry priority failed: {str(e)[:80]}"})
             slots = len(entries)
             if not force and _mins(now) <= _hm(cfg["windowStart"]):
                 burst = int(cfg.get("openBurstCap") or 12)

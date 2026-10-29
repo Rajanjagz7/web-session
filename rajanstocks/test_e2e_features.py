@@ -158,3 +158,18 @@ def test_gods_eye_tabs_show_flows_options_and_signals(app):
     app.page.wait_for_timeout(300)
     assert not app.ev("!!document.querySelector('.ge-det')"), "details drawer did not close"
     app.check_clean()
+
+
+def test_trade_on_a_new_device_asks_what_to_trade_and_remembers_it(app, server):
+    # a device with nothing saved must not open on Nifty: it shows a chooser and loads nothing until a symbol is picked
+    app.page.goto(server + "/?nogate=1#options")
+    app.page.evaluate("localStorage.removeItem('rs-opt-sym')")
+    app.page.goto(server + "/?nogate=1#options")
+    app.page.wait_for_function("!document.getElementById('boot')", timeout=120000)
+    app.page.wait_for_selector("#optGate", timeout=30000)
+    assert not app.ev("!!document.getElementById('optChain')"), "the chain screen loaded before a choice was made"
+    app.page.select_option("#optGate", "RELIANCE")
+    app.page.wait_for_function("document.getElementById('optSym') && document.getElementById('optSym').value === 'RELIANCE'", timeout=30000)
+    app.page.goto(server + "/?nogate=1#options")
+    app.page.wait_for_function("!document.getElementById('boot')", timeout=120000)
+    app.page.wait_for_function("document.getElementById('optSym') && document.getElementById('optSym').value === 'RELIANCE'", timeout=30000)

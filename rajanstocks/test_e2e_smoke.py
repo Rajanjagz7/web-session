@@ -76,6 +76,7 @@ class Page:
     def __init__(self, browser, kind):
         self.ctx = browser.new_context(**VIEWPORTS[kind])
         self.ctx.add_init_script(NO_PUSH_PROMPT)
+        self.ctx.add_init_script("try{if(localStorage.getItem('rs-opt-sym')===null&&!/nogate/.test(location.search))localStorage.setItem('rs-opt-sym','NIFTY')}catch(e){}")   # a brand-new device is asked what to trade; the other tests start with a choice made
         self.page = self.ctx.new_page()
         self.kind = kind
         self.js, self.http = [], []

@@ -101,9 +101,9 @@ def test_stock_only_skips_the_index_screen(monkeypatch):
 
 
 def test_sleeves_split_the_10_lakh_option_book():
-    assert at.DEFAULT_CFG["sleeves"] == {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0}
-    assert sum(at.DEFAULT_CFG["sleeves"].values()) == at.DEFAULT_CFG["capital"]
-    assert at._sleeve_of("morning-pick") == "picks" and at._sleeve_of("Eagle Trades") == "eagle" and at._sleeve_of("Z Trend") == "signals"
+    assert at.DEFAULT_CFG["sleeves"] == {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0, "old": 500000.0}
+    assert sum(v for k, v in at.DEFAULT_CFG["sleeves"].items() if k != "old") == at.DEFAULT_CFG["capital"]      # the Rs 5 L OLD FILT sleeve is on top of the Rs 10 L
+    assert at._sleeve_of("morning-pick") == "picks" and at._sleeve_of("Eagle Trades") == "eagle" and at._sleeve_of("Z Trend") == "signals" and at._sleeve_of({"key": "x", "strategies": ["a", "b"]}) == "old" and at._sleeve_of({"key": "stock-screen"}) == "old"
     st = {"cfg": {**at.DEFAULT_CFG}, "trades": [
         {"sleeve": "picks", "status": "CLOSED", "net": -12000.0}, {"sleeve": "eagle", "status": "CLOSED", "net": 5000.0},
         {"status": "CLOSED", "net": 99999.0},                                  # an old trade with no sleeve moves no sleeve
@@ -140,3 +140,10 @@ def test_index_options_are_bought_by_default(monkeypatch):
     out = at.fill_slots(st, "2026-10-28", [])
     assert [c["sym"] for c in out] == ["NIFTY"] and out[0]["kind"] == "index" and out[0]["side"] == "BUY"
     assert at._sleeve_of(out[0]["key"]) == "signals"
+
+
+def test_entry_priority_strength_100_then_eagle_then_75_then_index():
+    pm = {"A": {"strength": 100}, "B": {"strength": 80}, "C": {"strength": 60}, "E": {"strength": 78}}
+    rows = [{"kind": "stock", "sym": "C", "key": "x"}, {"kind": "index", "sym": "NIFTY", "key": "x"}, {"kind": "stock", "sym": "B", "key": "x"},
+            {"kind": "stock", "sym": "E", "key": at.EAGLE}, {"kind": "stock", "sym": "A", "key": "x"}]
+    assert [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))] == ["A", "E", "B", "NIFTY", "C"]

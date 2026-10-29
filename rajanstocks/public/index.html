@@ -3873,6 +3873,12 @@ function opxFilterHtml(){const f=OPT.f,tg=(k,l,d)=>`<label class="opx-tog"><inpu
   <div class="opx-fp-f"><button class="btn" data-opx="freset">Reset</button><button class="btn pri" data-opx="filters">Done</button></div>`}
 function opxActiveCount(){const f=OPT.f;return (f.span!==5?1:0)+(!f.oi?1:0)+(f.chg?1:0)+(!f.vol?1:0)+(!f.bars?1:0)+(f.liquid?1:0)}
 function renderOptions(){const el=$('#v-options');if(!el)return;if(!OPT.tf)OPT.tf=TFS.find(t=>t.k==='5m');
+  /* a brand-new device (nothing chosen yet) must not open on Nifty: ask what to trade first - nothing is loaded until a choice is made */
+  {let had=true;try{had=localStorage.getItem('rs-opt-sym')!==null}catch(e){}
+   OPT._gate=!had&&!OPT._chosen;
+   if(OPT._gate){el.innerHTML=`<div class="card" style="max-width:520px;margin:40px auto;text-align:center"><h3 style="margin:0 0 6px">Choose what to trade</h3><p class="muted" style="margin:0 0 14px;font-size:13px">Pick a stock or index to open its option chain and chart.</p>
+      <select class="opx-sel" id="optGate" aria-label="Stock or index" style="max-width:100%"><option value="">Select…</option>${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(x=>x.cls===g).map(x=>`<option value="${esc(x.s)}">${esc(x.s)}</option>`).join('')}</optgroup>`).join('')}</select></div>`;
+      $('#optGate').onchange=e=>{const v=e.target.value;if(!v)return;OPT._chosen=true;OPT.sym=v;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;renderOptions()};return}}
   el.innerHTML=`<div class="opx" data-mtab="${OPT.mtab}">
     <div class="opx-bar">
       <div class="opx-und"><select class="opx-sel" id="optSym" aria-label="Underlying">${['Indices','Stocks'].map(g=>`<optgroup label="${g}">${optUnderlyings().filter(s=>s.cls===g).map(s=>`<option value="${esc(s.s)}" ${s.s===OPT.sym?'selected':''}>${esc(s.s)}</option>`).join('')}</optgroup>`).join('')}</select>
@@ -4326,7 +4332,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-xp]');if(!
   if(sEl)XPB.exp=sEl.value;if(lEl)XPB.leg=lEl.value;if(kEl)XPB.strike=kEl.value;
   if(b.dataset.xp==='go'&&XPB.book&&XPB.strike)xpLoadDaily();else{XPB.book=null;xpLoadBook()}});
 document.addEventListener('change',e=>{if(e.target.id==='xpExp'){XPB.exp=e.target.value;XPB.book=null;xpLoadBook()}else if(e.target.id==='xpLeg'||e.target.id==='xpStrike'){if(e.target.id==='xpLeg')XPB.leg=e.target.value;else XPB.strike=e.target.value;XPB.daily=null;xpLoadDaily()}});
-async function optTick(){if(OPT.ticking)return;OPT.ticking=true;
+async function optTick(){if(OPT.ticking||OPT._gate)return;OPT.ticking=true;
   try{if(OPT.chain&&Date.now()-OPT.chainTs>(MKT.open?15000:180000))await loadChain(true);
     if(OPT.sel&&OPT.osym){const r=await api('/api/m/oquote?keys='+encodeURIComponent(OPT.sel.key)),q=r.quotes&&r.quotes[0],o=OPT.osym;
       if(q&&q.last>0){o.last=q.last;o.prev=q.prev||o.prev;o.hi=q.high||o.hi;o.lo=q.low||o.lo;o.open=q.open||o.open;o.vol=q.vol;o.oi=q.oi;o.oiChg=q.oi-q.oiPrev;o.bid=q.bid;o.ask=q.ask;
@@ -5285,7 +5291,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
   for(const [nm,fn] of [['loadChart',()=>loadChart(false)],['renderSymbar',renderSymbar],['renderToolbar',renderToolbar],['renderTools',renderTools],['renderWatchlist',renderWatchlist],['renderBottom',renderBottom],['renderTicket',renderTicket],['buildBook',buildBook]])
     try{fn()}catch(e){console.error('boot: '+nm,e)}   /* one broken panel must not leave the loader on screen */
   const h=location.hash.slice(1);$('#boot')?.remove();try{go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:(window.geHome?geHome():'godseye'))}catch(e){console.error('boot: go',e)}   /* home = God's Eye (or its Today's Picks tab, if that was open last) */
-  setTimeout(()=>{try{if(App.view==='options'&&!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
+  setTimeout(()=>{try{if(App.view==='options'&&!OPT._gate&&!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);setInterval(()=>{if(document.getElementById("tokBanner")&&!document.hidden)checkTokenHealth()},120000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}});
   let _rszT;window.addEventListener('resize',()=>{clearTimeout(_rszT);_rszT=setTimeout(()=>{try{if(App.view==='options'&&OPT.chain)drawChain()}catch(e){}},250)})})();
 </script>
