@@ -2089,6 +2089,8 @@ def picks(refresh: bool = False, response: Response = None):
             got_fno = sum(1 for r in (got or {}).get("picks", []) if r.get("universe") != "cash")
             if got and not refresh and got_fno >= 20 and time.time() - got.get("_t", 0) < ttl_s and got.get("_t", 0) >= opened_at:
                 return _public(got), True
+            if got and not refresh and got.get("_bad") and time.time() - got.get("_t", 0) < 60:   # a scan that just failed: do not re-run it on every request
+                return _public(got), False
             have_lock = shared_cache.lock("picks-build", 40)
             if not have_lock:                                           # someone else is building: serve what exists
                 if got:
@@ -2112,6 +2114,10 @@ def picks(refresh: bool = False, response: Response = None):
                     shared_cache.unlock("picks-build")
             v_fno = sum(1 for r in v.get("picks", []) if r.get("universe") != "cash")   # count F&O rows only: the 400 cash-seed rows must not make a failed F&O scan look healthy
             _inject_cash_seed_if_needed(v)
+            if v_fno < 20 and v.get("count", 0) > 0:
+                v["_t"] = time.time()
+                v["_bad"] = True
+                shared_cache.set(sk, v, 300)
             if v_fno >= 20:
                 v["_t"] = time.time()
                 shared_cache.set(sk, v, 20 * 3600 if v.get("complete") else 300)
