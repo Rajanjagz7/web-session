@@ -2,7 +2,8 @@ name: Refresh cash picks seed
 on:
   workflow_dispatch:
   schedule:
-    - cron: "15 11 * * 1-5"      # 16:45 IST - after the close, once the day's whole-market cash walk has filled the server's list
+    - cron: "30 2 * * 1-5"       # 08:00 IST - morning run
+    - cron: "30 15 * * 1-5"      # 21:00 IST - after-hours run
 permissions:
   contents: write
 concurrency: { group: cash-seed, cancel-in-progress: false }
@@ -20,7 +21,8 @@ jobs:
             curl -sS -m 40 "$S/api/m/picks?refresh=true" -o /dev/null || true
             st=$(curl -sS -m 30 "$S/api/m/cash-seed" || echo '{}')
             echo "round $i: $(echo "$st" | head -c 400)"
-            echo "$st" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('walk') and (d.get('today') or {}).get('changed',0)>=300 else 1)" && { echo "walk finished"; exit 0; }
+            echo "run at $(TZ=Asia/Kolkata date '+%d %b %H:%M IST') - round $i: $(echo "$st" | head -c 300)" > "$GITHUB_STEP_SUMMARY"
+            echo "$st" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('walk') and (d.get('today') or {}).get('rows',0)>=300 else 1)" && { echo "walk finished"; exit 0; }
             sleep 40
           done
           echo "walk did not finish in time - exporting whatever the server holds (the size check below still protects the seed)"
