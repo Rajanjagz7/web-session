@@ -177,7 +177,7 @@ def test_order_is_index_options_then_100_strength_volume_stocks_then_the_rest(wo
     real = at.open_trade
     monkeypatch.setattr(at, "open_trade", lambda st, c, today: (order.append(c["sym"]), real(st, c, today))[1])
     at.run_cycle()
-    assert order[:4] == ["NIFTY", "BBB", "CCC", "AAA"]
+    assert order[:4] == ["BBB", "CCC", "AAA", "NIFTY"]      # 30 Oct priority: strength-100 stocks, Eagle, strength 75+, then index options
 
 
 def test_stock_option_needs_two_indicators_or_one_strong_signal(world, monkeypatch):

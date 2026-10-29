@@ -29,10 +29,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter(prefix="/api/auto")
 _lock = threading.Lock()
 
-# The stage site (rajanstocks1, branch preprod-journal-filters) runs the same code with its OWN book: AUTO_BOOK_SUFFIX=":stage" there, so the two
-# traders never touch each other's trades. Production leaves both variables unset (profile "all", the original book).
-BOOK_SUFFIX = os.environ.get("AUTO_BOOK_SUFFIX", "")
-KEY = "rajanone:auto:v1" + BOOK_SUFFIX
+KEY = "rajanone:auto:v1"
 FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "auto_state.json")
 NO_LIMIT = 10 ** 6                      # "maxPerDay", "indexSlots", "stockSlots": 0 (or empty) means no limit
 
@@ -118,8 +115,6 @@ def _load(cached=False, verify=False):
         if saved and saved.get("slV") != SL_V:                  # one-time (user, 28 Oct): 10-15% option stop and bigger trades; the settings API can change both later
             st["cfg"].update(premSlPct=PREM_SL_PCT, riskPct=1.0, slV=SL_V)
             st["_dirty"] = True
-        if GROUP == "C":                                        # this environment's settings are the 22 Oct ones, whatever was saved
-            st["cfg"].update(C_CFG)
         if saved and saved.get("eagleV") != 1:                  # one-time (user, 28 Oct): Eagle Trades back ON - buy-only like everything else (call for Open = Low, put for Open = High); the Algo button / settings API can switch it off again
             st["cfg"].update(eagleOn=True, eagleV=1)
             st["_dirty"] = True
@@ -630,6 +625,9 @@ def fill_slots(st, today, already):
 
 
 EAGLE = "Eagle Trades"                    # the strategy name shown in the Journal (its "By strategy / setup" table groups on it)
+EAGLE_STOP_PTS = 5.0       # Eagle (Open = Low -> call, Open = High -> put) premium rules (user, 30 Oct): stop 5 points from the entry, targets 1.5x / 2x / 3x ... of that risk,
+EAGLE_OPEN_TOL = 0.03      # profit lock from Rs 1,500 / 2,000; bought only when the premium is at its day-open price (+3%) or down to 10 points below it
+EAGLE_DIP_PTS = 10.0
 EAGLE_FROM, EAGLE_TO = 9 * 60 + 20, 10 * 60 + 30     # the screen is read in the opening hour (backtested at 09:20-10:15)
 
 
@@ -1025,39 +1023,6 @@ def _quality(p):
     return top + (0.5 if st_ >= 75 else 0.0) + min(st_, 100) / 400 + min(vx, 3.0) / 6
 
 
-# A/B test of the entry sources (user, 29 Oct): all 15 sources are split in two groups; production trades group A, the stage site (rajanstocks1)
-# group B, each on its OWN book. After a few weeks the journal's "By strategy" table shows which sources earn - keep those, remove the rest.
-# Split alternates down the backtest ranking so both groups get a similar mix of stock and index sources and of good and weak ones.
-GROUP_A = ("rajan-rsi2-pullback", "rzt", "rajan-ibs-reversion", "Eagle Trades", "index-call-put", "rzt-intraday", "timecycle", "premium-rider")
-GROUP_B = ("rajan-ha-momentum", "ut-bot", "rajan-trend-rider", "morning-pick", "stock-screen", "rzt-hedge", "gann-angle", "z-timecycle")   # B tests the Z Trend + time cycle CONFLUENCE; A trades the two separately (rzt-intraday, timecycle)
-# Group C = the 22 Oct trader (the Setup filter in the first Journal: "N indicator(s) agree", "stock screen (trend + volume + RSI)", "index call/put
-# (daily chart and option flow agree)") PLUS three extras: Z Trend + time cycle confluence, Today's Picks tier 1, Eagle SELLs.
-# Its book also runs the 22 Oct settings (C_CFG): paired option sell on, 30% premium stop, 0.5% risk per trade.
-GROUP_C = ("ut-bot", "rajan-trend-rider", "rajan-ha-momentum", "rajan-rsi2-pullback", "rajan-ibs-reversion", "rzt", "stock-screen", "index-call-put",
-           "z-timecycle", "morning-pick", "Eagle Trades")
-C_CFG = {"buyOnly": False, "pairSell": True, "premSlPct": 0.30, "riskPct": 0.5, "classicOnly": False}
-GROUP = (os.environ.get("AUTO_GROUP") or "").strip().upper()          # "A" / "B" / "C" = an indicator subset for the retired A/B test; anything else (or empty) = every source
-GROUP = GROUP if GROUP in ("A", "B", "C") else ""
-
-
-def profile_ok(c, group=None):
-    """True when the entry's source belongs to this environment's group (always True when no group is set). The group REPLACES classic mode
-    and the 2-indicator rule: every source is judged on its own results, which is the point of the test. Risk/reward, spread, day-loss and
-    contract checks still apply to both groups equally."""
-    g = (group if group is not None else GROUP)
-    if g not in ("A", "B", "C"):
-        return True
-    if g == "C":                                      # the extras only in their backtested form
-        k = c.get("key")
-        if k == "morning-pick":
-            return "tier 1" in str(c.get("source") or "")
-        if k == EAGLE:
-            return c.get("side") == "SELL"
-        return k in GROUP_C
-    allowed = GROUP_A if g == "A" else GROUP_B
-    return c.get("key") in allowed
-
-
 def choose(cands, st, today):
     cfg = st["cfg"]
     taken_today = [t for t in st["trades"] if t["date"] == today]
@@ -1358,6 +1323,12 @@ def open_trade(st, c, today):
     # The target keeps its 2R distance, so the reward shrinks with the risk; position size is set from the risk budget, so a tighter stop
     # means more lots for the same money at risk.
     risk_u = min(risk_u, float(cfg.get("premSlPct", PREM_SL_PCT)) * ct["premium"] / 0.5)
+    if c.get("key") == EAGLE:                           # Eagle: a fixed 5-point premium stop; 1R = 5 premium points = 10 underlying points at delta 0.5, so the whole ladder follows
+        p0, o0 = float(ct["premium"]), float(ct.get("pOpen") or 0)
+        if o0 >= 5 and (p0 > o0 * (1 + EAGLE_OPEN_TOL) or p0 < o0 - EAGLE_DIP_PTS):
+            raise RuntimeError(f"skipped: Eagle buys at the option's open price or up to {EAGLE_DIP_PTS:.0f} points below it (open {o0:.2f}, now {p0:.2f})")
+        if EAGLE_STOP_PTS <= 0.35 * p0:                  # on a very cheap option 5 points is more than 35% of the premium: it keeps the percentage stop
+            risk_u = min(risk_u, EAGLE_STOP_PTS / 0.5)
     stop_u = entry_u - d * risk_u
     tgts = [round(entry_u + d * r * risk_u, 2) for r in TARGET_LADDER] if variant == "fixed" else None     # T1..T7 on the underlying
     target_u = tgts[-1] if tgts else None                                                                    # the last one (10R) ends the trade
@@ -1662,7 +1633,7 @@ def manage(st, now, t_end=None):
                     t["stopU"] = round(new, 2)
                     t["stopMoved"] = _now().isoformat()
                 st["log"].append({"at": _now().isoformat(), "msg": f"T{n} reached on {t['sym']} {t['strike']:.0f}{t['opt']} ({TARGET_LADDER[n - 1]}R) - stop moved to {t['stopU']}"})
-        if not tg:                                          # ladder trades trail on the underlying; the old rupee profit lock is for trades opened before it
+        if not tg or t.get("strategy") == EAGLE:            # Eagle also gets the premium lock (breakeven at Rs 1,500, trailing from Rs 2,000); other ladder trades trail on the underlying; the old rupee profit lock is for trades opened before it
             _profit_lock(t, opt_px if opt_px > 0 else exit_px, st["cfg"].get("lockMode", "old"))
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if t.get("premSL") and (exit_px >= t["premSL"] if short else exit_px <= t["premSL"]):
@@ -1860,8 +1831,6 @@ def _run_cycle(now, force, dry):
         if (in_window or force) and guard != "blocked" and len(todays) < _cap(cfg, "maxPerDay"):
             cands, why = scan_all(st, today)
             rep["note"] = why
-            if GROUP:
-                cands = [c for c in cands if profile_ok(c)]                  # this environment's own indicators only (so "N agree" counts them alone)
             chosen = choose(cands, st, today)
             if guard == "soft":                       # fewer, better trades near the day P&L limit
                 strong = [c for c in chosen if c.get("agree", 1) >= 3]
@@ -1958,12 +1927,7 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{sum(1 for c in entries if c.get('oel'))} with premium Open = Low first"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"premium open=low scan failed: {str(e)[:80]}"})
-            if GROUP:                                                         # A/B test: this environment's indicator group REPLACES classic mode + the agreement rule
-                n0 = len(entries)
-                entries = [c for c in entries if profile_ok(c)]
-                if n0 != len(entries):
-                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} outside group {GROUP}"
-            elif cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
+            if cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
                 kept, paper = classic_filter(entries, bool(cfg.get("extrasAgree", False)))
                 shadow_record(st, paper, now)
                 n0 = len(entries)
@@ -1987,7 +1951,7 @@ def _run_cycle(now, force, dry):
                 pm_ = _screen_score()
 
                 def _agree_ok(c):
-                    if c.get("kind") != "stock" or need <= 1 or GROUP:
+                    if c.get("kind") != "stock" or need <= 1:
                         return True
                     if int(c.get("agree") or len(c.get("strategies") or []) or 1) >= need:
                         return True
@@ -2385,7 +2349,7 @@ def status():
         "activeStrategies": [{"key": k, "variant": chosen.get(k, ("fixed", "none"))[0], "filter": chosen.get(k, ("fixed", "none"))[1]} for k in keys],
         "mode": label,
         "shadow": {"summary": shadow_summary(st), "recent": st.get("shadow", [])[-60:][::-1]},
-        "cfg": st["cfg"], "group": GROUP or "all", "book": BOOK_SUFFIX or "main", "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
+        "cfg": st["cfg"], "group": "all", "book": "main", "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
         "dayPnl": {"value": round(_day_pnl(st, today), 0), "limit": st["cfg"].get("dayPnlLimit", 0), "mode": guard, "note": guard_note},
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
         "sleeves": sleeve_report(st),

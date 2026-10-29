@@ -353,3 +353,26 @@ def test_a_failed_picks_build_leaves_a_note_so_walk_null_has_a_reason(monkeypatc
         market_api._picks_compute(18)
     st = market_api.cash_seed_status()
     assert st["walk"] is None and st["lastBuild"]["ok"] is False and "time budget" in st["lastBuild"]["error"] and "lastBuild" in st["why"]
+
+
+def _open_eagle(monkeypatch, prem, p_open):
+    import backtest
+    ct = {"expiry": "2026-11-10", "strike": 1200, "key": "OPT9", "premium": prem, "lot": 500, "spot": 1200.0, "bid": prem - 0.2, "ask": prem, "ltp": prem, "pOpen": p_open}
+    monkeypatch.setattr(at, "_contract", lambda *a, **k: ct)
+    monkeypatch.setattr(at, "_atr_for", lambda sym: (20.0, 1200.0, [{"date": "2026-10-28"}] * 30))
+    monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 100.0)
+    monkeypatch.setattr(at, "_now", lambda: NOW)
+    return at.open_trade(book(), {"sym": "RELIANCE", "side": "BUY", "kind": "stock", "key": at.EAGLE, "variant": "fixed"}, TODAY)
+
+
+def test_eagle_uses_a_5_point_premium_stop_and_1_5x_2x_3x_targets(monkeypatch):
+    t = _open_eagle(monkeypatch, prem=91.0, p_open=100.0)               # opened at 100, bought 9 points below the open
+    assert t["premRisk"] == 5.0 and t["premSL"] == 86.0
+    assert t["premT"][:3] == [98.5, 101.0, 106.0]
+
+
+def test_eagle_waits_for_the_open_price(monkeypatch):
+    with pytest.raises(RuntimeError, match="open price"):
+        _open_eagle(monkeypatch, prem=115.0, p_open=100.0)             # already 15% above its open
+    with pytest.raises(RuntimeError, match="open price"):
+        _open_eagle(monkeypatch, prem=85.0, p_open=100.0)              # fell more than 10 points under the open

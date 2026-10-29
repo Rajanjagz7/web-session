@@ -186,19 +186,6 @@ def test_pre_open_cycle_scans_but_never_trades(monkeypatch):
         assert r["ran"] is False
 
 
-def test_indicator_groups_split_all_sources_in_two_without_overlap():
-    import auto_trader as A
-    assert not set(A.GROUP_A) & set(A.GROUP_B), "a source is in both groups"
-    import backtest
-    assert set(backtest._runners()) <= set(A.GROUP_A) | set(A.GROUP_B), "an indicator is in neither group"
-    for key in ("index-call-put", "stock-screen", "morning-pick", "Eagle Trades", "timecycle", "gann-angle", "premium-rider", "rzt-intraday", "rzt-hedge"):
-        assert key in A.GROUP_A or key in A.GROUP_B, key
-    # each group has index AND stock sources (a daily indicator trades both)
-    assert all(g and len(g) >= 7 for g in (A.GROUP_A, A.GROUP_B))
-    assert A.profile_ok({"key": "ut-bot"}, "B") and not A.profile_ok({"key": "ut-bot"}, "A")
-    assert A.profile_ok({"key": "ut-bot"}, "") and A.profile_ok({"key": "anything"}, None) in (True, False)
-
-
 def _fake_tc(monkeypatch, last, vib, res, trend, cyc_min):
     import sys
     import types
@@ -226,14 +213,3 @@ def test_z_timecycle_needs_zone_time_and_trend_to_agree(monkeypatch):
     assert out and out[0]["side"] == "SELL" and out[0]["indStop"] > 22000
     A, now = _fake_tc(monkeypatch, 22000.0, 22005.0, 22400.0, None, 0)           # no Z Trend flip today -> nothing
     assert A._ztc_cands(now) == []
-    assert A.profile_ok({"key": "z-timecycle"}, "B") and not A.profile_ok({"key": "z-timecycle"}, "A")
-
-
-def test_group_c_is_the_22_oct_set_plus_backtested_extras():
-    import auto_trader as A
-    for k in ("stock-screen", "index-call-put", "ut-bot", "rajan-ha-momentum", "z-timecycle"):
-        assert A.profile_ok({"key": k, "kind": "stock", "side": "BUY"}, "C"), k
-    assert not A.profile_ok({"key": "gann-angle"}, "C") and not A.profile_ok({"key": "rzt-hedge"}, "C")
-    assert A.profile_ok({"key": "Eagle Trades", "side": "SELL"}, "C") and not A.profile_ok({"key": "Eagle Trades", "side": "BUY"}, "C")
-    assert A.profile_ok({"key": "morning-pick", "source": "Today's Picks · tier 1 · x"}, "C") and not A.profile_ok({"key": "morning-pick", "source": "Today's Picks · tier 2 · x"}, "C")
-    assert A.C_CFG["pairSell"] is True and A.C_CFG["premSlPct"] == 0.30
