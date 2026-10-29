@@ -22,6 +22,7 @@ class W(World):
 
 def test_card_shows_the_age_of_the_prices_and_refresh_reads_again(server, browser):
     w = W(45)
+    w.live["ok"] = False                                                                       # the quote feed is down: the card falls back to the age of the server's price
     c, pg, errs = open_journal(browser, w, tab="portfolio")
     pg.evaluate("MKT.open = true; JV.render()")                                              # the test clock may be outside market hours
     pg.wait_for_selector("#jvLiveB", timeout=15000)

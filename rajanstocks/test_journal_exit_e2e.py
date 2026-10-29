@@ -12,8 +12,6 @@ import urllib.request
 
 import pytest
 
-SKIP_WHY = "Journal went back to the 28 Oct code on 29 Oct 10:30; this tests the 29 Oct version (git tag journal-before-revert-29oct)"
-pytestmark = pytest.mark.skip(reason=SKIP_WHY)
 
 pw = pytest.importorskip("playwright.sync_api")
 
@@ -170,6 +168,7 @@ def test_table_keeps_the_last_price_when_the_feed_goes_down(server, browser):
 
 
 # ───────────────────────── the exit screen ─────────────────────────
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_screen_shows_ltp_bid_ask_exit_price_and_updates_while_open(server, browser):
     w = World()
     w.set_price("A-1", 110, bid=108, ask=112)
@@ -188,6 +187,7 @@ def test_exit_screen_shows_ltp_bid_ask_exit_price_and_updates_while_open(server,
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_screen_result_is_net_of_costs_and_matches_the_table_sign(server, browser):
     w = World()
     w.set_price("A-1", 100, bid=100, ask=101)                                                 # flat: result is the (negative) cost only
@@ -198,6 +198,7 @@ def test_exit_screen_result_is_net_of_costs_and_matches_the_table_sign(server, b
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_sends_the_price_shown_and_closes_the_screen(server, browser):
     w = World()
     w.set_price("A-1", 110, bid=108, ask=112)
@@ -212,6 +213,7 @@ def test_exit_sends_the_price_shown_and_closes_the_screen(server, browser):
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_price_jump_gives_a_409_the_screen_shows_the_new_price_and_the_second_try_goes_through(server, browser):
     w = World()
     w.set_price("A-1", 110, bid=108, ask=112)
@@ -246,6 +248,7 @@ def test_server_error_keeps_the_screen_open_with_the_reason(server, browser):
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_no_price_at_all_disables_exit_until_one_arrives(server, browser):
     w = World()
     w.live["ok"] = False                                                                      # the feed never answers
@@ -274,6 +277,7 @@ def test_cancel_stops_the_ticker_and_leaves_no_errors(server, browser):
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_sold_option_exits_at_the_ask(server, browser):
     short = dict(OPT, id="A-2", key="OPT2", pos="short", side="BUY", opt="PE", premSL=112.5, pairOf="A-1")
     w = World(opens=[short])
@@ -289,6 +293,7 @@ def test_sold_option_exits_at_the_ask(server, browser):
 
 
 # ───────────────────────── share trades and Exit all ─────────────────────────
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_button_on_a_share_trade_works(server, browser):
     w = World(opens=[], stocks=[dict(STK)])
     c, pg, errs = open_journal(browser, w, sym_prices={"TCS": 112.0})
@@ -302,6 +307,7 @@ def test_exit_button_on_a_share_trade_works(server, browser):
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_all_shows_a_live_total_and_closes_options_and_shares_through_their_own_endpoints(server, browser):
     w = World(stocks=[dict(STK)])
     w.set_price("A-1", 110, bid=108, ask=112)
@@ -319,6 +325,7 @@ def test_exit_all_shows_a_live_total_and_closes_options_and_shares_through_their
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_all_reports_partial_failures_and_stays_open(server, browser):
     w = World(stocks=[dict(STK)])
     w.set_price("A-1", 110)
@@ -341,6 +348,7 @@ MANUAL = [dict(id="TR-0001", date=TODAY, time="09:40", market="Equity", instrume
                why="", rule="Yes", emotion="Calm", mistakes="", reviewer="", ref="", created=f"{TODAY}T09:40:00+05:30", plan={"entry": 100, "sl": 95, "qty": 10}, reviewed=False, lesson="")]
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_manual_trade_exit_books_the_price_at_the_click_not_when_the_screen_opened(server, browser):
     w = World(opens=[])
     c, pg, errs = open_journal(browser, w, sym_prices={"TCS": 110.0}, manual=MANUAL)

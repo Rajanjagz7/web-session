@@ -4,8 +4,6 @@ import time
 
 import pytest
 
-SKIP_WHY = "Journal went back to the 28 Oct code on 29 Oct 10:30; this tests the 29 Oct version (git tag journal-before-revert-29oct)"
-pytestmark = pytest.mark.skip(reason=SKIP_WHY)
 
 from test_journal_exit_e2e import (BASE, TODAY, YDAY, World, browser, open_journal, pw, server, set_sym)  # noqa: F401
 
@@ -79,6 +77,7 @@ def test_a_wild_share_tick_does_not_move_the_figure(server, browser):
     c.close()
 
 
+@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_an_older_cached_copy_from_another_instance_is_ignored(server, browser):
     w = StockWorld(last_run="2026-10-29T09:25:00+05:30")
     c, pg, errs = open_journal(browser, w, tab="portfolio", sym_prices={"TCS": 100})
