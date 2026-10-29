@@ -3834,6 +3834,9 @@ async function checkTokenHealth(){try{const r=await api('/api/m/health');let b=$
 
 /* ======================= Options: pick from the chain -> live chart + indicator readings ======================= */
 const OPT={sym:'NIFTY',expiry:'',chain:null,chainTs:0,sel:null,osym:null,tf:null,ochart:null,span:10,busy:false,ticking:false,err:null};
+/* the options screen remembers its underlying across a refresh (it used to fall back to NIFTY: open SENSEX, refresh, land on the NIFTY chain) */
+{let _s='NIFTY';try{_s=localStorage.getItem('rs-opt-sym')||'NIFTY'}catch(e){}
+ Object.defineProperty(OPT,'sym',{get:()=>_s,set:v=>{_s=v;try{localStorage.setItem('rs-opt-sym',v)}catch(e){}},enumerable:true,configurable:true})}
 const OPT_TFS=['1m','5m','15m','1H','1D'];
 const OPT_INDS=[['vol','Vol'],['sma','SMA'],['ema','EMA'],['vwap','VWAP'],['bb','BB'],['rsi','RSI'],['macd','MACD'],['atr','ATR'],['rzt','Zone Trend'],['rztmb','MB']];
 const fmtExp=iso=>{try{const d=new Date(iso+'T00:00:00');return d.getDate()+' '+MON[d.getMonth()]}catch(e){return iso||''}};

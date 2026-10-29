@@ -598,3 +598,17 @@ def test_tapping_an_option_in_the_chain_selects_it_without_errors(server, browse
     pg.wait_for_function("OPT.mtab === 'chart'", timeout=10000)
     assert not errs
     c.close()
+
+
+def test_options_screen_keeps_its_underlying_after_a_refresh(server, browser):
+    w = World()
+    c = browser.new_context(viewport={"width": 420, "height": 900})
+    pg = c.new_page()
+    pg.route("**/api/**", w.handle)
+    pg.goto(BASE + "/#options")
+    pg.wait_for_selector("#optChain", timeout=20000)
+    pg.evaluate("OPT.sym = 'SENSEX'")
+    pg.reload()
+    pg.wait_for_selector("#optChain", timeout=20000)
+    assert pg.evaluate("OPT.sym") == "SENSEX"                      # was NIFTY after every refresh
+    c.close()
