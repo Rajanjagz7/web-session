@@ -80,7 +80,7 @@ def _load(cached=False, verify=False):
         else:
             with open(FILE, encoding="utf-8") as f:
                 d = json.load(f)
-        st.update({k: d[k] for k in ("trades", "log", "seq", "lastRun", "resetAt") if k in d})
+        st.update({k: d[k] for k in ("trades", "log", "seq", "lastRun", "resetAt", "cleared") if k in d})
         from common import is_removed_trade
         st["trades"] = [t for t in st["trades"] if not is_removed_trade(t)]
         from common import before_fresh_start, fresh_start_active
@@ -312,6 +312,9 @@ def enter(st, now):
         if room <= 0:
             continue
         held = {t["sym"] for t in open_now} | {t["sym"] for t in st["trades"] if t["hz"] == hz and t["date"] == today}
+        cl_ = st.get("cleared")
+        if isinstance(cl_, dict) and cl_.get("date") == today:
+            held |= set(cl_.get("syms") or [])                   # cleared by the user today: not bought again until tomorrow
         cands = sorted([p for p in picks if p["plans"][hz].get("ok") and p["plans"][hz].get("side") in ("BUY", "SELL") and p["s"] not in held],
                        key=lambda p: -(p["plans"][hz].get("fit") or 0))[:room * 3]
         if not cands:
@@ -472,6 +475,9 @@ def exit_all():
 @router.post("/reset")
 def reset():
     def apply(st):
+        today_ = _now().date().isoformat()                       # shares traded today stay blocked until tomorrow (the empty book used to buy the same ones back)
+        cl = st.get("cleared") if isinstance(st.get("cleared"), dict) and st["cleared"].get("date") == today_ else {"date": today_, "syms": []}
+        st["cleared"] = {"date": today_, "syms": sorted(set(cl.get("syms") or []) | {t["sym"] for t in st["trades"] if t.get("date") == today_ or t.get("status") == "OPEN" or str(t.get("closedAt") or "")[:10] == today_})}
         st["trades"], st["seq"] = [], 0
         st["log"] = [{"at": _now().isoformat(), "msg": "Reset to Rs 5,00,000"}]
         st["resetAt"] = _now().isoformat()

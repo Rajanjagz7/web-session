@@ -59,7 +59,7 @@ SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) 
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
 # (1-2 minutes later) takes the rest - best-ranked first.
 CYCLE_BUDGET = 18.0 if os.environ.get("VERCEL") else 10 ** 9
-PERSIST_KEYS = ("shadow", "skipUntil", "dayGuardMode", "idxWhy", "carry")      # book keys beyond trades / log / cfg that must survive from one cycle to the next
+PERSIST_KEYS = ("shadow", "skipUntil", "dayGuardMode", "idxWhy", "carry", "cleared")      # book keys beyond trades / log / cfg that must survive from one cycle to the next
 CARRY_FOR = 540          # screen candidates not tried in their own cycle are offered again for 9 minutes (3 screens)
 FILL_EVERY = 180          # index / stock screens are re-read every 3 minutes (10 missed short-lived signals)
 MIN_INDEX_RR = 1.5        # index call / put screen: reward to target 1 must be >= 1.5x the stop distance
@@ -473,12 +473,27 @@ REENTRY_GAP_MIN = 0       # minutes after a trade closes before the same symbol 
 BLOCK_SAME_CONTRACT = False   # True would refuse an option contract already traded today (user, 29 Oct: the same index / stock option may be taken again)
 
 
+def _remember_cleared(st, trades):
+    """Symbols that were traded today before the user cleared the book. They are not entered again until tomorrow: an empty book forgot
+    them and the next cycle (a minute later) bought the very same trades back."""
+    today = _now().date().isoformat()
+    cl = st.get("cleared") if isinstance(st.get("cleared"), dict) and st["cleared"].get("date") == today else {"date": today, "syms": []}
+    syms = set(cl.get("syms") or [])
+    for t in trades:
+        if t.get("date") == today or t.get("status") == "OPEN" or str(t.get("closedAt") or "")[:10] == today:
+            syms.add(t["sym"])
+    st["cleared"] = {"date": today, "syms": sorted(syms)}
+
+
 def _taken_syms(st, today, now=None):
     """Symbols that cannot get a new entry right now: one with an open trade (one position per symbol at a time), and - only if REENTRY_GAP_MIN
     is set - one whose trade (opened today) closed less than that many minutes ago. By default a closed symbol can be entered again at once
     on a fresh signal, in any option. A trade carried from an earlier day that closes today never blocks its symbol."""
     now = now or _now()
     out = set()
+    cl = st.get("cleared")
+    if isinstance(cl, dict) and cl.get("date") == today:
+        out.update(cl.get("syms") or [])                 # traded today, then cleared by the user: no second entry today
     for t in st["trades"]:
         if t["status"] == "OPEN":
             out.add(t["sym"])
@@ -2193,6 +2208,7 @@ def reset_portfolio():
     Settings are kept. Today's entries count restarts too."""
     def apply(st):
         n = len(st["trades"])
+        _remember_cleared(st, st["trades"])                      # 29 Oct (user): after "Reset", the same ideas were bought again at once ("old entries come back")
         st["trades"], st["cand"] = [], {}
         st["resetAt"] = _now().isoformat()                       # a later merge of two databases respects the reset
         st["log"] = [{"at": _now().isoformat(), "msg": f"Portfolio reset by the user ({n} paper trades cleared)"}]

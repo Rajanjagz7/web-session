@@ -224,3 +224,24 @@ def test_live_gaping_book_marks_at_the_last_traded_price(store, monkeypatch):
     feed(monkeypatch, {"OPT1": quote(110, bid=90, ask=120)})        # 25% spread
     x = at.live_prices()["trades"][0]
     assert x["mark"] == 110 and x["unrealised"] == pytest.approx(10 * 150) and x["exitPx"] == 90
+
+
+# ───────── "Reset" must not let the same ideas be bought back (29 Oct) ─────────
+def test_after_a_reset_what_was_traded_today_is_not_entered_again_until_tomorrow(monkeypatch):
+    import auto_trader as at
+    today = at._now().date().isoformat()
+    st = {"trades": [{"id": "A-1", "sym": "ATUL", "date": today, "status": "OPEN"}, {"id": "A-2", "sym": "CUPID", "date": today, "status": "CLOSED", "closedAt": today + "T10:00:00+05:30"},
+                     {"id": "A-0", "sym": "OLD", "date": "2026-10-01", "status": "CLOSED", "closedAt": "2026-10-02T10:00:00+05:30"}], "cand": {}, "log": [], "cfg": {}}
+    monkeypatch.setattr(at, "_mutate", lambda apply, *a, **k: apply(st))
+    at.reset_portfolio()
+    assert st["trades"] == [] and st["cleared"]["syms"] == ["ATUL", "CUPID"]
+    assert at._taken_syms(st, today) >= {"ATUL", "CUPID"} and "OLD" not in at._taken_syms(st, today)
+    assert not (at._taken_syms(st, "2026-12-01") & {"ATUL", "CUPID"})                # a new day starts clean
+
+
+def test_share_trader_reset_blocks_the_same_shares_today(monkeypatch):
+    today = sb._now().date().isoformat()
+    st = {"trades": [dict(id="S-1", sym="TCS", side="BUY", hz="swing", date=today, status="OPEN")], "log": [], "seq": 1}
+    monkeypatch.setattr(sb, "_mutate", lambda apply, *a, **k: apply(st))
+    sb.reset()
+    assert st["trades"] == [] and st["cleared"] == {"date": today, "syms": ["TCS"]}
