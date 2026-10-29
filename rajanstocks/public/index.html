@@ -3594,7 +3594,7 @@ function pkLookHTML(f){const q=(f.q||'').trim().toLowerCase();if(q.length<2||f.k
   return `<div class="pklook"><div class="pklook-h">Other listed stocks matching “${esc(f.q.trim())}”</div>${rows.map(x=>{const k=PKL.px[x.s],c=k&&k.last>0&&k.prev>0?(k.last/k.prev-1)*100:null;
     return `<button class="pklook-r" data-sym="${esc(x.s)}"><span class="t"><b>${esc(x.s)}</b><small>${esc(x.n||'')}${x.ind?' · '+esc(x.ind):''}</small></span><span class="num">${k&&k.last>0?k.last.toFixed(2):''}</span><span class="badge ${c==null?'':c>=0?'b-up':'b-down'} num">${c==null?'–':(c>=0?'+':'')+c.toFixed(2)+'%'}</span></button>`}).join('')}<div class="muted" style="font-size:12px;margin-top:6px">These have no trade setup in the current list: strength below 55%, too little volume, or not scanned yet today. Tap one to open its chart.</div></div>`}
 function pkRiders(picks,sig,q){const out=[];const qq=(q||'').trim().toUpperCase();
-  for(const p of picks||[]){const v=p.volx||0,L=p.ltp||0;if(v<2||!(L>0)||p.high==null||p.low==null)continue;if(qq&&!(p.s||'').toUpperCase().includes(qq))continue;
+  for(const p of picks||[]){const v=(p.volxPace!=null?p.volxPace:p.volx)||0,L=p.ltp||0;if(v<2||!(L>0)||p.high==null||p.low==null)continue;if(qq&&!(p.s||'').toUpperCase().includes(qq))continue;
     const rg=(p.high-p.low)||0,ch=p.chg||0;let side=null,why='';
     if(p.hi20&&L>=p.hi20*0.998&&ch>0){side='BUY';why='broke the 20-day high'}else if(p.lo20&&L<=p.lo20*1.002&&ch<0){side='SELL';why='broke the 20-day low'}
     else if(rg>0&&ch>=1&&L>=p.high-0.2*rg){side='BUY';why='pressing today\'s high'}else if(rg>0&&ch<=-1&&L<=p.low+0.2*rg){side='SELL';why='pressing today\'s low'}
@@ -3602,8 +3602,8 @@ function pkRiders(picks,sig,q){const out=[];const qq=(q||'').trim().toUpperCase(
     if(p.kind==='index'){const s0=pkIdxSide(p);if(s0&&s0!==side)continue}
     const d=side==='BUY'?1:-1,risk=Math.max(side==='BUY'?L-p.low:p.high-L,p.atr||L*0.01,L*0.003),dp=L<100?2:1;
     out.push({...p,signal:side,plans:null,entry:+L.toFixed(2),stop:+(L-d*risk).toFixed(2),target:+(L+d*1.5*risk).toFixed(2),target2:+(L+d*2.5*risk).toFixed(2),risk:+risk.toFixed(2),rr:1.5,
-      reasons:[`Rider: volume ${v.toFixed(1)}x the 20-day average and price ${why}`].concat(p.reasons||[])})}
-  return out.sort((a,b)=>(b.volx||0)-(a.volx||0))}
+      reasons:[`Rider: volume ${v.toFixed(1)}x the normal pace for this time of day and price ${why}`].concat(p.reasons||[])})}
+  return out.sort((a,b)=>(b.volxPace!=null?b.volxPace:b.volx||0)-(a.volxPace!=null?a.volxPace:a.volx||0))}
 function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(f.kind!=='INDEX'&&f.mkt!=='CASH'&&f.mkt!=='RIDER')f.mkt='FNO';if(f.mkt==='RIDER'){f.hz='ALL';f.str='ALL'}   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
   if(f.kind==='INDEX'){f.hz='ALL';f.mkt='ALL';f.str='ALL';f.q='';if(f.sig==='EVERY')f.sig='TOP'}else if(f.sig==='TOP')f.sig='ALL'   // stocks have no Top 10-15 chip any more (it leads Fresh picks); index calls only have the Show filter: nothing hidden can empty the list
