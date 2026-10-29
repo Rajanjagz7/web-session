@@ -110,7 +110,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   AUTO.q = {}; AUTO.qTs = 0; AUTO.qOk = true;
   async function pullLive(force) {
     if (AUTO.qBusy) return;
-    if (!force && (document.hidden || Date.now() - AUTO.qTs < 4000)) return;
+    if (!force && (document.hidden || Date.now() - AUTO.qTs < 2500)) return;
     AUTO.qBusy = true;
     try {
       const r = await fetch('/api/auto/live', { cache: 'no-store' });
@@ -195,6 +195,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     }
     AUTO.ts = Date.now();
     AUTO.busy = false;
+    if (!AUTO.qTs && AUTO.list.some(t => t.status !== 'Closed')) pullLive(true).then(refreshLive);          // first look: get live prices at once, not at the next 3 s tick
     if (JSON.stringify([AUTO.srv || null, !!AUTO.err]) !== stBefore && effTab() === 'algo' && document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render();
   }
   /* one mapping of a share-trader trade for BOTH pollers (status poll and the stock-book poll): the Today card used to read the book's
@@ -682,6 +683,10 @@ function paperList() {
   }
   function tslShow(t) { if (t.auto && statusOf(t) !== 'Closed') return autoTsl_(t); if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
+  /* live prices of the open option trades every 3 s while the Journal is on screen (it used to be every 5 s, and the FIRST pull came 5 s after the page opened - so a refresh
+     showed the saved, up-to-2-minutes-old marks for a few seconds) */
+  const liveTick = () => { const h = document.getElementById('v-journal'); if (!document.hidden && window.rjMkt() && h && h.offsetParent && AUTO.list.some(t => t.status !== 'Closed')) pullLive(false).then(refreshLive); };
+  setInterval(liveTick, 3000);
   setInterval(() => { refreshLive(); if (!document.hidden && window.rjMkt()) { syncAuto(false); const h = document.getElementById('v-journal'); if (h && h.offsetParent && AUTO.list.some(t => t.status !== 'Closed')) pullLive(false).then(refreshLive); } }, 5000);  // syncAuto self-throttles to 20 s; the live quote to 4 s, only with the Journal on screen and an option trade open
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden && window.rjMkt()) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
 
@@ -2093,7 +2098,15 @@ function paperList() {
    }
    /* THE one "today" figure: locked in + running, all three books. The Today card, the header chip and the Running-trades header all use it. */
    function todayTotal() { const R = todayRows(); const b = R.buy.b + R.sell.b + R.stock.b, o = R.buy.o + R.sell.o + R.stock.o; return { booked: b, open: o, total: b + o }; }
-   function todayCard() {
+   /* is what is on screen live? "live" = option prices pulled in the last 10 s; otherwise how old they are (so a frozen P&L is visible, not silent) */
+  function liveBadge(mk) {
+    if (!mk || !AUTO.list.some(t => t.status !== 'Closed')) return '';
+    const age = liveAgeS();
+    if (age == null) return '<em class="jv-mkt" id="jvLiveB" title="Waiting for the first live price">updating…</em>';
+    if (AUTO.qOk && age <= 10) return '<em class="jv-mkt on" id="jvLiveB" title="Option prices refresh every 3 seconds">● live</em>';
+    return `<em class="jv-mkt" id="jvLiveB" style="color:var(--down,#e5484d)" title="The live price feed did not answer - the figures are the last known prices">prices ${age}s old</em>`;
+  }
+  function todayCard() {
      const R = todayRows(), mk = (typeof MKT !== 'undefined' && typeof MKT.open === 'boolean') ? MKT.open : ((typeof window.rjMkt === 'function') ? window.rjMkt() : false);
      const bk = R.buy.b + R.sell.b + R.stock.b, op = R.buy.o + R.sell.o + R.stock.o, tot = bk + op;
      const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
@@ -2103,7 +2116,7 @@ function paperList() {
        : '<div class="jv-hr-n"><span class="muted">loading…</span></div>'}</div>`;
      const buyOnly = !!(AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.buyOnly), sellRow = buyOnly && !R.sell.b && !R.sell.o ? '' : row('Options Sell', R.sell, 'you sold options');   // buy-only mode: no empty "sold options" row
      return `<div class="card jv-hero ${box}" id="jvToday">
-       <div class="jv-hero-top"><span>Today's profit</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em></div>
+       <div class="jv-hero-top"><span>Today's profit</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em>${liveBadge(mk)}</div>
        <div class="jv-hero-big ${cls}">${sinr(tot)}</div>
        <div class="jv-chips">
          <div class="jv-chip2"><small>Locked in</small><b class="${cc(bk)}">${sinr(bk)}</b><span>trades already closed</span></div>

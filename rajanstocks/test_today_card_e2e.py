@@ -86,3 +86,28 @@ def test_an_older_cached_copy_from_another_instance_is_ignored(server, browser):
     assert pg.evaluate("o => JV.takeStock(o)", newer) is True and pg.evaluate("JV.stockCount()") == 0
     assert not errs
     c.close()
+
+
+def test_prices_are_live_within_a_few_seconds_of_a_refresh_and_the_card_says_so(server, browser):
+    w = World()
+    w.set_price("A-1", 110)
+    c, pg, errs = open_journal(browser, w, tab="portfolio")
+    pg.evaluate("MKT.open = true")                                       # the test server has no quote feed: tell the page the market is open
+    pg.wait_for_function("document.querySelector('#jvOpen [data-c=cur]') && document.querySelector('#jvOpen [data-c=cur]').textContent.includes('110.00')", timeout=4500)   # not 5+ s of saved marks
+    pg.wait_for_function("document.querySelector('#jvLiveB') && document.querySelector('#jvLiveB').textContent.includes('live')", timeout=5000)
+    w.set_price("A-1", 120)
+    pg.wait_for_function("document.querySelector('#jvOpen [data-c=cur]').textContent.includes('120.00')", timeout=6000)           # follows within one 3 s tick
+    assert not errs
+    c.close()
+
+
+def test_a_dead_price_feed_is_shown_not_hidden(server, browser):
+    w = World()
+    w.set_price("A-1", 110)
+    c, pg, errs = open_journal(browser, w, tab="portfolio")
+    pg.evaluate("MKT.open = true")
+    pg.wait_for_function("document.querySelector('#jvLiveB') && document.querySelector('#jvLiveB').textContent.includes('live')", timeout=6000)
+    w.live["ok"] = False
+    pg.wait_for_function("document.querySelector('#jvLiveB') && /old/.test(document.querySelector('#jvLiveB').textContent)", timeout=25000)
+    assert "110.00" in pg.inner_text('#jvOpen tr[data-id="A-1"] [data-c=cur]') and not errs                                      # last price kept, honestly labelled
+    c.close()
