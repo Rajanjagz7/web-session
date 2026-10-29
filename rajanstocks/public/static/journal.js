@@ -489,7 +489,7 @@ function paperList() {
         }
       }
       if (f.inst && !(t.instrument || t.symbol || '').toUpperCase().includes(f.inst.toUpperCase())) return false;
-      if (f.setup && t.setup !== f.setup) return false;
+      if (!setupOk(t, f.setup)) return false;
       if (f.dir && t.dir !== f.dir) return false;
       if (f.exit && t.exitType !== f.exit) return false;
       if (f.rule && t.rule !== f.rule) return false;
@@ -715,7 +715,7 @@ function paperList() {
     if (!f.to && f.from === istShift(6)) return '7d'; if (!f.to && f.from === istShift(29)) return '30d'; return 'custom'; }
   function moreCount() { const f = ui.f; return ['market', 'setup', 'dir', 'exit', 'rule'].filter(k => f[k]).length + (datePreset() === 'custom' ? 1 : 0); }
   function filterBar() {
-    const f = ui.f, setups = [...new Set(allTrades().map(t => t.setup).filter(Boolean))], dp = datePreset(), mc = moreCount();
+    const f = ui.f, setups = [...new Set(SETUP_LIST.concat(allTrades().map(t => setupKey(t.setup)).filter(Boolean)))], dp = datePreset(), mc = moreCount();
     const opt = (arr, cur, all) => `<option value="">${all}</option>` + arr.map(x => `<option ${cur === x ? 'selected' : ''}>${E(x)}</option>`).join('');
     const seg = (name, cur, opts) => `<div class="jv-seg">${opts.map(([v, l, tip]) => `<button class="${cur === v ? 'on' : ''}" data-jvq="${name}:${v}" ${tip ? `title="${tip}"` : ''}>${l}</button>`).join('')}</div>`;
     const chips = [];
@@ -1200,6 +1200,22 @@ function paperList() {
   }
 
   /* ---------- Strategy lab / reports ---------- */
+  // one entry per idea: the auto trader's source texts carry numbers / variants ("Z Trend flip - hedged credit spread", "Gann cycle 4 ..."), which
+  // used to make a long list of near-duplicates. SETUP_LIST is always shown, even before the first trade; anything else seen in a trade is added.
+  const setupKey = x => { x = String(x || '').trim(); if (!x) return '';
+    if (/^Today.s Picks/i.test(x)) return "Today's Picks";
+    if (/^Eagle/i.test(x)) return 'Eagle Trades';
+    if (/Z Trend/i.test(x) && /time cycle/i.test(x)) return 'Z Trend + time cycle';
+    if (/Z Trend/i.test(x)) return 'Z Trend';
+    if (/time cycle|^Gann cycle/i.test(x)) return 'Time cycle';
+    if (/^Gann angle|Gann time-price/i.test(x)) return 'Gann angle';
+    if (/^stock screen/i.test(x)) return 'Stock screen';
+    if (/^index call\/put/i.test(x)) return 'Index call/put';
+    if (/indicator\(s\) agree/i.test(x)) return 'Indicators agree';
+    return x.split(' · ')[0]; };
+  const SETUP_LIST = ['OLD FILT', 'NEW IND', 'Indicators agree', 'Stock screen', 'Index call/put', "Today's Picks", 'Eagle Trades', 'Z Trend', 'Z Trend + time cycle', 'Time cycle', 'Gann angle', 'Manual'];
+  const setupOk = (t, want) => !want || t.fset === want || setupKey(t.setup) === want;
+
   function groupBy(list, keyFn, split) {
     const g = {}; list.forEach(t => { const v = (keyFn(t) || '—').toString(); (split ? v.split(',').map(s => s.trim()).filter(Boolean) : [v]).forEach(k => (g[k] = g[k] || []).push(t)); });
     return Object.keys(g).map(k => ({ k, m: metrics(g[k]), all: g[k].length })).sort((a, b) => b.m.net - a.m.net);
@@ -1212,7 +1228,7 @@ function paperList() {
   }
   function viewStrategy() {
     const L = filtered();
-    return `${filterBar()}<div class="card"><div class="card-h"><h3>By strategy / setup</h3></div>${groupTable(groupBy(L, t => t.setup, false), 'Setup')}</div>
+    return `${filterBar()}<div class="card"><div class="card-h"><h3>By strategy / setup</h3></div>${groupTable(groupBy(L, t => setupKey(t.setup) || t.setup, false), 'Setup')}</div>
       <div class="card"><div class="card-h"><h3>By indicator</h3></div>${groupTable(groupBy(L, t => t.ind, true), 'Indicator')}</div>
       <div class="card"><div class="card-h"><h3>By instrument</h3></div>${groupTable(groupBy(L, t => t.instrument, false), 'Instrument')}</div>
       <div class="card"><div class="card-h"><h3>By direction / market</h3></div>${groupTable(groupBy(L, t => t.dir + ' · ' + t.market, false), 'Segment')}</div>`;
