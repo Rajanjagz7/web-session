@@ -167,6 +167,17 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
             n.unrl = p.unrl; n.raw.last = p.raw.last; n.raw.unrealised = p.raw.unrealised; n.raw.lastAt = pa;
           }
         });
+        /* "stop moved" message in the app (user 29 Oct: it used to appear while using the app, on any screen): once for every new lock step of a running auto trade */
+        try {
+          const KS = 'rs-lock-seen'; const first = localStorage.getItem(KS) === null; const seenL = JSON.parse(localStorage.getItem(KS) || '{}'); let ch = false;
+          AUTO.list.forEach(n => {
+            const lk = n.status !== 'Closed' && n.raw && n.raw.lock; if (!lk) return;
+            const sig = lk.mode + '|' + lk.keep; if (seenL[n.id] === sig) return;
+            seenL[n.id] = sig; ch = true;
+            if (!first && typeof toast === 'function') toast(`${n.symbol}: profit ₹${Math.round(lk.best || 0).toLocaleString('en-IN')} - stop moved to ${n.raw.premSL} (${lk.keep ? 'locks ₹' + Math.round(lk.keep).toLocaleString('en-IN') : 'breakeven'})`, 'ok');
+          });
+          if (ch || first) localStorage.setItem(KS, JSON.stringify(seenL));
+        } catch (e) { }
         AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly), stockTrader: !(a.cfg && a.cfg.stockTrader === false) } };
         AUTO.err = false;
         AUTO.ts = Date.now();

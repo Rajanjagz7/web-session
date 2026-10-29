@@ -511,3 +511,19 @@ def test_reset_from_the_stock_trader_tab_resets_every_book(server, browser):
     urls = [p[0] for p in w.posts]
     assert "auto/reset" in urls and "stockbot/reset" in urls and not errs
     c.close()
+
+
+def test_in_app_message_when_the_auto_trader_moves_a_stop_on_any_screen(server, browser):
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    pg.evaluate("go('picks')")                                                            # not the Journal
+    pg.evaluate("window.__toasts = []; const _t = window.toast; window.toast = (m, k) => { window.__toasts.push(m); return _t && _t(m, k); }")
+    w.opens[0]["lock"] = {"mode": "breakeven", "keep": 0, "best": 1600, "at": f"{TODAY}T11:00:00+05:30"}
+    w.opens[0]["premSL"] = 101.5
+    pg.evaluate("JV.sync(true)")
+    pg.wait_for_function("window.__toasts.some(m => m && m.includes('stop moved to 101.5'))", timeout=15000)
+    n = len(pg.evaluate("window.__toasts"))
+    pg.evaluate("JV.sync(true)")
+    pg.wait_for_timeout(1500)
+    assert len(pg.evaluate("window.__toasts")) == n and not errs                          # once per lock step, not on every sync
+    c.close()
