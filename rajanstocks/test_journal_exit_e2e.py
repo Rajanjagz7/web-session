@@ -578,3 +578,23 @@ def test_stale_hedge_tag_does_not_sell_a_new_manual_buy(server, browser):
     pg.wait_for_timeout(7500)
     assert pg.evaluate("App.positions.filter(p => p.sym === 'ZZ 100 CE').length") == 1 and not errs
     c.close()
+
+
+def test_tapping_an_option_in_the_chain_selects_it_without_errors(server, browser):
+    """14:12 bug: `el is not defined` in updOptTrade stopped the chart opening after a tap on a chain row."""
+    w = World()
+    c = browser.new_context(viewport={"width": 420, "height": 900})
+    pg = c.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    leg = lambda k, p: dict(key=f"K{k}", ltp=p, prev=p, open=p * 1.1, high=p * 1.2, low=p * 0.9, vol=1000, oi=5000, oiChg=10, bid=p - .1, ask=p + .1)
+    chain = dict(symbol="NIFTY", expiry="2026-11-03", expiries=["2026-11-03"], spot=22850.0, atm=22850, lot=65, asOf="2026-10-29T14:00:00+05:30", key="NSE_INDEX|Nifty 50",
+                 rows=[dict(strike=k, ce=leg(k, 100 + (22850 - k) / 10), pe=leg(k, 100 - (22850 - k) / 10)) for k in range(22700, 23000, 50)])
+    pg.route("**/api/**", w.handle)
+    pg.route("**/api/m/chain**", lambda r: r.fulfill(status=200, json=chain))
+    pg.goto(BASE + "/#options")
+    pg.wait_for_selector("#optChain [data-opt]", timeout=20000)
+    pg.click("#optChain [data-opt]")
+    pg.wait_for_function("OPT.mtab === 'chart'", timeout=10000)
+    assert not errs
+    c.close()
