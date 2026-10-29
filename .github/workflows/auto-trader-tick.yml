@@ -1,0 +1,26 @@
+name: Auto-trader tick
+# A short-job twin of "Auto-trader heartbeat". The heartbeat is ONE job that must START on time and then loops for hours: when GitHub
+# delays that start (it has fired the schedule 1 to 7 hours late, see docs/SCHEDULING.md) nothing runs until it finally does.
+# This one is a 10-second job every 5 minutes (GitHub's minimum): a dropped or late tick costs one cycle, the next tick carries on.
+# The server takes a lock per cycle, so overlapping with the heartbeat or with the external scheduler is harmless.
+# Every run prints when it really started, so the log shows how late GitHub is (compare with the 5-minute slot it was meant for).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 3-10 * * 1-5"       # every 5 minutes, 08:30-16:25 IST, Mon-Fri (the script itself acts only 09:15-15:35)
+concurrency: { group: auto-tick, cancel-in-progress: true }
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: One cycle
+        run: |
+          SITE="https://rajanstocks.vercel.app"
+          now=$(TZ=Asia/Kolkata date +%H%M)
+          echo "tick: event=${{ github.event_name }} started $(date -u +%FT%TZ) = $(TZ=Asia/Kolkata date +%H:%M:%S) IST"
+          if [ "$now" -lt 915 ] || [ "$now" -gt 1535 ]; then echo "outside 09:15-15:35 IST - nothing to do"; exit 0; fi
+          if [ "$now" -lt 920 ]; then curl -s -m 40 -o /dev/null "$SITE/api/m/picks" || true; fi     # warm today's picks at the open
+          out=$(curl -s -m 60 -X POST "$SITE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed [HTTP 000]')
+          echo "${out:0:400}"
+          case "$out" in *"[HTTP 200]"*) ;; *) echo "::error::auto-cycle did not answer 200"; exit 1;; esac
