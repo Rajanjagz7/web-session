@@ -10,7 +10,7 @@ Rules (identical to the backtest in backtest.py, so results are comparable):
   * Risk per trade = 1.0% of its sleeve's equity (0.5% until 28 Oct 11:16); lots = floor(budget / (lot x 0.5 delta x stop distance)), minimum 1.
   * Stop = the indicator's signal candle (beyond its low/high, 0.5-1.0 ATR) but never more than 12.5% of the option
     premium (backtest.plan_risk). Exit when the underlying hits that stop OR the option bid falls 12.5% below entry,
-    target ladder 1.5R 2R 3R 4R 5R 6R 10R (stop trails one target behind; 10R closes), 10 sessions, or one day before expiry; square-off check 15:15.
+    target ladder 1.5R 2R 3R 4R 5R 6R 10R (stop trails one target behind; 10R closes), 10 sessions, or one day before expiry. There is no intraday square-off: option trades are held across sessions (the "squareOff" config value is not used).
   * Stock picks are chosen automatically: proven-strategy signal agreeing with the stock's screen score.
 """
 import json
@@ -575,7 +575,7 @@ def eagle_cands(st, today, taken=()):
             continue
         out.append({"key": EAGLE, "sym": p["s"], "side": c["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                     "score": (p.get("strength") or 0) / 100, "rank": 20 + (p.get("strength") or 0) / 100, "agree": 1,
-                    "indStop": round(p["ltp"] - (1 if c["side"] == "BUY" else -1) * morning_picks.swing_risk(p, c["side"]), 2),   # the pick's own stop, as in the backtest (still capped at 30% of the premium)
+                    "indStop": round(p["ltp"] - (1 if c["side"] == "BUY" else -1) * morning_picks.swing_risk(p, c["side"]), 2),   # the pick's own stop, as in the backtest (the live stop is then capped at premSlPct of the premium, see open_trade)
                     "source": EAGLE, "why": c["why"], "label": EAGLE})
     return sorted(out, key=lambda c: -c["rank"])
 
@@ -1046,7 +1046,7 @@ def open_trade(st, c, today):
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
     variant = c.get("variant", "fixed")
-    # same rule as the backtest: signal-candle stop, capped at 30% of THIS option's premium
+    # signal-candle stop from the backtest's plan_risk() (that function still caps at 30% of the premium); the live cap below (premSlPct) is tighter
     risk_u = backtest.plan_risk(bars, atr, len(bars) - 1, c["side"], entry_u, ct["premium"], ind_stop=c.get("indStop"))
     if risk_u <= 0:
         raise RuntimeError("no valid stop")
@@ -1752,21 +1752,91 @@ def _und_price(t):
     return _last(q.get(market_api._key(t["sym"])))
 
 
+def _book(q):
+    """(bid, ask) from a full quote's top-of-book depth; 0 when a side is empty."""
+    d = (q or {}).get("depth") or {}
+    bid = float(((d.get("buy") or [{}])[0] or {}).get("price") or 0)
+    ask = float(((d.get("sell") or [{}])[0] or {}).get("price") or 0)
+    return bid, ask
+
+
+def _exit_px(t, q):
+    """The price a manual exit books for this trade: a sold option is bought back at the ask, a bought one sold at the bid; the last
+    traded price when that side of the book is empty. 0 when there is no price at all. ONE function, used by the exit endpoints and
+    by the live preview the Journal shows, so the price on the exit screen is the price that gets booked."""
+    bid, ask = _book(q)
+    side_px = ask if t.get("pos") == "short" else bid
+    return side_px if side_px > 0 else _last(q)
+
+
+MOVE_TOL = 0.03          # an exit is refused when the price moved more than this since the screen the user confirmed on
+
+
+class ExitBody(BaseModel):
+    seen: float | None = None        # the exit price on the confirm screen; the exit is refused (409) if it has moved by more than MOVE_TOL
+
+
+_LIVE = {"at": 0.0, "keys": (), "q": {}}
+
+
+def _live_quotes(keys, ttl=3.0):
+    """Quotes for the open contracts, shared for `ttl` seconds across requests on this instance so ten open tabs polling every few
+    seconds cost one broker call, not ten."""
+    keys = tuple(sorted(set(keys)))
+    if not keys:
+        return {}
+    if _LIVE["keys"] == keys and time.time() - _LIVE["at"] < ttl:
+        return _LIVE["q"]
+    q = _quotes(list(keys)) or {}
+    _LIVE.update(at=time.time(), keys=keys, q=q)
+    return q
+
+
+@router.get("/live")
+def live_prices():
+    """Read-only live prices of every open option trade: last traded, bid, ask and the price an exit would book right now. The status
+    read only marks to market every couple of minutes (and serves a cached copy), so the Journal polls this while it is on screen and
+    on every exit confirm screen. Nothing is saved here."""
+    st = _load(cached=True)
+    opens = [t for t in st["trades"] if t["status"] == "OPEN" and t.get("key")]
+    now = _now()
+    out = {"at": now.isoformat(), "trades": [], "ok": True}
+    if not opens:
+        return out
+    try:
+        q = _live_quotes([t["key"] for t in opens])
+    except Exception as e:
+        out.update(ok=False, error=str(e)[:80])
+        return out
+    for t in opens:
+        qq = q.get(t["key"]) or {}
+        bid, ask = _book(qq)
+        ltp = _last(qq)
+        ex = _exit_px(t, qq)
+        qty = (t.get("lots") or 0) * (t.get("lot") or 0)
+        sgn = -1 if t.get("pos") == "short" else 1
+        out["trades"].append({"id": t["id"], "ltp": round(ltp, 2), "bid": round(bid, 2), "ask": round(ask, 2), "exitPx": round(ex, 2),
+                              "unrealised": round((ltp - t["entry"]) * qty * sgn, 2) if ltp > 0 else None,
+                              "exitGross": round((ex - t["entry"]) * qty * sgn, 2) if ex > 0 else None, "at": now.isoformat()})
+    return out
+
+
 @router.post("/trade/{tid}/exit")
-def manual_exit(tid: str):
-    """Close an open automated paper trade right now at the live bid."""
+def manual_exit(tid: str, b: ExitBody | None = None):
+    """Close an open automated paper trade right now at the live bid (ask for a sold option)."""
+    seen = b.seen if b else None
+
     def apply(st):
         t = _open_trade(st, tid)
         try:
             q = _quotes([t["key"]]).get(t["key"]) or {}
         except Exception as e:
             raise HTTPException(503, f"Live price unavailable right now, try again in a moment ({str(e)[:80]})")
-        bid = float((((q or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
-        ask = float((((q or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
-        side_px = ask if t.get("pos") == "short" else bid      # a sold option is bought back at the ask, a bought one sold at the bid
-        px = side_px if side_px > 0 else _last(q)
+        px = _exit_px(t, q)
         if px <= 0:
             raise HTTPException(503, "No live price for this contract right now, try again in a moment")
+        if seen and seen > 0 and abs(px - seen) / seen > MOVE_TOL:
+            raise HTTPException(409, f"Price moved from {seen:.2f} to {px:.2f} while you were confirming. Check the new price and exit again.")
         _close(st, t, px, "MANUAL")
         return {"ok": True, "exit": t["exit"], "net": t["net"], "R": t["R"]}
     return _mutate(apply)
@@ -1788,10 +1858,7 @@ def exit_all():
             raise HTTPException(503, f"Live prices unavailable right now, try again in a moment ({str(e)[:80]})")
         n, net, failed = 0, 0.0, []
         for t in opens:
-            qq = q.get(t.get("key")) or {}
-            bid = float((((qq or {}).get("depth") or {}).get("buy") or [{}])[0].get("price") or 0)
-            ask = float((((qq or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
-            px = (ask if t.get("pos") == "short" else bid) or _last(qq)
+            px = _exit_px(t, q.get(t.get("key")) or {})
             if px <= 0:                                  # no live price for this contract: leave it open rather than book a guess
                 failed.append(f"{t['id']}: no live price")
                 continue

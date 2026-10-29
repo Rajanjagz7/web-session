@@ -72,7 +72,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
   const EXIT_MAP = { STOP: 'SL', TSL: 'TSL', MANUAL: 'Manual Exit', TARGET: 'T2', TIME: 'Time Exit', EXPIRY: 'Time Exit', REVERSE: 'Manual Exit', 'SQUARE-OFF': 'Time Exit', 'SPREAD-STOP': 'SL', 'SPREAD-T1': 'T2', 'SPREAD-EXPIRY': 'Time Exit' };
   function mapAuto(a) {
     const d = a.openedAt ? new Date(a.openedAt) : new Date(a.date + 'T09:20:00+05:30');
-    // premium at risk per unit: from the server plan (delta 0.5 x the indicator's stop, capped at 30% of the premium)
+    // premium at risk per unit: from the server plan (delta 0.5 x the underlying stop; the server caps the stop at premSlPct, default 12.5%, of the premium). The 30% below is only a fallback for old trades without premRisk
     const riskP = a.premRisk > 0 ? a.premRisk : Math.max(0.05, Math.min(0.5 * (a.riskU || 0), 0.3 * a.entry));
     const inds = (a.indicators && a.indicators.length ? a.indicators : [a.strategy]).filter(Boolean);
     const closed = a.status === 'CLOSED', sh = a.pos === 'short', k = sh ? -1 : 1;   // sold option: stop above, targets below the entry
@@ -103,6 +103,43 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     } else { t.reviewed = false; t.lesson = ''; if (a.tgts && a.tHit) { const hh = ['T1', 'T2', 'T3'].slice(0, Math.min(3, a.tHit)); t.hits = hh; t.hitOrder = hh.slice(); } }
     return t;
   }
+  /* ---------- live prices for the open option trades ----------
+     /api/auto/status only marks to market every couple of minutes and serves a cached copy, so the LTP on the table (and on the exit
+     screen) could sit still for minutes and then jump. /api/auto/live is a read-only quote of the open contracts (last, bid, ask and the
+     price an exit books); it is polled while the Journal is on screen and every 3 s while an exit screen is open. */
+  AUTO.q = {}; AUTO.qTs = 0; AUTO.qOk = true;
+  async function pullLive(force) {
+    if (AUTO.qBusy) return;
+    if (!force && (document.hidden || Date.now() - AUTO.qTs < 4000)) return;
+    AUTO.qBusy = true;
+    try {
+      const r = await fetch('/api/auto/live', { cache: 'no-store' });
+      if (!r.ok) { AUTO.qOk = false; return; }
+      const d = await r.json();
+      if (!d.ok) { AUTO.qOk = false; return; }
+      const m = {}; (d.trades || []).forEach(x => { m[x.id] = x; });
+      AUTO.q = m; AUTO.qTs = Date.now(); AUTO.qOk = true;
+      applyLive();
+    } catch (e) { AUTO.qOk = false; }
+    finally { AUTO.qBusy = false; }
+  }
+  /* put the live quote into the trade (price AND open P&L together, so the table, the cost estimate and the day total agree) - never an older one over a newer one */
+  function applyLive() {
+    AUTO.list.forEach(t => {
+      const q = AUTO.q[t.id]; if (!q || t.status === 'Closed' || !(q.ltp > 0) || !t.raw) return;
+      if (t.raw.lastAt && q.at && q.at < t.raw.lastAt) return;
+      t.raw.last = q.ltp; t.raw.lastAt = q.at;
+      if (typeof q.unrealised === 'number') { t.unrl = q.unrealised; t.raw.unrealised = q.unrealised; }
+    });
+  }
+  const liveAgeS = () => AUTO.qTs ? Math.round((Date.now() - AUTO.qTs) / 1000) : null;
+  /* runs `paint` now and every `ms` while the exit screen (the .modal-bg that is open now) stays open; stops by itself when it closes */
+  function exitTicker(paint, ms) {
+    const bg = document.querySelector('.modal-bg');
+    const h = setInterval(async () => { if (!bg || !document.body.contains(bg)) { clearInterval(h); return; } await pullLive(true); if (document.body.contains(bg)) paint(); }, ms || 3000);
+    paint();
+  }
+  const hms = () => new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Kolkata' });
   async function syncAuto(force) {
     /* server load: the status read runs a mark-to-market (and, in market hours, an auto-trade cycle) - every 10 s on every screen was the biggest
        single user of Vercel Active CPU. Now: not at all from a hidden tab, every 20 s while the Journal is on screen, every 60 s elsewhere. */
@@ -616,7 +653,7 @@ function paperList() {
   }
   function tslShow(t) { if (t.auto && statusOf(t) !== 'Closed') return autoTsl_(t); if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
-  setInterval(() => { refreshLive(); if (!document.hidden && window.rjMkt()) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
+  setInterval(() => { refreshLive(); if (!document.hidden && window.rjMkt()) { syncAuto(false); const h = document.getElementById('v-journal'); if (h && h.offsetParent && AUTO.list.some(t => t.status !== 'Closed')) pullLive(false).then(refreshLive); } }, 5000);  // syncAuto self-throttles to 20 s; the live quote to 4 s, only with the Journal on screen and an option trade open
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden && window.rjMkt()) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
 
    function viewOverview() {
@@ -1015,47 +1052,105 @@ function paperList() {
         persist(); window.closeModal(); render(); openDetail(id);
       });
   }
+  /* one line per figure of the exit screen. `row` = {ltp, bid, ask, exitPx, gross, cost}; any may be missing */
+  function exitPanel(row, label) {
+    if (!row || !(row.exitPx > 0)) return `<p class="warn" style="margin:8px 0">Waiting for a live price${AUTO.qOk === false ? ' (the price feed is not answering - retrying)' : ''}…</p>`;
+    const net = row.gross - (row.cost || 0), age = liveAgeS();
+    const stale = age != null && age > 20;
+    return `<table class="jv-t" style="margin:8px 0;width:100%"><tbody>
+      <tr><td>LTP (last traded)</td><td class="num"><b>${px(row.ltp)}</b></td></tr>
+      ${row.bid > 0 || row.ask > 0 ? `<tr><td>Bid / Ask</td><td class="num">${px(row.bid)} / ${px(row.ask)}</td></tr>` : ''}
+      <tr><td>${label || 'You exit at'}</td><td class="num"><b>${px(row.exitPx)}</b></td></tr>
+      <tr><td>Result if you exit now (after costs)</td><td class="num ${cc(net)}"><b>${sinr(net)}</b></td></tr></tbody></table>
+      <p class="muted" style="margin:0;font-size:12px">Updated ${hms()}, refreshes every 3 s${stale ? ' - <b class="down">price is ' + age + ' s old, wait for it to refresh</b>' : ''}</p>`;
+  }
+  function optionExitRow(t) {
+    const q = AUTO.q[t.id]; if (!q || !(q.exitPx > 0) || Date.now() - AUTO.qTs > 60000) return null;
+    const rem = (t.raw.lots || 0) * (t.raw.lot || 0), pct = Number(t.raw.costPctEff) || 0;
+    return { ltp: q.ltp, bid: q.bid, ask: q.ask, exitPx: q.exitPx, gross: q.exitGross != null ? q.exitGross : 0, cost: pct / 100 * ((t.entry || 0) + q.exitPx) * rem };
+  }
+  function stockExitRow(t) {
+    const l = live(t.symbol || t.instrument); if (!(l > 0)) return null;
+    const sg = dirOf(t), pct = Number(t.raw && t.raw.costPctEff) || 0.1;
+    return { ltp: l, exitPx: l, gross: sg * (l - t.entry) * (t.qty || 1), cost: pct / 100 * (t.entry + l) * (t.qty || 1) };
+  }
   function autoExit(id) {
-    const t = AUTO.list.find(x => x.id === id); if (!t) return;
-    smallForm('Exit now · ' + t.id, `<p>Close <b>${E(t.symbol)}</b> at the live bid? This ends the paper trade; you can't undo it.</p>`, 'Exit now', () => {
-      const ok = document.getElementById('jvFormOk'); ok.disabled = true; ok.textContent = 'Exiting…';
-      jpost('/api/auto/trade/' + encodeURIComponent(id) + '/exit').then(async r => {
-        ok.disabled = false; ok.textContent = 'Exit now';
-        if (!r.ok) { const er = document.getElementById('jvFormErr'); er.textContent = r.err; er.hidden = false; return; }
-        window.closeModal(); await syncAuto(true); render(); toast_(`Exited #${shortId(t)} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
+    /* share trades are auto trades too but live in AUTO.stockTrades and close through the share trader's own endpoint (this used to look only in AUTO.list, so Exit on a share trade did nothing) */
+    const t = AUTO.list.find(x => x.id === id) || (AUTO.stockTrades || []).find(x => x.id === id); if (!t) { toast_('That trade is no longer open - refreshing.', 'warn'); syncAuto(true).then(render); return; }
+    const stock = !!t.isStock, url = (stock ? '/api/stockbot/trade/' : '/api/auto/trade/') + encodeURIComponent(id) + '/exit';
+    let busy = false, seen = 0;
+    smallForm('Exit now · ' + t.id, `<p>Close <b>${E(t.symbol)}</b> now? This ends the paper trade; you can't undo it.</p><div id="jvXp"></div>`, 'Exit now', () => {
+      if (busy || !(seen > 0)) return null;
+      const ok = document.getElementById('jvFormOk'), er = document.getElementById('jvFormErr'); busy = true; ok.disabled = true; ok.textContent = 'Exiting…'; er.hidden = true;
+      jpost(url, { seen }).then(async r => {
+        busy = false; ok.disabled = false; ok.textContent = 'Exit now';
+        if (!r.ok) { er.textContent = r.err; er.hidden = false; return; }          /* 409 = the price moved: the panel already shows the new one, confirm again */
+        window.closeModal(); await syncAuto(true); await pullLive(true); render(); toast_(`Exited #${shortId(t)} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
       });
       return null;
     });
+    exitTicker(() => {
+      const host = document.getElementById('jvXp'), ok = document.getElementById('jvFormOk'); if (!host) return;
+      const row = stock ? stockExitRow(t) : optionExitRow(t);
+      seen = row ? row.exitPx : 0;
+      host.innerHTML = exitPanel(row, stock ? 'You exit at (last price)' : (t.dir === 'Short' ? 'You buy back at (ask)' : 'You sell at (bid)'));
+      if (ok && !busy) ok.disabled = !(seen > 0);
+    });
+    pullLive(true);
   }
   function exitAll() {
-    const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
-    if (!open.length) { toast_('No open positions to exit.', 'warn'); return; }
-    const unr = open.reduce((a, t) => a + (unrealisedNet(t) || 0), 0);
-    smallForm('Exit all positions', `<p>Exit <b>${open.length}</b> open position${open.length === 1 ? '' : 's'} at live prices? Open P&L right now: <b class="${cc(unr)}">${sinr(unr)}</b>. This can't be undone.</p>`, 'Exit all', () => {
-      const ok = document.getElementById('jvFormOk'), er = document.getElementById('jvFormErr'); ok.disabled = true;
+    const openNow = () => allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed');
+    if (!openNow().length) { toast_('No open positions to exit.', 'warn'); return; }
+    /* open P&L of everything that would be closed: option trades at the exit price of the live quote, the rest at their live figure */
+    const totals = () => {
+      const o = openNow(); let net = 0, missing = 0;
+      o.forEach(t => {
+        const r = t.auto && !t.isStock ? optionExitRow(t) : null;
+        if (r) net += r.gross - r.cost; else { const u = unrealisedNet(t); if (u == null) missing++; else net += u; }
+      });
+      return { n: o.length, net, missing };
+    };
+    let busy = false;
+    smallForm('Exit all positions', '<div id="jvXp"></div>', 'Exit all', () => {
+      if (busy) return null;
+      const ok = document.getElementById('jvFormOk'), er = document.getElementById('jvFormErr'); busy = true; ok.disabled = true; er.hidden = true;
       (async () => {
-        let done = 0, fail = [], autoBulk = null; const now = new Date();
+        const open = openNow(); let done = 0, fail = [], autoBulk = null; const now = new Date();
         for (const t of open) {
           ok.textContent = `Exiting ${done + fail.length + 1}/${open.length}…`;
-          if (t.auto) {
-            if (autoBulk === null) {                       /* every auto trade closes in ONE request (20 single calls hung on Vercel) */
+          if (t.auto && t.isStock) {                      /* share trades close through the share trader (the options bulk call below never touches them) */
+            const l = live(t.symbol || t.instrument);
+            const r = await jpost('/api/stockbot/trade/' + encodeURIComponent(t.id) + '/exit', l > 0 ? { seen: l } : {});
+            if (r.ok) done++; else fail.push(t.symbol + ': ' + r.err);
+          }
+          else if (t.auto) {
+            if (autoBulk === null) {                       /* every auto option trade closes in ONE request (20 single calls hung on Vercel) */
               ok.textContent = 'Exiting auto trades…';
               const r = await jpost('/api/auto/exit-all'); autoBulk = r;
               if (r.ok) { done += r.d.closed || 0; (r.d.failed || []).forEach(f => fail.push(f)); } else fail.push('Auto trades: ' + r.err);
             }
-            continue;
           }
           else if (t.paper) { if (typeof closePos === 'function') { closePos(t.symbol, 'manual'); done++; } else fail.push(t.symbol + ': Trade screen not loaded'); }
-          else { const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);
-            if (l == null) { fail.push(t.id + ': no live price'); continue; }
+          else { const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);        /* read NOW, not when the screen opened */
+            if (!(l > 0)) { fail.push(t.id + ': no live price'); continue; }
             t.exits.push({ qty: rem, price: +l.toFixed(2), type: 'Manual Exit', date: istDay(now), time: istTime(now) }); t.exitType = 'Manual Exit'; t.status = 'Closed'; t.closedAt = now.toISOString(); done++; }
         }
-        persist(); await syncAuto(true);
+        persist(); await syncAuto(true); await pullLive(true);
+        busy = false;
         if (fail.length) { ok.disabled = false; ok.textContent = 'Exit all'; er.innerHTML = `Exited ${done}. Could not exit ${fail.length}:<br>${fail.map(E).join('<br>')}`; er.hidden = false; render(); return; }
         window.closeModal(); render(); toast_(`Exited ${done} position${done === 1 ? '' : 's'}`, 'ok');
       })();
       return null;
     });
+    exitTicker(() => {
+      const host = document.getElementById('jvXp'), ok = document.getElementById('jvFormOk'); if (!host) return;
+      const T_ = totals(), age = liveAgeS();
+      host.innerHTML = `<p>Exit <b>${T_.n}</b> open position${T_.n === 1 ? '' : 's'} at live prices? This can't be undone.</p>
+        <p>Open P&amp;L right now (after costs): <b class="${cc(T_.net)}">${sinr(T_.net)}</b>${T_.missing ? ` <span class="muted">· ${T_.missing} without a live price</span>` : ''}</p>
+        <p class="muted" style="margin:0;font-size:12px">Updated ${hms()}, refreshes every 3 s${age != null && age > 20 ? ' - <b class="down">option prices are ' + age + ' s old</b>' : ''}</p>`;
+      if (ok && !busy) ok.disabled = T_.n === 0;
+    });
+    pullLive(true);
   }
   function autoTsl(id) {
     const t = AUTO.list.find(x => x.id === id); if (!t || !t.raw) return;
@@ -1112,14 +1207,22 @@ function paperList() {
       const sym = String(id).replace(/^P\|/, '');
       if (typeof closePos === 'function') { closePos(sym, 'manual'); setTimeout(render, 120); return; }
     }
-    const l = live(t.symbol || t.instrument), rem = t.qty - exitedQty(t);
-    if (l == null) { addExit(id); return; }                           // no live quote here: ask for the exit price instead
-    smallForm('Exit at market · ' + t.id, `<p>Exit the remaining <b>${rem}</b> of <b>${E(t.symbol || t.instrument)}</b> at the live price <b>${px(l)}</b>?</p>`, 'Exit now', () => {
+    if (!(live(t.symbol || t.instrument) > 0)) { addExit(id); return; }                           // no live quote here: ask for the exit price instead
+    const rem = () => t.qty - exitedQty(t);
+    smallForm('Exit at market · ' + t.id, `<p>Exit the remaining <b>${rem()}</b> of <b>${E(t.symbol || t.instrument)}</b> at the live price?</p><div id="jvXp"></div>`, 'Exit now', () => {
+      const l = live(t.symbol || t.instrument);                                                   /* the price at the click - the screen used to book the price from when it opened */
+      if (!(l > 0)) return 'No live price right now, try again in a moment.';
       const now = new Date();
-      t.exits.push({ qty: rem, price: +l.toFixed(2), type: 'Manual Exit', date: istDay(now), time: istTime(now) });
+      t.exits.push({ qty: rem(), price: +l.toFixed(2), type: 'Manual Exit', date: istDay(now), time: istTime(now) });
       t.exitType = 'Manual Exit'; t.status = 'Closed'; t.closedAt = now.toISOString();
       persist(); window.closeModal(); toast_('Exited at ' + px(l), 'ok'); render(); return null;
     });
+    exitTicker(() => {
+      const host = document.getElementById('jvXp'), ok = document.getElementById('jvFormOk'); if (!host) return;
+      const l = live(t.symbol || t.instrument);
+      host.innerHTML = l > 0 ? `<table class="jv-t" style="margin:8px 0;width:100%"><tbody><tr><td>Live price</td><td class="num"><b>${px(l)}</b></td></tr><tr><td>Result if you exit now</td><td class="num ${cc(dirOf(t) * (l - t.entry))}"><b>${sinr(dirOf(t) * (l - t.entry) * rem() * units(t))}</b></td></tr></tbody></table><p class="muted" style="margin:0;font-size:12px">Updated ${hms()}</p>` : '<p class="warn">Waiting for a live price…</p>';
+      if (ok) ok.disabled = !(l > 0);
+    }, 2000);
   }
   function saveReview(id) {
     const t = T.find(x => x.id === id); if (!t) return; const g = k => document.getElementById(k).value;
@@ -1889,23 +1992,51 @@ function paperList() {
    /* two separate paper books: options / Trade screen (this journal) and the stock trader - options Rs 10 L, stock trader Rs 5 L */
    /* "Today" card: today's profit split by book into what is BOOKED (closed trades - locked in) and what is still OPEN (moves with
       price until the trade closes). Options Buy / Options Sell come from the journal trades; the stock trader from its own server book. */
+   /* TODAY's share of an automated trade is the move since the start of TODAY - not since the entry. A trade carried from an earlier day used
+      to put its whole open profit (and, when it closed, its whole result) into "Today's profit". Option trades: the server remembers the
+      price at the first look of the day (baseDate / basePx); share trades: yesterday's close. Same rule as the server's day P&L guard. */
+   function dayBase(t) {
+     const day = today();
+     if (t.date === day) return t.entry;                                    // opened today: the move since the entry is all today's
+     if (t.isStock) { const s = typeof SYM === 'function' ? SYM(t.symbol || t.instrument) : null; return s && s.prev > 0 ? s.prev : null; }
+     const r = t.raw || {};
+     return r.baseDate === day && r.basePx > 0 ? r.basePx : null;           // not marked yet today: nothing has moved today as far as we know
+   }
+   function autoDay(t) {
+     const day = today(), sg = dirOf(t), r = t.raw || {};
+     const qty = t.isStock ? (t.qty || 0) : (r.lots || 0) * (r.lot || 0);
+     if (statusOf(t) === 'Closed') {
+       const when = String(r.closedAt || '').slice(0, 10) || lastExit(t).slice(0, 10);
+       if (when !== day) return { b: 0, o: 0 };
+       const net = typeof r.net === 'number' ? r.net : (calc(t).net || 0);
+       if (t.date === day) return { b: net, o: 0 };
+       const b0 = dayBase(t), ex = t.isStock ? r.exit : ((t.exits || []).slice(-1)[0] || {}).price;
+       if (b0 == null || !(ex > 0)) return { b: net, o: 0 };               // carried and never marked today: its whole result is the best guess
+       return { b: sg * (ex - b0) * qty - (Number(r.cost) || 0), o: 0 };
+     }
+     if (t.date === day) return { b: 0, o: unrealisedNet(t) || 0 };
+     const b0 = dayBase(t); if (b0 == null) return { b: 0, o: 0 };
+     const cur = curPx(t), pct = Number(r.costPctEff) || (t.isStock ? 0.1 : 0);
+     return { b: 0, o: sg * (cur - b0) * qty - pct / 100 * cur * qty };       // only the cost of closing is still ahead; the entry cost was paid on an earlier day
+   }
    function todayRows() {
      const day = today(), R = { buy: { b: 0, o: 0 }, sell: { b: 0, o: 0 }, stock: null };
      let carry = 0;
      allTrades().forEach(t => {
        if (!entered(t) || t.isStock) return;
        const k = dirOf(t) < 0 ? 'sell' : 'buy', closed = statusOf(t) === 'Closed';
-       if (t.auto || t.paper) { if (closed && lastExit(t).slice(0, 10) === day) R[k].b += calc(t).net || 0; }
+       if (t.auto) { const x = autoDay(t); R[k].b += x.b; R[k].o += x.o; if (!closed) carry++; return; }
+       if (t.paper) { if (closed && lastExit(t).slice(0, 10) === day) R[k].b += calc(t).net || 0; }
        else (t.exits || []).forEach(l => { if (l.date === day) R[k].b += dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (t.costOverride != null ? t.costOverride : (S.cost + S.slip) * units(t) * l.qty); });
        if (!closed) { R[k].o += unrealisedNet(t) || 0; carry++; }
      });
-     const d = SB.d && SB.d.byHorizon ? SB.d : null;
-     if (d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: d.unrealised || 0 };
-     if (!R.stock) {                                  // stock trader not loaded yet: use the stock trades already mirrored from its status
-       let b = 0, o = 0;
-       (AUTO.stockTrades || []).forEach(t => { if (!entered(t)) return; if (statusOf(t) === 'Closed') { if (lastExit(t).slice(0, 10) === day || String((t.raw && t.raw.closedAt) || '').slice(0, 10) === day) b += (t.raw && typeof t.raw.net === 'number') ? t.raw.net : (calc(t).net || 0); } else o += unrealisedNet(t) || 0; });
-       R.stock = { b, o, est: true };
+     if ((AUTO.stockTrades || []).length) {                                   // per trade from the share trader's status: carried shares count only today's move
+       R.stock = { b: 0, o: 0 };
+       AUTO.stockTrades.forEach(t => { if (!entered(t)) return; const x = autoDay(t); R.stock.b += x.b; R.stock.o += x.o; });
      }
+     const d = SB.d && SB.d.byHorizon ? SB.d : null;
+     if (!R.stock && d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: d.unrealised || 0 };
+     if (!R.stock) R.stock = { b: 0, o: 0, est: true };
      R.carry = carry;
      return R;
    }

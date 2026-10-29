@@ -26,6 +26,7 @@ import time
 from datetime import date, datetime, timedelta, timezone
 
 import requests
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 
 import shared_cache
@@ -420,14 +421,24 @@ def run():
     return run_cycle()
 
 
+class ExitBody(BaseModel):
+    seen: float | None = None        # the price on the confirm screen; refused (409) when it has moved by more than 3% since
+
+
 @router.post("/trade/{tid}/exit")
-def manual_exit(tid: str):
+def manual_exit(tid: str, b: ExitBody | None = None):
+    seen = b.seen if b else None
+
     def apply(st):
         t = next((x for x in st["trades"] if x["id"] == tid and x["status"] == "OPEN"), None)
         if not t:
             raise HTTPException(404, "No open trade with that id")
         q = _quotes([t["sym"]]).get(t["sym"]) or {}
-        px = float(q.get("last") or t.get("last") or t["entry"])
+        px = float(q.get("last") or 0)
+        if px <= 0:                       # was: fell back to the old mark, or even the ENTRY price - booking a fake break-even exit
+            raise HTTPException(503, "No live price for this share right now, try again in a moment")
+        if seen and seen > 0 and abs(px - seen) / seen > 0.03:
+            raise HTTPException(409, f"Price moved from {seen:.2f} to {px:.2f} while you were confirming. Check the new price and exit again.")
         _close(st, t, px, "MANUAL", _now())
         return {"ok": True, "exit": t["exit"], "net": t["net"]}
     return _mutate(apply)
