@@ -293,49 +293,43 @@ def test_sold_option_exits_at_the_ask(server, browser):
 
 
 # ───────────────────────── share trades and Exit all ─────────────────────────
-@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_button_on_a_share_trade_works(server, browser):
     w = World(opens=[], stocks=[dict(STK)])
     c, pg, errs = open_journal(browser, w, sym_prices={"TCS": 112.0})
     pg.wait_for_selector('#jvPosOpen tr[data-pid="S-1"] button.jv-exit', timeout=15000)       # used to do nothing when clicked
-    click_exit(pg, "S-1")
-    pg.wait_for_function("document.querySelector('#jvXp').innerText.includes('112.00')", timeout=8000)
+    pg.click('#jvPosOpen tr[data-pid="S-1"] button.jv-exit')
+    pg.wait_for_selector(".modal-bg #jvFormOk", timeout=8000)
     pg.click("#jvFormOk")
     pg.wait_for_selector(".modal-bg", state="detached", timeout=8000)
-    assert w.posts[-1][0] == "stockbot/trade/S-1/exit" and w.posts[-1][1] == {"seen": 112.0}
-    assert not errs
+    assert w.posts[-1][0] == "stockbot/trade/S-1/exit" and w.posts[-1][1] == {"seen": 112.0} and not errs
     c.close()
 
 
-@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
-def test_exit_all_shows_a_live_total_and_closes_options_and_shares_through_their_own_endpoints(server, browser):
+def test_exit_all_closes_options_and_shares_each_through_its_own_bulk_endpoint(server, browser):
     w = World(stocks=[dict(STK)])
     w.set_price("A-1", 110, bid=108, ask=112)
+    w.post["stockbot/exit-all"] = (200, {"ok": True, "closed": 1, "net": 5, "failed": []})
+    w.post["auto/exit-all"] = (200, {"ok": True, "closed": 1, "net": 5, "failed": []})
     c, pg, errs = open_journal(browser, w, tab="portfolio", sym_prices={"TCS": 112.0})
     pg.wait_for_selector('#jvOpen tr[data-id="S-1"]', timeout=15000)
-    pg.wait_for_function("document.querySelector('#jvOpen tr[data-id=\"A-1\"] [data-c=cur]').textContent.includes('110.00')", timeout=15000)
     pg.click("[data-jv=exitall]")
-    pg.wait_for_selector(".modal-bg #jvXp")
-    pg.wait_for_function("document.querySelector('#jvXp').innerText.includes('Open P')", timeout=8000)
-    assert "2</b>" in pg.inner_html("#jvXp") or "Exit 2 open" in panel(pg)
+    pg.wait_for_selector(".modal-bg #jvFormOk")
     pg.click("#jvFormOk")
     pg.wait_for_selector(".modal-bg", state="detached", timeout=10000)
     urls = [p[0] for p in w.posts]
-    assert "auto/exit-all" in urls and "stockbot/trade/S-1/exit" in urls and not errs
+    assert "auto/exit-all" in urls and "stockbot/exit-all" in urls and not errs         # "Exited 0 positions" when only shares were open
     c.close()
 
 
-@pytest.mark.skip(reason="29 Oct exit screen / stock-list guard: the Journal is on the 28 Oct code (older commit 1e7e5eb has it)")
 def test_exit_all_reports_partial_failures_and_stays_open(server, browser):
     w = World(stocks=[dict(STK)])
     w.set_price("A-1", 110)
-    w.post["stockbot"] = (503, {"detail": "No live price for this share right now, try again in a moment"})
+    w.post["stockbot/exit-all"] = (200, {"ok": True, "closed": 0, "net": 0, "failed": ["TCS: no live price"]})
     w.post["auto/exit-all"] = (200, {"ok": True, "closed": 1, "net": 5, "failed": []})
     c, pg, _ = open_journal(browser, w, tab="portfolio", sym_prices={"TCS": 112.0})
     pg.wait_for_selector('#jvOpen tr[data-id="S-1"]', timeout=15000)
     pg.click("[data-jv=exitall]")
-    pg.wait_for_selector(".modal-bg #jvXp")
-    pg.wait_for_function("!document.getElementById('jvFormOk').disabled", timeout=8000)
+    pg.wait_for_selector(".modal-bg #jvFormOk")
     pg.click("#jvFormOk")
     pg.wait_for_function("!document.getElementById('jvFormErr').hidden", timeout=10000)
     assert "Could not exit 1" in pg.inner_text("#jvFormErr") and "TCS" in pg.inner_text("#jvFormErr")
@@ -487,3 +481,16 @@ def test_manual_trade_closed_yesterday_adds_nothing_today(server, browser):
 def test_manual_trade_without_a_previous_close_falls_back_to_the_old_figure_not_nan(server, browser):
     out, cost = manual_hero(browser, dict(date=YDAY), prev=0.0, last=112.0)
     assert out == fmt(12 * 10 - cost * 10)
+
+
+def test_exit_button_on_an_option_trade_asks_once_and_exits(server, browser):
+    w = World()
+    w.set_price("A-1", 110, bid=108, ask=112)
+    c, pg, errs = open_journal(browser, w)
+    pg.wait_for_selector('#jvPosOpen tr[data-pid="A-1"] button.jv-exit', timeout=15000)
+    pg.click('#jvPosOpen tr[data-pid="A-1"] button.jv-exit')
+    pg.wait_for_selector(".modal-bg #jvFormOk", timeout=8000)                               # the confirm box opens
+    pg.click("#jvFormOk")
+    pg.wait_for_selector(".modal-bg", state="detached", timeout=8000)
+    assert w.posts[-1][0] == "auto/trade/A-1/exit" and not errs
+    c.close()

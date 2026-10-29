@@ -1061,13 +1061,14 @@ function paperList() {
       });
   }
   function autoExit(id) {
-    const t = AUTO.list.find(x => x.id === id); if (!t) return;
-    smallForm('Exit now · ' + t.id, `<p>Close <b>${E(t.symbol)}</b> at the live bid? This ends the paper trade; you can't undo it.</p>`, 'Exit now', () => {
+    const t = AUTO.list.find(x => x.id === id) || (AUTO.stockTrades || []).find(x => x.id === id); if (!t) return;
+    const stk = !!t.isStock, seen = stk ? live(t.symbol || t.instrument) : null;      // a share trade is exited through the share trader's own endpoint (the button did nothing for shares)
+    smallForm('Exit now · ' + t.id, `<p>Close <b>${E(t.symbol)}</b> at the live ${stk ? 'price' : 'bid'}? This ends the paper trade; you can't undo it.</p>`, 'Exit now', () => {
       const ok = document.getElementById('jvFormOk'); ok.disabled = true; ok.textContent = 'Exiting…';
-      jpost('/api/auto/trade/' + encodeURIComponent(id) + '/exit').then(async r => {
+      jpost((stk ? '/api/stockbot/trade/' : '/api/auto/trade/') + encodeURIComponent(id) + '/exit', stk && seen > 0 ? { seen } : undefined).then(async r => {
         ok.disabled = false; ok.textContent = 'Exit now';
         if (!r.ok) { const er = document.getElementById('jvFormErr'); er.textContent = r.err; er.hidden = false; return; }
-        window.closeModal(); await syncAuto(true); render(); toast_(`Exited #${shortId(t)} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
+        window.closeModal(); await syncAuto(true); render(); toast_(`Exited ${stk ? E(t.symbol) : '#' + shortId(t)} at ${px(r.d.exit)} · net ${sinr(r.d.net)}`, 'ok');
       });
       return null;
     });
@@ -1079,9 +1080,17 @@ function paperList() {
     smallForm('Exit all positions', `<p>Exit <b>${open.length}</b> open position${open.length === 1 ? '' : 's'} at live prices? Open P&L right now: <b class="${cc(unr)}">${sinr(unr)}</b>. This can't be undone.</p>`, 'Exit all', () => {
       const ok = document.getElementById('jvFormOk'), er = document.getElementById('jvFormErr'); ok.disabled = true;
       (async () => {
-        let done = 0, fail = [], autoBulk = null; const now = new Date();
+        let done = 0, fail = [], autoBulk = null, stockBulk = null; const now = new Date();
         for (const t of open) {
           ok.textContent = `Exiting ${done + fail.length + 1}/${open.length}…`;
+          if (t.auto && t.isStock) {
+            if (stockBulk === null) {                       /* the share trader is a separate book: it needs its own bulk exit (Exit all used to skip it: "Exited 0") */
+              ok.textContent = 'Exiting shares…';
+              const r = await jpost('/api/stockbot/exit-all'); stockBulk = r;
+              if (r.ok) { done += r.d.closed || 0; (r.d.failed || []).forEach(f => fail.push(f)); } else fail.push('Shares: ' + r.err);
+            }
+            continue;
+          }
           if (t.auto) {
             if (autoBulk === null) {                       /* every auto trade closes in ONE request (20 single calls hung on Vercel) */
               ok.textContent = 'Exiting auto trades…';

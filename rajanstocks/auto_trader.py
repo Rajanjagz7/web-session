@@ -1042,7 +1042,49 @@ def _contract(sym, side, today, min_days, max_outlay=None):
     if ask > 0 and bid <= 0:
         raise RuntimeError("skipped: no bid in the market")
     return {"expiry": ch["expiry"], "strike": row["strike"], "key": leg["key"], "premium": px, "lot": int(ch.get("lot") or 1),
-            "spot": spot, "bid": bid, "ask": ask, "ltp": ltp}
+            "spot": spot, "bid": bid, "ask": ask, "ltp": ltp,
+            "pOpen": float(leg.get("open") or 0), "pHigh": float(leg.get("high") or 0), "pLow": float(leg.get("low") or 0)}
+
+
+OEL_TOL, OEL_WIDE = 0.5, 10.0
+
+
+def premium_oel(ct):
+    """User rule (29 Oct, same as the Trade screen's premium indicator): the option we would BUY opened at its day low.
+       'clean'  = Open = Low (low >= open - 0.5) and the price is above the open -> stop 10 pts (capped at 35% of the premium)
+       'wide'   = Open = Low within 10 pts (low >= open - 10) and the price is at / above the open -> stop 3 pts
+       None otherwise. Returns (kind, stop_pts) - the stop is only ever used when it is TIGHTER than the normal premium stop."""
+    o, h, l, p = float(ct.get("pOpen") or 0), float(ct.get("pHigh") or 0), float(ct.get("pLow") or 0), float(ct.get("ltp") or ct.get("premium") or 0)
+    if o < 5 or not (h > l > 0) or p <= 0:
+        return None
+    if abs(l - o) <= OEL_TOL and p > o:
+        return "clean", 10.0
+    if l >= o - OEL_WIDE and p >= o:
+        return "wide", 3.0
+    return None
+
+
+def _oel_stop(entry, pts):
+    return round(max(0.05, entry - min(pts, max(0.5, entry * 0.35))), 2)       # same cap as the Trade screen: never more than 35% of a small premium
+
+
+_OEL_CACHE = {}
+
+
+def oel_tag(c, today, cfg):
+    """Premium Open = Low tag of a candidate's ATM contract (cached 60 s: the chain is already cached, this only reads it)."""
+    k = (c["sym"], c["side"], today)
+    hit = _OEL_CACHE.get(k)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    tag = None
+    try:
+        cap = float((cfg.get("maxOutlay") or MAX_OUTLAY).get(c["sym"]) or 0) or None
+        tag = premium_oel(_contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap))
+    except Exception:
+        tag = None
+    _OEL_CACHE[k] = (time.time(), tag)
+    return tag
 
 
 def _atr_for(sym):
@@ -1140,8 +1182,14 @@ def open_trade(st, c, today):
         "source": c.get("source", f"{c.get('agree', 1)} indicator(s) agree" if c.get("strategies") else "strategy signal"), "status": "OPEN", "last": round(ct["premium"], 2),
         "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
     }
+    oel = premium_oel(ct)
+    if oel:                                                  # the bought option opened at its day low: its own point stop, when that is tighter than the normal one
+        t["premSig"] = "Open = Low" if oel[0] == "clean" else "Open = Low (within 10 pts)"
+        sl_ = _oel_stop(t["entry"], oel[1])
+        if sl_ > float(t.get("premSL") or 0):
+            t["premSL"] = sl_
     st["trades"].append(t)
-    st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]"})
+    st["log"].append({"at": _now().isoformat(), "msg": f"ENTER {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} [{c['key']} · {variant}]{' · premium ' + t['premSig'] if t.get('premSig') else ''}"})
     if pair:
         if _mins(_now()) < SELL_FROM:
             t["writePending"] = True          # option SELL legs wait until 09:20 (user rule); buys go at 09:16
@@ -1658,6 +1706,17 @@ def _run_cycle(now, force, dry):
                 chosen, filled = [c for c in chosen if c["sym"] not in have], [c for c in filled if c["sym"] not in have]
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
             entries = sorted(eagles + chosen + filled, key=lambda c: (c.get("kind") != "index", -(c.get("rank", c.get("score")) or 0)))   # indices first (there are at most five; they ranked below every stock entry and were never reached)
+            try:                                                              # premium Open = Low / High (user 29 Oct): trades whose option opened at its day low go first
+                from concurrent.futures import ThreadPoolExecutor
+                scan = [c for c in entries[:16] if c.get("key") != "rzt-hedge" and c.get("pos") != "short"]
+                with ThreadPoolExecutor(max_workers=6) as ex:
+                    for c, tag in zip(scan, ex.map(lambda c: oel_tag(c, today, cfg), scan, timeout=8)):
+                        c["oel"] = tag[0] if tag else None
+                if any(c.get("oel") for c in entries):
+                    entries = sorted(entries, key=lambda c: (c.get("kind") != "index", {"clean": 0, "wide": 1}.get(c.get("oel"), 2), -(c.get("rank", c.get("score")) or 0)))
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{sum(1 for c in entries if c.get('oel'))} with premium Open = Low first"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"premium open=low scan failed: {str(e)[:80]}"})
             if cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
                 kept, paper = classic_filter(entries, bool(cfg.get("extrasAgree", False)))
                 shadow_record(st, paper, now)

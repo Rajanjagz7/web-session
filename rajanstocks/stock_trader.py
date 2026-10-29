@@ -444,6 +444,31 @@ def manual_exit(tid: str, b: ExitBody | None = None):
     return _mutate(apply)
 
 
+@router.post("/exit-all")
+def exit_all():
+    """Close EVERY open share trade at the live price in ONE request (one state load, one quote call, one save). The Journal's "Exit all" only
+    knew the option book: it reported "Exited 0 positions" and left every share trade open."""
+    def apply(st):
+        opens = [t for t in st["trades"] if t["status"] == "OPEN"]
+        if not opens:
+            return {"ok": True, "closed": 0, "net": 0, "failed": []}
+        try:
+            q = _quotes(sorted({t["sym"] for t in opens}))
+        except Exception as e:
+            raise HTTPException(503, f"Live prices unavailable right now, try again in a moment ({str(e)[:80]})")
+        n, net, failed, now = 0, 0.0, [], _now()
+        for t in opens:
+            px = float((q.get(t["sym"]) or {}).get("last") or 0)
+            if px <= 0:                                  # no live price: leave it open rather than book a guess
+                failed.append(f"{t['sym']}: no live price")
+                continue
+            _close(st, t, px, "MANUAL", now)
+            n += 1
+            net += t.get("net") or 0
+        return {"ok": True, "closed": n, "net": round(net, 2), "failed": failed}
+    return _mutate(apply)
+
+
 @router.post("/reset")
 def reset():
     def apply(st):

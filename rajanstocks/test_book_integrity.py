@@ -312,3 +312,28 @@ def test_cash_seed_status_counts_the_rows_the_walk_changed_today(monkeypatch):
     monkeypatch.setattr(shared_cache, "get", lambda k, *a, **kw: day if k == f"picks:cash|{date.today().isoformat()}" else None)
     out = market_api.cash_seed_status()
     assert out["today"] == {"rows": 2, "changed": 1} and out["symbols"] == len(seed)
+
+
+# ───────── premium Open = Low (user 29 Oct) ─────────
+def test_premium_open_low_rules():
+    base = {"pOpen": 22.7, "pHigh": 42.55, "pLow": 22.5, "ltp": 40.0, "premium": 40.0}
+    assert at.premium_oel(base) == ("clean", 10.0)                               # low within 0.5 of the open, price above it
+    assert at.premium_oel(dict(base, pLow=20.5)) == ("wide", 3.0)                 # ADANIPORTS 1840 CE on the user's screen: open 22.70, low 20.50
+    assert at.premium_oel(dict(base, pLow=11.0)) is None                          # fell more than 10 pts under the open
+    assert at.premium_oel(dict(base, ltp=21.0, premium=21.0, pLow=20.5)) is None  # price below the open: not a buy
+    assert at.premium_oel(dict(base, pOpen=0)) is None and at.premium_oel(dict(base, pOpen=3, pLow=3, pHigh=8)) is None
+
+
+def test_open_low_entry_gets_its_own_tighter_stop_and_a_label(monkeypatch):
+    import backtest
+    ct = {"expiry": "2026-11-10", "strike": 25000, "key": "OPT1", "premium": 40.0, "lot": 475, "spot": 25000.0, "bid": 39.9, "ask": 40.0, "ltp": 40.0,
+          "pOpen": 22.7, "pHigh": 42.55, "pLow": 20.5}
+    monkeypatch.setattr(at, "_contract", lambda *a, **k: ct)
+    monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-28"}] * 30))
+    monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 100.0)
+    monkeypatch.setattr(at, "_now", lambda: NOW)
+    t = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "x", "variant": "fixed"}, TODAY)
+    assert t["premSig"] == "Open = Low (within 10 pts)" and t["premSL"] == 37.0      # 3 pts under 40, tighter than the normal 12.5% stop (35.0)
+    ct.update(pOpen=0)
+    t2 = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "y", "variant": "fixed"}, TODAY)
+    assert "premSig" not in t2 and t2["premSL"] < 37.0

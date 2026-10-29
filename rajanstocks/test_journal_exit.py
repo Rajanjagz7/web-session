@@ -204,6 +204,14 @@ def test_share_exit_price_moved_is_a_409(monkeypatch):
     assert e.value.status_code == 409 and st["trades"][0]["status"] == "OPEN"
 
 
+def test_share_exit_all_closes_every_open_share_in_one_call_and_skips_unpriced(monkeypatch):
+    st = stock_book(monkeypatch, {"TCS": {"last": 120.0}})
+    st["trades"].append(dict(id="S-2", sym="INFY", side="SELL", hz="swing", status="OPEN", entry=100.0, qty=10, risk=50.0, last=99.0, stop=105.0))
+    r = sb.exit_all()
+    assert r["closed"] == 1 and r["failed"] == ["INFY: no live price"]                # the unpriced one stays open, nothing is booked at a guess
+    assert [t["status"] for t in st["trades"]] == ["CLOSED", "OPEN"] and st["trades"][0]["exit"] == 120.0
+
+
 def test_share_exit_unknown_trade(monkeypatch):
     stock_book(monkeypatch, {"TCS": {"last": 120.0}})
     with pytest.raises(HTTPException) as e:
