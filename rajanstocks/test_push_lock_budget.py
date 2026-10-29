@@ -37,3 +37,17 @@ def test_profit_lock_alert_is_on_and_uses_the_lock_budget(monkeypatch):
     t = {"id": "A-1", "sym": "NIFTY", "strike": 25000, "opt": "CE", "entry": 100.0, "lots": 1, "lot": 100, "pos": "long"}
     at._profit_lock(t, 116.0, "old")
     assert got and got[0][1] == "lock" and got[0][0].startswith("auto-lock|A-1")
+
+
+def test_signal_ideas_are_pushed_again_and_the_cron_can_run_only_the_pushes(monkeypatch):
+    import auto_trader as at
+    assert ps.PUSH_FROM_AUTO_ONLY is False
+    calls = []
+    monkeypatch.setattr(at, "run_cycle", lambda *a, **k: calls.append("auto"))
+    monkeypatch.setattr(ps, "run_cycle", lambda *a, **k: calls.append("push") or {"ran": True})
+    monkeypatch.delenv("CRON_SECRET", raising=False)
+    ps.cron(only="push")
+    assert calls == ["push"]
+    calls.clear()
+    ps.cron()
+    assert calls == ["auto", "push"]

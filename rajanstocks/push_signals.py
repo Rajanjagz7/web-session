@@ -244,7 +244,7 @@ def _send(sub, title, body, url="/#picks", tag=None):
         return "gone" if code in (404, 410) else f"error:{code or str(e)[:80]}"
 
 
-PUSH_FROM_AUTO_ONLY = True      # the 5 daily recommendation pushes are the auto trader's executed trades
+PUSH_FROM_AUTO_ONLY = False     # 29 Oct (user: 'both'): the 5 best signal ideas a day are pushed AND the auto trader's entries / stop moves (own budgets)
 
 
 def run_cycle(force=False, dry=False):
@@ -394,15 +394,16 @@ def preview():
 
 
 @router.api_route("/api/cron/signal-push", methods=["GET", "POST"])
-def cron(authorization: str = Header(default="")):
+def cron(authorization: str = Header(default=""), only: str = ""):
     secret = os.environ.get("CRON_SECRET")
     if secret and authorization != f"Bearer {secret}":
         raise HTTPException(401, "Unauthorized")
-    try:
-        import auto_trader
-        auto_trader.run_cycle()
-    except Exception as e:
-        print(f"[cron] auto_trader cycle failed: {e}")
+    if only != "push":                                    # ?only=push: just the signal pushes (the auto trader has its own tick, /api/cron/auto-cycle)
+        try:
+            import auto_trader
+            auto_trader.run_cycle()
+        except Exception as e:
+            print(f"[cron] auto_trader cycle failed: {e}")
     return run_cycle()
 
 

@@ -24,3 +24,12 @@ jobs:
           out=$(curl -s -m 60 -X POST "$SITE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed [HTTP 000]')
           echo "${out:0:400}"
           case "$out" in *"[HTTP 200]"*) ;; *) echo "::error::auto-cycle did not answer 200"; exit 1;; esac
+      - name: Signal pushes (the 5 best ideas a day)
+        if: always()
+        continue-on-error: true
+        run: |
+          SITE="https://rajanstocks.vercel.app"
+          now=$(TZ=Asia/Kolkata date +%H%M)
+          if [ "$now" -lt 915 ] || [ "$now" -gt 1530 ]; then exit 0; fi
+          out=$(curl -s -m 60 -X POST -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "$SITE/api/cron/signal-push?only=push" -w ' [HTTP %{http_code}]' || echo 'request failed [HTTP 000]')
+          echo "${out:0:400}"
