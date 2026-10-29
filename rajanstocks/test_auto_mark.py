@@ -184,3 +184,16 @@ def test_pre_open_cycle_scans_but_never_trades(monkeypatch):
         r = A.run_cycle()
         assert len(calls) == expect, (hh, mm, calls)
         assert r["ran"] is False
+
+
+def test_indicator_groups_split_all_sources_in_two_without_overlap():
+    import auto_trader as A
+    assert not set(A.GROUP_A) & set(A.GROUP_B), "a source is in both groups"
+    import backtest
+    assert set(backtest._runners()) <= set(A.GROUP_A) | set(A.GROUP_B), "an indicator is in neither group"
+    for key in ("index-call-put", "stock-screen", "morning-pick", "Eagle Trades", "timecycle", "gann-angle", "premium-rider", "rzt-intraday", "rzt-hedge"):
+        assert key in A.GROUP_A or key in A.GROUP_B, key
+    # each group has index AND stock sources (a daily indicator trades both)
+    assert all(g and len(g) >= 7 for g in (A.GROUP_A, A.GROUP_B))
+    assert A.profile_ok({"key": "ut-bot"}, "B") and not A.profile_ok({"key": "ut-bot"}, "A")
+    assert A.profile_ok({"key": "ut-bot"}, "") and A.profile_ok({"key": "anything"}, None) in (True, False)

@@ -29,7 +29,10 @@ IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter(prefix="/api/auto")
 _lock = threading.Lock()
 
-KEY = "rajanone:auto:v1"
+# The stage site (rajanstocks1, branch preprod-journal-filters) runs the same code with its OWN book: AUTO_BOOK_SUFFIX=":stage" there, so the two
+# traders never touch each other's trades. Production leaves both variables unset (profile "all", the original book).
+BOOK_SUFFIX = os.environ.get("AUTO_BOOK_SUFFIX", "")
+KEY = "rajanone:auto:v1" + BOOK_SUFFIX
 FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "auto_state.json")
 NO_LIMIT = 10 ** 6                      # "maxPerDay", "indexSlots", "stockSlots": 0 (or empty) means no limit
 
@@ -957,6 +960,25 @@ def _quality(p):
     return top + (0.5 if st_ >= 75 else 0.0) + min(st_, 100) / 400 + min(vx, 3.0) / 6
 
 
+# A/B test of the entry sources (user, 29 Oct): all 15 sources are split in two groups; production trades group A, the stage site (rajanstocks1)
+# group B, each on its OWN book. After a few weeks the journal's "By strategy" table shows which sources earn - keep those, remove the rest.
+# Split alternates down the backtest ranking so both groups get a similar mix of stock and index sources and of good and weak ones.
+GROUP_A = ("rajan-rsi2-pullback", "rzt", "rajan-ibs-reversion", "Eagle Trades", "index-call-put", "rzt-intraday", "timecycle", "premium-rider")
+GROUP_B = ("rajan-ha-momentum", "ut-bot", "rajan-trend-rider", "morning-pick", "stock-screen", "rzt-hedge", "gann-angle")
+GROUP = (os.environ.get("AUTO_GROUP") or "").strip().upper()          # "A" / "B" / "" (= every source, the original behaviour)
+
+
+def profile_ok(c, group=None):
+    """True when the entry's source belongs to this environment's group (always True when no group is set). The group REPLACES classic mode
+    and the 2-indicator rule: every source is judged on its own results, which is the point of the test. Risk/reward, spread, day-loss and
+    contract checks still apply to both groups equally."""
+    g = (group if group is not None else GROUP)
+    if g not in ("A", "B"):
+        return True
+    allowed = GROUP_A if g == "A" else GROUP_B
+    return c.get("key") in allowed
+
+
 def choose(cands, st, today):
     cfg = st["cfg"]
     taken_today = [t for t in st["trades"] if t["date"] == today]
@@ -1758,6 +1780,8 @@ def _run_cycle(now, force, dry):
         if (in_window or force) and guard != "blocked" and len(todays) < _cap(cfg, "maxPerDay"):
             cands, why = scan_all(st, today)
             rep["note"] = why
+            if GROUP:
+                cands = [c for c in cands if profile_ok(c)]                  # this environment's own indicators only (so "N agree" counts them alone)
             chosen = choose(cands, st, today)
             if guard == "soft":                       # fewer, better trades near the day P&L limit
                 strong = [c for c in chosen if c.get("agree", 1) >= 3]
@@ -1852,7 +1876,12 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{sum(1 for c in entries if c.get('oel'))} with premium Open = Low first"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"premium open=low scan failed: {str(e)[:80]}"})
-            if cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
+            if GROUP:                                                         # A/B test: this environment's indicator group REPLACES classic mode + the agreement rule
+                n0 = len(entries)
+                entries = [c for c in entries if profile_ok(c)]
+                if n0 != len(entries):
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{n0 - len(entries)} outside group {GROUP}"
+            elif cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
                 kept, paper = classic_filter(entries, bool(cfg.get("extrasAgree", False)))
                 shadow_record(st, paper, now)
                 n0 = len(entries)
@@ -1876,7 +1905,7 @@ def _run_cycle(now, force, dry):
                 pm_ = _screen_score()
 
                 def _agree_ok(c):
-                    if c.get("kind") != "stock" or need <= 1:
+                    if c.get("kind") != "stock" or need <= 1 or GROUP:
                         return True
                     if int(c.get("agree") or len(c.get("strategies") or []) or 1) >= need:
                         return True
@@ -2263,7 +2292,7 @@ def status():
         "activeStrategies": [{"key": k, "variant": chosen.get(k, ("fixed", "none"))[0], "filter": chosen.get(k, ("fixed", "none"))[1]} for k in keys],
         "mode": label,
         "shadow": {"summary": shadow_summary(st), "recent": st.get("shadow", [])[-60:][::-1]},
-        "cfg": st["cfg"], "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
+        "cfg": st["cfg"], "group": GROUP or "all", "book": BOOK_SUFFIX or "main", "today": today, "marketOpen": __import__("nse_calendar").session_open(now),
         "dayPnl": {"value": round(_day_pnl(st, today), 0), "limit": st["cfg"].get("dayPnlLimit", 0), "mode": guard, "note": guard_note},
         "todayCount": len([t for t in st["trades"] if t["date"] == today]),
         "sleeves": sleeve_report(st),

@@ -490,7 +490,7 @@ def cleanup_junk(budget_s=20.0):
     return cleanup_prefix("rl2:", budget_s)
 
 
-STATE_KEYS = ("rajanone:auto:v1", "rajanone:push:v1", "rajanone:stockbot:v1")   # auto trader, push subscriptions, stock trader
+STATE_KEYS = ("rajanone:auto:v1" + os.environ.get("AUTO_BOOK_SUFFIX", ""), "rajanone:push:v1", "rajanone:stockbot:v1")   # auto trader, push subscriptions, stock trader
 
 
 def _old_creds():
