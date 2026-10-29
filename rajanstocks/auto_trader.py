@@ -1862,7 +1862,7 @@ def _notify(t):
         return
     try:
         import push_signals
-        push_signals.notify_all(f"auto|{t['id']}", f"PAPER ENTRY · {t['sym']} {t['strike']:.0f} {t['opt']}",
+        push_signals.notify_all(f"auto|{t['id']}|{str(t.get('openedAt') or '')[11:19]}", f"PAPER ENTRY · {t['sym']} {t['strike']:.0f} {t['opt']}",
                                 f"{t['lots']} lot(s) @ ₹{t['entry']} · stop {t['stopU']} · target {t['targetU'] if t['targetU'] else 'trailing'} · "
                                 f"{len(t.get('indicators') or [])} indicator(s): {', '.join((t.get('indicators') or [t['strategy']])[:3])}",
                                 bucket="index" if t.get("kind") == "index" else "stock")

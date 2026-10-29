@@ -301,6 +301,8 @@ def _day_total(st, today, ep):
     return sum(int((st.get(k) or {}).get(today, {}).get(ep, 0)) for k in ("sent", "sentT", "sentL"))
 
 
+FRESH_PUSH_DAY = "2026-10-29"
+NO_LIMIT_DAY = "2026-10-29"      # user 29 Oct: test day - trade-entry pushes are not limited today; the 5-a-day limit applies from tomorrow
 PUSH_BUCKETS = {"index": 2, "stock": 3}   # user: 5 trade pushes a day = 2 index-option + 3 stock-option trades
 
 
@@ -312,6 +314,10 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
     today = now.date().isoformat()
     with _lock:
         st = _load()
+        if today == FRESH_PUSH_DAY and st.get("freshPush") != FRESH_PUSH_DAY:     # one-time (user 29 Oct 12:06): the morning's alerts used the 5-a-day budget - the fresh start gets its own
+            for k_ in ("sentT", "sentL", "sent", "sentB", "seen"):
+                (st.get(k_) or {}).pop(today, None)
+            st["freshPush"] = FRESH_PUSH_DAY
         seen = set(st["seen"].setdefault(today, []))
         if idem in seen:
             return 0
@@ -325,7 +331,10 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
                 st["sentL"].pop(d, None)
         else:
             sent_by, cap = st["sent"].setdefault(today, {}), MAX_PER_DAY
-        if bucket in PUSH_BUCKETS:                        # per-kind daily budget (2 index + 3 stock option trades)
+        free = today == NO_LIMIT_DAY and kind in ("trade", "lock")
+        if free:
+            cap = 10 ** 6
+        if bucket in PUSH_BUCKETS and not free:           # per-kind daily budget (2 index + 3 stock option trades)
             bk = st.setdefault("sentB", {})
             for d in [d for d in bk if d < today]:
                 bk.pop(d, None)
@@ -334,7 +343,7 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
                 return 0
         n = 0
         for ep, rec in list(st["subs"].items()):
-            if sent_by.get(ep, 0) >= cap or _day_total(st, today, ep) >= MAX_TOTAL_PER_DAY:
+            if sent_by.get(ep, 0) >= cap or (not free and _day_total(st, today, ep) >= MAX_TOTAL_PER_DAY):
                 continue
             res = _send(rec["sub"], title, body, url=url, tag=idem)
             if res == "ok":
@@ -347,7 +356,7 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
         if not st["subs"]:
             st["lastFail"] = {"at": now.isoformat(), "id": idem, "result": "no subscribed device - turn 'Enable push' off and on again on the phone"}
         if n:
-            if bucket in PUSH_BUCKETS:
+            if bucket in PUSH_BUCKETS and not free:
                 st["sentB"][today][bucket] = st["sentB"][today].get(bucket, 0) + 1
             seen.add(idem)
             st["seen"][today] = sorted(seen)

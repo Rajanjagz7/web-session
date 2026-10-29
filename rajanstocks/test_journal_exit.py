@@ -245,3 +245,12 @@ def test_share_trader_reset_blocks_the_same_shares_today(monkeypatch):
     monkeypatch.setattr(sb, "_mutate", lambda apply, *a, **k: apply(st))
     sb.reset()
     assert st["trades"] == [] and st["cleared"] == {"date": today, "syms": ["TCS"]}
+
+
+def test_fresh_start_clears_everything_before_the_cut_and_keeps_newer_trades(monkeypatch):
+    import common
+    from datetime import datetime
+    monkeypatch.setattr(common, "FRESH_START_FROM", "2026-10-29T12:05:00+05:30")
+    assert common.fresh_start_active(datetime.fromisoformat("2026-10-29T12:30:00+05:30"))
+    assert common.before_fresh_start({"openedAt": "2026-10-29T11:45:00+05:30"})
+    assert not common.before_fresh_start({"openedAt": "2026-10-29T12:11:00+05:30"})
