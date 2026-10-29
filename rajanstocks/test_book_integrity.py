@@ -249,7 +249,7 @@ def test_cycle_state_survives_a_save_and_load(monkeypatch):
     monkeypatch.setattr(at, "_remote", lambda: ("https://x.upstash.io", "t"))
     at._RC.clear()
     st = at._load()
-    st.update(shadow=[{"id": "s1", "status": "OPEN"}], skipUntil={"k|NIFTY|BUY": 9e12}, dayGuardMode="soft", idxWhy={"NIFTY": {"text": "x", "t": 1}}, carry=[{"sym": "NIFTY", "_exp": 9e12}])
+    st.update(shadow=[{"id": "s1", "status": "OPEN"}], skipUntil={"k|NIFTY|BUY": 9e12}, dayGuardMode="soft", idxWhy={"NIFTY": {"text": "x", "t": 1}}, carry=[{"sym": "NIFTY", "_exp": 9e12}], cleared={"date": "2026-10-29", "syms": ["ATUL"]})
     assert at._save(st) is True
     at._RC.clear()
     back = at._load()
