@@ -2,11 +2,15 @@ name: Refresh cash picks seed
 on:
   workflow_dispatch:
   schedule:
-    # 21:00 IST, Mon-Fri only - after market hours, never on weekends. GitHub drops or delays scheduled runs (29 Oct: the 21:00 one never started),
-    # so there are three odd-minute starts; a later start only commits when the rows changed, so extra runs are harmless.
+    # Evening starts, Mon-Fri, odd minutes (GitHub drops or delays scheduled runs: on 29 Oct the 21:00 one never started). Every start first checks whether today's
+    # seed is already committed and then exits in seconds, so the many starts only matter when the earlier ones were dropped.
     - cron: "37 15 * * 1-5"      # 21:07 IST
     - cron: "11 16 * * 1-5"      # 21:41 IST
     - cron: "43 16 * * 1-5"      # 22:13 IST
+    - cron: "17 17 * * 1-5"      # 22:47 IST
+    - cron: "49 17 * * 1-5"      # 23:19 IST
+    - cron: "23 18 * * 1-5"      # 23:53 IST
+    - cron: "19 2 * * 2-6"       # 07:49 IST next morning - last catch-up before the market opens
 permissions:
   contents: write
 concurrency: { group: cash-seed, cancel-in-progress: false }
@@ -16,8 +20,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with: { ref: rajan-web-session }
+        with: { ref: rajan-web-session, fetch-depth: 30 }
+      - name: Skip when this session's seed (made after the 15:30 IST close) is already committed
+        id: gate
+        run: |
+          cut=$(date -u -d 'today 10:00' +%s); [ "$(date -u +%s)" -lt "$cut" ] && cut=$((cut - 86400))      # the most recent 15:30 IST
+          since=$(date -u -d "@$cut" +%FT%TZ)
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ -n "$(git log --since="$since" --grep='^Cash picks seed' --format=%h | head -1)" ]; then
+            echo "seed already committed since $since - nothing to do"; echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
       - name: Make the live site build today's whole-market walk (it only runs when the picks screen is refreshed)
+        if: steps.gate.outputs.skip != '1'
         run: |
           S=https://rajanstocks.vercel.app
           for i in $(seq 1 6); do
@@ -30,6 +43,7 @@ jobs:
           done
           echo "walk did not finish in time - exporting whatever the server holds (the size check below still protects the seed)"
       - name: Download today's cash rows from the live site
+        if: steps.gate.outputs.skip != '1'
         run: |
           curl -fsS -m 90 --retry 3 https://rajanstocks.vercel.app/api/m/cash-seed/export -o /tmp/seed.json
           python3 - <<'PY'
@@ -41,6 +55,7 @@ jobs:
           PY
           cp /tmp/seed.json rajanstocks/public/static/picks_cash_seed.json
       - name: Commit result
+        if: steps.gate.outputs.skip != '1'
         run: |
           git config user.name "backtest-bot"
           git config user.email "backtest-bot@users.noreply.github.com"
