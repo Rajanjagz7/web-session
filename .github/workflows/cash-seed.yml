@@ -2,8 +2,7 @@ name: Refresh cash picks seed
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 2 * * 1-5"       # 08:00 IST - morning run
-    - cron: "30 15 * * 1-5"      # 21:00 IST - after-hours run
+    - cron: "30 15 * * 1-5"      # 21:00 IST, Mon-Fri only - after market hours, never on weekends
 permissions:
   contents: write
 concurrency: { group: cash-seed, cancel-in-progress: false }
@@ -17,13 +16,13 @@ jobs:
       - name: Make the live site build today's whole-market walk (it only runs when the picks screen is refreshed)
         run: |
           S=https://rajanstocks.vercel.app
-          for i in $(seq 1 12); do
+          for i in $(seq 1 6); do
             curl -sS -m 40 "$S/api/m/picks?refresh=true" -o /dev/null || true
             st=$(curl -sS -m 30 "$S/api/m/cash-seed" || echo '{}')
             echo "round $i: $(echo "$st" | head -c 400)"
             echo "run at $(TZ=Asia/Kolkata date '+%d %b %H:%M IST') - round $i: $(echo "$st" | head -c 300)" > "$GITHUB_STEP_SUMMARY"
             echo "$st" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('walk') and (d.get('today') or {}).get('rows',0)>=300 else 1)" && { echo "walk finished"; exit 0; }
-            sleep 40
+            sleep 75
           done
           echo "walk did not finish in time - exporting whatever the server holds (the size check below still protects the seed)"
       - name: Download today's cash rows from the live site
