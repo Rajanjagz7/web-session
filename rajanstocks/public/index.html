@@ -4805,15 +4805,15 @@ function drawOptTrade(){const box=$('#opTrade');if(!box||!OPT.osym)return;
 function updOptTrade(){const o=OPT.osym;if(!o||!$('#opQty'))return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1,qty=lots*lot,px=o.ask>0?o.ask:o.last,ch=calcCharges('option','buy',qty*px).total,p=posOf(o.s);
   $('#opQty').textContent=qn(qty);$('#opPx').textContent=fmtP(px);$('#opCost').textContent=money(qty*px,0)+' · '+money(ch,0);
   {const bp=o.bid>0?o.bid:o.last,bEl=$('#opBidPx'),mEl=$('#opMargin'),spot=(OPT.chain&&OPT.chain.spot)||0;if(bEl)bEl.textContent=fmtP(bp);if(mEl)mEl.textContent=money(qty*Math.max(0.12*spot,bp),0)}
-  $('#opExit').disabled=!p;{const sb=$('#opSell');if(sb){const blk=sellRule(o,qty);sb.disabled=!!blk&&!(p&&p.q>0);sb.title=blk||''}
+  $('#opExit').disabled=!(p||posOf(o.s+' (short)'));{const sb=$('#opSell');if(sb){const blk=sellRule(o,qty);sb.disabled=!!blk&&!(p&&p.q>0);sb.title=blk||''}
     {const sb=$('#opSell');if(sb){const held=p&&p.q>0?p.q:0;let t=$('#opSellHint');if(!t){t=document.createElement('div');t.id='opSellHint';t.className='muted';t.style.cssText='font-size:11.5px;margin:6px 0 0';const bt=sb.closest('.ot-btns');bt&&bt.insertAdjacentElement('afterend',t)}
-      t.textContent=held?(qty>held?`Sell closes your ${qn(held)} long, then shorts ${qn(qty-held)}.`:`Sell closes ${qn(Math.min(qty,held))} of your ${qn(held)} long (positions net per contract, like a broker).`):'Sell opens a short.';sb.removeAttribute('title')}}}const el=$('#opPos');
+      t.textContent=held?`Sell opens a separate short and keeps your ${qn(held)} long open. Exit closes both.`:'Sell opens a short.';sb.removeAttribute('title')}}}const el=$('#opPos');
   {const pe=$('#opPend'),od=App.orders.filter(x=>x.sym===o.s&&x.status==='Open');if(pe)pe.innerHTML=od.length?'<b>Pending limit orders</b>'+od.map(x=>`<div><span>${x.side==='buy'?'Buy':'Sell'} ${qn(x.qty)} @ <b class="num">${fmtP(x.price)}</b></span><button class="btn-xs" data-opcancel="${x.id}">Cancel</button></div>`).join(''):''}
   if(p){const pnl=p.q*(o.last-p.avg);el.innerHTML=`<b>${p.q<0?'You are short '+qn(-p.q):'You hold '+qn(p.q)} @ ${fmtP(p.avg)}</b> · unrealized <span class="num ${cls(pnl)}">${smoney(pnl)}</span>${p.sl?` · SL ${fmtP(p.sl)}`:''}${p.tp?` · target ${fmtP(p.tp)}`:''}`}else el.innerHTML='<span class="muted">No open position in this contract.</span>'}
 /* manual selling rule: buying is open everywhere; writing (sell to open) is stock options only, max 1 lot; index options are buy-only */
 function sellRule(o,qty){return''}   /* manual selling (writing) has no limit: any option, any size; only the margin check applies. The auto trader never sells. */
 function optOrder(side){if(!netGuard())return;const o=OPT.osym;if(!o||!OPT.sel)return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1;let qty=lots*lot;
-  if(side==='exit'){const p=posOf(o.s);if(!p){toast('No open position in this contract to exit.','warn');return}closePos(o.s,'manual');updOptTrade();drawOptTrade();return}
+  if(side==='exit'){const ps=[o.s,o.s+' (short)'].filter(x=>posOf(x));if(!ps.length){toast('No open position in this contract to exit.','warn');return}ps.forEach(x=>closePos(x,'manual'));updOptTrade();drawOptTrade();return}
   if(side==='sell'){const g=sellRule(o,qty);if(g){toast(g,'warn');return}}
   if((OPT.otype||'market')==='limit'){const lp=+parseFloat(($('#opLmt')||{}).value);if(!(lp>0)){toast('Enter a limit price.','warn');return}
     const bp=o.bid>0?o.bid:o.last,ap=o.ask>0?o.ask:o.last,spot=(OPT.chain&&OPT.chain.spot)||0;OPT.lmt=lp;OPT.lmtFor=o.s;OPT.lots=lots;
@@ -4831,13 +4831,16 @@ function optOrder(side){if(!netGuard())return;const o=OPT.osym;if(!o||!OPT.sel)r
     savePaper();renderBottom();updOptTrade();drawOptTrade();return}
   if(side==='sell'){                              /* sell to close a long, or write (sell to open) a short */
     const bp=o.bid>0?o.bid:o.last;if(!(bp>0)){toast('No live price for this contract yet.','warn');return}
-    const p0=posOf(o.s),closing=p0&&p0.q>0?Math.min(qty,p0.q):0,opening=qty-closing,spot=(OPT.chain&&OPT.chain.spot)||0;
+    /* Sell never nets against your own long: with a long in this contract the short is opened as its own position ("... (short)"), so Buy then Sell gives BOTH open;
+       Exit closes whichever you hold. (A real broker would net them, the paper account lets you hold both.) */
+    const longHeld=posOf(o.s),tsym=(longHeld&&longHeld.q>0)?o.s+' (short)':o.s,p0=posOf(tsym),closing=0,opening=qty,spot=(OPT.chain&&OPT.chain.spot)||0;
     let used=0;App.positions.forEach(x=>{const m=App.meta[x.sym];if(x.q<0&&m&&m.ikey)used+=Math.abs(x.q)*Math.max(0.12*(m.spot||spot),x.avg)});
     const need=opening*Math.max(0.12*spot,bp);
     if(opening>0&&App.cash-used<need){toast(`Not enough margin to sell ${lots} lot${lots>1?'s':''}: about ${money(need,0)} needed, ${money(Math.max(0,App.cash-used),0)} free.`,'warn');return}
-    EXTRA[o.s]=o;o.ikey=OPT.sel.key;o.cls='Options';App.meta[o.s]={ikey:OPT.sel.key,lot,und:OPT.sym,strike:OPT.sel.strike,side:OPT.sel.side,expiry:OPT.chain?OPT.chain.expiry:null,last:o.last,prev:o.prev,spot};
+    o.ikey=OPT.sel.key;o.cls='Options';if(tsym===o.s)EXTRA[o.s]=o;else EXTRA[tsym]=Object.assign({},o,{s:tsym,n:tsym});
+    App.meta[tsym]={ikey:OPT.sel.key,lot,und:OPT.sym,strike:OPT.sel.strike,side:OPT.sel.side,expiry:OPT.chain?OPT.chain.expiry:null,last:o.last,prev:o.prev,spot};
     const att=$('#opAtt').checked&&opening>0;OPT.att=$('#opAtt').checked;OPT.lots=lots;
-    fill({id:++OID,t:Date.now(),sym:o.s,side:'sell',type:'market',qty,tif:'Day',tp:att?+(bp*0.5).toFixed(2):null,sl:att?+(bp*1.3).toFixed(2):null,plan:null},bp);
+    fill({id:++OID,t:Date.now(),sym:tsym,side:'sell',type:'market',qty,tif:'Day',tp:att?+(bp*0.5).toFixed(2):null,sl:att?+(bp*1.3).toFixed(2):null,plan:null},bp);
     savePaper();renderBottom();updOptTrade();drawOptTrade();return}
   const px=o.ask>0?o.ask:o.last;if(!(px>0)){toast('No live price for this contract yet.','warn');return}
   if(qty*px>App.cash){toast('Not enough buying power for this order.','warn');return}
