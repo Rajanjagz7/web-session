@@ -263,7 +263,7 @@ def _dec(s):
 # server copies go to Redis; everything else (prices, candles, quote copies, observer, research proxy) stays in this
 # instance's memory + /tmp disk. Durable state (auto trader, stock trader, push) uses its own keys, not this module.
 REMOTE_PREFIXES = ("picks|", "picks:cash|", "ipo:", "bt:")
-REMOTE_LOCKS = ("auto-cycle", "stockbot-cycle")
+REMOTE_LOCKS = ("auto-cycle", "stockbot-cycle", "signal-push")
 _MEM = {}
 
 

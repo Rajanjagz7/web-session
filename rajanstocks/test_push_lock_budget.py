@@ -51,3 +51,15 @@ def test_signal_ideas_are_pushed_again_and_the_cron_can_run_only_the_pushes(monk
     calls.clear()
     ps.cron()
     assert calls == ["auto", "push"]
+
+
+def test_two_signal_runs_at_once_send_once(monkeypatch):
+    import shared_cache
+    st, sent = _world(monkeypatch)
+    monkeypatch.setattr(ps, "market_hours", lambda now=None: True)
+    monkeypatch.setattr(ps, "PUSH_FROM_AUTO_ONLY", False)
+    monkeypatch.setattr(ps, "collect", lambda today=None: [{"id": "x|1", "title": "T1", "body": "b", "rank": 1}])
+    monkeypatch.setattr(shared_cache, "lock", lambda name, ttl: not sent)         # granted to the first caller only (nothing sent yet)
+    a = ps.run_cycle()
+    b = ps.run_cycle()
+    assert a["ran"] and len(sent) == 1 and b == {"ran": False, "reason": "another run is in progress"}

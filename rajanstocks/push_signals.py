@@ -253,6 +253,9 @@ def run_cycle(force=False, dry=False):
         return {"ran": False, "reason": "recommendation pushes are sent when the auto trader enters a trade"}
     if not force and not market_hours(now):
         return {"ran": False, "reason": "market closed"}
+    import shared_cache
+    if not dry and not shared_cache.lock("signal-push", 90):      # two runs at once (cron + tick) sent the same ideas twice, one second apart
+        return {"ran": False, "reason": "another run is in progress"}
     with _lock:
         st = _load()
         subs = st["subs"]

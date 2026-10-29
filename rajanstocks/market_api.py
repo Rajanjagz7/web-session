@@ -1736,6 +1736,12 @@ def _picks_compute(deadline_s, progress=None):
     # by design (a rate-limited extra must never stop the day's payload from being stored)
     core_got = sum(1 for r in res if r.get("universe") != "cash")
     out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
+    if not extra:
+        try:
+            shared_cache.set(f"picks:walk|{date.today().isoformat()}", {"at": datetime.now(IST).isoformat(), "extraTotal": 0,
+                                                                         "bhavNote": "the list of cash symbols is empty (instrument master not loaded)"}, 6 * 3600)
+        except Exception:
+            pass
     if extra:
         done = sum(1 for s in slice_syms if s in extra_done)        # only symbols that actually got data
         nxt = (cursor + done) if done else cursor                   # rate-limited ones retry in the next build
@@ -1745,6 +1751,12 @@ def _picks_compute(deadline_s, progress=None):
                     "days": len(bhav_days) if isinstance(bhav_days, dict) else 0,
                     "fallback": len(fallback_used)}
         try:
+            shared_cache.set(f"picks:walk|{date.today().isoformat()}",              # last build's walk numbers, read by /api/m/cash-seed (why is no cash data coming?)
+                             {"at": datetime.now(IST).isoformat(), "extraTotal": len(extra), "from": cursor, "took": take, "advancedTo": nxt, "failed": len(failed),
+                              "bhavSessions": (bhav_diag or {}).get("have") if isinstance(bhav_diag, dict) else None,
+                              "bhavDownloaded": (bhav_diag or {}).get("downloaded") if isinstance(bhav_diag, dict) else None,
+                              "bhavNote": ((bhav_diag or {}).get("skipped") or (bhav_diag or {}).get("error")) if isinstance(bhav_diag, dict) else None,
+                              "bhavReady": bool(bhav), "newRows": sum(1 for r in res if r.get("universe") == "cash")}, 6 * 3600)
             print("picks walk:", {k: (v if not isinstance(v, dict) else "dict") for k, v in coverage.items()}, flush=True)
         except Exception:
             pass        # diagnostics go to the logs only - the public payload must not reveal the scan mechanics
@@ -1999,7 +2011,12 @@ def cash_seed_status():
         live = {"rows": len(day), "changed": sum(1 for k, v in day.items() if isinstance(v, dict) and (seed.get(k) or {}).get("ltp") != v.get("ltp"))}
     except Exception:
         pass
-    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None, "today": live}
+    walk = None
+    try:
+        walk = shared_cache.get(f"picks:walk|{date.today().isoformat()}")
+    except Exception:
+        pass
+    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None, "today": live, "walk": walk}
 
 
 @router.get("/cash-seed/export")
