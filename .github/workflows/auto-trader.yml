@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     env:
+      BYPASS: ${{ secrets.VERCEL_BYPASS_SECRET }}                  # lets the heartbeat reach the protected stage preview
       STAGE_TRADING: ${{ vars.STAGE_TRADING }}          # set the repository variable STAGE_TRADING=0 to stop calling the stage site
     steps:
       - name: Run the trading cycle through the session
@@ -42,7 +43,7 @@ jobs:
               # pre-open: the server reads every stock's indicators now (8 s per call, so several calls) - 09:15 starts with all of them
               out=$(curl -s -m 60 -X POST "$SITE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed')
               echo "$(TZ=Asia/Kolkata date +%T) IST pre-open ${out:0:200}"
-              [ "${STAGE_TRADING:-1}" = 1 ] && curl -s -m 60 -o /dev/null -X POST "$STAGE/api/cron/auto-cycle" || true
+              [ "${STAGE_TRADING:-1}" = 1 ] && curl -s -m 60 -o /dev/null -H "x-vercel-protection-bypass: $BYPASS" -X POST "$STAGE/api/cron/auto-cycle" || true
             fi
             if [ "$now" -ge 915 ]; then
               # at the open only: warm today's picks first (a cycle that had to build them itself could hit Vercel's 30 s limit).
@@ -53,7 +54,7 @@ jobs:
               tick=$((tick + 1))
               # the stage book: every 2nd tick (4 min) after the open - it shares Upstox's request budget with production, so it is called less often
               if [ "${STAGE_TRADING:-1}" = 1 ] && { [ "$now" -lt 930 ] || [ $((tick % 2)) -eq 0 ]; }; then
-                sout=$(curl -s -m 60 -X POST "$STAGE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed')
+                sout=$(curl -s -m 60 -H "x-vercel-protection-bypass: $BYPASS" -X POST "$STAGE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed')
                 echo "$(TZ=Asia/Kolkata date +%T) IST stage ${sout:0:200}"
               fi
               # a holiday: the server still says the market is closed well after the open - stop early (status runs no cycle)
