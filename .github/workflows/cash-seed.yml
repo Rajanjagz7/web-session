@@ -1,0 +1,34 @@
+name: Refresh cash picks seed
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 11 * * 1-5"      # 16:45 IST - after the close, once the day's whole-market cash walk has filled the server's list
+permissions:
+  contents: write
+concurrency: { group: cash-seed, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: rajan-web-session }
+      - name: Download today's cash rows from the live site
+        run: |
+          curl -fsS -m 90 --retry 3 https://rajanstocks.vercel.app/api/m/cash-seed/export -o /tmp/seed.json
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("/tmp/seed.json"))
+          ok = isinstance(d, dict) and len(d) >= 300 and all(isinstance(v, dict) and v.get("s") for v in list(d.values())[:50])
+          print("rows:", len(d) if isinstance(d, dict) else "not a dict")
+          sys.exit(0 if ok else 1)      # a short or broken answer never replaces the seed
+          PY
+          cp /tmp/seed.json rajanstocks/public/static/picks_cash_seed.json
+      - name: Commit result
+        run: |
+          git config user.name "backtest-bot"
+          git config user.email "backtest-bot@users.noreply.github.com"
+          git add rajanstocks/public/static/picks_cash_seed.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Cash picks seed $(date -u +%F)"
+          for i in 1 2 3; do git pull --rebase -q origin rajan-web-session && git push -q origin HEAD:rajan-web-session && break; sleep 5; done
