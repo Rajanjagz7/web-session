@@ -488,7 +488,7 @@ function paperList() {
         }
       }
       if (f.inst && !(t.instrument || t.symbol || '').toUpperCase().includes(f.inst.toUpperCase())) return false;
-      if (f.setup && setupKey(t.setup) !== f.setup) return false;
+      if (f.setup && t.setup !== f.setup) return false;
       if (f.dir && t.dir !== f.dir) return false;
       if (f.exit && t.exitType !== f.exit) return false;
       if (f.rule && t.rule !== f.rule) return false;
@@ -713,21 +713,8 @@ function paperList() {
   function datePreset() { const f = ui.f, t = today(); if (!f.from && !f.to) return 'all'; if (f.from === t && (!f.to || f.to === t)) return 'today';
     if (!f.to && f.from === istShift(6)) return '7d'; if (!f.to && f.from === istShift(29)) return '30d'; return 'custom'; }
   function moreCount() { const f = ui.f; return ['market', 'setup', 'dir', 'exit', 'rule'].filter(k => f[k]).length + (datePreset() === 'custom' ? 1 : 0); }
-  /* The Setup filter / "By strategy" table group trades by a SHORT stable name. The server writes each trade's own numbers into its label
-     ("Today's Picks · tier 1 · strength 80% · room 2.3R", "Gann cycle 10:15 (..) · price at 4,512.30 ..."), which made the dropdown one entry per
-     trade - it was a handful of names (1 / 2 indicator(s) agree, stock screen, index call/put) in the first version. */
-  const setupKey = x => { x = String(x || '').trim(); if (!x) return '';
-    if (/^Today.s Picks/i.test(x)) return "Today's Picks";
-    if (/^Eagle/i.test(x)) return 'Eagle Trades';
-    if (/^Gann cycle/i.test(x)) return 'Gann time cycle';
-    if (/^Gann angle|Gann time-price/i.test(x)) return 'Gann angle';
-    if (/Z Trend/i.test(x)) return /hedge|credit spread/i.test(x) ? 'Z Trend (hedged spread)' : 'Z Trend';
-    if (/time cycle/i.test(x)) return 'Time cycle';
-    if (/^stock screen/i.test(x)) return 'stock screen (trend + volume + RSI)';
-    if (/^index call\/put/i.test(x)) return 'index call/put (daily chart and option flow agree)';
-    return x.split(' · ')[0]; };
   function filterBar() {
-    const f = ui.f, setups = [...new Set(allTrades().map(t => setupKey(t.setup)).filter(Boolean))].sort(), dp = datePreset(), mc = moreCount();
+    const f = ui.f, setups = [...new Set(allTrades().map(t => t.setup).filter(Boolean))], dp = datePreset(), mc = moreCount();
     const opt = (arr, cur, all) => `<option value="">${all}</option>` + arr.map(x => `<option ${cur === x ? 'selected' : ''}>${E(x)}</option>`).join('');
     const seg = (name, cur, opts) => `<div class="jv-seg">${opts.map(([v, l, tip]) => `<button class="${cur === v ? 'on' : ''}" data-jvq="${name}:${v}" ${tip ? `title="${tip}"` : ''}>${l}</button>`).join('')}</div>`;
     const chips = [];
@@ -1224,7 +1211,7 @@ function paperList() {
   }
   function viewStrategy() {
     const L = filtered();
-    return `${filterBar()}<div class="card"><div class="card-h"><h3>By strategy / setup</h3></div>${groupTable(groupBy(L, t => setupKey(t.setup) || t.setup, false), 'Setup')}</div>
+    return `${filterBar()}<div class="card"><div class="card-h"><h3>By strategy / setup</h3></div>${groupTable(groupBy(L, t => t.setup, false), 'Setup')}</div>
       <div class="card"><div class="card-h"><h3>By indicator</h3></div>${groupTable(groupBy(L, t => t.ind, true), 'Indicator')}</div>
       <div class="card"><div class="card-h"><h3>By instrument</h3></div>${groupTable(groupBy(L, t => t.instrument, false), 'Instrument')}</div>
       <div class="card"><div class="card-h"><h3>By direction / market</h3></div>${groupTable(groupBy(L, t => t.dir + ' · ' + t.market, false), 'Segment')}</div>`;
