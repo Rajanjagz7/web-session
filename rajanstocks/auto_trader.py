@@ -1110,6 +1110,75 @@ def oel_tag(c, today, cfg):
     return tag
 
 
+CONTRACT_CONFIRM = True      # 29 Oct (user): a bought option is only entered when the contract's OWN 5m indicators are not clearly against it
+
+
+def _ema(vals, n):
+    k, e, out = 2.0 / (n + 1), None, []
+    for v in vals:
+        e = v if e is None else v * k + e * (1 - k)
+        out.append(e)
+    return out
+
+
+def contract_votes(bars):
+    """Bull / bear votes from the option's own 5m candles - the same five readings the Trade screen shows
+    (RSI 14, MACD 12/26/9, VWAP, EMA 21, SMA 20). Returns (bull, bear) or None when there are too few candles to judge."""
+    cl = [float(b["close"]) for b in bars if float(b.get("close") or 0) > 0]
+    if len(cl) < 22:
+        return None
+    px, bull, bear = cl[-1], 0, 0
+    g = [max(cl[i] - cl[i - 1], 0) for i in range(1, len(cl))]
+    l = [max(cl[i - 1] - cl[i], 0) for i in range(1, len(cl))]
+    ag, al = sum(g[:14]) / 14, sum(l[:14]) / 14
+    for i in range(14, len(g)):
+        ag, al = (ag * 13 + g[i]) / 14, (al * 13 + l[i]) / 14
+    rsi = 100.0 if al == 0 else 100 - 100 / (1 + ag / al)
+    if rsi > 55:
+        bull += 1
+    elif rsi < 45:
+        bear += 1
+    if len(cl) >= 35:
+        m = [a_ - b_ for a_, b_ in zip(_ema(cl, 12), _ema(cl, 26))]
+        sg = _ema(m, 9)
+        if m[-1] > sg[-1]:
+            bull += 1
+        else:
+            bear += 1
+    day = str(bars[-1].get("time") or "")[:10]
+    sess = [b for b in bars if str(b.get("time") or "")[:10] == day] or bars
+    pv = sum(((float(b["high"]) + float(b["low"]) + float(b["close"])) / 3) * float(b.get("volume") or 0) for b in sess)
+    vv = sum(float(b.get("volume") or 0) for b in sess)
+    if vv > 0:
+        if px > pv / vv:
+            bull += 1
+        else:
+            bear += 1
+    for ref in (_ema(cl, 21)[-1], sum(cl[-20:]) / 20):
+        if px > ref:
+            bull += 1
+        else:
+            bear += 1
+    return bull, bear
+
+
+def contract_blocked(ct, cfg=None):
+    """A bought option is skipped when most of its own indicators point down (a premium that is falling is not a long to buy,
+    even when the stock's strategies lean the right way). Unknown / too little data never blocks."""
+    if not CONTRACT_CONFIRM or (cfg is not None and cfg.get("contractConfirm") is False):
+        return None
+    try:
+        from nse_service import nse_service
+        bars = nse_service.upstox.get_candles(ct["key"], "5minute")
+        v = contract_votes(bars or [])
+    except Exception as e:
+        print(f"[auto] contract check unavailable: {e}")
+        return None
+    if v and v[1] >= 3 and v[1] - v[0] >= 2:
+        return f"skipped: this option's own 5m indicators are bearish ({v[0]} up / {v[1]} down) - waiting for the contract itself to turn up"
+    return None
+
+
 def _atr_for(sym):
     import bar_source
     from ut_bot import _rma, _true_range
@@ -1157,6 +1226,10 @@ def open_trade(st, c, today):
         sp_, lim_ = (ask_ - bid_) / ask_, MAX_SPREAD_OF_STOP * float(cfg.get("premSlPct", PREM_SL_PCT))
         if sp_ > lim_:
             raise RuntimeError(f"skipped: bid/ask spread {sp_ * 100:.1f}% is too wide for the {float(cfg.get('premSlPct', PREM_SL_PCT)) * 100:.1f}% stop (max {lim_ * 100:.1f}%)")
+    if c.get("pos") != "short" and c.get("key") != "rzt-hedge" and not str(c.get("id", "")).endswith("-W"):
+        why_ = contract_blocked(ct, cfg)
+        if why_:
+            raise RuntimeError(why_)
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
     variant = c.get("variant", "fixed")
