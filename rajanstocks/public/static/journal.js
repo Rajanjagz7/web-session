@@ -1556,13 +1556,13 @@ function paperList() {
         persist();
         if (typeof App !== 'undefined') {
           if (App.trades) {
-            App.trades = App.trades.filter(x => x.id !== id && ('PT|' + x.id) !== id);
-            try { localStorage.setItem('mer-trades', JSON.stringify(App.trades)); } catch(e) {}
+            App.trades = App.trades.filter(x => x.id !== id && String(x.id) !== String(id) && ('PT|' + x.id) !== id);
+            try { if (typeof saveTrades === 'function') saveTrades(); } catch (e) { }                 /* the real store (rs-trades-v1): the old code wrote a dead key, so deleted entries came back after a refresh */
           }
           if (App.positions) {
             const cleanSym = String(id).replace(/^P\|/, '');
             App.positions = App.positions.filter(p => p.sym !== cleanSym && ('P|' + p.sym) !== id);
-            try { localStorage.setItem('mer-paper', JSON.stringify(App.positions)); } catch(e) {}
+            try { if (typeof savePaper === 'function') savePaper(); } catch (e) { }
           }
         }
         if (window.closeModal) window.closeModal();
