@@ -1246,6 +1246,17 @@ td.ltp.pd-hit .pd-tag{color:#4ade80}td.ltp.pd-near .pd-tag{color:#fbbf24}td.ltp.
   <section class="view" id="v-godseye"></section>
 </main>
 <div id="boot"><div class="spin"></div><b>Rajan Algo</b><small>Loading live NSE data…</small></div>
+<script>/* start-up watchdog: if the loader is still up after 20 s, say why and offer a one-tap fix (no saved trades are touched by "Fix") */
+(function(){var last='';function note(m){last=String(m||'').slice(0,220)}
+window.addEventListener('error',function(e){note(e.message)});window.addEventListener('unhandledrejection',function(e){note(e.reason&&e.reason.message||e.reason)});
+setTimeout(function(){var b=document.getElementById('boot');if(!b)return;
+  b.innerHTML='<b>Rajan Algo</b><small style="display:block;margin:8px 0">The app did not finish starting.'+(last?'<br><span style="opacity:.7">'+last.replace(/[<>&]/g,'')+'</span>':'')+'</small>'
+   +'<button id="bootFix" style="margin:4px;padding:9px 16px;border-radius:8px;border:0;background:#3987e5;color:#fff;font-weight:600">Fix &amp; reload</button>'
+   +'<button id="bootReset" style="margin:4px;padding:9px 16px;border-radius:8px;border:1px solid #888;background:none;color:inherit">Reset saved data</button>';
+  document.getElementById('bootFix').onclick=function(){var d=function(){location.replace(location.pathname+'?r='+Date.now())};
+    Promise.all([navigator.serviceWorker?navigator.serviceWorker.getRegistrations().then(function(r){return Promise.all(r.map(function(x){return x.unregister()}))}):0,window.caches?caches.keys().then(function(k){return Promise.all(k.map(function(x){return caches.delete(x)}))}):0]).then(d,d)};
+  document.getElementById('bootReset').onclick=function(){if(confirm('Clear the paper positions, orders and settings saved in this browser? Server-side auto trades are not affected.')){try{localStorage.clear()}catch(e){}document.getElementById('bootFix').onclick()}};
+},20000)})();</script>
 <div id="modalRoot"></div>
 <div id="toasts" role="status" aria-live="polite"></div>
 
@@ -4768,6 +4779,10 @@ App.trades=[];App.meta={};
 const kindOf=s=>!s?'stock':(s.ikey||s.cls==='Options')?'option':s.cls==='Indices'?'index':'stock';
 function saveTrades(){try{localStorage.setItem(TR_STORE,JSON.stringify(App.trades.slice(-5000)))}catch(e){}}
 function loadTrades(){try{App.trades=JSON.parse(localStorage.getItem(TR_STORE)||'[]')}catch(e){App.trades=[]}}
+function healSymbols(){   /* a saved position / open order whose contract is no longer listed (expired option) must not crash the start-up: keep it, priced at its entry */
+  const need=new Set();(App.positions||[]).forEach(p=>p&&p.sym&&need.add(p.sym));(App.orders||[]).forEach(o=>o&&o.sym&&need.add(o.sym));
+  need.forEach(sym=>{if(SYM(sym))return;const pv=((App.positions||[]).find(p=>p.sym===sym)||{}).avg||0,opt=/\b(CE|PE)\b/.test(sym);
+    EXTRA[sym]={s:sym,n:sym,ex:opt?'NFO':'NSE',cls:opt?'Options':'Stocks',sec:opt?'Options':'NSE',dp:2,qdp:0,vol:.02,vb:1e6,unit:opt?'contracts':'shares',dvol:0,turn:0,bid:0,ask:0,last:pv,prev:pv,hi:pv,lo:pv,open:pv,stale:1}})}
 function rehydrateMeta(){for(const [label,m] of Object.entries(App.meta||{})){if(m&&m.xstk){if(!EXTRA[label]&&!SYMS.some(x=>x.s===label)){const pv=(App.positions.find(p=>p.sym===label)||{}).avg||0;EXTRA[label]={s:label,n:m.n||label,sec:m.idx?'Index':'NSE',cls:m.idx?'Indices':'Stocks',ex:'NSE',dp:2,qdp:0,vol:.02,vb:1e6,unit:'shares',dvol:0,turn:0,bid:0,ask:0,last:pv,prev:pv,hi:pv,lo:pv,open:pv,xstk:1}}continue}if(!EXTRA[label])EXTRA[label]={s:label,n:label,ex:'NFO',cls:'Options',sec:'Options',ikey:m.ikey,lot:m.lot,dp:2,qdp:0,unit:'units',vol:.03,vb:1e5,dvol:0,turn:0,bid:0,ask:0,last:m.last||0,prev:m.prev||m.last||0,hi:m.last||0,lo:m.last||0,open:m.last||0}}}
 
 /* ---- estimated Indian trading charges (shown as estimates) ---- */
@@ -5279,8 +5294,10 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{readTh
      loader on screen forever - race both with timeouts and swallow failures (they retry later) */
   try{await Promise.race([loadUniverse(),new Promise(r=>setTimeout(r,10000))])}catch(e){}
   try{await Promise.all([Promise.race([pollQuotes(),new Promise(r=>setTimeout(r,8000))]),Promise.race([fetchSeries(App.sym,App.tf),new Promise(r=>setTimeout(r,8000))])])}catch(e){}
-  loadChart(false);renderSymbar();renderToolbar();renderTools();renderWatchlist();renderBottom();renderTicket();buildBook();
-  const h=location.hash.slice(1);$('#boot')?.remove();go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:(window.geHome?geHome():'godseye'));   /* home = God's Eye (or its Today's Picks tab, if that was open last) */
+  try{healSymbols()}catch(e){console.error('boot: healSymbols',e)}
+  for(const [nm,fn] of [['loadChart',()=>loadChart(false)],['renderSymbar',renderSymbar],['renderToolbar',renderToolbar],['renderTools',renderTools],['renderWatchlist',renderWatchlist],['renderBottom',renderBottom],['renderTicket',renderTicket],['buildBook',buildBook]])
+    try{fn()}catch(e){console.error('boot: '+nm,e)}   /* one broken panel must not leave the loader on screen */
+  const h=location.hash.slice(1);$('#boot')?.remove();try{go(h==='trade'||h==='mobile'?'options':KNOWN_VIEWS.includes(h)?h:(window.geHome?geHome():'godseye'))}catch(e){console.error('boot: go',e)}   /* home = God's Eye (or its Today's Picks tab, if that was open last) */
   setTimeout(()=>{try{if(!ocGet('NIFTY',''))api('/api/m/chain?symbol=NIFTY').then(r=>ocPut('NIFTY','',r)).catch(()=>{})}catch(e){}},4000);
   loadPicks();loadNews();loadGlobal(true);checkTokenHealth();setInterval(checkTokenHealth,1800000);setInterval(()=>{if(document.getElementById("tokBanner")&&!document.hidden)checkTokenHealth()},120000);loadStratMeta().catch(()=>{});setInterval(()=>loadPicks(),300000);setInterval(loadNews,600000);setTimeout(schedulePoll,3000);netBanner();setInterval(savePaper,4000);window.addEventListener('beforeunload',savePaper);checkCacheVersion();setInterval(checkCacheVersion,300000);setInterval(triggerSignalPush,180000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){pollQuotes();checkCacheVersion();triggerSignalPush();try{chart&&chart.req()}catch(e){}try{mchart&&mchart.req()}catch(e){}try{OPT&&OPT.ochart&&OPT.ochart.req()}catch(e){}}});
   let _rszT;window.addEventListener('resize',()=>{clearTimeout(_rszT);_rszT=setTimeout(()=>{try{if(App.view==='options'&&OPT.chain)drawChain()}catch(e){}},250)})})();

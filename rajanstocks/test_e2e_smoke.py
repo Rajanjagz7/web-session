@@ -296,3 +296,23 @@ def test_mobile_layout_basics(server, browser):
         a.check_clean()
     finally:
         a.close()
+
+
+def test_front_end_files_have_no_stray_control_characters():
+    # a '\b' typed through a patch script becomes a backspace and silently breaks the regex (the Index filter did exactly that)
+    import pathlib
+    root = pathlib.Path(__file__).parent / "public"
+    for f in [root / "index.html", root / "static" / "index.html", *sorted((root / "static").glob("*.js"))]:
+        txt = f.read_text(encoding="utf-8")
+        bad = sorted({hex(ord(c)) for c in txt if ord(c) < 32 and c not in "\r\n\t"})
+        assert not bad, f"{f.name} contains control characters {bad}"
+
+
+def test_start_up_survives_a_saved_position_without_contract_data(app):
+    # a saved paper position whose option is no longer listed used to throw at start-up and leave the loader on screen for good
+    app.open("picks")
+    app.page.add_init_script("""try { localStorage.setItem('rs-paper-v1', JSON.stringify({cash: 900000, oid: 3, watch: [], alerts: [], orders: [], history: [],
+        positions: [{sym: 'NIFTY 22,750 CE 27 Oct', q: 65, avg: 83.2}], meta: {}})) } catch (e) {}""")
+    app.page.reload()
+    app.page.wait_for_function("!document.getElementById('boot')", timeout=60000)
+    assert app.ev("!!SYM('NIFTY 22,750 CE 27 Oct')"), "the saved contract was not restored"
