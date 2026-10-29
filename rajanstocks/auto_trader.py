@@ -1470,7 +1470,7 @@ def _profit_lock(t, px, mode="old"):
         t["lock"] = {"mode": "trail" if keep else "breakeven", "keep": round(keep), "best": round(best), "at": _now().isoformat()}
         t["stopMoved"] = _now().isoformat()
         if first and PUSH_LOCKS:
-            _push(f"auto-lock|{t['id']}|{t['lock']['mode']}", f"PROFIT LOCKED · {t['sym']} {t.get('strike', 0):.0f} {t.get('opt', '')}",
+            _push(f"auto-lock|{t.get('id')}|{t['lock']['mode']}", f"PROFIT LOCKED · {t.get('sym')} {t.get('strike', 0):.0f} {t.get('opt', '')}",
                   f"Profit ₹{best:,.0f} - stop moved to ₹{stop:.2f} ({'keeps ₹' + format(round(keep), ',') if keep else 'breakeven'})", kind="lock")
 
 
