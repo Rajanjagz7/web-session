@@ -31,8 +31,9 @@ from push_api import _host_ok
 IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter()
 
-MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "5"))
-MAX_LOCK_PER_DAY = int(os.environ.get("PUSH_MAX_LOCK_PER_DAY", "20"))   # "stop moved / profit locked" alerts have their own budget, so the 5 entry alerts cannot use it up
+MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "2"))     # idea pushes; the rest of the 5-a-day total is kept for the auto trader's entries
+MAX_LOCK_PER_DAY = int(os.environ.get("PUSH_MAX_LOCK_PER_DAY", "0"))    # "stop moved / profit locked" phone alerts: OFF by default (user 29 Oct: a push for every lock is irritating) - they stay in the app
+MAX_TOTAL_PER_DAY = int(os.environ.get("PUSH_MAX_TOTAL_PER_DAY", "5"))   # HARD limit: phone pushes per device per day, ALL kinds together (ideas + trades + locks)
 MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "5"))   # user: at most 5 phone pushes a day (the auto trader's first 5 trades); after that it trades silently
 CYCLE_SECONDS = 300
 STATE_KEY = "rajanone:push:v1"
@@ -273,7 +274,7 @@ def run_cycle(force=False, dry=False):
                 continue
             delivered = False
             for ep, rec in list(subs.items()):
-                if sent_by.get(ep, 0) >= MAX_PER_DAY:
+                if sent_by.get(ep, 0) >= MAX_PER_DAY or _day_total(st, today, ep) >= MAX_TOTAL_PER_DAY:
                     continue
                 res = _send(rec["sub"], c["title"], c["body"], tag=c["id"])
                 if res == "ok":
@@ -287,12 +288,17 @@ def run_cycle(force=False, dry=False):
                 seen.add(c["id"])
                 st["log"].append({"at": now.isoformat(), "id": c["id"], "title": c["title"]})
                 report["sent"].append({"id": c["id"], "title": c["title"]})
-            if subs and all(sent_by.get(ep, 0) >= MAX_PER_DAY for ep in subs):
+            if subs and all(sent_by.get(ep, 0) >= MAX_PER_DAY or _day_total(st, today, ep) >= MAX_TOTAL_PER_DAY for ep in subs):
                 break
         st["seen"][today] = sorted(seen)
         if not dry:
             _save(st)
         return report
+
+
+def _day_total(st, today, ep):
+    """Everything this device was sent today: ideas + trade entries + lock alerts."""
+    return sum(int((st.get(k) or {}).get(today, {}).get(ep, 0)) for k in ("sent", "sentT", "sentL"))
 
 
 PUSH_BUCKETS = {"index": 2, "stock": 3}   # user: 5 trade pushes a day = 2 index-option + 3 stock-option trades
@@ -328,7 +334,7 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
                 return 0
         n = 0
         for ep, rec in list(st["subs"].items()):
-            if sent_by.get(ep, 0) >= cap:
+            if sent_by.get(ep, 0) >= cap or _day_total(st, today, ep) >= MAX_TOTAL_PER_DAY:
                 continue
             res = _send(rec["sub"], title, body, url=url, tag=idem)
             if res == "ok":
@@ -383,7 +389,7 @@ def status():
     st = _load()
     today = datetime.now(IST).date().isoformat()
     return {
-        "subscribers": len(st["subs"]), "maxPerDay": MAX_PER_DAY, "maxTradePerDay": MAX_TRADE_PER_DAY,
+        "subscribers": len(st["subs"]), "maxPerDay": MAX_PER_DAY, "maxTradePerDay": MAX_TRADE_PER_DAY, "maxTotalPerDay": MAX_TOTAL_PER_DAY,
         "sentToday": {"signals": len(st["sent"].get(today, {})), "tradeEvents": sum((st.get("sentT") or {}).get(today, {}).values()), "lockEvents": sum((st.get("sentL") or {}).get(today, {}).values())},
         "lastFail": st.get("lastFail"), "recent": st["log"][-10:], "configured": bool(os.environ.get("VAPID_PRIVATE_KEY")),
         "durableStore": bool(_remote()), "marketHours": market_hours(),

@@ -1760,7 +1760,7 @@ def _run_cycle(now, force, dry):
 
 
 PUSH_ENTRIES = True       # user: push the auto trader's trades, max 5 a day (push_signals.MAX_TRADE_PER_DAY)
-PUSH_LOCKS = True        # 29 Oct (user): 'profit locked - stop moved to ...' alerts are back (own daily budget, push_signals.MAX_LOCK_PER_DAY)
+PUSH_LOCKS = True        # builds the "stop moved" alert; push_signals.MAX_LOCK_PER_DAY = 0 keeps it OFF on the phone (user 29 Oct) - it still shows in the app; hard total 5 pushes a day
 
 
 def _notify(t):
