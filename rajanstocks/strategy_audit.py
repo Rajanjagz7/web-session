@@ -8,7 +8,7 @@ For each DAILY indicator, over ~4 years of daily candles for 5 indices + 20 liqu
      drift over the same horizon, with a t-statistic.
   3. Lag - how far price had already moved in the signal's direction over the 3 sessions before it (in ATR).
   4. Futures / stock test - indicator stop (or signal-candle stop, 0.5-1 ATR), 2R target, 10 sessions, 0.05% cost.
-  5. Option-buyer test - backtest.simulate (30%-of-premium stop, daily theta to the real expiry, out before expiry).
+  5. Option-buyer test - backtest.simulate (live premium-stop cap, daily theta to the real expiry, out before expiry).
   Every test is split in time: first 70% of signals in-sample, last 30% out-of-sample.
 For INTRADAY indicators (ORB, VWAP+RSI, 3-min HA channels) the last ~25 sessions of 1-minute candles are replayed
 day by day; edge = direction-adjusted move 30 minutes later and at 15:25.

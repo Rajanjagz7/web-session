@@ -2019,6 +2019,27 @@ function paperList() {
      const cur = curPx(t), pct = Number(r.costPctEff) || (t.isStock ? 0.1 : 0);
      return { b: 0, o: sg * (cur - b0) * qty - pct / 100 * cur * qty };       // only the cost of closing is still ahead; the entry cost was paid on an earlier day
    }
+   /* Manual journal trades and open Trade-screen positions: same rule - a position taken on an earlier day counts only the move since yesterday's
+      close (the live symbol's previous close; unknown -> the old since-entry figure, never a guess). Closed Trade-screen trades carry no open
+      date, so they keep their whole result on the closing day. */
+   function manualDay(t) {
+     const day = today(), sg = dirOf(t), m = units(t), closed = statusOf(t) === 'Closed';
+     const carried = !!t.date && t.date < day && !(t.paper && closed);
+     let base = t.entry;
+     if (carried) { const sy = typeof SYM === 'function' ? SYM(t.symbol || t.instrument) : null; base = sy && sy.prev > 0 ? sy.prev : null; }
+     let b = 0, o = 0;
+     if (t.paper) { if (closed && lastExit(t).slice(0, 10) === day) b = calc(t).net || 0; }
+     else (t.exits || []).forEach(l => {
+       if (l.date !== day) return;
+       const cost = t.costOverride != null ? t.costOverride : (S.cost + S.slip) * m * l.qty;
+       b += sg * (l.price - (base == null ? t.entry : base)) * l.qty * m - cost;
+     });
+     if (!closed) {
+       if (carried && base != null) { const cur = curPx(t), rem = t.qty - exitedQty(t); o = sg * (cur - base) * rem * m - exitCostEst(t); }
+       else o = unrealisedNet(t) || 0;
+     }
+     return { b, o };
+   }
    function todayRows() {
      const day = today(), R = { buy: { b: 0, o: 0 }, sell: { b: 0, o: 0 }, stock: null };
      let carry = 0;
@@ -2026,9 +2047,8 @@ function paperList() {
        if (!entered(t) || t.isStock) return;
        const k = dirOf(t) < 0 ? 'sell' : 'buy', closed = statusOf(t) === 'Closed';
        if (t.auto) { const x = autoDay(t); R[k].b += x.b; R[k].o += x.o; if (!closed) carry++; return; }
-       if (t.paper) { if (closed && lastExit(t).slice(0, 10) === day) R[k].b += calc(t).net || 0; }
-       else (t.exits || []).forEach(l => { if (l.date === day) R[k].b += dirOf(t) * (l.price - t.entry) * l.qty * units(t) - (t.costOverride != null ? t.costOverride : (S.cost + S.slip) * units(t) * l.qty); });
-       if (!closed) { R[k].o += unrealisedNet(t) || 0; carry++; }
+       const x = manualDay(t); R[k].b += x.b; R[k].o += x.o;
+       if (!closed) carry++;
      });
      if ((AUTO.stockTrades || []).length) {                                   // per trade from the share trader's status: carried shares count only today's move
        R.stock = { b: 0, o: 0 };

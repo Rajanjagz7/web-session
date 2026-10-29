@@ -4,7 +4,7 @@ What it does
   1. Replays every daily-bar strategy "as of" several past dates (so ~3 years of signals, not just the last 1.5),
      for 5 indices and the most liquid F&O stocks.
   2. Simulates each fresh signal on daily candles with one fixed rule set:
-        entry next session's open, signal-candle stop capped at 30% of the option premium, target 2R,
+        entry next session's open, signal-candle stop capped at 12.5% of the option premium, target 2R,
         max hold 10 sessions, estimated option time decay per session, round-trip cost 0.05%.
      A candle that touches both stop and target is treated as a stop (conservative).
   3. Splits the history: the first 70% of trades is IN-SAMPLE (used to decide which strategies "work"),
@@ -39,9 +39,11 @@ ASOF_OFFSETS = [0, 380, 760, 1140]          # calendar days back; each replay yi
 RISK_RS = 5000.0                            # BRD default: 0.5% of Rs 10,00,000
 ATR_N, TARGET_R, MAX_HOLD, COST = 14, 2.0, 10, 0.0005
 # Option-buyer stop (same rule in auto_trader.py). The stop is the indicator's signal candle: just beyond the low (BUY) or
-# high (SELL) of the signal bar and the bar before it, kept between 0.5 and 1.0 ATR - but never more than 30% of the
+# high (SELL) of the signal bar and the bar before it, kept between 0.5 and 1.0 ATR - but never more than PREM_SL of the
 # option premium (at delta 0.5). Without that cap a 1.5 ATR stop let one ATM option lose ~90% of its premium.
-PREM_SL, DELTA, SWING_BUF, MIN_ATR, MAX_ATR = 0.30, 0.5, 0.1, 0.5, 1.0
+# PREM_SL is 12.5% = auto_trader.PREM_SL_PCT, the cap the live trader uses since 28 Oct (it was 30% here, so the backtest tested wider
+# stops than the ones actually traded). test_backtest_matches_live.py fails if the two ever differ again.
+PREM_SL, DELTA, SWING_BUF, MIN_ATR, MAX_ATR = 0.125, 0.5, 0.1, 0.5, 1.0
 DTE_EST = {"index": 5, "stock": 15}        # fallback only - theta now follows the real expiry calendar (expiry_for)
 MIN_DTE = 3                                 # the live trader buys the nearest expiry at least 3 days away
 SKIP_KEYS = {"vix-range", "volume-buzzer-15m", "volume-buzzer-daily", "potential-breakout"}   # not directional entries
@@ -124,7 +126,7 @@ def expiry_for(day_iso, kind):
 
 def plan_risk(bars, atr_v, i, side, entry, premium, delta=DELTA, ind_stop=None):
     """Underlying stop distance for a signal on bar i. The indicator's own stop when it gives one (Rajan Trend Rider,
-    HA Momentum, Breakout Trap, OH/OL, Gann Sq9), otherwise the signal candle; either way never more than 30% of
+    HA Momentum, Breakout Trap, OH/OL, Gann Sq9), otherwise the signal candle; either way never more than PREM_SL of
     the option premium (see PREM_SL above)."""
     d = 1 if side == "BUY" else -1
     own = d * (entry - ind_stop) if ind_stop else None
@@ -151,7 +153,7 @@ TRAIL_HOLD = 10      # options cannot be held for 40 sessions
 
 def simulate(bars, atr, i, side, variant="fixed", opp_i=None, kind="index", ind_stop=None, target_r=None):
     """Signal on bar i's close -> enter bar i+1 open. Returns (R, exit_index, reason) or None while still open.
-    Stop for every variant: plan_risk() (signal-candle stop, capped at 30% of the option premium).
+    Stop for every variant: plan_risk() (signal-candle stop, capped at PREM_SL of the option premium).
     fixed   : target 2R (or target_r), max 10 sessions
     trail   : the stop trails the best price by the same distance, no target, max 10 sessions
     reverse : exit at the open after the strategy's opposite signal, max 10 sessions
@@ -444,7 +446,7 @@ def run_backtest(progress=None, only=None):
         "generatedAt": datetime.now(IST).isoformat(), "symbols": syms, "strategiesTested": len(ranking),
         "tradesSimulated": len(trades), "historyFrom": dates[0], "historyTo": dates[-1], "splitDate": split,
         "rules": {"entry": "next session open", "exitStyles": {
-                      "fixed": f"signal-candle stop ({MIN_ATR}-{MAX_ATR} ATR, max {int(PREM_SL * 100)}% of premium), target {TARGET_R}R, max {MAX_HOLD} sessions, theta from the real days to expiry, out 1 day before expiry",
+                      "fixed": f"signal-candle stop ({MIN_ATR}-{MAX_ATR} ATR, max {PREM_SL * 100:g}% of premium), target {TARGET_R}R, max {MAX_HOLD} sessions, theta from the real days to expiry, out 1 day before expiry",
                       "trail": f"same stop trailing the best price, max {TRAIL_HOLD} sessions, daily theta, out 1 day before expiry",
                       "reverse": f"same stop, exit on the opposite signal, max {TRAIL_HOLD} sessions, daily theta, out 1 day before expiry"},
                   "filters": {"none": "no filter", "trend200": "only with the 200-day EMA trend"},

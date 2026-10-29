@@ -1046,7 +1046,7 @@ def open_trade(st, c, today):
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
     variant = c.get("variant", "fixed")
-    # signal-candle stop from the backtest's plan_risk() (that function still caps at 30% of the premium); the live cap below (premSlPct) is tighter
+    # signal-candle stop from the backtest's plan_risk() (capped at backtest.PREM_SL of the premium); the live cap below (premSlPct, same 12.5% by default) is applied on top
     risk_u = backtest.plan_risk(bars, atr, len(bars) - 1, c["side"], entry_u, ct["premium"], ind_stop=c.get("indStop"))
     if risk_u <= 0:
         raise RuntimeError("no valid stop")

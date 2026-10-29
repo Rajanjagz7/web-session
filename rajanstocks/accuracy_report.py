@@ -6,7 +6,7 @@ Method (the same engine the Auto Trader's own backtest uses, see backtest.py):
   * Every daily-bar indicator is replayed "as of" many past dates on 5 indices + 20 liquid stocks (~4 years), so each signal
     only uses data that existed on that day. Entry = the next session's open. One open trade per indicator and symbol.
   * Two ways of trading each signal, both with a stop-loss AND a target:
-      options : the app's own rule - the indicator's stop (else the signal candle, 0.5-1.0 ATR) capped at 30% of the ATM option
+      options : the app's own rule - the indicator's stop (else the signal candle, 0.5-1.0 ATR) capped at the live premium-stop % of the ATM option
                 premium, real expiry calendar, time decay, 0.05% cost, out 1 day before expiry.
       cash    : plain shares / futures - the indicator's stop (else signal candle +0.1 ATR, kept between 0.75 and 2 ATR),
                 no time decay, 0.1% round-trip cost.
@@ -383,7 +383,7 @@ def to_markdown(r):
          "**Read this first.** Every trade has a stop-loss and a target. *Win rate* = share of trades that ended in profit (after costs). *Target hit* / *Stopped* = how they ended. "
          "*Avg R* = average result in multiples of the money risked (+0.30R = 30% of the risk won per trade); *PF* = profit factor (> 1.2 is healthy). "
          "The 95% range shows how uncertain the win rate is for that many trades. Past results do not predict the future.", ""]
-    for model, title in (("cash", "A. Shares / futures (stop = indicator or signal candle, no option decay)"), ("options", "B. Options, as the Auto Trader trades (stop capped at 30% of the premium, time decay)")):
+    for model, title in (("cash", "A. Shares / futures (stop = indicator or signal candle, no option decay)"), ("options", f"B. Options, as the Auto Trader trades (stop capped at {__import__('backtest').PREM_SL * 100:g}% of the premium, time decay)")):
         L += [f"## {title}", "",
               "| Indicator | Best exit rule (chosen in-sample) | Trades | Win rate (95% range) | Target hit | Stopped | Avg R | PF | Out-of-sample: trades · win · avg R · PF | Verdict |",
               "|---|---|---:|---|---:|---:|---:|---:|---|---|"]

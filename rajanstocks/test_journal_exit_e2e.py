@@ -430,3 +430,49 @@ def test_carried_share_counts_the_move_from_yesterdays_close(server, browser):
 
 def test_empty_and_flat_books_show_zero_not_nan(server, browser):
     assert hero_for(browser, [])[0] == "+₹0.00"
+
+
+# ───────────────────────── manual journal trades: also only today's move ─────────────────────────
+def fmt(v):
+    return ("+" if v >= 0 else "−") + "₹" + f"{abs(v):,.2f}"
+
+
+def manual_hero(browser, trade_over, prev, last):
+    w = World(opens=[])
+    t = dict(MANUAL[0], **trade_over)
+    c, pg, errs = open_journal(browser, w, tab="portfolio", sym_prices={"TCS": last}, manual=[t])
+    pg.evaluate("([k, v]) => { SYMS.find(x => x.s === k).prev = v; }", ["TCS", prev])
+    pg.wait_for_timeout(1200)
+    pg.evaluate("JV.refreshLive()")
+    pg.wait_for_timeout(300)
+    out, cost = hero(pg), pg.evaluate("JV.settings().cost + JV.settings().slip")
+    c.close()
+    assert not errs
+    return out, cost
+
+
+def test_manual_trade_carried_from_yesterday_counts_the_move_from_yesterdays_close(server, browser):
+    out, cost = manual_hero(browser, dict(date=YDAY), prev=108.0, last=112.0)
+    assert out == fmt(4 * 10 - cost * 10)                          # +4 since the close, not +12 since the entry
+
+
+def test_manual_trade_taken_today_counts_the_move_since_entry(server, browser):
+    out, cost = manual_hero(browser, {}, prev=108.0, last=112.0)
+    assert out == fmt(12 * 10 - cost * 10)
+
+
+def test_manual_trade_carried_and_closed_today_counts_from_yesterdays_close(server, browser):
+    leg = dict(qty=10, price=115.0, type="Manual Exit", date=TODAY, time="11:00")
+    out, cost = manual_hero(browser, dict(date=YDAY, status="Closed", exits=[leg], exitType="Manual Exit", closedAt=f"{TODAY}T11:00:00+05:30"), prev=108.0, last=115.0)
+    assert out == fmt(7 * 10 - cost * 10)                          # not (115 - 100) x 10
+
+
+def test_manual_trade_closed_yesterday_adds_nothing_today(server, browser):
+    leg = dict(qty=10, price=115.0, type="Manual Exit", date=YDAY, time="11:00")
+    out, _ = manual_hero(browser, dict(date=YDAY, status="Closed", exits=[leg], exitType="Manual Exit", closedAt=f"{YDAY}T11:00:00+05:30"), prev=108.0, last=115.0)
+    assert out == "+₹0.00"
+
+
+def test_manual_trade_without_a_previous_close_falls_back_to_the_old_figure_not_nan(server, browser):
+    out, cost = manual_hero(browser, dict(date=YDAY), prev=0.0, last=112.0)
+    assert out == fmt(12 * 10 - cost * 10)
