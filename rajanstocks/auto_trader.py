@@ -913,8 +913,7 @@ def _quality(p):
         return 0.0
     st_ = float(p.get("strength") or 0)
     vx = float(p.get("volx") or 0)
-    top = 1.0 if st_ >= 99.5 else 0.0                       # user, 29 Oct: strength-100 stocks first, and those with a volume surge (1.5x+) before the rest of them
-    top += 0.5 if top and vx >= 1.5 else 0.0
+    top = 1.0 if st_ >= 99.5 else 0.0                       # user, 29 Oct: strength-100 stocks first; among them (and everywhere below) the higher volume goes first - no volume threshold
     return top + (0.5 if st_ >= 75 else 0.0) + min(st_, 100) / 400 + min(vx, 3.0) / 6
 
 
