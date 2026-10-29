@@ -1985,13 +1985,21 @@ def cash_seed_status():
     """Is the cash-picks seed file there? (the file the picks screen falls back on until today's whole-market walk is done)"""
     fp = _static_path("picks_cash_seed.json")
     n = 0
+    d = {}
     try:
         with open(fp, "r", encoding="utf-8") as f:
             d = json.load(f)
         n = len(d) if isinstance(d, (dict, list)) else 0
     except Exception:
         pass
-    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None}
+    live = {"rows": 0, "changed": 0}                   # today's accumulating list on the server vs the committed file: "changed" > 0 = the whole-market walk is bringing fresh prices
+    try:
+        day = shared_cache.get(f"picks:cash|{date.today().isoformat()}") or {}
+        seed = d if isinstance(d, dict) else {}
+        live = {"rows": len(day), "changed": sum(1 for k, v in day.items() if isinstance(v, dict) and (seed.get(k) or {}).get("ltp") != v.get("ltp"))}
+    except Exception:
+        pass
+    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None, "today": live}
 
 
 @router.get("/cash-seed/export")

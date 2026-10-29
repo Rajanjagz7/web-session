@@ -301,3 +301,14 @@ def test_cash_seed_export_returns_the_days_cash_rows_in_seed_format(monkeypatch)
     monkeypatch.setattr(shared_cache, "get", lambda k, *a, **kw: rows if k == f"picks:cash|{date.today().isoformat()}" else None)
     r = market_api.cash_seed_export()
     assert json.loads(r.body) == rows and r.headers["x-rows"] == "1" and "picks_cash_seed.json" in r.headers["content-disposition"]
+
+
+def test_cash_seed_status_counts_the_rows_the_walk_changed_today(monkeypatch):
+    import market_api, shared_cache
+    from datetime import date
+    seed = market_api.json.load(open(market_api._static_path("picks_cash_seed.json")))
+    k1, k2 = list(seed)[:2]
+    day = {k1: dict(seed[k1], ltp=seed[k1]["ltp"] + 1.0), k2: dict(seed[k2])}
+    monkeypatch.setattr(shared_cache, "get", lambda k, *a, **kw: day if k == f"picks:cash|{date.today().isoformat()}" else None)
+    out = market_api.cash_seed_status()
+    assert out["today"] == {"rows": 2, "changed": 1} and out["symbols"] == len(seed)
