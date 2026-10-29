@@ -2,7 +2,11 @@ name: Refresh cash picks seed
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 15 * * 1-5"      # 21:00 IST, Mon-Fri only - after market hours, never on weekends
+    # 21:00 IST, Mon-Fri only - after market hours, never on weekends. GitHub drops or delays scheduled runs (29 Oct: the 21:00 one never started),
+    # so there are three odd-minute starts; a later start only commits when the rows changed, so extra runs are harmless.
+    - cron: "37 15 * * 1-5"      # 21:07 IST
+    - cron: "11 16 * * 1-5"      # 21:41 IST
+    - cron: "43 16 * * 1-5"      # 22:13 IST
 permissions:
   contents: write
 concurrency: { group: cash-seed, cancel-in-progress: false }
