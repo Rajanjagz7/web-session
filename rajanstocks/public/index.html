@@ -3906,8 +3906,9 @@ function opxSummary(c){const rows=c.rows||[];let ceOi=0,peOi=0,cw=null,pw=null;
    ran = touched and already moved up (blue), stop = fell more than 10 pts under the level. ---- */
 const PD_TOL=0.5;
 const pdSl=(e,pts)=>+Math.max(0.05,e-Math.min(pts,Math.max(0.5,e*0.35))).toFixed(2);   // the indicator's point stop, capped at 35% of a small premium so a 7 rs entry never carries a 0.05 stop
-const ZONES={'sensex-310':{name:'SENSEX Indicator (prev close 310-340)',short:'SX 52-58',only:'SENSEX',ref:'prev',refLo:310,refHi:340,lo:52,hi:58,slPts:10,t:[88,92,105]},
-  'prem-38-42':{name:'Premium 38-42 -> 7.80-8.45',short:'7.8-8.45',ref:'open',refLo:38,refHi:42,lo:7.80,hi:8.45,sl:5.80,t:[12,16,22,32,42]}};
+const ZONES_RETIRED={'sensex-310':{name:'SENSEX Indicator (prev close 310-340)',short:'SX 52-58',only:'SENSEX',ref:'prev',refLo:310,refHi:340,lo:52,hi:58,slPts:10,t:[88,92,105]},
+  'prem-38-42':{name:'Premium 38-42 -> 7.80-8.45',short:'7.8-8.45',ref:'open',refLo:38,refHi:42,lo:7.80,hi:8.45,sl:5.80,t:[12,16,22,32,42]}};   /* retired 29 Oct: duplicates of the Strategy 1 / 3 zones (hidden on the server too) - no signals, no work */
+const ZONES={};
 function pdIsExpiry(){const c=OPT.chain;return !!(c&&c.expiry&&c.expiry===new Date(Date.now()+330*60000).toISOString().slice(0,10))}
 function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;const o=leg.open,h=Math.max(leg.high||o,o),l=Math.min(leg.low||o,o),p=leg.ltp,pc=leg.prev||0,lv=[];
   if(o>=20){if(isExp){if(h<=o+PD_TOL)[4,6.5,8,10].forEach(k=>lv.push({name:'/'+k,ind:'Expiry divisor',base:o,lv:o/k}))}

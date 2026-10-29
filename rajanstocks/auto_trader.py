@@ -785,6 +785,52 @@ def _gann_cands(now, used=()):
     return sorted(out, key=lambda c: -c["rank"])[:3]
 
 
+ZTC_WINDOW_MIN = 5            # a strong / medium cycle time is honoured +-5 minutes (the plain time-cycle trigger uses +-3)
+ZTC_ZONE_TOL = 0.0025         # price within 0.25% of the zone (plain trigger: 0.15%) - the Z Trend agreement is the extra filter
+
+
+def _ztc_cands(now):
+    """Z Trend + Gann time cycle confluence (user, 29 Oct): the cycle TIME and the ZONE must line up (as in the plain time-cycle trigger) AND the
+    Z Trend direction on the 5-minute chart must agree - its latest flip today: BUY at the vibration support with the last flip BUY, SELL at the
+    resistance with the last flip SELL. Two independent readings (time/price and trend) have to point the same way, which is what should cut
+    the false cycle triggers. Stop = a whisker beyond the zone, target = the next zone, R:R >= TC_MIN_RR. Tagged "z-timecycle" so the journal's
+    By-strategy table measures it on its own (forward test: no historical cycle backtest exists for it)."""
+    try:
+        import vedic_api
+        import rzt as rzt_mod
+    except Exception:
+        return []
+    now_m, out = _mins(now), []
+    for sym in ("NIFTY", "BANKNIFTY"):
+        try:
+            d = vedic_api.timecycle(symbol=sym, mode="underlying", strike=0)
+            cyc = next((c for c in d.get("cycles") or [] if abs(c.get("m", 10 ** 6) - now_m) <= ZTC_WINDOW_MIN and c.get("strength") in ("strong", "medium")), None)
+            last = float(d.get("last") or 0)
+            vib, res = (d.get("vibration") or {}).get("level"), (d.get("nextResistance") or {}).get("level")
+            if not (cyc and last > 0 and vib and res):
+                continue
+            flips = [c for c in rzt_mod.intraday_cands([sym], fresh_min=10 ** 4) if c.get("sym") == sym]   # every flip today (cached ~4 min)
+            if not flips:
+                continue
+            trend = flips[-1]["side"]                                                   # the latest flip is the trend now
+            tol = last * ZTC_ZONE_TOL
+            if abs(last - vib) <= tol and trend == "BUY":
+                stop = round(vib - last * 0.001, 2)
+                risk, reward, side, at = last - stop, res - last, "BUY", f"vibration zone {vib:,.2f} · target {res:,.2f}"
+            elif abs(last - res) <= tol and trend == "SELL":
+                stop = round(res + last * 0.001, 2)
+                risk, reward, side, at = stop - last, last - vib, "SELL", f"resistance {res:,.2f} · target {vib:,.2f}"
+            else:
+                continue
+            if risk > 0 and reward / risk >= TC_MIN_RR:
+                out.append({"key": "z-timecycle", "sym": sym, "side": side, "asOf": now.date().isoformat(), "score": 0.7, "indStop": stop,
+                            "variant": "fixed", "filter": "none", "kind": "index", "label": "Z Trend + time cycle",
+                            "source": f"Z Trend {side} + Gann cycle {cyc['time']} ({cyc['strength']}) · price at {at} · R:R 1:{reward / risk:.1f}"})
+        except Exception:
+            continue
+    return out[:1]
+
+
 def _timecycle_cands(now):
     """Gann time cycle trigger (indices only): at a strong / medium cycle time, price sitting at the
     vibration zone (support) or the next resistance is the traditional 'price confirms time' entry.
@@ -964,7 +1010,7 @@ def _quality(p):
 # group B, each on its OWN book. After a few weeks the journal's "By strategy" table shows which sources earn - keep those, remove the rest.
 # Split alternates down the backtest ranking so both groups get a similar mix of stock and index sources and of good and weak ones.
 GROUP_A = ("rajan-rsi2-pullback", "rzt", "rajan-ibs-reversion", "Eagle Trades", "index-call-put", "rzt-intraday", "timecycle", "premium-rider")
-GROUP_B = ("rajan-ha-momentum", "ut-bot", "rajan-trend-rider", "morning-pick", "stock-screen", "rzt-hedge", "gann-angle")
+GROUP_B = ("rajan-ha-momentum", "ut-bot", "rajan-trend-rider", "morning-pick", "stock-screen", "rzt-hedge", "gann-angle", "z-timecycle")   # B tests the Z Trend + time cycle CONFLUENCE; A trades the two separately (rzt-intraday, timecycle)
 GROUP = (os.environ.get("AUTO_GROUP") or "").strip().upper()          # "A" / "B" / "" (= every source, the original behaviour)
 
 
@@ -1805,7 +1851,9 @@ def _run_cycle(now, force, dry):
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"rzt intraday failed: {str(e)[:80]}"})
             try:                                      # Gann time cycle: price AT a zone AT a cycle time, with the zone as stop
-                tc_extra = _timecycle_cands(now)
+                tc_extra = _ztc_cands(now) + _timecycle_cands(now)
+                _seen_tc = set()
+                tc_extra = [c for c in tc_extra if not (c["sym"] in _seen_tc or _seen_tc.add(c["sym"]))]        # one trigger per symbol (the confluence one wins)
                 # not just this cycle's picks: a symbol already traded / open today must not be bought again on every cycle
                 # while its time-cycle trigger stays active (BANKNIFTY went in 3 times in 3 minutes)
                 tseen = {c["sym"] for c in chosen} | _taken_syms(st, today)

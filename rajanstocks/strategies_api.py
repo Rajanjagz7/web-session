@@ -949,6 +949,9 @@ HIDDEN = {
     "vwap-rsi", "heikin-ashi-channel", "ema-9-15", "bottom-reversal", "hammer-support",
     # -- older option scans, replaced by the Expiry / Daily Divisor and Open = Low (10 pt) scans --
     "opt-strat1", "opt-premium", "opt-spike", "rajan-premium-levels", "rajan-ohol-premium",
+    # -- duplicates found 29 Oct: SENSEX 310 = Strategy 3 (opt-premium) limited to SENSEX (31 setups, lost at every target); Premium 38-42 = the
+    #    Strategy 1 zone (opt-strat1) again; "opened exactly at its low" (opt-ol) is a subset of Open = Low within 10 pts (pd-ohol10) --
+    "sensex-310", "prem-38-42", "opt-ol",
 }
 
 

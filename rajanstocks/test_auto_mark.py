@@ -197,3 +197,33 @@ def test_indicator_groups_split_all_sources_in_two_without_overlap():
     assert all(g and len(g) >= 7 for g in (A.GROUP_A, A.GROUP_B))
     assert A.profile_ok({"key": "ut-bot"}, "B") and not A.profile_ok({"key": "ut-bot"}, "A")
     assert A.profile_ok({"key": "ut-bot"}, "") and A.profile_ok({"key": "anything"}, None) in (True, False)
+
+
+def _fake_tc(monkeypatch, last, vib, res, trend, cyc_min):
+    import sys
+    import types
+    import auto_trader as A
+    import rzt as R
+    from datetime import datetime
+    now = datetime(2026, 10, 30, 10, 15, tzinfo=A.IST)
+    fake = types.SimpleNamespace(timecycle=lambda **k: {"last": last, "vibration": {"level": vib}, "nextResistance": {"level": res},
+                                                        "cycles": [{"m": 10 * 60 + 15 + cyc_min, "time": "10:15", "strength": "strong"}]})
+    monkeypatch.setitem(sys.modules, "vedic_api", fake)
+    monkeypatch.setattr(R, "intraday_cands", lambda syms, fresh_min=15: [{"sym": syms[0], "side": trend, "key": "rzt-intraday"}] if trend else [])
+    return A, now
+
+
+def test_z_timecycle_needs_zone_time_and_trend_to_agree(monkeypatch):
+    A, now = _fake_tc(monkeypatch, 22000.0, 22005.0, 22400.0, "BUY", 0)          # at support, Z Trend BUY, on the cycle time
+    out = A._ztc_cands(now)
+    assert out and out[0]["key"] == "z-timecycle" and out[0]["side"] == "BUY" and out[0]["kind"] == "index" and out[0]["indStop"] < 22000
+    A, now = _fake_tc(monkeypatch, 22000.0, 22005.0, 22400.0, "SELL", 0)         # trend disagrees -> nothing
+    assert A._ztc_cands(now) == []
+    A, now = _fake_tc(monkeypatch, 22000.0, 22005.0, 22400.0, "BUY", 20)         # not on a cycle time -> nothing
+    assert A._ztc_cands(now) == []
+    A, now = _fake_tc(monkeypatch, 22000.0, 21800.0, 22005.0, "SELL", 4)         # at resistance, Z Trend SELL, 4 min off the cycle (window 5) -> SELL
+    out = A._ztc_cands(now)
+    assert out and out[0]["side"] == "SELL" and out[0]["indStop"] > 22000
+    A, now = _fake_tc(monkeypatch, 22000.0, 22005.0, 22400.0, None, 0)           # no Z Trend flip today -> nothing
+    assert A._ztc_cands(now) == []
+    assert A.profile_ok({"key": "z-timecycle"}, "B") and not A.profile_ok({"key": "z-timecycle"}, "A")
