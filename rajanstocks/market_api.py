@@ -2312,7 +2312,10 @@ def quick_index_calls(deadline_s=8):
     out = []
     for sym in CALL_INDICES:
         try:
-            out.append(_index_call(sym, tech.get(sym) or {}))
+            r = _index_call(sym, tech.get(sym) or {})
+            if sym not in tech and r.get("signal") in ("WATCH", "NO SIGNAL") and r.get("reason"):
+                r["reason"] += " (the daily-chart screen gave no result in time - it is read as neutral)"
+            out.append(r)
         except Exception as e:
             out.append({"instrument": sym, "signal": "NO SIGNAL", "reason": str(e)[:80]})
     return out

@@ -464,6 +464,21 @@ def _index_backing(c, side):
     return pts, bits
 
 
+IDX_NOTE_EVERY = 900      # the "why no trade in this index" line is repeated at most every 15 minutes while the reason stays the same
+
+
+def _idx_note(st, sym, text):
+    """One Algo-log line per index saying WHY the call/put screen did not trade it (no signal, flow not confirming, R:R, already holding...). The
+    screen used to drop those silently, so a quiet index looked like a broken one."""
+    seen = st.setdefault("idxWhy", {})
+    prev = seen.get(sym) or {}
+    now_t = time.time()
+    if prev.get("text") == text and now_t - prev.get("t", 0) < IDX_NOTE_EVERY:
+        return
+    seen[sym] = {"text": text, "t": now_t, "at": _now().isoformat()}
+    st["log"].append({"at": _now().isoformat(), "msg": f"index {sym}: {text}"})
+
+
 def fill_slots(st, today, already):
     """Entries beyond the strategy signals come from the app's own screens:
        index slots  <- index CALL / PUT where the daily chart and the live option flow agree
@@ -494,10 +509,14 @@ def fill_slots(st, today, already):
                 # day, e.g. out at 09:07) does not count, so it never blocks the index all day.
                 busy_idx = {t["sym"] for t in st["trades"] if t["status"] == "OPEN" or t.get("date") == today} | {x["sym"] for x in already} | {x["sym"] for x in out}
                 if c["instrument"] in busy_idx:
+                    _idx_note(st, c["instrument"], "not looked at - already holding it or traded it today (one entry per index a day)")
                     continue
                 e_, s_, t1_ = (c.get(k) for k in ("entry", "stopLoss", "target1"))
                 if e_ and s_ and t1_ and e_ > s_ and (t1_ - e_) / (e_ - s_) < MIN_INDEX_RR:
+                    _idx_note(st, c["instrument"], f"{c.get('signal')} skipped - reward to target 1 is under {MIN_INDEX_RR}x the stop")
                     continue                                                   # weak risk/reward on the screen's own levels
+                if c.get("signal") not in ("BUY CALL", "BUY PUT"):
+                    _idx_note(st, c["instrument"], f"no entry - {c.get('signal') or 'NO SIGNAL'}: {c.get('reason') or 'chart and option flow do not agree yet'}")
                 if c.get("signal") in ("BUY CALL", "BUY PUT"):
                     tier = 0 if c.get("confidence") == "high" else 1               # tier 0: chart + flow agree; tier 1: flow-led
                     sd = "BUY" if c["signal"] == "BUY CALL" else "SELL"
