@@ -35,9 +35,11 @@ def test_every_local_script_is_versioned():
         assert "?v=" in src, f"{src} has no cache-busting stamp"
 
 
-def test_cash_seed_is_added_by_the_server_never_fetched_by_the_browser():
+def test_cash_seed_is_not_fetched_with_a_frozen_version():
     html = read("public", "index.html")
-    assert "picks_cash_seed" not in html and "loadCashSeed" not in html     # the undated snapshot file must never reach a screen; the server adds the dated seed (test_cash_seed.py)
+    assert "picks_cash_seed.json?v=" not in html                                  # the file is regenerated daily: a fixed ?v= served week-old picks
+    assert html.count("picks_cash_seed.json") == 1 and "loadCashSeed()" in html   # one shared, revalidated fetch (no 1 MB re-download per render)
+    assert "cache:'no-cache'" in html
 
 
 def test_json_data_is_revalidated_by_the_cdn():

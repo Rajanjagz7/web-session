@@ -1751,22 +1751,39 @@ def _picks_compute(deadline_s, progress=None):
         # the day's cash picks ACCUMULATE: each build's slice would otherwise replace the previous
         # one, and strong names found earlier today would vanish from the screen on the next build
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
-        cash_day = shared_cache.get(cash_day_key) or {}        # TODAY's own scans only - the seed is never written back (a stale row would be carried forward day after day)
+        cash_day = shared_cache.get(cash_day_key) or {}
+        if not cash_day:
+            seed_file = _static_path("picks_cash_seed.json")
+            if os.path.exists(seed_file):
+                try:
+                    with open(seed_file, "r", encoding="utf-8") as f:
+                        cash_day = json.load(f)
+                    shared_cache.set(cash_day_key, cash_day, 20 * 3600)
+                except Exception:
+                    pass
         for r in res:
             if r.get("universe") == "cash" and r.get("score") is not None:
                 cash_day[r["s"]] = r
         if cash_day:
-            shared_cache.set(cash_day_key, cash_day, CASH_DAY_TTL)
-        walked = {x[0] for x in extra[:(nxt if extra else 0)]}  # symbols the walk has already covered today: their seed row is superseded
-        res = [r for r in res if r.get("universe") != "cash"] + \
-              [r for r in _with_seed(cash_day, walked) if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
+            shared_cache.set(cash_day_key, cash_day, 20 * 3600)
+        res = [r for r in res if r.get("universe") != "cash"] +               [r for r in cash_day.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
         out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
     if not any(r.get("universe") == "cash" for r in res):
         cash_day_key = f"picks:cash|{date.today().isoformat()}"
         cash_day = shared_cache.get(cash_day_key) or {}
-        shown = [r for r in _with_seed(cash_day) if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
-        if shown:
-            res = [r for r in res if r.get("universe") != "cash"] + shown
+        if not cash_day:
+            seed_file = _static_path("picks_cash_seed.json")
+            if not os.path.exists(seed_file):
+                seed_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "picks_cash_seed.json")
+            if os.path.exists(seed_file):
+                try:
+                    with open(seed_file, "r", encoding="utf-8") as f:
+                        cash_day = json.load(f)
+                    shared_cache.set(cash_day_key, cash_day, 20 * 3600)
+                except Exception:
+                    pass
+        if cash_day:
+            res = [r for r in res if r.get("universe") != "cash"] +                   [r for r in cash_day.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
             out = _picks_payload(res, len(keymap), core_got >= 0.95 * fno_n)
     return out
 
@@ -1867,76 +1884,31 @@ def stock_lookup(q: str = ""):
     return {"q": q, "src": src, "items": [{"s": s, "n": n, "ind": industry.of(s, n) or SECTOR.get(s, "")} for s, n in hits[:8]]}
 
 
-SEED_NAME, SEED_META = "picks_cash_seed.json", "picks_cash_seed.meta.json"
-_SEED_MEM = {"sig": None, "rows": {}, "asof": None}
-CASH_DAY_TTL = 96 * 3600          # each day's accumulated cash picks are kept 4 days (was 20 h): the last finished session is tomorrow's seed
-
-
-def _prev_trading_day(d):
-    import nse_calendar
-    d = d - timedelta(days=1)
-    while not nse_calendar.is_trading_day(d):
-        d -= timedelta(days=1)
-    return d
-
-
-def cash_seed(today=None):
-    """(rows, asOf, fresh): the cash picks of the last FINISHED session, used to fill the screen while today's whole-market walk is still
-    catching up. They come from the server's own accumulation (the shared-cache day key written by every picks build, kept for 4 days) -
-    nothing to run on a schedule, nothing to commit. A committed picks_cash_seed.json with a picks_cash_seed.meta.json date is only a
-    fallback for an empty cache. Nothing older than the last finished session is ever used: the one-off file from 25 Oct had no date and
-    its 4-day-old prices and signals were mixed into today's picks."""
-    today = today or datetime.now(IST).date()
-    try:
-        prev = _prev_trading_day(today)
-        rows = shared_cache.get(f"picks:cash|{prev.isoformat()}")
-        if isinstance(rows, dict) and rows:
-            return dict(rows), prev.isoformat(), True
-    except Exception:
-        prev = None
-    try:
-        prev = prev or _prev_trading_day(today)
-        fp, mp = _static_path(SEED_NAME), _static_path(SEED_META)
-        if not fp or not mp:
-            return {}, None, False
-        sig = (fp, os.path.getmtime(fp), os.path.getsize(fp), os.path.getmtime(mp))
-        if _SEED_MEM["sig"] != sig:
-            with open(mp, "r", encoding="utf-8") as f:
-                asof = date.fromisoformat(str(json.load(f).get("asOf")))
-            with open(fp, "r", encoding="utf-8") as f:
-                rows = json.load(f)
-            _SEED_MEM.update(sig=sig, rows=rows if isinstance(rows, dict) else {}, asof=asof)
-        asof = _SEED_MEM["asof"]
-        fresh = asof >= prev
-        return (dict(_SEED_MEM["rows"]) if fresh else {}), asof.isoformat(), fresh
-    except Exception:
-        return {}, None, False
-
-
-def _with_seed(today_rows, walked=()):
-    """Today's own cash rows, plus the last finished session's row for every symbol today's walk has not reached yet."""
-    merged = {k: v for k, v in cash_seed()[0].items() if k not in today_rows and k not in walked}
-    merged.update(today_rows)
-    return list(merged.values())
-
-
 def _inject_cash_seed_if_needed(data):
     if not isinstance(data, dict):
         return data
-    rows, asof, fresh = cash_seed()
-    data["cashSeed"] = {"asOf": asof, "fresh": fresh}            # the page only loads the seed file itself when this says fresh
     picks = data.get("picks")
     if not isinstance(picks, list):
         return data
     if any(r.get("universe") == "cash" for r in picks):
         return data
-    if rows:
-        cash_items = [r for r in rows.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
-        all_picks = list(picks) + cash_items
-        data["picks"] = all_picks
-        data["buy"] = sorted([r for r in all_picks if r.get("signal") == "BUY"], key=lambda r: (-r.get("score", 0), -r.get("volx", 0)))
-        data["sell"] = sorted([r for r in all_picks if r.get("signal") == "SELL"], key=lambda r: (r.get("score", 0), -r.get("volx", 0)))
-        data["count"] = len(all_picks)
+    seed_file = _static_path("picks_cash_seed.json")
+    if not os.path.exists(seed_file):
+        alt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "picks_cash_seed.json")
+        if os.path.exists(alt):
+            seed_file = alt
+    if os.path.exists(seed_file):
+        try:
+            with open(seed_file, "r", encoding="utf-8") as f:
+                c_seed = json.load(f)
+            cash_items = [r for r in c_seed.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
+            all_picks = list(picks) + cash_items
+            data["picks"] = all_picks
+            data["buy"] = sorted([r for r in all_picks if r.get("signal") == "BUY"], key=lambda r: (-r.get("score", 0), -r.get("volx", 0)))
+            data["sell"] = sorted([r for r in all_picks if r.get("signal") == "SELL"], key=lambda r: (r.get("score", 0), -r.get("volx", 0)))
+            data["count"] = len(all_picks)
+        except Exception:
+            pass
     return data
 
 
@@ -2010,17 +1982,16 @@ def _add_shortlist(v):
 
 @router.get("/cash-seed")
 def cash_seed_status():
-    """Is the cash-picks seed there? One small answer at the top level (the same data is in /picks as `cashSeed`, at the end of a big document):
-    which session it came from, whether it is the last FINISHED session (fresh) and how many symbols it holds."""
-    today = datetime.now(IST).date()
-    rows, asof, fresh = cash_seed()
+    """Is the cash-picks seed file there? (the file the picks screen falls back on until today's whole-market walk is done)"""
+    fp = _static_path("picks_cash_seed.json")
+    n = 0
     try:
-        want = _prev_trading_day(today).isoformat()
+        with open(fp, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        n = len(d) if isinstance(d, (dict, list)) else 0
     except Exception:
-        want = None
-    return {"today": today.isoformat(), "wanted": want, "asOf": asof, "fresh": fresh, "symbols": len(rows or {}),
-            "source": "server day cache" if fresh and shared_cache.get(f"picks:cash|{want}") else ("file fallback" if fresh else "none"),
-            "note": "" if fresh else "No seed for the last finished session yet: it is written by the first full picks build of a trading day, so it appears from the next session."}
+        pass
+    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None}
 
 
 @router.get("/picks")
@@ -2102,7 +2073,14 @@ def picks(refresh: bool = False, response: Response = None):
         return _public({**_PK["data"], "refreshing": False})
     partial_res = list(_PK["partial"])
     if not any(r.get("universe") == "cash" for r in partial_res):
-        partial_res.extend(cash_seed()[0].values())
+        seed_file = _static_path("picks_cash_seed.json")
+        if os.path.exists(seed_file):
+            try:
+                with open(seed_file, "r", encoding="utf-8") as f:
+                    c_seed = json.load(f)
+                partial_res.extend(c_seed.values())
+            except Exception:
+                pass
     return _public({**_picks_payload(partial_res, _PK["total"], False), "refreshing": True})
 
 

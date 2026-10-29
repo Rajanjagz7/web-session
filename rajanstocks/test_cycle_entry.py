@@ -1,6 +1,7 @@
 """A whole trading cycle at the open, with the versioned book store: a signal becomes a saved trade (index and stock option),
 for realistic opening-minute bid/ask spreads, and a concurrent save is recovered on the next cycle."""
 import json
+import time
 from datetime import datetime
 
 import pytest
@@ -111,3 +112,46 @@ def test_two_cycles_back_to_back_do_not_conflict_with_themselves(world):
     box, fs = world
     box["cands"] = []
     assert not at.run_cycle().get("saveConflict") and not at.run_cycle().get("saveConflict")
+
+
+# ───────────── index entries are not starved by the stock entries, and untried screen candidates are carried over ─────────────
+def screen(sym, kind, rank, key="stock-screen"):
+    return {"_fill": True, "key": key, "sym": sym, "side": "BUY", "kind": kind, "variant": "fixed", "filter": "none", "score": 0.5, "rank": rank,
+            "agree": 1, "source": "t", "label": "t"}
+
+
+def test_index_screen_entries_go_before_better_ranked_stock_entries(world, monkeypatch):
+    box, fs = world
+    box["cands"] = []
+    monkeypatch.setattr(at, "fill_slots", lambda st, today, chosen: [screen("TCS", "stock", 2.0), screen("INFY", "stock", 1.9), screen("NIFTY", "index", 0.6, "index-call-put")])
+    monkeypatch.setattr(at, "CYCLE_BUDGET", 0.0)                       # time for ONE entry per cycle
+    at.run_cycle()
+    assert [t["sym"] for t in saved(fs)["trades"]] == ["NIFTY"]        # the index went first although it ranks lowest
+
+
+def test_what_the_cycle_did_not_get_to_is_carried_to_the_next_cycle(world, monkeypatch):
+    box, fs = world
+    box["cands"] = []
+    calls = {"n": 0}
+
+    def once(st, today, chosen):
+        calls["n"] += 1
+        return [screen("NIFTY", "index", 0.6, "index-call-put"), screen("BANKNIFTY", "index", 0.6, "index-call-put"), screen("SENSEX", "index", 0.6, "index-call-put")] if calls["n"] == 1 else []
+    monkeypatch.setattr(at, "fill_slots", once)
+    monkeypatch.setattr(at, "CYCLE_BUDGET", 0.0)
+    for _ in range(4):
+        monkeypatch.setattr(at, "FILL_EVERY", 0)
+        at.run_cycle()
+    assert {t["sym"] for t in saved(fs)["trades"]} == {"NIFTY", "BANKNIFTY", "SENSEX"}      # one per cycle, none lost
+    assert saved(fs).get("carry") == []
+
+
+def test_carried_candidates_expire_and_skip_symbols_already_held(world, monkeypatch):
+    box, fs = world
+    box["cands"] = []
+    monkeypatch.setattr(at, "fill_slots", lambda st, today, chosen: [])
+    st = at._load()
+    st["carry"] = [dict(screen("NIFTY", "index", 0.6, "index-call-put"), _exp=time.time() - 1), dict(screen("SENSEX", "index", 0.6, "index-call-put"), _exp=time.time() + 100)]
+    assert at._save(st) is True
+    at.run_cycle()
+    assert [t["sym"] for t in saved(fs)["trades"]] == ["SENSEX"]       # the expired one is dropped

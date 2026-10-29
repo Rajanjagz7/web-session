@@ -59,6 +59,8 @@ SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) 
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
 # (1-2 minutes later) takes the rest - best-ranked first.
 CYCLE_BUDGET = 18.0 if os.environ.get("VERCEL") else 10 ** 9
+PERSIST_KEYS = ("shadow", "skipUntil", "dayGuardMode", "idxWhy", "carry")      # book keys beyond trades / log / cfg that must survive from one cycle to the next
+CARRY_FOR = 540          # screen candidates not tried in their own cycle are offered again for 9 minutes (3 screens)
 FILL_EVERY = 180          # index / stock screens are re-read every 3 minutes (10 missed short-lived signals)
 MIN_INDEX_RR = 1.5        # index call / put screen: reward to target 1 must be >= 1.5x the stop distance
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
@@ -148,6 +150,9 @@ def _load(cached=False):
             st["resetAt"] = d["resetAt"]
         if d.get("cand"):
             st["cand"] = d["cand"]
+        for k_ in PERSIST_KEYS:                                       # _save writes these but _load used to drop them: the skip cooldown, the paper-only signal log,
+            if d.get(k_) is not None:                                  # the day-guard state and the carried screen candidates all restarted from empty every cycle
+                st[k_] = d[k_]
         if st["cfg"].get("windowStart") in ("09:15", "09:20"):   # entries (buying) start at 09:16 - the first full minute after the open
             st["cfg"]["windowStart"] = "09:16"
     except FileNotFoundError:
@@ -528,7 +533,7 @@ def fill_slots(st, today, already):
                 if need["index"] <= 0:
                     break
                 score = (-neg) / 100 if tier == 0 else (-neg) / 200
-                out.append({"key": "index-call-put", "sym": c["instrument"], "side": side, "kind": "index", "variant": "fixed",
+                out.append({"_fill": True, "key": "index-call-put", "sym": c["instrument"], "side": side, "kind": "index", "variant": "fixed",
                             "filter": "none", "score": score, "rank": (1.0 if tier == 0 else 0.5) + score + 0.3 * pts, "agree": 1,
                             "source": why, "label": "index call/put screen"})
                 used.add(c["instrument"])
@@ -551,7 +556,7 @@ def fill_slots(st, today, already):
                 rows.sort(key=lambda p: -_quality(p))                    # strength >= 75% first, then strength and volume
                 for p in rows[:max(0, min(need["stock"], morning_picks.MAX_PICKS - took))]:
                     d = 1 if p["signal"] == "BUY" else -1
-                    out.append({"key": "stock-screen", "sym": p["s"], "side": p["signal"], "kind": "stock", "variant": "fixed", "filter": "none",
+                    out.append({"_fill": True, "key": "stock-screen", "sym": p["s"], "side": p["signal"], "kind": "stock", "variant": "fixed", "filter": "none",
                                 "indStop": round(p["ltp"] - d * morning_picks.swing_risk(p, p["signal"]), 2), "score": (p.get("strength") or 0) / 100,
                                 "rank": 1.0 + _quality(p), "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
                 return out[:room]
@@ -562,7 +567,7 @@ def fill_slots(st, today, already):
             # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
             early = _mins(_now()) < EAGLE_FROM
             for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2)][:max(0, min(need["stock"], left))]:
-                out.append({"key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
+                out.append({"_fill": True, "key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
                             "source": f"Today's Picks · tier {p['tier']} · {p['why']}", "label": "Today's Picks shortlist"})
@@ -1540,6 +1545,7 @@ def _run_cycle(now, force, dry):
         if note and st.get("dayGuardMode") != guard:
             st["log"].append({"at": now.isoformat(), "msg": note})
         st["dayGuardMode"] = guard
+        entries, tried = [], set()
         if (in_window or force) and guard != "blocked" and len(todays) < _cap(cfg, "maxPerDay"):
             cands, why = scan_all(st, today)
             rep["note"] = why
@@ -1603,6 +1609,19 @@ def _run_cycle(now, force, dry):
             # No limit on the day - only the opening burst is capped: in the first minute of the entry window (09:16) at most
             # `openBurstCap` (12) entries are taken (paired hedge legs -W belong to their entry and do not count). Best-ranked
             # first; the rest are picked up by the following cycles as normal.
+            # Screen candidates (index call/put, stock screen) exist only in the cycle that ran the 3-minute screen. When that cycle ran out of
+            # time (or the opening cap) the rest were simply lost until the next screen - and index ones rank below the stock entries, so they
+            # were the ones lost. Whatever was not tried is kept for CARRY_FOR seconds and offered again in the next cycles.
+            try:
+                busy_ = {t["sym"] for t in st["trades"] if t["date"] == today or t["status"] == "OPEN" or (t.get("closedAt") or "") >= today}
+                have_ = {(c["sym"], c["side"]) for c in chosen + filled}
+                back = [c for c in (st.get("carry") or []) if c.get("_exp", 0) > time.time() and c["sym"] not in busy_ and (c["sym"], c["side"]) not in have_]
+                if back:
+                    filled = filled + back
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(back)} screen candidate(s) carried over from the last cycle"
+                st["carry"] = []
+            except Exception:
+                st["carry"] = []
             try:
                 eagles = eagle_cands(st, today, {c["sym"] for c in chosen + filled if c.get("key") == EAGLE}) if cfg.get("eagleOn", False) else []   # Eagle is on by default since 28 Oct (setting "eagleOn"); buy-only like the rest
             except Exception as e:
@@ -1612,7 +1631,7 @@ def _run_cycle(now, force, dry):
                 have = {c["sym"] for c in eagles}
                 chosen, filled = [c for c in chosen if c["sym"] not in have], [c for c in filled if c["sym"] not in have]
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(eagles)} Eagle trade(s)"
-            entries = sorted(eagles + chosen + filled, key=lambda c: -(c.get("rank", c.get("score")) or 0))
+            entries = sorted(eagles + chosen + filled, key=lambda c: (c.get("kind") != "index", -(c.get("rank", c.get("score")) or 0)))   # indices first (there are at most five; they ranked below every stock entry and were never reached)
             if cfg.get("classicOnly", True):                                  # classic mode (user, 28 Oct): the four classic entry types trade; Picks / Eagle / Gann angle / time cycle / Z Trend trade ONLY
                 kept, paper = classic_filter(entries, bool(cfg.get("extrasAgree", False)))
                 shadow_record(st, paper, now)
@@ -1652,6 +1671,7 @@ def _run_cycle(now, force, dry):
                 if not dry and (over > CYCLE_BUDGET + 6 or (taken and over > CYCLE_BUDGET)):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"time budget: {len(entries) - i} entr(ies) wait for the next cycle"
                     break
+                tried.add(id(c))
                 if dry:
                     rep["entered"].append({"sym": c["sym"], "side": c["side"], "strategy": c["key"], "kind": c["kind"],
                                            "rank": round(c.get("rank", c.get("score") or 0), 2), "source": c.get("source") or c.get("label") or ""})   # Z Trend / time-cycle / filled candidates carry a score but no rank
@@ -1692,6 +1712,12 @@ def _run_cycle(now, force, dry):
                         cool[ck] = time.time() + 900
                         for k_ in [k_ for k_, v_ in cool.items() if v_ < time.time()]:
                             cool.pop(k_, None)
+        if not dry:
+            try:                                                                                  # what this cycle did not get to is offered again next cycle
+                exp = time.time() + CARRY_FOR
+                st["carry"] = [dict(c, _exp=c.get("_exp") or exp) for c in entries if c.get("_fill") and id(c) not in tried][:20]
+            except Exception:
+                st["carry"] = []
         if not dry:
             if _save(st) is not True:
                 rep["saveConflict"] = True

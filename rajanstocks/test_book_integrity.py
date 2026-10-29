@@ -238,3 +238,20 @@ def test_old_unversioned_book_is_readable_and_upgraded(store):
     assert st["_ver0"] is None and len(st["trades"]) == 1
     st["log"].append({"at": "x", "msg": "m"})
     assert at._save(st) is True and at._ver_of(store.d[at.KEY])
+
+
+# ───────────── 6. everything the cycle saves is read back ─────────────
+def test_cycle_state_survives_a_save_and_load(monkeypatch):
+    """_save wrote shadow / skipUntil / dayGuardMode / idxWhy / carry but _load dropped them: failed candidates were retried every cycle
+    (burning the 18 s budget), the paper-only signal log restarted empty each cycle, and the day-guard note was logged again every time."""
+    fs = FakeStore()
+    monkeypatch.setattr(at.shared_cache, "kv", fs.kv)
+    monkeypatch.setattr(at, "_remote", lambda: ("https://x.upstash.io", "t"))
+    at._RC.clear()
+    st = at._load()
+    st.update(shadow=[{"id": "s1", "status": "OPEN"}], skipUntil={"k|NIFTY|BUY": 9e12}, dayGuardMode="soft", idxWhy={"NIFTY": {"text": "x", "t": 1}}, carry=[{"sym": "NIFTY", "_exp": 9e12}])
+    assert at._save(st) is True
+    at._RC.clear()
+    back = at._load()
+    for k in at.PERSIST_KEYS:
+        assert back.get(k) == st[k], k
