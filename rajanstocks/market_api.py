@@ -1915,6 +1915,22 @@ def stock_lookup(q: str = ""):
     return {"q": q, "src": src, "items": [{"s": s, "n": n, "ind": industry.of(s, n) or SECTOR.get(s, "")} for s, n in hits[:8]]}
 
 
+def _drop_cash_dupes(data):
+    """A stock that is in the F&O list is not a cash-only stock: when the cash walk / seed (older prices, other strength) also carries it,
+    the live F&O row wins - otherwise the same symbol showed twice with two different prices and strengths."""
+    picks = data.get("picks") if isinstance(data, dict) else None
+    if not isinstance(picks, list):
+        return data
+    live = {r.get("s") for r in picks if r.get("universe") != "cash"}
+    kept = [r for r in picks if r.get("universe") != "cash" or r.get("s") not in live]
+    if len(kept) != len(picks):
+        data["picks"] = kept
+        data["buy"] = [r for r in data.get("buy") or [] if r.get("universe") != "cash" or r.get("s") not in live]
+        data["sell"] = [r for r in data.get("sell") or [] if r.get("universe") != "cash" or r.get("s") not in live]
+        data["count"] = len(kept)
+    return data
+
+
 def _inject_cash_seed_if_needed(data):
     if not isinstance(data, dict):
         return data
@@ -1932,7 +1948,13 @@ def _inject_cash_seed_if_needed(data):
         try:
             with open(seed_file, "r", encoding="utf-8") as f:
                 c_seed = json.load(f)
-            cash_items = [r for r in c_seed.values() if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH]
+            # the seed is a SNAPSHOT of a past session (prices, signals, levels as of its last export): tag every row with that
+            # date so the screen can say so instead of presenting yesterday's setups as live, and never add a symbol the scan already has
+            seed_day = datetime.fromtimestamp(os.path.getmtime(seed_file), IST).date().isoformat()
+            have = {r.get("s") for r in picks}
+            cash_items = [dict(r, seed=True, seedDate=seed_day) for r in c_seed.values()
+                          if (r.get("strength") or 0) >= PICK_CASH_MIN_STRENGTH and r.get("s") not in have]
+            data["cashSeedDate"] = seed_day
             all_picks = list(picks) + cash_items
             data["picks"] = all_picks
             data["buy"] = sorted([r for r in all_picks if r.get("signal") == "BUY"], key=lambda r: (-r.get("score", 0), -r.get("volx", 0)))
@@ -2065,6 +2087,7 @@ def picks(refresh: bool = False, response: Response = None):
             v.pop("coverage", None)
             v.pop("bhav_diag", None)
             _inject_cash_seed_if_needed(v)
+            _drop_cash_dupes(v)
             _add_shortlist(v)
             _add_industry(v)
         return v
