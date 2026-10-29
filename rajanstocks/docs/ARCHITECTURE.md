@@ -179,7 +179,7 @@ Because Vercel serverless functions do not share local memory:
 ### C. Stock Scanner & Cash Seed Injection (`market_api.py`)
 1. **Universe**: 500+ NSE F&O equities, main indices (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX), and broad cash stocks.
 2. **Cash Seed Fallback**:
-   * `picks_cash_seed.json` contains pre-calculated momentum setups for 364+ cash stocks.
+   * The cash-picks seed is the last finished session's cash picks, taken from the server's own shared-cache day key (`picks:cash|<date>`, kept 4 days) by `market_api.cash_seed()`; nothing runs on a schedule. `picks_cash_seed.json` (+ a dated `picks_cash_seed.meta.json`) is only a fallback for an empty cache and is ignored when undated or older than the last finished session.
    * `_inject_cash_seed_if_needed(data)` verifies if cash picks exist. If not, it hydrates the payload instantly from the static seed so the user never sees a blank dashboard.
 
 ### D. Automated Paper Trader (`auto_trader.py`)

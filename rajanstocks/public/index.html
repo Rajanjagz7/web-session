@@ -3608,17 +3608,6 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
   if(f.kind!=='INDEX'&&f.mkt!=='CASH'&&f.mkt!=='RIDER')f.mkt='FNO';if(f.mkt==='RIDER'){f.hz='ALL';f.str='ALL'}   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
   if(f.kind==='INDEX'){f.hz='ALL';f.mkt='ALL';f.str='ALL';f.q='';if(f.sig==='EVERY')f.sig='TOP'}else if(f.sig==='TOP')f.sig='ALL'   // stocks have no Top 10-15 chip any more (it leads Fresh picks); index calls only have the Show filter: nothing hidden can empty the list
   const isIdx=f.kind==='INDEX';
-  if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
-    window._pkCashLoading=true;
-    loadCashSeed().then(cl=>{
-      if(!cl.length)return;
-      P.picks=(P.picks||[]).concat(cl);P.count=P.picks.length;
-      if(Array.isArray(P.buy))P.buy=P.buy.concat(cl.filter(x=>x.signal==='BUY'));
-      if(Array.isArray(P.sell))P.sell=P.sell.concat(cl.filter(x=>x.signal==='SELL'));
-      renderPicks();
-    }).catch(()=>{})
-    .finally(()=>{window._pkCashLoading=false;});
-  }
   (P&&P.picks||[]).forEach(p=>{if(!SYM(p.s))SYMS.push({s:p.s,n:p.n||p.s,cls:p.kind==='index'?'Index':'Stocks',last:p.ltp||0,prev:p.prev||(p.ltp||0)/(1+(p.chg||0)/100),dp:2});});   // payload symbols the NAME map lacks (new indices, cash names): price/chg render and charts switch
   const idx=MK_KEY_IDX.map(k=>SYM(k)).filter(Boolean);   /* the old Markets screen's key indices, shown once here */
   const idxHtml=idx.map(s=>`<button class="ix" data-sym="${esc(s.s)}"><small>${esc(s.n)}</small><b class="num" data-px="${esc(s.s)}"></b><span class="num" data-chg="${esc(s.s)}"></span><span class="ix-f" data-ixf="${esc(s.s)}"></span></button>`).join('');
@@ -5145,8 +5134,8 @@ function showUpdatePill(){
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
 function triggerSignalPush(){if(!MKT.open)return;fetch('/api/cron/signal-push',{method:'POST'}).catch(()=>{})}
-function loadCashSeed(){return window._cashSeedP||(window._cashSeedP=fetch('/static/picks_cash_seed.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(cs=>Object.values(cs).filter(x=>(x.strength||0)>=55)).catch(()=>{window._cashSeedP=null;return[]}))}
-async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cl=await loadCashSeed();if(cl.length){App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)+(e&&e.detail?' - '+e.detail:'')}}
+/* the cash-picks seed is added by the SERVER (market_api.cash_seed): only the last finished session's picks, never an undated file */
+async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)+(e&&e.detail?' - '+e.detail:'')}}
   if(App.view==='picks')renderPicks(true);renderWatchlist();
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}
