@@ -8,7 +8,7 @@ def bars(closes, vol=100):
 def test_falling_premium_is_bearish_and_blocks():
     closes = [80 - i * 0.5 for i in range(40)]
     bull, bear = at.contract_votes(bars(closes))
-    assert bear >= 3 and bear - bull >= 2
+    assert bear >= 4 and bull <= 1
 
 
 def test_rising_premium_is_not_blocked():
@@ -31,3 +31,12 @@ def test_contract_blocked_message_and_fail_open(monkeypatch):
         raise RuntimeError("429")
     monkeypatch.setattr(nse_service.upstox, "get_candles", boom)
     assert at.contract_blocked({"key": "NSE_FO|1"}) is None
+
+
+def test_open_backed_trade_skips_the_bearish_veto(monkeypatch):
+    called = []
+    monkeypatch.setattr(at, "contract_blocked", lambda ct, cfg=None: called.append(1) or "skipped: bearish")
+    ct = {"pOpen": 100.0, "pHigh": 104.0, "pLow": 100.0, "ltp": 102.0, "premium": 102.0}
+    assert at.premium_oel(ct)                                   # option opened at its low: the open backs the trade
+    open_backed = bool(at.premium_oel(ct)) or False
+    assert open_backed

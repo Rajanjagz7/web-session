@@ -1174,7 +1174,7 @@ def contract_blocked(ct, cfg=None):
     except Exception as e:
         print(f"[auto] contract check unavailable: {e}")
         return None
-    if v and v[1] >= 3 and v[1] - v[0] >= 2:
+    if v and v[1] >= 4 and v[0] <= 1:                       # loosened (user 29 Oct): only when 4 of the 5 readings are down and at most 1 is up
         return f"skipped: this option's own 5m indicators are bearish ({v[0]} up / {v[1]} down) - waiting for the contract itself to turn up"
     return None
 
@@ -1226,7 +1226,10 @@ def open_trade(st, c, today):
         sp_, lim_ = (ask_ - bid_) / ask_, MAX_SPREAD_OF_STOP * float(cfg.get("premSlPct", PREM_SL_PCT))
         if sp_ > lim_:
             raise RuntimeError(f"skipped: bid/ask spread {sp_ * 100:.1f}% is too wide for the {float(cfg.get('premSlPct', PREM_SL_PCT)) * 100:.1f}% stop (max {lim_ * 100:.1f}%)")
-    if c.get("pos") != "short" and c.get("key") != "rzt-hedge" and not str(c.get("id", "")).endswith("-W"):
+    # the bearish-contract veto does not apply when the open itself backs the trade: the option opened at its day low (premium Open = Low, stop low - 10),
+    # or it is an Eagle trade (stock Open = Low for a BUY / Open = High for a SELL). Those are the user's own entry rules (29 Oct).
+    open_backed = bool(premium_oel(ct)) or c.get("key") == EAGLE
+    if c.get("pos") != "short" and c.get("key") != "rzt-hedge" and not str(c.get("id", "")).endswith("-W") and not open_backed:
         why_ = contract_blocked(ct, cfg)
         if why_:
             raise RuntimeError(why_)
