@@ -83,7 +83,7 @@ def test_realistic_opening_spreads_do_not_stop_entries(world, bid, ask, expect_t
 
 def test_stock_option_entry_is_saved_too(world):
     box, fs = world
-    box["cands"] = [cand("RELIANCE", "stock")]
+    box["cands"] = [dict(cand("RELIANCE", "stock"), agree=2)]                    # 2 indicators agree (a stock option needs 2+, or strength 75+)
     box.update(bid=19.4, ask=20.0)
     at.run_cycle()
     assert [t["sym"] for t in saved(fs)["trades"]] == ["RELIANCE"]
@@ -170,8 +170,25 @@ def test_order_is_index_options_then_100_strength_volume_stocks_then_the_rest(wo
     mk = lambda sym, kind, q: screen(sym, kind, 1.0 + q, "stock-screen" if kind == "stock" else "index-call-put")
     monkeypatch.setattr(at, "fill_slots", lambda st, today, chosen: [mk("AAA", "stock", at._quality({"strength": 80, "volx": 1})), mk("BBB", "stock", at._quality({"strength": 100, "volx": 2.5})),
                                                                        mk("NIFTY", "index", -0.4), mk("CCC", "stock", at._quality({"strength": 100, "volx": 0.9}))])
+    monkeypatch.setattr(at, "_screen_score", lambda: {"AAA": {"strength": 80}, "BBB": {"strength": 100}, "CCC": {"strength": 100}})
+    import morning_picks
+    monkeypatch.setattr(morning_picks, "good_rr", lambda *a, **k: True)
     order = []
     real = at.open_trade
     monkeypatch.setattr(at, "open_trade", lambda st, c, today: (order.append(c["sym"]), real(st, c, today))[1])
     at.run_cycle()
     assert order[:4] == ["NIFTY", "BBB", "CCC", "AAA"]
+
+
+def test_stock_option_needs_two_indicators_or_one_strong_signal(world, monkeypatch):
+    """User 29 Oct: a stock option trade needs 2+ indicators agreeing; a single indicator only counts with Picks strength 75+. Index trades are not affected."""
+    box, fs = world
+    one = dict(cand("AAA", "stock"), agree=1)
+    two = dict(cand("BBB", "stock"), agree=2)
+    strong = dict(cand("CCC", "stock"), agree=1)
+    box["cands"] = [one, two, strong, dict(cand("NIFTY", "index"), agree=1)]
+    monkeypatch.setattr(at, "_screen_score", lambda: {"AAA": {"strength": 60}, "CCC": {"strength": 80}})
+    import morning_picks
+    monkeypatch.setattr(morning_picks, "good_rr", lambda *a, **k: True)
+    rep = at.run_cycle()
+    assert sorted(t["sym"] for t in saved(fs)["trades"]) == ["BBB", "CCC", "NIFTY"] and "1 skipped (stock option needs 2+" in rep["note"]

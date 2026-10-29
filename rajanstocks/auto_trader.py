@@ -54,6 +54,8 @@ DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnl
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1}
+MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade needs at least 2 indicators pointing the same way ...
+SOLO_STRENGTH = 75.0                     # ... unless a single signal comes with Picks strength >= 75 (100 ranks first). Index trades are not affected.
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
@@ -1751,6 +1753,23 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(weak)} skipped for weak risk/reward"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"risk/reward check failed: {str(e)[:80]}"})
+            try:                                                  # agreement rule (user 29 Oct): stock options need 2+ indicators, or one indicator with strength >= 75
+                need, solo = int(cfg.get("minAgreeStock", MIN_AGREE_STOCK)), float(cfg.get("soloStrength", SOLO_STRENGTH))
+                pm_ = _screen_score()
+
+                def _agree_ok(c):
+                    if c.get("kind") != "stock" or need <= 1:
+                        return True
+                    if int(c.get("agree") or len(c.get("strategies") or []) or 1) >= need:
+                        return True
+                    return float((pm_.get(c["sym"]) or {}).get("strength") or 0) >= solo
+                few = [c for c in entries if not _agree_ok(c)]
+                if few:
+                    fk = {id(c) for c in few}
+                    entries = [c for c in entries if id(c) not in fk]
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(few)} skipped (stock option needs {need}+ indicators or strength {solo:.0f}+)"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"agreement check failed: {str(e)[:80]}"})
             if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: options are only BOUGHT (call for a bullish signal, put for a bearish one) - nothing is written / sold (stock options only too when stockOnly is switched on)
                 n0 = len(entries)
                 entries = [c for c in entries if not (cfg.get("stockOnly") and c.get("kind") != "stock")

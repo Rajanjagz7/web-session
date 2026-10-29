@@ -162,7 +162,7 @@ def test_a_cycle_enters_eagle_trades_first_and_drops_duplicates(monkeypatch):
     from datetime import datetime
     now = datetime(2026, 10, 27, 9, 36, tzinfo=auto_trader.IST)
     monkeypatch.setattr(auto_trader, "_now", lambda: now)
-    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG")]})
+    monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG"), pick("OTH", signal="SELL", strength=80, ltp=100.0, stop=103.0)]})   # OTH: a single signal, allowed because its strength is 75+
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
     st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False, "classicOnly": False, "eagleOn": True}, "trades": [], "log": []}    # Eagle is off by default now
     monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
