@@ -337,3 +337,15 @@ def test_open_low_entry_gets_its_own_tighter_stop_and_a_label(monkeypatch):
     ct.update(pOpen=0)
     t2 = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "y", "variant": "fixed"}, TODAY)
     assert "premSig" not in t2 and t2["premSL"] < 37.0
+
+
+def test_a_failed_picks_build_leaves_a_note_so_walk_null_has_a_reason(monkeypatch):
+    import market_api
+    store = {}
+    monkeypatch.setattr(market_api.shared_cache, "set", lambda k, v, ttl=None: store.__setitem__(k, v))
+    monkeypatch.setattr(market_api.shared_cache, "get", lambda k: store.get(k))
+    monkeypatch.setattr(market_api, "_picks_compute_inner", lambda d, p=None: (_ for _ in ()).throw(RuntimeError("time budget")))
+    with pytest.raises(RuntimeError):
+        market_api._picks_compute(18)
+    st = market_api.cash_seed_status()
+    assert st["walk"] is None and st["lastBuild"]["ok"] is False and "time budget" in st["lastBuild"]["error"] and "lastBuild" in st["why"]

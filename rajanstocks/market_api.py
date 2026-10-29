@@ -1564,7 +1564,7 @@ class _BuildBudget(RuntimeError):
     """This build's cap on fresh Upstox candle calls is used up (not a real failure: retry in the next build)."""
 
 
-def _picks_compute(deadline_s, progress=None):
+def _picks_compute_inner(deadline_s, progress=None):
     """Screen indices first, then the curated liquid stocks, then the rest. Rate-limited requests are
     retried and swept again in a gentle second pass, so a symbol is never silently dropped.
     After the F&O set, the scan continues into the WHOLE listed NSE market (cash universe) with a
@@ -1800,6 +1800,25 @@ def _picks_compute(deadline_s, progress=None):
     return out
 
 
+def _picks_compute(deadline_s, progress=None):
+    """Runs one picks build and ALWAYS leaves a note of how it ended (/api/m/cash-seed -> lastBuild): 'walk: null' used to be all anyone could see
+    when a build ran out of time or failed before it reached the point where the walk numbers are written."""
+    t0 = time.time()
+    note = {"at": datetime.now(IST).isoformat(), "budgetS": deadline_s}
+    try:
+        v = _picks_compute_inner(deadline_s, progress)
+        note.update(ok=True, tookS=round(time.time() - t0, 1), count=v.get("count"), complete=v.get("complete"))
+        return v
+    except Exception as e:
+        note.update(ok=False, tookS=round(time.time() - t0, 1), error=f"{type(e).__name__}: {str(e)[:160]}")
+        raise
+    finally:
+        try:
+            shared_cache.set(f"picks:build|{date.today().isoformat()}", note, 6 * 3600)
+        except Exception:
+            pass
+
+
 def _picks_run():
     try:
         data = _picks_compute(120, progress=lambda r: _PK.__setitem__("partial", list(r)))
@@ -2016,7 +2035,13 @@ def cash_seed_status():
         walk = shared_cache.get(f"picks:walk|{date.today().isoformat()}")
     except Exception:
         pass
-    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None, "today": live, "walk": walk}
+    lastb = None
+    try:
+        lastb = shared_cache.get(f"picks:build|{date.today().isoformat()}")
+    except Exception:
+        pass
+    return {"file": bool(fp), "symbols": n, "modified": datetime.fromtimestamp(os.path.getmtime(fp), IST).isoformat() if fp else None, "today": live, "walk": walk,
+            "lastBuild": lastb, "why": None if walk else ("no build has finished its walk today - see lastBuild (error / time taken); open Picks and refresh once" if lastb else "no picks build has run since this server started - open God's Eye > Today's Picks and tap refresh")}
 
 
 @router.get("/cash-seed/export")
