@@ -167,3 +167,20 @@ def test_the_mark_and_the_stop_are_one_price(env):
     prices["opt"] = 70.2                                            # bid 70.0 -> at the stop (premSL 70)
     s = at.status()
     assert not s["open"] and s["closed"][0]["exitReason"] == "STOP"
+
+
+def test_pre_open_cycle_scans_but_never_trades(monkeypatch):
+    """08:30-09:15 the cycle only warms the once-a-day indicator scan (no entries); outside that window a closed market does nothing."""
+    import auto_trader as A
+    import nse_calendar
+    from datetime import datetime
+    calls = []
+    monkeypatch.setattr(nse_calendar, "session_open", lambda now: False)
+    monkeypatch.setattr(nse_calendar, "is_trading_day", lambda d: True)
+    monkeypatch.setattr(A, "_prewarm_scan", lambda now: calls.append(now) or {"ran": False, "reason": "market closed", "preOpenScan": "x"})
+    for hh, mm, expect in ((8, 40, 1), (9, 10, 1), (8, 10, 0), (9, 16, 0), (16, 0, 0)):
+        calls.clear()
+        monkeypatch.setattr(A, "_now", lambda hh=hh, mm=mm: datetime(2026, 10, 30, hh, mm, tzinfo=A.IST))
+        r = A.run_cycle()
+        assert len(calls) == expect, (hh, mm, calls)
+        assert r["ran"] is False

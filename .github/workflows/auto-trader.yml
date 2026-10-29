@@ -35,6 +35,11 @@ jobs:
             now=$(TZ=Asia/Kolkata date +%H%M)
             [ "$now" -ge 1535 ] && { echo "session over ($now IST)"; break; }
             [ $(( $(date +%s) - start )) -ge 20700 ] && { echo "time budget used - the next scheduled run takes over"; break; }
+            if [ "$now" -ge 835 ] && [ "$now" -lt 915 ]; then
+              # pre-open: the server reads every stock's indicators now (8 s per call, so several calls) - 09:15 starts with all of them
+              out=$(curl -s -m 60 -X POST "$SITE/api/cron/auto-cycle" -w ' [HTTP %{http_code}]' || echo 'request failed')
+              echo "$(TZ=Asia/Kolkata date +%T) IST pre-open ${out:0:200}"
+            fi
             if [ "$now" -ge 915 ]; then
               # at the open only: warm today's picks first (a cycle that had to build them itself could hit Vercel's 30 s limit).
               # Later the cycle reads the cached list - warming every tick added Upstox load

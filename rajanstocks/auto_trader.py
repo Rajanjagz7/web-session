@@ -1649,12 +1649,34 @@ def _reversed(t, today):
     return False
 
 
+def _prewarm_scan(now):
+    """08:30-09:15 on a trading day: run the once-a-day indicator scan (completed daily bars only - nothing intraday, no trade) so that it is
+    finished when the session opens. On Vercel one call may only spend ~8 s on it and it used to start at 09:15, so the first cycles of the day saw
+    only 65 of ~220 stocks and the rest trickled in over later cycles - signals on the other stocks were taken late or missed."""
+    if not shared_cache.lock("auto-prewarm", 20):
+        return {"ran": False, "reason": "market closed (pre-open scan already running)"}
+    try:
+        with _lock:
+            st = _load()
+            if not st["cfg"].get("enabled", True):
+                return {"ran": False, "reason": "auto trader is switched off"}
+            _, note = scan_all(st, now.date().isoformat())
+            _save(st)
+        return {"ran": False, "reason": "market closed", "preOpenScan": note}
+    except Exception as e:
+        return {"ran": False, "reason": "market closed", "preOpenScan": f"failed: {str(e)[:80]}"}
+    finally:
+        shared_cache.unlock("auto-prewarm")
+
+
 def run_cycle(force=False, dry=False):
     run_cycle._last_ran = time.time()
     now = _now()
     if not force and not dry:                       # closed market: no lock, no state read - zero Upstash commands
         import nse_calendar
         if not nse_calendar.session_open(now):
+            if nse_calendar.is_trading_day(now.date()) and 8 * 60 + 30 <= _mins(now) < 9 * 60 + 15:
+                return _prewarm_scan(now)               # before the open: read the indicators of every stock now, so 09:15 starts with all of them
             return {"ran": False, "reason": "market closed"}
     if not dry and not shared_cache.lock("auto-cycle", 30):
         return {"ran": False, "reason": "another cycle is already running"}
