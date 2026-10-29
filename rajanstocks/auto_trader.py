@@ -1303,10 +1303,10 @@ def _close(st, t, px, why):
               f"Exit @ ₹{px:.2f} (entry ₹{t['entry']}) · net {'+' if t['net'] >= 0 else '−'}₹{abs(t['net']):,.0f}")
 
 
-def _push(idem, title, body):
+def _push(idem, title, body, kind="trade"):
     try:
         import push_signals
-        push_signals.notify_all(idem, title, body, url="/#journal", kind="trade")
+        push_signals.notify_all(idem, title, body, url="/#journal", kind=kind)
     except Exception as e:
         print(f"[auto] notify failed: {e}")
 
@@ -1471,7 +1471,7 @@ def _profit_lock(t, px, mode="old"):
         t["stopMoved"] = _now().isoformat()
         if first and PUSH_LOCKS:
             _push(f"auto-lock|{t['id']}|{t['lock']['mode']}", f"PROFIT LOCKED · {t['sym']} {t.get('strike', 0):.0f} {t.get('opt', '')}",
-                  f"Profit ₹{best:,.0f} - stop moved to ₹{stop:.2f} ({'keeps ₹' + format(round(keep), ',') if keep else 'breakeven'})")
+                  f"Profit ₹{best:,.0f} - stop moved to ₹{stop:.2f} ({'keeps ₹' + format(round(keep), ',') if keep else 'breakeven'})", kind="lock")
 
 
 def _reversed(t, today):
@@ -1760,7 +1760,7 @@ def _run_cycle(now, force, dry):
 
 
 PUSH_ENTRIES = True       # user: push the auto trader's trades, max 5 a day (push_signals.MAX_TRADE_PER_DAY)
-PUSH_LOCKS = False
+PUSH_LOCKS = True        # 29 Oct (user): 'profit locked - stop moved to ...' alerts are back (own daily budget, push_signals.MAX_LOCK_PER_DAY)
 
 
 def _notify(t):

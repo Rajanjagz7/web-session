@@ -32,6 +32,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter()
 
 MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "5"))
+MAX_LOCK_PER_DAY = int(os.environ.get("PUSH_MAX_LOCK_PER_DAY", "20"))   # "stop moved / profit locked" alerts have their own budget, so the 5 entry alerts cannot use it up
 MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "5"))   # user: at most 5 phone pushes a day (the auto trader's first 5 trades); after that it trades silently
 CYCLE_SECONDS = 300
 STATE_KEY = "rajanone:push:v1"
@@ -309,6 +310,10 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
             sent_by, cap = st.setdefault("sentT", {}).setdefault(today, {}), MAX_TRADE_PER_DAY
             for d in [d for d in st["sentT"] if d < today]:
                 st["sentT"].pop(d, None)
+        elif kind == "lock":
+            sent_by, cap = st.setdefault("sentL", {}).setdefault(today, {}), MAX_LOCK_PER_DAY
+            for d in [d for d in st["sentL"] if d < today]:
+                st["sentL"].pop(d, None)
         else:
             sent_by, cap = st["sent"].setdefault(today, {}), MAX_PER_DAY
         if bucket in PUSH_BUCKETS:                        # per-kind daily budget (2 index + 3 stock option trades)
@@ -326,8 +331,12 @@ def notify_all(idem, title, body, url="/#journal", kind="trade", bucket=None):
             if res == "ok":
                 sent_by[ep] = sent_by.get(ep, 0) + 1
                 n += 1
-            elif res == "gone":
-                st["subs"].pop(ep, None)
+            else:
+                st["lastFail"] = {"at": now.isoformat(), "id": idem, "result": res}      # why a push did not arrive (shown by /api/push/signals)
+                if res == "gone":
+                    st["subs"].pop(ep, None)
+        if not st["subs"]:
+            st["lastFail"] = {"at": now.isoformat(), "id": idem, "result": "no subscribed device - turn 'Enable push' off and on again on the phone"}
         if n:
             if bucket in PUSH_BUCKETS:
                 st["sentB"][today][bucket] = st["sentB"][today].get(bucket, 0) + 1
@@ -372,8 +381,8 @@ def status():
     today = datetime.now(IST).date().isoformat()
     return {
         "subscribers": len(st["subs"]), "maxPerDay": MAX_PER_DAY, "maxTradePerDay": MAX_TRADE_PER_DAY,
-        "sentToday": {"signals": len(st["sent"].get(today, {})), "tradeEvents": sum((st.get("sentT") or {}).get(today, {}).values())},
-        "recent": st["log"][-10:], "configured": bool(os.environ.get("VAPID_PRIVATE_KEY")),
+        "sentToday": {"signals": len(st["sent"].get(today, {})), "tradeEvents": sum((st.get("sentT") or {}).get(today, {}).values()), "lockEvents": sum((st.get("sentL") or {}).get(today, {}).values())},
+        "lastFail": st.get("lastFail"), "recent": st["log"][-10:], "configured": bool(os.environ.get("VAPID_PRIVATE_KEY")),
         "durableStore": bool(_remote()), "marketHours": market_hours(),
     }
 

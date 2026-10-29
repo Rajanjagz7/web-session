@@ -1,0 +1,39 @@
+import push_signals as ps
+
+
+def _world(monkeypatch, subs=1):
+    st = {"subs": {f"ep{i}": {"sub": {"endpoint": f"https://x/{i}"}} for i in range(subs)}, "seen": {}, "sent": {}, "log": []}
+    sent = []
+    monkeypatch.setattr(ps, "_load", lambda: st)
+    monkeypatch.setattr(ps, "_save", lambda s, merge=True: True)
+    monkeypatch.setattr(ps, "_send", lambda sub, title, body, url="", tag=None: sent.append(title) or "ok")
+    return st, sent
+
+
+def test_lock_alerts_have_their_own_budget_after_the_five_entry_alerts(monkeypatch):
+    st, sent = _world(monkeypatch)
+    for i in range(7):
+        ps.notify_all(f"auto|{i}", f"PAPER ENTRY {i}", "b", kind="trade")
+    assert len([t for t in sent if t.startswith("PAPER")]) == ps.MAX_TRADE_PER_DAY            # entries stop at 5 a day
+    assert ps.notify_all("auto-lock|A-1|breakeven", "PROFIT LOCKED A-1", "b", kind="lock") == 1
+    assert sent[-1] == "PROFIT LOCKED A-1"
+
+
+def test_the_reason_a_push_failed_is_recorded(monkeypatch):
+    st, sent = _world(monkeypatch)
+    monkeypatch.setattr(ps, "_send", lambda *a, **k: "no-key")
+    ps.notify_all("auto|1", "t", "b")
+    assert st["lastFail"]["result"] == "no-key"
+    st2, _ = _world(monkeypatch, subs=0)
+    ps.notify_all("auto|2", "t", "b")
+    assert "no subscribed device" in st2["lastFail"]["result"]
+
+
+def test_profit_lock_alert_is_on_and_uses_the_lock_budget(monkeypatch):
+    import auto_trader as at
+    assert at.PUSH_LOCKS is True
+    got = []
+    monkeypatch.setattr(ps, "notify_all", lambda idem, title, body, url="", kind="trade", bucket=None: got.append((idem, kind)))
+    t = {"id": "A-1", "sym": "NIFTY", "strike": 25000, "opt": "CE", "entry": 100.0, "lots": 1, "lot": 100, "pos": "long"}
+    at._profit_lock(t, 116.0, "old")
+    assert got and got[0][1] == "lock" and got[0][0].startswith("auto-lock|A-1")
