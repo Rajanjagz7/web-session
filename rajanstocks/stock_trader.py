@@ -75,6 +75,7 @@ def _load(cached=False):
                 raw = j.get("result")
                 _RC.update(t=time.time(), raw=raw)
             d = json.loads(raw) if raw else {}
+            st["_ver0"] = shared_cache.ver_of(raw)                  # the version this copy was read at (checked again when it is saved)
         else:
             with open(FILE, encoding="utf-8") as f:
                 d = json.load(f)
@@ -96,26 +97,55 @@ def _load(cached=False):
 
 
 def _save(st):
+    """True = saved (or nothing to save); "conflict" = somebody else saved the book after this copy was read, nothing was written;
+    False = the store refused the write."""
     if st.get("_readonly"):
         print("[stockbot] state was not read - not saving")
-        return
+        return True
     st.pop("_dirty", None)
     st["log"] = st["log"][-150:]
     try:
         r = _remote()
         if r:
-            body = json.dumps(st)
-            if body == _RC.get("raw"):
-                return
-            j = shared_cache.kv([["SET", KEY, body]], 8.0)[0]
-            if not j.get("error"):
-                _RC.update(t=time.time(), raw=body)
-        else:
-            with open(FILE + ".tmp", "w", encoding="utf-8") as f:
-                json.dump(st, f)
-            os.replace(FILE + ".tmp", FILE)
+            rest = {k: v for k, v in st.items() if k not in ("ver", "_ver0")}
+            res, info = shared_cache.versioned_set(KEY, rest, _RC, st.get("_ver0"))
+            if res == "conflict":
+                print("[stockbot] book changed since it was read - save skipped (conflict)")
+                return "conflict"
+            if res == "error":
+                print(f"[stockbot] save refused: {info}")
+                return False
+            if res == "ok":
+                st["_ver0"] = info
+            return True
+        with open(FILE + ".tmp", "w", encoding="utf-8") as f:
+            json.dump({k: v for k, v in st.items() if k != "_ver0"}, f)
+        os.replace(FILE + ".tmp", FILE)
+        return True
     except Exception as e:
         print(f"[stockbot] save failed: {e}")
+        return False
+
+
+def _mutate(apply, tries=3):
+    """A user action on the book (manual exit, reset): works on a fresh copy and is redone on the newest one if another instance saved meanwhile."""
+    for _ in range(8):
+        if shared_cache.lock("stockbot-cycle", 2):
+            break
+        time.sleep(0.5)
+    for attempt in range(tries):
+        with _lock:
+            st = _load()
+            if st.get("_readonly"):
+                raise HTTPException(503, "The state store is not answering - nothing was changed so nothing is lost")
+            out = apply(st)
+            res = _save(st)
+        if res is True:
+            return out
+        if res is False:
+            raise HTTPException(503, "The book could not be saved right now - try again in a moment")
+        time.sleep(0.25 * (attempt + 1))
+    raise HTTPException(409, "The book changed while you were saving - nothing was lost, please try again")
 
 
 def _sessions_between(a, b):
@@ -345,7 +375,8 @@ def run_cycle(force=False):
                 on = True
             ent = enter(st, now) if (on or force) else []
             st["lastRun"] = now.isoformat()
-            _save(st)
+            if _save(st) is not True:
+                return {"ran": True, "saved": False, "reason": "the book changed while this cycle ran - the next cycle redoes it"}
             return {"ran": True, "entered": ent, "closed": [t["id"] for t in st["trades"] if t["status"] == "CLOSED" and t["id"] not in before]}
     finally:
         shared_cache.unlock("stockbot-cycle")
@@ -391,23 +422,23 @@ def run():
 
 @router.post("/trade/{tid}/exit")
 def manual_exit(tid: str):
-    with _lock:
-        st = _load()
+    def apply(st):
         t = next((x for x in st["trades"] if x["id"] == tid and x["status"] == "OPEN"), None)
         if not t:
             raise HTTPException(404, "No open trade with that id")
         q = _quotes([t["sym"]]).get(t["sym"]) or {}
         px = float(q.get("last") or t.get("last") or t["entry"])
         _close(st, t, px, "MANUAL", _now())
-        _save(st)
         return {"ok": True, "exit": t["exit"], "net": t["net"]}
+    return _mutate(apply)
 
 
 @router.post("/reset")
 def reset():
-    if _load().get("_readonly"):
-        raise HTTPException(503, "The state store is not answering - reset refused so nothing is lost")
-    with _lock:
-        _save({"trades": [], "log": [{"at": _now().isoformat(), "msg": "Reset to Rs 5,00,000"}], "seq": 0,
-               "resetAt": _now().isoformat()})
-    return {"ok": True}
+    def apply(st):
+        st["trades"], st["seq"] = [], 0
+        st["log"] = [{"at": _now().isoformat(), "msg": "Reset to Rs 5,00,000"}]
+        st["resetAt"] = _now().isoformat()
+        st.pop("lastRun", None)
+        return {"ok": True}
+    return _mutate(apply)

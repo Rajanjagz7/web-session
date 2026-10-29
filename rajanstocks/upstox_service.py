@@ -740,7 +740,7 @@ class UpstoxService:
             "expiryDates": expiry_dates,
             "lotSize": lot_size,
             "rows": rows,
-            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "timestamp": datetime.now(IST).strftime("%H:%M:%S"),
             "provider": "Upstox",
             "mode": "REST",
             "underlyingKey": underlying_key,

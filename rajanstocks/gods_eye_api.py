@@ -8,6 +8,7 @@ WCAG 2.2 AA compliant, strict leakage protection, immutable forecast ledger, zer
 """
 from __future__ import annotations
 
+import hmac
 import os
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -27,7 +28,12 @@ DATA_QUALITIES = ["FRESH", "DELAYED", "STALE", "PARTIAL", "INSUFFICIENT", "UNAVA
 PROBABILITY_STATUSES = ["VALIDATED", "NOT_VALIDATED", "UNAVAILABLE"]
 EVALUATION_STATUSES = ["PENDING", "MATURED", "SCORED", "EXCLUDED"]
 
-ADMIN_API_KEY = os.environ.get("GODS_EYE_ADMIN_KEY", "ge-admin-secure-key-2026")
+ADMIN_API_KEY = os.environ.get("GODS_EYE_ADMIN_KEY", "")     # no built-in default: this repository is public, so a default key would be a known password
+
+
+def _admin_ok(token):
+    """True only when GODS_EYE_ADMIN_KEY is configured on the server and the caller sent exactly that key."""
+    return bool(ADMIN_API_KEY) and bool(token) and hmac.compare_digest(str(token).encode(), ADMIN_API_KEY.encode())
 MODEL_VERSION = "gods-eye-baseline-v1.0"
 CALIBRATION_VERSION = "calib-v1.0-isotonic"
 
@@ -629,7 +635,7 @@ def trigger_evaluation_run(
         else:
             auth_token = authorization
 
-    if not auth_token or auth_token != ADMIN_API_KEY:
+    if not _admin_ok(auth_token):
         return make_error_response(
             "INTERNAL_ERROR",
             "Security verification failed: valid admin key required for evaluation job trigger.",
@@ -667,7 +673,7 @@ def set_kill_switch(
     x_admin_key: Optional[str] = Header(None)
 ):
     """Toggle the model kill switch (PM-025)."""
-    if x_admin_key != ADMIN_API_KEY:
+    if not _admin_ok(x_admin_key):
         return make_error_response("INTERNAL_ERROR", "Unauthorized admin action", 401)
     
     global _KILL_SWITCH
@@ -786,7 +792,7 @@ def set_drift_alert(
     x_admin_key: Optional[str] = Header(None)
 ):
     """Trigger or clear model drift alert for testing (PM-026)."""
-    if x_admin_key != ADMIN_API_KEY:
+    if not _admin_ok(x_admin_key):
         return make_error_response("INTERNAL_ERROR", "Unauthorized admin action", 401)
     global _DRIFT_ALERT_TRIGGERED
     _DRIFT_ALERT_TRIGGERED = req.triggered

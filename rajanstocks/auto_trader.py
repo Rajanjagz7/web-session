@@ -43,6 +43,9 @@ PLAN_V = 202610282     # one-time switch (28 Oct 2026): Rs 10 L option buying (s
 IDX_V = 20261028       # one-time: index options are bought too (not only stock options) - stockOnly stays a setting that can be turned back on
 SLEEVES = {"picks": 400000.0, "eagle": 200000.0, "signals": 400000.0}      # Rs 10 L of option buying; the share trader has its own Rs 5 L
 SLEEVE_NAMES = {"picks": "Today's Picks", "eagle": "Eagle Trades", "signals": "Indicator signals"}
+STOP_GAP_TOL = 0.02                      # a premium stop fills AT the stop unless the price seen is more than this far beyond it (a gap / fast move between two cycles): then it fills at that price
+MAX_SPREAD_OF_STOP = 0.4                 # an option is only bought when its bid/ask spread is at most this share of the premium stop (12.5% stop -> 5% spread)
+SCAN_RETRIES = 3                         # a symbol whose indicator run failed is retried this many times (cycles) before it is closed for the day
 PREM_SL_PCT = 0.125                      # option premium stop: at most this share of the premium (30% until 28 Oct, 20% for a few hours, then 12.5%)
 MAX_OUTLAY = {"BANKNIFTY": 15000.0}     # most one trade may spend on premium, per symbol (user, 28 Oct: Bank Nifty options 10-15k max) - a dearer ATM strike moves to the nearest OTM one that fits
 TARGET_LADDER = (1.5, 2, 3, 4, 5, 6, 10)    # targets in R (user, 28 Oct): the stop trails one target behind, the last one closes the trade
@@ -69,6 +72,12 @@ def _remote():
 
 
 _RC = {}
+_ver_of = shared_cache.ver_of
+_strip_ver = shared_cache.strip_ver
+
+
+def _read_ver():
+    return shared_cache.read_ver(KEY)
 
 
 def _load(cached=False):
@@ -84,6 +93,7 @@ def _load(cached=False):
                 raw = j.get("result")
                 _RC.update(t=time.time(), raw=raw)
             d = json.loads(raw) if raw else {}
+            st["_ver0"] = _ver_of(raw)                              # the version this copy was read at (checked again when it is saved)
         else:
             with open(FILE, encoding="utf-8") as f:
                 d = json.load(f)
@@ -149,27 +159,59 @@ def _load(cached=False):
 
 
 def _save(st):
+    """True = saved (or nothing to save); "conflict" = somebody else saved the book after this copy was read, nothing was written
+    (the caller reloads and redoes its change); False = the store refused the write."""
     if st.get("_readonly"):
         print("[auto] state was not read - not saving")
-        return
+        return True
     st.pop("_dirty", None)
     st["log"] = st["log"][-120:]
     try:
         r = _remote()
         if r:
-            body = json.dumps(st)
-            if body == _RC.get("raw"):
-                return                                              # nothing changed: no store request
-            j = shared_cache.kv([["SET", KEY, body]], 8.0)[0]
-            if not j.get("error"):
-                _RC.update(t=time.time(), raw=body)
-        else:
-            tmp = FILE + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(st, f)
-            os.replace(tmp, FILE)
+            rest = {k: v for k, v in st.items() if k not in ("ver", "_ver0")}
+            res, info = shared_cache.versioned_set(KEY, rest, _RC, st.get("_ver0"))
+            if res == "conflict":
+                print("[auto] book changed since it was read - save skipped (conflict)")
+                return "conflict"
+            if res == "error":
+                print(f"[auto] state save refused: {info}")
+                return False
+            if res == "ok":
+                st["_ver0"] = info
+            return True
+        rest = {k: v for k, v in st.items() if k != "_ver0"}
+        tmp = FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(rest, f)
+        os.replace(tmp, FILE)
+        return True
     except Exception as e:
         print(f"[auto] state save failed: {e}")
+        return False
+
+
+def _mutate(apply, tries=3):
+    """Read-modify-write of the book for the user's own actions (exit, stop, TSL, settings, reset). Each action waits briefly for a running
+    cycle, works on a fresh copy and, if another instance saved in between, is redone on the newest copy - so neither a manual action nor a
+    cycle's trade can overwrite the other. apply(st) changes the book and returns the response."""
+    for _ in range(8):
+        if shared_cache.lock("auto-cycle", 2):
+            break
+        time.sleep(0.5)
+    for attempt in range(tries):
+        with _lock:
+            st = _load()
+            if st.get("_readonly"):
+                raise HTTPException(503, "The book could not be read right now - try again in a moment")
+            out = apply(st)
+            res = _save(st)
+        if res is True:
+            return out
+        if res is False:
+            raise HTTPException(503, "The book could not be saved right now (the state store refused the write) - try again in a moment")
+        time.sleep(0.25 * (attempt + 1))
+    raise HTTPException(409, "The book changed while you were saving - nothing was lost, please try again")
 
 
 def _now():
@@ -229,11 +271,41 @@ def _open_pnl(t):
     return (last - t["entry"]) * t["lots"] * t["lot"] * sgn
 
 
+def _day_base(t, today):
+    """First look at a position on a trading day: remember its price then. Today's P&L is the move SINCE that price - the entry for a trade
+    opened today, the previous mark for a carried one - not everything since the entry."""
+    if t.get("baseDate") != today:
+        t["baseDate"] = today
+        t["basePx"] = round(float(t["entry"] if t.get("date") == today else (t.get("last") or t["entry"])), 2)
+
+
+def _base_px(t, today):
+    if t.get("baseDate") == today and t.get("basePx") is not None:
+        return float(t["basePx"])
+    if t.get("date") == today:
+        return float(t["entry"])
+    return float(t.get("last") or t["entry"]) if t["status"] == "OPEN" else None
+
+
+def _day_part(t, today):
+    """What one trade added to TODAY's P&L: closed today (by its EXIT day, not its entry day) or still open."""
+    sgn = -1 if t.get("pos") == "short" else 1
+    qty = (t.get("lots") or 0) * (t.get("lot") or 0)
+    if t["status"] == "CLOSED":
+        if str(t.get("closedAt") or t.get("date") or "")[:10] != today:
+            return 0.0
+        if t.get("date") == today:                           # opened today: its whole result belongs to today
+            return float(t.get("net", 0.0))
+        base = _base_px(t, today)
+        if base is None:                                     # carried, and never marked today: its whole result is the best guess
+            return float(t.get("net", 0.0))
+        return (float(t.get("exit") or base) - base) * qty * sgn - float(t.get("cost", 0.0))
+    return (float(t.get("last") or t["entry"]) - _base_px(t, today)) * qty * sgn
+
+
 def _day_pnl(st, today):
-    """Realised (today's closed trades) + unrealised (every open position marked to market)."""
-    closed = sum(t.get("net", 0.0) for t in st["trades"] if t["date"] == today and t["status"] == "CLOSED")
-    open_u = sum(_open_pnl(t) for t in st["trades"] if t["status"] == "OPEN")
-    return closed + open_u
+    """Today's realised (trades closed today) + unrealised (open positions: the move since their price at the start of today)."""
+    return sum(_day_part(t, today) for t in st["trades"])
 
 
 def _day_guard(st, today):
@@ -512,6 +584,18 @@ def x_stop(rows):
     return rows[-1].get("stop") if rows else None
 
 
+def _scan_settle(cache, sym, found, errs):
+    """True when this symbol's scan is final for the day. Out of time -> not final. Some indicator runs FAILED -> not final: the symbol is
+    retried in the next cycles (up to SCAN_RETRIES), instead of being closed for the whole day with whatever the surviving runs found."""
+    if found is None:
+        return False
+    if errs:
+        tries = cache.setdefault("tries", {})
+        tries[sym] = tries.get(sym, 0) + 1
+        return tries[sym] >= SCAN_RETRIES
+    return True
+
+
 def scan_all(st, today):
     """Fresh BUY/SELL events from EVERY indicator on the last completed daily bar, for 5 indices + every F&O stock
     with listed options (~218, not just the curated 20 - a stock is only skipped when it has no daily history).
@@ -523,7 +607,7 @@ def scan_all(st, today):
     cache = st.setdefault("cand", {})
     if cache.get("date") != today:
         cache.clear()
-        cache.update(date=today, done=[], items=[])
+        cache.update(date=today, done=[], items=[], tries={})
     r = backtest.get()["result"]
     score = {x["key"]: x["inSample"]["avgR"] for x in (r["ranking"] if r else [])}
     chosen = {k: tuple(v) for k, v in ((r["chosen"] if r else {}) or {}).items()}
@@ -544,13 +628,14 @@ def scan_all(st, today):
 
     def one_symbol(sym):
         bar_source.completed_only(True)               # long-cached completed bars, no intraday request
-        found = []
+        found, errs = [], 0
         for key, fn in runners.items():
             if time.time() > deadline:
-                return sym, None                       # not finished: stays on the to-do list
+                return sym, None, 0                    # not finished: stays on the to-do list
             try:
                 rows = fn(sym, 400).get("bars") or []
             except Exception:
+                errs += 1                              # a failed run (rate limit, timeout) is NOT "no signal"
                 continue
             rows = [x for x in rows if x.get("date") and x["date"] < today]
             if len(rows) < 2:
@@ -563,11 +648,11 @@ def scan_all(st, today):
                 continue
             found.append({"key": key, "sym": sym, "side": sg, "asOf": rows[-1]["date"], "score": score.get(key, 0.0), "indStop": x_stop(rows),
                           "variant": variant, "filter": flt, "kind": "index" if sym in INDEX_SYMS else "stock"})
-        return sym, found
+        return sym, found, errs
 
     with cf.ThreadPoolExecutor(max_workers=4) as ex:
-        for sym, found in ex.map(one_symbol, todo):
-            if found is not None:
+        for sym, found, errs in ex.map(one_symbol, todo):
+            if _scan_settle(cache, sym, found, errs):
                 cache["done"].append(sym)
                 cache["items"].extend(found)
     done = len(cache["done"])
@@ -910,7 +995,7 @@ def _contract(sym, side, today, min_days, max_outlay=None):
     if ask > 0 and bid <= 0:
         raise RuntimeError("skipped: no bid in the market")
     return {"expiry": ch["expiry"], "strike": row["strike"], "key": leg["key"], "premium": px, "lot": int(ch.get("lot") or 1),
-            "spot": spot, "bid": bid, "ltp": ltp}
+            "spot": spot, "bid": bid, "ask": ask, "ltp": ltp}
 
 
 def _atr_for(sym):
@@ -953,6 +1038,11 @@ def open_trade(st, c, today):
     atr, last_close, bars = _atr_for(c["sym"])
     cap = float((cfg.get("maxOutlay") or MAX_OUTLAY).get(c["sym"]) or 0) or None
     ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap)
+    ask_, bid_ = float(ct.get("ask") or 0), float(ct.get("bid") or 0)
+    if ask_ > 0 and bid_ > 0:                           # the stop is judged on the bid but the entry is paid at the ask: the spread must leave room for the stop
+        sp_, lim_ = (ask_ - bid_) / ask_, MAX_SPREAD_OF_STOP * float(cfg.get("premSlPct", PREM_SL_PCT))
+        if sp_ > lim_:
+            raise RuntimeError(f"skipped: bid/ask spread {sp_ * 100:.1f}% is too wide for the {float(cfg.get('premSlPct', PREM_SL_PCT)) * 100:.1f}% stop (max {lim_ * 100:.1f}%)")
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
     variant = c.get("variant", "fixed")
@@ -1141,7 +1231,7 @@ def _open_short(st, c, today, main):
               "entry": round(px, 2), "last": round(px, 2), "premRisk": rp, "premSL": round(px + rp, 2),
               "premT": [round(max(0.05, px - k * rp), 2) for k in (1, 2, 3)], "initialRisk": round(qty * rp, 0),
               "margin": round(qty * margin_u, 0), "openedAt": _now().isoformat(), "status": "OPEN"})
-    for k in ("lock", "bestPnl", "stopMoved", "tsl"):
+    for k in ("lock", "bestPnl", "stopMoved", "tsl", "baseDate", "basePx"):
         t.pop(k, None)
     st["trades"].append(t)
     st["log"].append({"at": _now().isoformat(), "msg": f"SELL {t['sym']} {t['strike']:.0f}{t['opt']} x{lots} @ {t['entry']} (paired with {main['id']}, SL {t['premSL']})"})
@@ -1199,6 +1289,7 @@ def manage(st, now, t_end=None):
     today = now.date().isoformat()
     for t in opens:
         _replan(t)
+        _day_base(t, today)
     for t in opens:
         if t.get("expiry") and t["expiry"] < today:          # contract already expired (missed while the store was down): no quote any more
             _close(st, t, float(t.get("last") or t["entry"]), "EXPIRY (late)")
@@ -1212,6 +1303,8 @@ def manage(st, now, t_end=None):
         ask = float((((opt_q or {}).get("depth") or {}).get("sell") or [{}])[0].get("price") or 0)
         short = t.get("pos") == "short"
         exit_px = (ask if ask > 0 else opt_px) if short else (bid if bid > 0 else opt_px)   # a short is bought back at the ask
+        if bid > 0 and ask > 0 and (ask - bid) / ask > 0.10 and opt_px > 0:
+            exit_px = opt_px                       # a gaping book (opening minutes, one-sided quote) is not a price anyone could trade at: judge the stop on the last traded price
         if exit_px <= 0 or und_px <= 0:
             continue
         d = 1 if t["side"] == "BUY" else -1
@@ -1261,7 +1354,9 @@ def manage(st, now, t_end=None):
         hold = st["cfg"]["maxHoldSessions"] if variant == "fixed" else 40
         if t.get("premSL") and (exit_px >= t["premSL"] if short else exit_px <= t["premSL"]):
             why = "TSL" if t.get("lock") else "STOP"   # option premium stop (30% cap) - catches time decay too
-            exit_px = float(t["premSL"])               # filled at the stop (a stop order), not at the price seen minutes later
+            sl_ = float(t["premSL"])                   # a stop order fills AT the stop when the market only just crossed it ...
+            beyond = exit_px > sl_ * (1 + STOP_GAP_TOL) if short else exit_px < sl_ * (1 - STOP_GAP_TOL)
+            exit_px = exit_px if beyond else sl_       # ... but at the price actually seen when it is well past it (a gap): never a better fill than the market gave
         elif d * (und_px - t["stopU"]) <= 0:
             why = "TSL" if ((tsl and tsl.get("mode") in ("trail", "breakeven", "step") and t.get("stopMoved")) or t.get("tHit")) else "STOP"
         elif t.get("targetU") is not None and d * (und_px - t["targetU"]) >= 0:
@@ -1390,8 +1485,7 @@ def mark_open_positions(min_gap=120):
                 return False
             _MARK_AT = time.time()
             manage(st, now)
-            _save(st)
-        return True
+            return _save(st) is True
     finally:
         shared_cache.unlock("auto-cycle")
 
@@ -1579,7 +1673,10 @@ def _run_cycle(now, force, dry):
                         for k_ in [k_ for k_, v_ in cool.items() if v_ < time.time()]:
                             cool.pop(k_, None)
         if not dry:
-            _save(st)
+            if _save(st) is not True:
+                rep["saveConflict"] = True
+                rep["note"] = (rep["note"] + " · " if rep["note"] else "") + "the book changed while this cycle ran - its changes were not saved, the next cycle redoes them"
+                st["log"].append({"at": now.isoformat(), "msg": "cycle not saved: the book changed meanwhile (a manual action or another instance)"})
         else:
             try:                                   # a preview still persists the day's scan cache so the next
                 real = _load()                     # preview (or live cycle) does not rescan every symbol from zero
@@ -1658,8 +1755,7 @@ def _und_price(t):
 @router.post("/trade/{tid}/exit")
 def manual_exit(tid: str):
     """Close an open automated paper trade right now at the live bid."""
-    with _lock:
-        st = _load()
+    def apply(st):
         t = _open_trade(st, tid)
         try:
             q = _quotes([t["key"]]).get(t["key"]) or {}
@@ -1672,8 +1768,8 @@ def manual_exit(tid: str):
         if px <= 0:
             raise HTTPException(503, "No live price for this contract right now, try again in a moment")
         _close(st, t, px, "MANUAL")
-        _save(st)
         return {"ok": True, "exit": t["exit"], "net": t["net"], "R": t["R"]}
+    return _mutate(apply)
 
 
 @router.post("/exit-all")
@@ -1681,12 +1777,7 @@ def exit_all():
     """Close EVERY open automated paper trade at the live bid / ask in ONE request (one state load, one quote call for all contracts,
     one save). The Journal used to call the single-trade exit 20+ times in a row: each call loaded and saved the whole book and waited for
     the cycle lock, so on Vercel the first one could hang and "Exit all" sat at 1/20 forever."""
-    for _ in range(8):                                   # a running cycle holds the shared lock for up to ~30 s - wait a little, then go on anyway
-        if shared_cache.lock("auto-cycle", 6):
-            break
-        time.sleep(1.0)
-    with _lock:
-        st = _load()
+    def apply(st):
         opens = [t for t in st["trades"] if t["status"] == "OPEN"]
         if not opens:
             return {"ok": True, "closed": 0, "net": 0, "failed": []}
@@ -1707,8 +1798,8 @@ def exit_all():
             _close(st, t, px, "MANUAL")
             n += 1
             net += t.get("net") or 0
-        _save(st)
         return {"ok": True, "closed": n, "net": round(net, 2), "failed": failed}
+    return _mutate(apply)
 
 
 @router.post("/trade/{tid}/tsl")
@@ -1717,8 +1808,8 @@ def set_tsl(tid: str, b: TslBody):
     mode = (b.mode or "").lower()
     if mode not in ("off", "trail", "breakeven", "step"):
         raise HTTPException(400, "mode must be off, trail, breakeven or step")
-    with _lock:
-        st = _load()
+
+    def apply(st):
         t = _open_trade(st, tid)
         if mode == "off":
             t["tsl"] = None
@@ -1733,14 +1824,13 @@ def set_tsl(tid: str, b: TslBody):
                 raise HTTPException(400, "Enter the step size (underlying points)")
             t["tsl"] = {"mode": "step", "step": b.step}
         st["log"].append({"at": _now().isoformat(), "msg": f"TSL {mode} set on {t['sym']} {t['strike']:.0f}{t['opt']} by user"})
-        _save(st)
         return {"ok": True, "tsl": t["tsl"], "stopU": t["stopU"]}
+    return _mutate(apply)
 
 
 @router.post("/trade/{tid}/stop")
 def tighten_stop(tid: str, b: StopBody):
-    with _lock:
-        st = _load()
+    def apply(st):
         t = _open_trade(st, tid)
         d = 1 if t["side"] == "BUY" else -1
         try:
@@ -1754,8 +1844,8 @@ def tighten_stop(tid: str, b: StopBody):
         t["stopU"] = round(b.stopU, 2)
         t["stopMoved"] = _now().isoformat()
         st["log"].append({"at": _now().isoformat(), "msg": f"Stop moved to {t['stopU']} on {t['sym']} {t['strike']:.0f}{t['opt']} by user"})
-        _save(st)
         return {"ok": True, "stopU": t["stopU"]}
+    return _mutate(apply)
 
 
 @router.get("/status")
@@ -1816,8 +1906,7 @@ def status():
 
 @router.post("/config")
 def config(c: Cfg):
-    with _lock:
-        st = _load()
+    def apply(st):
         if c.enabled is not None:
             st["cfg"]["enabled"] = c.enabled
         if c.researchMode is not None:
@@ -1869,31 +1958,29 @@ def config(c: Cfg):
         if c.zTrendHedge is not None:                                   # true: Z Trend flips open hedged credit spreads
             st["cfg"]["zTrendHedge"] = c.zTrendHedge
         st["cfg"]["cfgAt"] = time.time()                                # newest settings win if two databases are merged
-        _save(st)
         return st["cfg"]
+    return _mutate(apply)
 
 
 @router.post("/log/clear")
 def clear_log():
-    with _lock:
-        st = _load()
+    def apply(st):
         st["log"] = []
-        _save(st)
         return {"ok": True}
+    return _mutate(apply)
 
 
 @router.post("/reset")
 def reset_portfolio():
     """Journal 'Reset portfolio': drop every paper trade (open and closed) so equity starts again from capital.
     Settings are kept. Today's entries count restarts too."""
-    with _lock:
-        st = _load()
+    def apply(st):
         n = len(st["trades"])
         st["trades"], st["cand"] = [], {}
         st["resetAt"] = _now().isoformat()                       # a later merge of two databases respects the reset
         st["log"] = [{"at": _now().isoformat(), "msg": f"Portfolio reset by the user ({n} paper trades cleared)"}]
-        _save(st)
         return {"ok": True, "cleared": n}
+    return _mutate(apply)
 
 
 @router.api_route("/run", methods=["GET", "POST"])

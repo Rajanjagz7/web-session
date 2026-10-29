@@ -1,11 +1,12 @@
 import os
 import threading
+from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import indicators
@@ -66,11 +67,26 @@ import gods_eye_tab
 app.include_router(gods_eye_tab.router)
 
 @app.middleware("http")
+async def _same_origin_writes_only(request, call_next):
+    """Every POST / PUT / PATCH / DELETE here changes the paper books (reset, exit-all, settings ...) and none of them has a login, with CORS open to
+    all sites: any web page could have fired them from a visitor's browser. Browsers always label such a request with Origin / Sec-Fetch-Site, so a
+    write that comes from another site is refused. Requests without those headers (curl, the GitHub heartbeat, cron) and the app's own pages pass."""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        site = (request.headers.get("sec-fetch-site") or "").lower()
+        origin = request.headers.get("origin")
+        host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip().lower()
+        cross = site not in ("", "same-origin", "none") or (origin and origin != "null" and urlparse(origin).netloc.lower() != host) or origin == "null"
+        if cross:
+            return JSONResponse({"detail": "Cross-site request refused"}, status_code=403)
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def _no_stale_assets(request, call_next):
     """HTML / manifest / sw.js are revalidated on every load, so devices never keep running an old build."""
     resp = await call_next(request)
     p = request.url.path
-    if p == "/" or p.endswith((".html", ".webmanifest", "sw.js", ".js", ".css")):
+    if p == "/" or p.endswith((".html", ".webmanifest", "sw.js", ".js", ".css")) or (p.startswith("/static/") and p.endswith(".json")):
         resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     return resp
 
@@ -189,7 +205,7 @@ def api_cron_morning_refresh():
     — re-running it just re-fetches the same day's data. There's no
     notification channel wired up — it just runs server-side; check Vercel's
     Cron Jobs dashboard to confirm it fired."""
-    summary = {"ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    summary = {"ranAt": datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")}
 
     try:
         nse_service.refresh_cookies(force=True)
@@ -231,4 +247,4 @@ def api_cron_weekly_cleanup():
         nse_service.refresh_cookies(force=True)
     except Exception:
         pass
-    return {"status": "ok", "cacheFilesRemoved": shared_cache.sweep(), "ranAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    return {"status": "ok", "cacheFilesRemoved": shared_cache.sweep(), "ranAt": datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d %H:%M:%S")}

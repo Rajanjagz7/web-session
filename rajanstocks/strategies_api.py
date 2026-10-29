@@ -8,7 +8,7 @@ output so the UI can chart, list and scan them uniformly.
 import concurrent.futures
 import re
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException
 
@@ -24,6 +24,7 @@ import ut_bot
 import market_api
 from indicators import get_india_vix, vix_tier
 
+IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter(prefix="/api/m")
 
 # key -> (name, group, description, source)
@@ -521,7 +522,7 @@ def run(key, symbol):
         raise
     except Exception as exc:
         raise HTTPException(502, str(exc))
-    res["asOf"] = datetime.now().isoformat(timespec="seconds")
+    res["asOf"] = datetime.now(IST).isoformat(timespec="seconds")
     _cache[ck] = (time.time(), res)
     return res
 
@@ -919,7 +920,7 @@ def option_scan(key: str, scope: str = "indices", offset: int = 0, only: str = "
         parts = list(pool.map(one, syms))
     rows = sorted([r for part in parts for r in part], key=lambda r: -r["vol"])[:6000]
     res = {"key": key, "name": OPT_META[key]["name"], "scope": scope, "scanned": len(syms), "rows": rows, "next": nxt, "total": total or len(syms),
-           "marketOpen": market_api.market_open(), "asOf": datetime.now().isoformat(timespec="seconds")}
+           "marketOpen": market_api.market_open(), "asOf": datetime.now(IST).isoformat(timespec="seconds")}
     res["failed"] = sorted(set(failed))
     if not failed:                                     # only complete scans are cached
         _cache[ck] = (time.time(), res)
@@ -998,4 +999,4 @@ def strategy_scan(key: str, symbols: str = ""):
     skipped = sum(1 for r in rows if r.get("skipped"))
     rows = [r for r in rows if not r.get("skipped")]
     return {"key": key, "name": META[key]["name"], "rows": rows, "count": len(rows), "skipped": skipped,
-            "asOf": datetime.now().isoformat(timespec="seconds")}
+            "asOf": datetime.now(IST).isoformat(timespec="seconds")}

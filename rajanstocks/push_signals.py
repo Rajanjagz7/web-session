@@ -51,6 +51,9 @@ def _empty():
     return {"subs": {}, "sent": {}, "seen": {}, "log": []}
 
 
+_RC = {}
+
+
 def _load():
     r = _remote()
     try:
@@ -60,7 +63,10 @@ def _load():
             if j.get("error"):                                      # store refused (e.g. request limit): never treat as "empty"
                 raise RuntimeError(f"state store error: {j.get('error')}")
             raw = j.get("result")
-            return json.loads(raw) if raw else _empty()
+            _RC.update(t=time.time(), raw=raw)
+            st = json.loads(raw) if raw else _empty()
+            st["_ver0"] = shared_cache.ver_of(raw)                  # the version this copy was read at (checked again when it is saved)
+            return st
         with open(STATE_FILE, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
@@ -72,10 +78,13 @@ def _load():
         return st
 
 
-def _save(st):
+def _save(st, merge=True):
+    """True = saved; False = the store refused / the state was not read; "conflict" = another instance saved after this copy was read.
+    With merge=True a conflict is resolved here: the newest book is read again and this copy's day counters, seen ids, log and
+    subscriptions are united with it (no push is sent twice, nobody's subscription is lost) and the save is retried."""
     if st.get("_readonly"):
         print("[push-signals] state was not read - not saving")
-        return
+        return False
     today = datetime.now(IST).date()
     keep = {(today - timedelta(days=i)).isoformat() for i in range(3)}
     st["sent"] = {d: v for d, v in st["sent"].items() if d in keep}
@@ -85,14 +94,52 @@ def _save(st):
     try:
         if r:
             import shared_cache
-            shared_cache.kv([["SET", STATE_KEY, json.dumps(st)]], 8.0)
-        else:
-            tmp = STATE_FILE + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(st, f)
-            os.replace(tmp, STATE_FILE)
+            for _ in range(3):
+                rest = {k: v for k, v in st.items() if k not in ("ver", "_ver0")}
+                res, info = shared_cache.versioned_set(STATE_KEY, rest, _RC, st.get("_ver0"))
+                if res in ("ok", "same"):
+                    if res == "ok":
+                        st["_ver0"] = info
+                    return True
+                if res == "error":
+                    print(f"[push-signals] state save refused: {info}")
+                    return False
+                if not merge:
+                    return "conflict"
+                fresh = _load()
+                if fresh.get("_readonly"):
+                    return False
+                merged = shared_cache._merge_state(STATE_KEY, fresh, {k: v for k, v in st.items() if k != "_ver0"})
+                merged["_ver0"] = fresh.get("_ver0")
+                st.clear()
+                st.update(merged)
+            return "conflict"
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({k: v for k, v in st.items() if k != "_ver0"}, f)
+        os.replace(tmp, STATE_FILE)
+        return True
     except Exception as e:
         print(f"[push-signals] state save failed: {e}")
+        return False
+
+
+def _mutate(apply, tries=3):
+    """Subscribe / unsubscribe: change a fresh copy of the book and redo the change on the newest one if another instance saved meanwhile
+    (a plain merge would bring an unsubscribed device back)."""
+    for attempt in range(tries):
+        with _lock:
+            st = _load()
+            if st.get("_readonly"):
+                raise HTTPException(503, "Push state is not readable right now - try again in a moment")
+            apply(st)
+            res = _save(st, merge=False)
+        if res is True:
+            return True
+        if res is False:
+            raise HTTPException(503, "Push state could not be saved right now - try again in a moment")
+        time.sleep(0.2 * (attempt + 1))
+    raise HTTPException(409, "Push state changed while saving - please try again")
 
 
 # ───────────────────────── collecting ideas ─────────────────────────
@@ -302,23 +349,20 @@ def subscribe(b: SubBody):
     ep = (b.subscription or {}).get("endpoint", "")
     if not _host_ok(ep):
         raise HTTPException(400, "Unsupported push service.")
-    with _lock:
-        st = _load()
+
+    def apply(st):
         st["subs"][ep] = {"sub": b.subscription, "at": datetime.now(IST).isoformat()}
         if len(st["subs"]) > 200:
             for k in list(st["subs"])[:-200]:
                 st["subs"].pop(k, None)
-        _save(st)
+    _mutate(apply)
     return {"ok": True, "maxPerDay": MAX_PER_DAY}
 
 
 @router.post("/api/push/unsubscribe")
 def unsubscribe(b: SubBody):
     ep = (b.subscription or {}).get("endpoint", "")
-    with _lock:
-        st = _load()
-        st["subs"].pop(ep, None)
-        _save(st)
+    _mutate(lambda st: st["subs"].pop(ep, None))
     return {"ok": True}
 
 

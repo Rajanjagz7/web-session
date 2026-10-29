@@ -2,8 +2,11 @@
 Test Suite for GOD'S EYE — The Observer (Pre-Market & Intraday Forecasting)
 Automates verification of TestRail cases PM-001 through PM-055 and BRD v0.4 requirements.
 """
+import os
 import pytest
 from datetime import datetime, timezone, timedelta
+
+os.environ.setdefault("GODS_EYE_ADMIN_KEY", "test-admin-key-not-a-real-secret")   # the module has no built-in default any more
 from fastapi.testclient import TestClient
 from server import app
 from gods_eye_api import (

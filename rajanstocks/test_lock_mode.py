@@ -104,7 +104,7 @@ def test_share_trader_opens_nothing_while_switched_off(monkeypatch):
     monkeypatch.setattr(sb.shared_cache, "lock", lambda *a, **k: True)
     monkeypatch.setattr(sb.shared_cache, "unlock", lambda *a, **k: None)
     monkeypatch.setattr(sb, "_load", lambda: {"trades": []})
-    monkeypatch.setattr(sb, "_save", lambda st: None)
+    monkeypatch.setattr(sb, "_save", lambda st: True)
     monkeypatch.setattr(sb, "manage", lambda st, now: None)
     calls = []
     monkeypatch.setattr(sb, "enter", lambda st, now: calls.append(1) or ["X"])

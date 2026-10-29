@@ -13,9 +13,11 @@ import builtins
 import hashlib
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
+import uuid
 import zlib
 
 _DISK = os.environ.get("RJ_CACHE_DIR") or (os.path.join("/tmp", "rj_cache") if os.environ.get("VERCEL")
@@ -331,6 +333,52 @@ def set_many(items, ttl):
 
 def set(key, value, ttl):
     set_many({key: value}, ttl)
+
+
+# ───────────── versioned state books (lost-update guard) ─────────────
+# A state book (auto trader, share trader, push subscriptions) is one JSON text under one key and every instance used to read it,
+# change it and write it back whole: whoever saved last silently erased the other's change (a manual exit, a new trade, a push
+# subscription). The book now starts with a version token ({"ver": "<16 hex>", ...}); a save first reads that token back (GETRANGE of the
+# first bytes, not the whole book) and refuses to write when somebody saved after this copy was read.
+_VER_RE = re.compile(r'^\{"ver": "([0-9a-f]{8,32})"')
+
+
+def ver_of(raw):
+    """The version token a stored book starts with (None for a book saved before versions existed)."""
+    m = _VER_RE.match(raw or "")
+    return m.group(1) if m else None
+
+
+def strip_ver(raw):
+    return re.sub(r'^\{"ver": "[0-9a-f]+", ?', "{", raw or "", count=1)
+
+
+def read_ver(key):
+    """(known, ver) of the book as it is stored right now. known is False when the store could not answer: the check is then skipped."""
+    try:
+        j = kv([["GETRANGE", key, 0, 60]], 6.0)[0]
+    except Exception:
+        return False, None
+    if not isinstance(j, dict) or j.get("error"):
+        return False, None
+    return True, ver_of(j.get("result") or "")
+
+
+def versioned_set(key, rest, rc, ver0, timeout=8.0):
+    """Write `rest` (the book without its version) if nobody saved since version `ver0` was read. rc is the caller's cache dict whose
+    'raw' holds the text last read or written. Returns ("ok", new_ver) | ("same", ver0) | ("conflict", None) | ("error", message)."""
+    if strip_ver(rc.get("raw")) == json.dumps(rest):
+        return "same", ver0
+    known, cur = read_ver(key)
+    if known and cur != ver0:
+        return "conflict", None
+    new = uuid.uuid4().hex[:16]
+    body = json.dumps({"ver": new, **rest})                 # the version is the FIRST key, so GETRANGE can read it cheaply
+    j = kv([["SET", key, body]], timeout)[0]
+    if j.get("error"):
+        return "error", str(j["error"])
+    rc.update(t=time.time(), raw=body)
+    return "ok", new
 
 
 def lock(name, ttl_s):

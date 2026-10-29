@@ -14,7 +14,7 @@
     }
   } catch (e) { }
   if (!O.data) {
-    fetch('/static/observer_seed.json?v=20261025b')
+    fetch('/static/observer_seed.json?v=ce171626')
       .then(r => r.json())
       .then(d => {
         if (!O.data && d && Array.isArray(d.items)) {

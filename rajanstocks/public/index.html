@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <script>/* open the app with ?reset=1 to wipe this device's paper account + journal (positions, trades, orders, journal entries) before anything loads */try{if(/[?&]reset=1(&|$)/.test(location.search)){['rs-paper-v1','rs-trades-v1','rj-journal-v1','rj-journal-settings-v1','mer-trades','mer-paper'].forEach(function(k){localStorage.removeItem(k)});history.replaceState(null,'',location.pathname+location.hash)}}catch(e){}</script>
-<link rel="manifest" href="/manifest.webmanifest?v=20261026n">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20261026n">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=20261026n">
-<link rel="apple-touch-icon" href="/icon-192.png?v=20261026n">
+<link rel="manifest" href="/manifest.webmanifest?v=2e956231">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=ca46e1fe">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=d17945e3">
+<link rel="apple-touch-icon" href="/icon-192.png?v=a4a70263">
 <meta name="theme-color" content="#4f46e5">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0E14">
@@ -745,11 +745,11 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pk-sec{display:flex;gap:6px;margin:10px 0;padding:4px;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,58,237,.10));border:1px solid rgba(99,102,241,.3);border-radius:14px}.pk-sec button{display:flex!important;align-items:center;justify-content:center;gap:6px;height:auto!important;min-height:44px;line-height:1.2!important;padding:10px 8px!important;overflow:visible!important;background:transparent!important;color:var(--text-3,#8b97ab)!important;border:1px solid transparent!important;border-radius:9px!important;opacity:.85}.pk-sec button.on{background:linear-gradient(135deg,#2563eb 0%,#7c3aed 55%,#06b6d4 100%)!important;color:#fff!important;border-color:var(--accent,#3b82f6)!important;box-shadow:0 2px 10px rgba(59,130,246,.45);opacity:1}.pk-sec button.on::before{content:'✓ '}.pk-sec button{flex:1;padding:11px 8px;font-weight:600}.pk-sec .pk-n{font-style:normal;background:var(--accent,#3b82f6);color:#fff;border-radius:9px;padding:0 6px;margin-left:4px;font-size:11px}[hidden]{display:none!important}
 .pkl-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}.pkl-tile{padding:9px 4px;border-radius:12px;text-align:center;background:linear-gradient(160deg,rgba(99,102,241,.14),rgba(6,182,212,.07));border:1px solid rgba(99,102,241,.22)}.pkl-tile b{display:block;font-size:19px;line-height:1.1}.pkl-tile small{font-size:9.5px;color:var(--text-3);letter-spacing:.02em}.pkl-tile.up b{color:var(--up)}.pkl-tile.down b{color:var(--down)}.pkl-tile.gold b{color:var(--gold)}.pkl-bar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 4px;flex-wrap:wrap}.pkl-f{display:flex;gap:4px}.pkl-f button{padding:7px 10px;border-radius:9px;font-size:12px;font-weight:600}.pkl-f button i{font-style:normal;opacity:.7;margin-left:2px}.pkl-f button.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}.pkl-reset{padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;background:transparent;color:var(--down);border:1px solid var(--down)}.pkl-reset.arm{background:var(--down);color:#fff}.pkr{border-left:3px solid transparent}.pkr.o-win{border-left-color:var(--up)}.pkr.o-loss{border-left-color:var(--down)}.pkr.o-mixed{border-left-color:var(--gold)}.pkr-n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:var(--panel);color:var(--text-2);font-size:11px;font-weight:800}
 </style>
-<script id="scrJV" src="/static/journal.js?v=20261028s"></script>
-<script src="/static/ipo.js?v=20261018d"></script>
-<script src="/static/godseye.js?v=20261026a"></script>
-<script src="/static/observer.js?v=20261026b"></script>
-<script src="/static/geye.js?v=20261028g"></script>
+<script id="scrJV" src="/static/journal.js?v=e5450a71"></script>
+<script src="/static/ipo.js?v=e57a0080"></script>
+<script src="/static/godseye.js?v=66f9653f"></script>
+<script src="/static/observer.js?v=e6b0fb33"></script>
+<script src="/static/geye.js?v=b0dc17ea"></script>
 <style id="opxCss">
 .opx{display:flex;flex-direction:column;gap:10px;padding:12px 14px 16px;max-width:1800px;margin:0 auto}
 .opx svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -1643,7 +1643,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=20261026u',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=a6ced19d',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -3610,8 +3610,8 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
   const isIdx=f.kind==='INDEX';
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
     window._pkCashLoading=true;
-    fetch('/static/picks_cash_seed.json?v=20261025c').then(r=>r.json()).then(cs=>{
-      const cl=Object.values(cs).filter(x=>(x.strength||0)>=55);
+    loadCashSeed().then(cl=>{
+      if(!cl.length)return;
       P.picks=(P.picks||[]).concat(cl);P.count=P.picks.length;
       if(Array.isArray(P.buy))P.buy=P.buy.concat(cl.filter(x=>x.signal==='BUY'));
       if(Array.isArray(P.sell))P.sell=P.sell.concat(cl.filter(x=>x.signal==='SELL'));
@@ -4891,7 +4891,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=20261028s';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=e5450a71';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;
@@ -5145,7 +5145,8 @@ function showUpdatePill(){
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
 function triggerSignalPush(){if(!MKT.open)return;fetch('/api/cron/signal-push',{method:'POST'}).catch(()=>{})}
-async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cr=await fetch('/static/picks_cash_seed.json?v=20261025c');if(cr.ok){const cs=await cr.json(),cl=Object.values(cs).filter(x=>(x.strength||0)>=55);App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)+(e&&e.detail?' - '+e.detail:'')}}
+function loadCashSeed(){return window._cashSeedP||(window._cashSeedP=fetch('/static/picks_cash_seed.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(cs=>Object.values(cs).filter(x=>(x.strength||0)>=55)).catch(()=>{window._cashSeedP=null;return[]}))}
+async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cl=await loadCashSeed();if(cl.length){App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)+(e&&e.detail?' - '+e.detail:'')}}
   if(App.view==='picks')renderPicks(true);renderWatchlist();
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),5000);else window._pkTry=0;
   try{App.calls=await api('/api/m/day-calls')}catch(e){console.warn('calls',e);App.calls=App.calls||{error:String(e)}}

@@ -14,7 +14,8 @@ import time
 import shared_cache
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query, Response
+import hmac
+from fastapi import APIRouter, Header, HTTPException, Query, Response
 
 from nse_service import nse_service
 from upstox_service import _BG, UpstoxRateLimited, background
@@ -2316,8 +2317,14 @@ def kv_cleanup():
 
 
 @router.api_route("/kv-migrate", methods=["GET", "POST"])
-def kv_migrate(overwrite: int = 0):
-    """One-time copy of the auto trader / stock trader / push state from the old Upstash database to the new one."""
+def kv_migrate(overwrite: int = 0, authorization: str = Header(default=""), x_admin_key: str = Header(default="")):
+    """One-time copy of the auto trader / stock trader / push state from the old Upstash database to the new one.
+    It can overwrite the live books, so it needs the server's CRON_SECRET (Authorization: Bearer ...) or GODS_EYE_ADMIN_KEY (X-Admin-Key);
+    with neither configured it is disabled."""
+    secrets = [x for x in (os.environ.get("CRON_SECRET"), os.environ.get("GODS_EYE_ADMIN_KEY")) if x]
+    given = [authorization[7:] if authorization.lower().startswith("bearer ") else authorization, x_admin_key]
+    if not secrets or not any(g and hmac.compare_digest(g.encode(), sec.encode()) for g in given for sec in secrets):
+        raise HTTPException(403, "Admin only: send CRON_SECRET as a Bearer token or GODS_EYE_ADMIN_KEY as X-Admin-Key (disabled when neither is set on the server)")
     r = shared_cache.migrate_state(bool(overwrite))
     if r.get("ok"):
         try:                                     # drop any copy the state modules hold in memory so the moved data shows at once
