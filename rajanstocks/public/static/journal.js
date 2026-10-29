@@ -1605,8 +1605,8 @@ function paperList() {
 
   /* Reset portfolio: one confirmation, then clear EVERYTHING that feeds the portfolio figure -
      manual journal trades, journal settings, the server's auto paper trades and the Trade screen's paper account. */
-  async function resetPortfolio() {
-    if (!confirm('Reset the portfolio to ' + inr(DEFAULTS.capital, 0) + '?\n\nThis clears every journal trade, all auto paper trades (open and closed), the stock trader book and the Trade screen paper positions and orders. It cannot be undone.')) return;
+  async function resetPortfolio(confirmed) {
+    if (confirmed !== true && !confirm('Reset the portfolio to ' + inr(DEFAULTS.capital, 0) + '?\n\nThis clears every journal trade, all auto paper trades (open and closed), the stock trader book and the Trade screen paper positions and orders. It cannot be undone.')) return;
     const [r, rs] = await Promise.all([jpost('/api/auto/reset', {}), jpost('/api/stockbot/reset', {})]);   // options book AND the stock trader book
     T = []; S = Object.assign({}, DEFAULTS); persist(); persistS();
     AUTO.list = []; AUTO.stockTrades = []; AUTO.ts = Date.now();
@@ -1938,7 +1938,7 @@ function paperList() {
    document.addEventListener('click', e => { const b = e.target.closest('[data-sb]'); if (!b || !e.target.closest('#v-journal')) return; e.preventDefault(); e.stopPropagation();
      if (b.dataset.sb === 'reload') { SB.d = null; sbLoad(true); return; }
      if (b.dataset.sb === 'exit') { b.disabled = true; jpost('/api/stockbot/trade/' + encodeURIComponent(b.dataset.id) + '/exit').then(r => { if (!r.ok) toast_(r.err, 'warn'); sbLoad(true); }); }
-     else if (b.dataset.sb === 'reset') smallForm('Reset stock trader', '<p>Close the record of every stock-trader trade and start again with full paper capital? This cannot be undone.</p>', 'Reset', () => { jpost('/api/stockbot/reset').then(() => { window.closeModal && window.closeModal(); sbLoad(true); }); });
+     else if (b.dataset.sb === 'reset') smallForm('Reset everything', '<p>This clears <b>every</b> trade - options, share trades and the Trade screen paper positions - and starts again with full paper capital. The Reset button on the Journal home does exactly the same. It cannot be undone.</p>', 'Reset all', () => { window.closeModal && window.closeModal(); resetPortfolio(true); });
    }, true);
 
    /* two separate paper books: options / Trade screen (this journal) and the stock trader - options Rs 10 L, stock trader Rs 5 L */

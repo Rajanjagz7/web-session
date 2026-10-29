@@ -61,7 +61,8 @@ class World:
             return route.fulfill(json={"open": self.opens, "closed": [], "cfg": {"enabled": True, "stockTrader": bool(self.stocks)}, "marketOpen": True,
                                        "todayCount": len(self.opens), "sleeves": [], "dayPnl": {"value": 0, "limit": 0, "mode": "off", "note": ""}})
         if "/api/stockbot/status" in u:
-            return route.fulfill(json={"open": self.stocks, "closed": []})
+            return route.fulfill(json={"open": self.stocks, "closed": [], "capital": 500000, "cash": 500000, "used": 0, "booked": 0, "unrealised": 0, "equity": 500000,
+                                       "log": [], "all": {}, "byHorizon": {h: {"open": 0, "closed": 0, "winRate": None, "pf": None, "booked": 0} for h in ("intraday", "swing", "positional")}})
         if "/api/auto/live" in u:
             self.live_calls += 1
             if not self.live["ok"]:
@@ -493,4 +494,20 @@ def test_exit_button_on_an_option_trade_asks_once_and_exits(server, browser):
     pg.click("#jvFormOk")
     pg.wait_for_selector(".modal-bg", state="detached", timeout=8000)
     assert w.posts[-1][0] == "auto/trade/A-1/exit" and not errs
+    c.close()
+
+
+def test_reset_from_the_stock_trader_tab_resets_every_book(server, browser):
+    w = World(stocks=[dict(STK)])
+    w.post["reset"] = (200, {"ok": True})
+    c, pg, errs = open_journal(browser, w, tab="stocks", sym_prices={"TCS": 112.0})
+    pg.route("**/api/**/reset", lambda r: (w.posts.append((r.request.url.split("/api/")[1], {})), r.fulfill(json={"ok": True}))[1])
+    pg.wait_for_selector('[data-sb=reset]', timeout=15000)
+    pg.click('[data-sb=reset]')
+    pg.wait_for_selector(".modal-bg #jvFormOk", timeout=8000)
+    pg.once("dialog", lambda d: d.accept())               # the shared confirm of the full reset
+    pg.click("#jvFormOk")
+    pg.wait_for_timeout(1500)
+    urls = [p[0] for p in w.posts]
+    assert "auto/reset" in urls and "stockbot/reset" in urls and not errs
     c.close()
