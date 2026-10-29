@@ -1376,6 +1376,7 @@ def open_trade(st, c, today):
         "screenAgrees": c.get("screenAgrees"), "indicators": c.get("strategies") or [c["key"]],
         "source": c.get("source", f"{c.get('agree', 1)} indicator(s) agree" if c.get("strategies") else "strategy signal"), "status": "OPEN", "last": round(ct["premium"], 2),
         "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
+        "fset": filter_set(c),
     }
     oel = premium_oel(ct)
     if oel:                                                  # the bought option opened at its day low: its own point stop, when that is tighter than the normal one
@@ -2115,6 +2116,12 @@ class TslBody(BaseModel):
 
 class StopBody(BaseModel):
     stopU: float
+
+
+def filter_set(c):
+    """Which filter set an entry belongs to, for the Journal's two accuracy panels: "OLD FILT" = the 22 Oct filter ("N indicator(s) agree",
+    stock screen, index call/put); "NEW IND" = every other working indicator (Z Trend, time cycle, Today's Picks, Eagle, Gann ...)."""
+    return "OLD FILT" if c.get("strategies") or c.get("key") in ("stock-screen", "index-call-put") else "NEW IND"
 
 
 def _open_trade(st, tid):

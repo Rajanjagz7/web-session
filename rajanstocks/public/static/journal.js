@@ -82,6 +82,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     const t = {
       id: a.id, auto: true, date: a.date, time: istTime(d), at: d.toISOString(), market: 'Options', instrument: a.sym,
       symbol: `${a.sym} ${Number(a.strike).toFixed(0)} ${a.opt} ${a.expiry}`, dir: sh ? 'Short' : 'Long',
+      fset: a.fset || (/indicator\(s\) agree/.test(a.source || '') || a.strategy === 'stock-screen' || a.strategy === 'index-call-put' ? 'OLD FILT' : 'NEW IND'),
       setup: a.source || a.strategy, tf: '1D', ind: inds.join(', '), entry: a.entry,
       sl: a.premSL > 0 ? +(+a.premSL).toFixed(2) : +(a.entry - k * riskP).toFixed(2), sl0: +(a.entry - k * riskP).toFixed(2),
       t1: +Math.max(0.05, a.entry + k * (a.tgts ? 1.5 : 1) * riskP).toFixed(2), t2: +Math.max(0.05, a.entry + k * 2 * riskP).toFixed(2), t3: +Math.max(0.05, a.entry + k * 3 * riskP).toFixed(2),   /* ladder trades: 1.5R / 2R / 3R shown here, T4-T7 (4R 5R 6R 10R) in the plan text */
@@ -2121,6 +2122,18 @@ function paperList() {
      const os = hideSell ? '' : tile('', 'Options Sell', Sx.eq, Sx.cap, Sx.unr, Sx.booked, Sx.used, Sx.free);
      const hideStock = stockHidden();
      const st = hideStock ? '' : tile('', 'Stock trader', d ? d.equity : null, sCap, d ? d.unrealised : null, d ? d.booked : null, d ? d.used : null, d ? d.cash : null);
+     // accuracy of the two filter sets on the auto trader's option trades: OLD FILT (22 Oct filter) vs NEW IND (every other working indicator)
+     const setTile = nm => {
+       const L = AUTO.list.filter(t => t.fset === nm && entered(t) && !(t.raw && t.raw.pos === 'short' && t.raw.pairOf)),
+         C = L.filter(t => statusOf(t) === 'Closed'), net = x => +(x.raw && x.raw.net) || 0, unr = L.filter(t => statusOf(t) !== 'Closed').reduce((q, x) => q + (+x.unrl || 0), 0),
+         booked = C.reduce((q, x) => q + net(x), 0), w = C.filter(x => net(x) > 0), g = w.reduce((q, x) => q + net(x), 0), ls = -C.filter(x => net(x) <= 0).reduce((q, x) => q + net(x), 0),
+         Rs = C.map(x => x.raw && x.raw.R).filter(x => x != null), avgR = Rs.length ? Rs.reduce((q, x) => q + x, 0) / Rs.length : null;
+       return `<div class="jv-book"><b class="jv-bt">${nm}</b>
+         <div class="jv-beq"><span class="${cc(booked + unr)}">${sinr(booked + unr)}</span><em>${L.length} trades</em></div>
+         <div class="jv-bl">${v('Running now', unr, 'pl', sinr)}${v('Locked in', booked, 'pl', sinr)}${v('Win rate', C.length ? w.length / C.length * 100 : null, '', x => x.toFixed(0) + '%')}${v('Avg R', avgR, avgR == null ? '' : cc(avgR), x => (x >= 0 ? '+' : '') + x.toFixed(2) + 'R')}</div>
+         <div class="muted" style="font-size:11px;margin-top:2px">Profit factor ${ls > 0 ? (g / ls).toFixed(2) : (g > 0 ? '∞' : '–')} · ${C.length} closed</div></div>`;
+     };
+     const sets = setTile('OLD FILT') + setTile('NEW IND');
      const X = hideSell ? { eq: 0, cap: 0, unr: 0, booked: 0, used: 0, free: 0 } : Sx;
      const Z = hideStock ? { equity: 0, unrealised: 0, booked: 0, used: 0, cash: 0 } : d;
      const zCap = hideStock ? 0 : sCap;
@@ -2128,7 +2141,7 @@ function paperList() {
        d ? B.unr + X.unr + Z.unrealised : null, d ? B.booked + X.booked + Z.booked : null,
        d ? B.used + X.used + Z.used : null, d ? B.free + X.free + Z.cash : null);
      return `<div class="card" id="jvBooks"><div class="card-h"><h3>Your money</h3><span class="muted" style="font-size:12px">paper money · ${inrL(B.cap + X.cap + zCap)} ${hideStock && hideSell ? 'options (buy only)' : 'in all'}</span><div class="jv-actions"><button class="btn" data-jv="reset" title="Reset the whole journal: options book back to its starting money and the stock trader back to ₹10 L">Reset journal</button></div></div>
-       <div class="jv-books">${ob}${os}${st}${tot}</div></div>`;
+       <div class="jv-books">${ob}${os}${st}${sets}${tot}</div></div>`;
    }
 
    function viewAlgo() {
