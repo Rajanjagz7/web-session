@@ -2086,7 +2086,8 @@ def picks(refresh: bool = False, response: Response = None):
             got = shared_cache.get(sk)                                  # another instance already built it
             if got:
                 _inject_cash_seed_if_needed(got)
-            if got and not refresh and time.time() - got.get("_t", 0) < ttl_s and got.get("_t", 0) >= opened_at:
+            got_fno = sum(1 for r in (got or {}).get("picks", []) if r.get("universe") != "cash")
+            if got and not refresh and got_fno >= 20 and time.time() - got.get("_t", 0) < ttl_s and got.get("_t", 0) >= opened_at:
                 return _public(got), True
             have_lock = shared_cache.lock("picks-build", 40)
             if not have_lock:                                           # someone else is building: serve what exists
@@ -2109,11 +2110,12 @@ def picks(refresh: bool = False, response: Response = None):
             finally:
                 if have_lock:                                           # only release a lock this request took (and always, even on failure)
                     shared_cache.unlock("picks-build")
+            v_fno = sum(1 for r in v.get("picks", []) if r.get("universe") != "cash")   # count F&O rows only: the 400 cash-seed rows must not make a failed F&O scan look healthy
             _inject_cash_seed_if_needed(v)
-            if v.get("count", 0) >= 20:
+            if v_fno >= 20:
                 v["_t"] = time.time()
                 shared_cache.set(sk, v, 20 * 3600 if v.get("complete") else 300)
-            return _public(v), v.get("complete", False)
+            return _public(v), bool(v.get("complete", False) and v_fno >= 20)
         try:
             # memory TTL is short on purpose: build_ok re-reads the shared store first (cheap),
             # so every instance catches up with the advancing cash walk within a few minutes
