@@ -1643,6 +1643,7 @@ def _run_cycle(now, force, dry):
             st["log"].append({"at": now.isoformat(), "msg": note})
         st["dayGuardMode"] = guard
         entries, tried = [], set()
+        pend_notify = []                      # entry pushes wait until the book is saved: a rejected save used to leave a push for a trade that did not exist
         if (in_window or force) and guard != "blocked" and len(todays) < _cap(cfg, "maxPerDay"):
             cands, why = scan_all(st, today)
             rep["note"] = why
@@ -1825,10 +1826,10 @@ def _run_cycle(now, force, dry):
                             # (CE for a BUY flip, PE for a SELL flip) so index flips are not lost
                             b = dict(c, key="rzt-intraday", source=(c.get("source") or "").replace(" · hedged credit spread", "") + " · option buy (no credit for a spread)")
                             t = open_trade(st, b, today)
-                            _notify(t)
+                            pend_notify.append(t)
                     else:
                         t = open_trade(st, c, today)
-                        _notify(t)
+                        pend_notify.append(t)
                     rep["entered"].append(t["id"])
                     taken += 1
                 except Exception as e:
@@ -1844,7 +1845,12 @@ def _run_cycle(now, force, dry):
             except Exception:
                 st["carry"] = []
         if not dry:
-            if _save(st) is not True:
+            _sv = _save(st)
+            if _sv is True:
+                for _t in pend_notify:
+                    _notify(_t)
+            if _sv is not True:
+                rep["entered"] = []                # nothing was kept: do not report these as entered
                 rep["saveConflict"] = True
                 rep["note"] = (rep["note"] + " · " if rep["note"] else "") + "the book changed while this cycle ran - its changes were not saved, the next cycle redoes them"
                 st["log"].append({"at": now.isoformat(), "msg": "cycle not saved: the book changed meanwhile (a manual action or another instance)"})
