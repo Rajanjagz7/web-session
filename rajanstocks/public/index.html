@@ -3840,7 +3840,8 @@ async function loadChain(force){if(OPT.busy&&!force)return;OPT.busy=true;const w
   if(!OPT.chain||OPT.chain.symbol!==want){const c=ocGet(want,wexp);if(c){OPT.chain=Object.assign({},c,{stale:true});OPT.expiry=c.expiry;OPT.err=null;
     if(App.view==='options'){drawChain();if(!OPT.sel&&!OPT.pending)opxAutoPick()}}}
   try{const r=await api('/api/m/chain?symbol='+encodeURIComponent(want)+(wexp?'&expiry='+wexp:''));if(want!==OPT.sym){OPT.busy=false;return}OPT.chain=r;OPT.expiry=r.expiry;OPT.chainTs=Date.now();OPT.err=null;ocPut(want,wexp,r)}
-  catch(e){if(!(OPT.chain&&OPT.chain.stale&&OPT.chain.symbol===want)){OPT.chain=null;OPT.err='The option chain is not available for '+want+' right now.'}}
+  catch(e){if(!(OPT.chain&&OPT.chain.stale&&OPT.chain.symbol===want)){OPT.chain=null;OPT.noOpt=(e&&e.status===400&&/no option chain/i.test(e.detail||''))?want:null;
+    OPT.err=OPT.noOpt?want+' is a cash-market stock - it has no options, so there is nothing to chain or signal here.':'The option chain is not available for '+want+' right now.'}}
   OPT.busy=false;if(App.view==='options'){drawChain();if(OPT.pending&&OPT.chain){const pp=OPT.pending;OPT.pending=null;selectOption(pp.side,pp.strike)}else if(OPT.chain&&!OPT.sel)opxAutoPick()}}
 /* Open a contract straight away: the ATM strike on the side last used (CE by default) - no extra tap needed. */
 function opxAutoPick(){const c=OPT.chain;if(!c||!c.rows||!c.rows.length)return;let side='CE';try{side=localStorage.getItem('opx-side')||'CE'}catch(e){}
@@ -4013,8 +4014,9 @@ try{OPT.blPs=+localStorage.getItem('bl-ps')||6;OPT.buyAll=localStorage.getItem('
 document.addEventListener('click',e=>{const pgb=e.target.closest('[data-blpg]');if(pgb){const [sd,n]=pgb.dataset.blpg.split(':');OPT.blPg[sd]=Math.max(0,+n);drawBuyList();return}
   const b=e.target.closest('[data-buyall]');if(b){OPT.buyAll=b.dataset.buyall==='1';try{localStorage.setItem('bl-all',OPT.buyAll?'1':'0')}catch(x){}OPT.blPg={CE:0,PE:0};drawBuyList();return}
   if(e.target.closest('[data-act="buylist"]')){if(opxMobile())opxTab('signals');else{opxWtab('signals');const p=document.querySelector('.opx-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})}}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-optsym]');if(!b)return;OPT.sym=b.dataset.optsym;OPT.expiry='';OPT.chain=null;OPT.sel=null;OPT.osym=null;OPT.err=null;OPT.noOpt=null;try{loadChain(true)}catch(x){}});
 function drawChain(){const box=$('#optChain');if(!box)return;const c=OPT.chain,f=OPT.f;
-  if(!c){box.innerHTML=OPT.err?`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`:`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
+  if(!c){box.innerHTML=OPT.err?(OPT.noOpt&&OPT.noOpt===OPT.sym?`<div class="empty">${esc(OPT.err)}<br><button class="btn pri" data-sym="${esc(OPT.sym)}">Open ${esc(OPT.sym)} stock chart &amp; trade</button> <button class="btn" data-optsym="NIFTY">Back to NIFTY options</button></div>`:`<div class="empty">${esc(OPT.err)}<br><button class="btn" id="optRef">Try again</button></div>`):`<div class="opx-skel">${'<i></i>'.repeat(12)}</div>`;const sm=$('#opxSum');if(sm)sm.innerHTML='';return}
   drawExpCtl(c);xpEnsureExps();
   const und=SYMS.find(x=>x.s===c.symbol),uch=und&&und.prev>0?und.last/und.prev-1:null,sp=$('#opxSpot');
   if(sp)sp.innerHTML=`<b class="num">${fmtP(c.spot)}</b>${uch==null?'':`<span class="num ${cls(uch)}">${pct(uch)}</span>`}<small>${MKT.open?'Live':'Last session'} · ${new Date(c.asOf).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</small>${und?`<span class="opx-ohl num"><span>O <b data-open="${esc(und.s)}">${fmtP(und.open,und.dp)}</b></span><span>H <b class="up" data-high="${esc(und.s)}">${fmtP(und.hi,und.dp)}</b></span><span>L <b class="down" data-low="${esc(und.s)}">${fmtP(und.lo,und.dp)}</b></span><span>Prev <b data-prev="${esc(und.s)}">${fmtP(und.prev,und.dp)}</b></span></span>`:''}`;

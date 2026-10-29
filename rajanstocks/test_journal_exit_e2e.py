@@ -527,3 +527,19 @@ def test_in_app_message_when_the_auto_trader_moves_a_stop_on_any_screen(server, 
     pg.wait_for_timeout(1500)
     assert len(pg.evaluate("window.__toasts")) == n and not errs                          # once per lock step, not on every sync
     c.close()
+
+
+def test_options_screen_for_a_cash_stock_says_so_and_offers_the_stock_chart(server, browser):
+    w = World()
+    c = browser.new_context(viewport={"width": 420, "height": 900})
+    pg = c.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route("**/api/m/chain**", lambda r: r.fulfill(status=400, json={"detail": "SSWL has no option chain here"}))
+    pg.route("**/api/**", w.handle)
+    pg.goto(BASE + "/#options")
+    pg.wait_for_selector("#optChain", timeout=20000)
+    pg.evaluate("OPT.sym = 'SSWL'; OPT.chain = null; OPT.err = null; loadChain(true)")
+    pg.wait_for_selector('#optChain [data-sym="SSWL"]', timeout=15000)
+    assert "no options" in pg.inner_text("#optChain") and not errs
+    c.close()
