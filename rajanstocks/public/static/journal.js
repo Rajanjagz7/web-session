@@ -181,21 +181,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       }
       if (rStock && rStock.ok) {
         const sb = await rStock.json();
-        AUTO.stockTrades = (sb.open || []).concat(sb.closed || []).map(s => {
-          const isClosed = s.status === 'CLOSED';
-          return {
-            id: s.id || ('stk_' + s.sym), auto: true, isStock: true,
-            date: (s.openedAt || '').slice(0, 10) || today(),
-            time: (s.openedAt || '').slice(11, 16) || '09:30',
-            market: 'Equity ' + (s.hz ? s.hz.charAt(0).toUpperCase() + s.hz.slice(1) : 'Positional'),
-            instrument: s.sym, symbol: s.sym, dir: s.side === 'SELL' ? 'Short' : 'Long',
-            setup: (s.hz || 'positional') + ' stock pick', hz: s.hz || 'positional', tf: '1D',
-            entry: s.entry, sl: s.stop, sl0: s.stop, t1: s.t1, t2: s.t2, qty: s.qty,
-            last: s.last || s.exit || s.entry, status: isClosed ? 'Closed' : 'Open',
-            exitType: s.exitWhy === 'STOP' ? 'SL' : s.exitWhy === 'TARGET' ? 'T2' : (s.exitWhy || ''),
-            raw: s, holdSessions: s.holdSessions || 0, net: s.net || 0, R: s.R || 0
-          };
-        });
+        takeStock(sb);
       }
       const changed = shapeA() !== before || shapeS() !== beforeStock;
       const pxMoved = pricesA() !== beforePx;
@@ -209,6 +195,33 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     AUTO.ts = Date.now();
     AUTO.busy = false;
     if (JSON.stringify([AUTO.srv || null, !!AUTO.err]) !== stBefore && effTab() === 'algo' && document.getElementById('v-journal') && !document.querySelector('.modal-bg')) render();
+  }
+  /* one mapping of a share-trader trade for BOTH pollers (status poll and the stock-book poll): the Today card used to read the book's
+     since-entry open total while the per-trade list was still empty, then jump to today's move - a -16,667 / -31 flicker */
+  function mapStockTrade(s) {
+    const isClosed = s.status === 'CLOSED';
+    return {
+      id: s.id || ('stk_' + s.sym), auto: true, isStock: true,
+      date: (s.openedAt || '').slice(0, 10) || today(),
+      time: (s.openedAt || '').slice(11, 16) || '09:30',
+      market: 'Equity ' + (s.hz ? s.hz.charAt(0).toUpperCase() + s.hz.slice(1) : 'Positional'),
+      instrument: s.sym, symbol: s.sym, dir: s.side === 'SELL' ? 'Short' : 'Long',
+      setup: (s.hz || 'positional') + ' stock pick', hz: s.hz || 'positional', tf: '1D',
+      entry: s.entry, sl: s.stop, sl0: s.stop, t1: s.t1, t2: s.t2, qty: s.qty,
+      last: s.last || s.exit || s.entry, status: isClosed ? 'Closed' : 'Open',
+      exitType: s.exitWhy === 'STOP' ? 'SL' : s.exitWhy === 'TARGET' ? 'T2' : (s.exitWhy || ''),
+      raw: s, holdSessions: s.holdSessions || 0, net: s.net || 0, R: s.R || 0
+    };
+  }
+  const stockList = sb => (sb.open || []).concat(sb.closed || []).map(mapStockTrade);
+  /* share-trader book -> AUTO.stockTrades. A reply older than the one already shown (another serverless instance with an older cached copy)
+     is ignored, so the running figure does not swing back and forth between copies */
+  function takeStock(sb) {
+    if (!sb || !Array.isArray(sb.open)) return false;
+    if (sb.lastRun && AUTO.stockRun && sb.lastRun < AUTO.stockRun) return false;
+    if (sb.lastRun) AUTO.stockRun = sb.lastRun;
+    AUTO.stockTrades = stockList(sb);
+    return true;
   }
   const EXIT_SRC = { TP: 'T2', SL: 'SL', TSL: 'TSL', manual: 'Manual Exit' };
   function lockTxt(p) { return p && p.lock ? (p.lock.mode === 'trail' ? `Auto trail · locks ₹${Math.round(p.lock.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : ''; }
@@ -362,7 +375,7 @@ function paperList() {
   function unrealisedRaw(t) {
     if (statusOf(t) === 'Closed' || t.status === 'Planned' || t.status === 'Cancelled') return null;
     if (t.isStock) {
-      const l = live(t.symbol || t.instrument);
+      const l = stockLive(t);
       if (l != null && t.entry > 0) {
         return +(dirOf(t) * (l - t.entry) * (t.qty || 1) * units(t)).toFixed(2);
       }
@@ -373,6 +386,15 @@ function paperList() {
     const rem = t.qty - exitedQty(t);
     return dirOf(t) * (l - t.entry) * rem * units(t);
   }
+  /* the screen's own live quote for a share, unless it disagrees wildly (> 8%) with the price the server marked a moment ago - then it is a
+     stale or wrong tick (feed catching up after the open, a different instrument's price) and the server's price is used until they agree */
+  function stockLive(t) {
+    const l = live(t.symbol || t.instrument), sv = t.raw && Number(t.raw.last);
+    if (l == null || !(l > 0)) return null;
+    if (sv > 0 && Math.abs(l - sv) / sv > STOCK_TICK_TOL) return null;
+    return l;
+  }
+  const STOCK_TICK_TOL = 0.08;
   const entered = t => t.status !== 'Planned' && t.status !== 'Cancelled';
   const closedTrades = () => T.filter(t => entered(t) && statusOf(t) === 'Closed');
   const realised = () => T.reduce((a, t) => a + (entered(t) ? calc(t).net : 0), 0);
@@ -620,7 +642,7 @@ function paperList() {
   }
   function curPx(t) {
     if (t.isStock) {
-      const l = live(t.symbol || t.instrument);
+      const l = stockLive(t);
       if (l != null && l > 0) return l;
       return (t.raw && t.raw.last) || t.last || t.entry;
     }
@@ -1956,7 +1978,7 @@ function paperList() {
    async function sbLoad(force) {
      if (SB.busy || (!force && Date.now() - SB.ts < 60000)) return;
      SB.busy = true;
-     try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) SB.d = await r.json(); else if (!SB.d) SB.d = { error: r.status }; }
+     try { const r = await fetch('/api/stockbot/status', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); SB.d = j; takeStock(j); } else if (!SB.d) SB.d = { error: r.status }; }
      catch (e) { if (!SB.d) SB.d = { error: 'network' }; }
      SB.ts = Date.now();                    // success OR failure: the next try waits (a failure used to retry in a tight loop)
      SB.busy = false;
@@ -2055,7 +2077,9 @@ function paperList() {
        AUTO.stockTrades.forEach(t => { if (!entered(t)) return; const x = autoDay(t); R.stock.b += x.b; R.stock.o += x.o; });
      }
      const d = SB.d && SB.d.byHorizon ? SB.d : null;
-     if (!R.stock && d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: d.unrealised || 0 };
+     /* no per-trade list yet: show what is booked today and nothing running. The book's own "unrealised" is the move since ENTRY of every
+        open share - it is not today's figure and made the card jump (-16,667 for a moment, then -31) when the list arrived. */
+     if (!R.stock && d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: 0, est: true, wait: !!(d.open || []).length };
      if (!R.stock) R.stock = { b: 0, o: 0, est: true };
      R.carry = carry;
      return R;
@@ -2068,7 +2092,7 @@ function paperList() {
      const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
      const num = (lab, v) => `<div><small>${lab}</small><span class="${cc(v)}">${sinr(v)}</span></div>`;
      const row = (name, x, hint) => `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>${hint}</small></div>${x
-       ? `<div class="jv-hr-n">${num('Locked in', x.b)}${num('Running', x.o)}${num('Total', x.b + x.o)}</div>`
+       ? (x.wait ? `<div class="jv-hr-n"><div><small>Locked in</small><span class="${cc(x.b)}">${sinr(x.b)}</span></div><div><small>Running</small><span class="muted">loading…</span></div></div>` : `<div class="jv-hr-n">${num('Locked in', x.b)}${num('Running', x.o)}${num('Total', x.b + x.o)}</div>`)
        : '<div class="jv-hr-n"><span class="muted">loading…</span></div>'}</div>`;
      return `<div class="card jv-hero ${box}" id="jvToday">
        <div class="jv-hero-top"><span>Today's profit</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em></div>
@@ -2456,7 +2480,7 @@ function lastDayStats(currentDay) {
     return { day: lastD, pnl: dayTotals[lastD] || 0 };
   }
 
-  window.JV = { cap: () => capUse(), render, sync: syncAuto, refreshLive, trades: () => T, settings: () => S, calc, validate,
+  window.JV = { cap: () => capUse(), render, takeStock, todayTotal, stockCount: () => (AUTO.stockTrades || []).length, sync: syncAuto, refreshLive, trades: () => T, settings: () => S, calc, validate,
     /* live portfolio for the header: capital + booked + open (marked to market) */
           totals: () => { const d = today(), L = liveTotals(d), ds = dayStats(d), todayBooked = ds.pnl + L.autoToday, last = lastDayStats(d);
       return { capital: S.capital, booked: L.booked, unr: L.unr, eq: L.eq, today: todayTotal().total, todayBooked, lastDay: last.day, lastDayPnl: last.pnl, open: allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed').length }; } };

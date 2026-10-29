@@ -115,12 +115,17 @@ def _open_with(monkeypatch, bid, ask):
 
 def test_entry_refused_when_the_spread_eats_the_stop(monkeypatch):
     with pytest.raises(RuntimeError, match="too wide for the 12.5% stop"):
-        _open_with(monkeypatch, bid=90.0, ask=100.0)               # 10% spread
+        _open_with(monkeypatch, bid=88.0, ask=100.0)               # 12% spread
 
 
 def test_entry_allowed_on_a_tight_book(monkeypatch):
     t = _open_with(monkeypatch, bid=99.0, ask=100.0)               # 1%
     assert t["status"] == "OPEN" and t["entry"] == 100.0
+
+
+def test_entry_allowed_on_a_normal_opening_spread(monkeypatch):
+    t = _open_with(monkeypatch, bid=92.0, ask=100.0)               # 8%: common in the first minutes, must still trade
+    assert t["status"] == "OPEN"
 
 
 # ───────────── 4. failed indicator runs ─────────────
