@@ -27,10 +27,10 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
     let T = load(KEY, []);
   /* fresh start: from 28 Oct 2026 the books begin at zero - drop journal trades created before 09:00 that morning (nothing newer is touched) */
   (function freshStart() {
-    const CUT = Date.parse('2026-10-28T09:00:00+05:30'); if (Date.now() < Date.parse('2026-10-27T21:00:00+05:30')) return;
-    const old = t => { const ts = t && (t.ts || Date.parse(t.at || t.openedAt || t.created || '')); return isFinite(ts) ? ts < CUT : String((t && (t.date || t.day)) || '') <= '2026-10-27'; };
+    const CUT = Date.parse('2026-10-29T12:10:00+05:30'); if (Date.now() < Date.parse('2026-10-29T12:05:00+05:30')) return;
+    const old = t => { const ts = t && (t.ts || Date.parse(t.at || t.openedAt || t.created || '')); return isFinite(ts) ? ts < CUT : String((t && (t.date || t.day)) || '') <= '2026-10-28'; };
     const n = T.length; T = T.filter(t => !old(t)); if (T.length !== n) save(KEY, T);
-    try { ['mer-trades', 'mer-paper'].forEach(k => { const v = JSON.parse(localStorage.getItem(k) || '[]'); if (Array.isArray(v) && v.length) { const w = v.filter(x => !old(x)); if (w.length !== v.length) localStorage.setItem(k, JSON.stringify(w)); } }); localStorage.removeItem('rj-cap-peak'); } catch (e) { }
+    try { ['mer-trades', 'mer-paper'].forEach(k => { const v = JSON.parse(localStorage.getItem(k) || '[]'); if (Array.isArray(v) && v.length) { const w = v.filter(x => !old(x)); if (w.length !== v.length) localStorage.setItem(k, JSON.stringify(w)); } }); localStorage.removeItem('rj-cap-peak'); if (!localStorage.getItem('rs-fresh-1029')) { localStorage.setItem('rs-fresh-1029', '1'); ['rs-today-total', 'rs-last-pnl'].forEach(k => localStorage.removeItem(k)); } } catch (e) { }
   })();
   const REMOVED_IDS = new Set(['27', '1004', '1009', 'TR-0027', 'TR-1004', 'TR-1009', 'PT|1004', 'PT|1009', 'PT|27', 'P|1004', 'P|1009', 'P|27']);
   const REMOVED_UNTIL = '2026-10-25';                    // untimed trades dated on/before this day

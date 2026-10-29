@@ -59,9 +59,9 @@ def is_removed_trade(t):
     return not day or day <= REMOVED_TRADES_UNTIL
 
 
-FRESH_START = "2026-10-28T09:00:00+05:30"   # from 28 Oct 2026 the paper books start at zero: every trade created before this instant is void
-FRESH_START_DAY = "2026-10-27"
-FRESH_START_FROM = "2026-10-27T21:00:00+05:30"   # the rule only acts from this instant (the request time), never on earlier clocks
+FRESH_START = "2026-10-29T12:10:00+05:30"   # 29 Oct 2026 12:10 (user: one fresh start, no manual reset): the paper books start at zero: every trade created before this instant is void
+FRESH_START_DAY = "2026-10-28"
+FRESH_START_FROM = "2026-10-29T12:05:00+05:30"   # the rule only acts from this instant (the request time), never on earlier clocks
 
 
 def fresh_start_active(now):

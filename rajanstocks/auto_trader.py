@@ -129,10 +129,11 @@ def _load(cached=False, verify=False):
         st["trades"], st["log"] = d.get("trades") or [], d.get("log") or []
         from common import before_fresh_start, fresh_start_active
         old = [t for t in st["trades"] if before_fresh_start(t)] if fresh_start_active(_now()) else []
-        if old:                                           # "remove all old entries, start from 0 tomorrow"
+        if old:                                           # "remove all old entries, start from 0"
+            _remember_cleared(st, old)                    # what was traded today is not bought straight back
             st["trades"] = [t for t in st["trades"] if not before_fresh_start(t)]
             st["cand"] = {}
-            st["log"] = [{"at": _now().isoformat(), "msg": f"Fresh start: {len(old)} older paper trade(s) cleared - the book starts at zero on 28 Oct"}]
+            st["log"] = [{"at": _now().isoformat(), "msg": f"Fresh start: {len(old)} older paper trade(s) cleared - the book starts at zero"}]
             st["resetAt"] = _now().isoformat()
             st["_dirty"] = True
         import nse_calendar                               # trades "opened" on an exchange holiday used stale prices: void them

@@ -1,5 +1,5 @@
 /* Service worker: shows push notifications (also when the app is closed) and handles taps. */
-const SHELL = 'algo-shell-c6c0a545';
+const SHELL = 'algo-shell-1e3bef2d';
 
 const UPDATING_HTML = `<!DOCTYPE html>
 <html lang="en">

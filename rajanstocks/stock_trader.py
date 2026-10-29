@@ -85,7 +85,10 @@ def _load(cached=False, verify=False):
         st["trades"] = [t for t in st["trades"] if not is_removed_trade(t)]
         from common import before_fresh_start, fresh_start_active
         old = [t for t in st["trades"] if before_fresh_start(t)] if fresh_start_active(_now()) else []
-        if old:                                           # fresh start on 28 Oct 2026
+        if old:                                           # fresh start (29 Oct 2026 12:10)
+            td_ = _now().date().isoformat()
+            cl_ = st.get("cleared") if isinstance(st.get("cleared"), dict) and st["cleared"].get("date") == td_ else {"date": td_, "syms": []}
+            st["cleared"] = {"date": td_, "syms": sorted(set(cl_.get("syms") or []) | {t["sym"] for t in old if t.get("date") == td_ or t.get("status") == "OPEN" or str(t.get("closedAt") or "")[:10] == td_})}
             st["trades"] = [t for t in st["trades"] if not before_fresh_start(t)]
             st["log"] = [{"at": _now().isoformat(), "msg": f"Fresh start: {len(old)} older paper trade(s) cleared"}]
             st["_dirty"] = True
