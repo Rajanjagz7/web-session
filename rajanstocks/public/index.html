@@ -2813,7 +2813,7 @@ function placeOrder(){if(!netGuard())return;const s=App.sym,tk=App.tk,q=parseFlo
   tk.price='';tk.tp=false;tk.sl=false;tk.tpPx='';tk.slPx='';tk.tsl=false;tk.tslV='';renderTicket();renderBottom();setChartLines();renderSymbar();liveUpdate()}
 function fill(o,price){if(!(price>0)||!isFinite(price)){try{toast('No live price for '+o.sym+' right now - order not filled','warn')}catch(e){}return}const s=SYM(o.sym),sg=o.side==='buy'?1:-1;let p=posOf(o.sym);const pre={q:p?p.q:0,avg:p?p.avg:0,sl:p&&p.sl||null,tp:p&&p.tp||null,tsl:p&&p.tsl||null};
   App.cash-=sg*o.qty*price;
-  if(!p){p={sym:o.sym,q:0,avg:price};App.positions.push(p)}
+  if(!p){p={sym:o.sym,q:0,avg:price};App.positions.push(p);{const m0=App.meta&&App.meta[o.sym];if(m0){delete m0.hedgeOf;delete m0.spread}}}   /* a NEW position starts clean: the hedge/spread tags of an old hedge on this contract made the 5 s hedge timer sell every later manual buy of it within seconds */
   const nq=p.q+sg*o.qty;if(Math.sign(p.q)===sg||p.q===0)p.avg=(p.avg*Math.abs(p.q)+price*o.qty)/Math.abs(nq);else if(Math.sign(nq)===sg)p.avg=price;
   p.q=+nq.toFixed(8);if(o.tp)p.tp=o.tp;if(o.sl)p.sl=o.sl;
   if(o.tsl&&o.tsl.v>0&&p.q!==0){p.tsl={u:o.tsl.u,v:o.tsl.v};p.peak=price;const d=p.tsl.u==='abs'?p.tsl.v:price*p.tsl.v/100,st=+(p.q>0?price-d:price+d).toFixed((s&&s.dp)||2);if(!(p.sl>0)||(p.q>0?st>p.sl:st<p.sl))p.sl=st}if(Math.abs(p.q)<1e-9)App.positions=App.positions.filter(x=>x!==p);
@@ -2913,7 +2913,6 @@ document.addEventListener('click',e=>{const mv=e.target.closest('[data-mvp]');if
 let eqRange=90;
 function renderPortfolio(){const eq=equity(),inv=App.positions.reduce((a,p)=>a+Math.abs(p.q)*p.avg,0),unr=App.positions.reduce((a,p)=>a+p.q*(SYM(p.sym).last-p.avg),0);
   // Sync with Journal's portfolio reset
-  try{const jv=localStorage.getItem('rj-journal-v1');if(jv){const T=JSON.parse(jv);if(T.length===0){App.positions=[];App.cash=1000000;}} }catch(e){}
   
   $('#v-portfolio').innerHTML=`<div class="page">${pageHead('Portfolio','Simulated account · positions marked to the live price.',`<button class="btn" data-view="journal">${I('download',15)}Trade journal</button><button class="btn" data-view="orders">${I('list',15)}Order history</button><button class="btn" data-act="resetpaper">Reset</button><button class="btn pri" data-view="trade">${I('candle',15)}Trade</button>`)}
    <div class="grid"><div class="kpis"><div class="card kpi"><small>Total equity</small><b data-eq></b><span class="muted">Cash + positions</span></div><div class="card kpi"><small>Day P&L</small><b><span data-dpnl></span></b><span class="muted">Since previous close</span></div><div class="card kpi"><small>Unrealized P&L · live</small><b data-upnl></b><span class="muted" data-upnlp></span></div><div class="card kpi"><small>Total P&L</small><b data-tpnl></b><span class="muted">Realized <span data-rpnl></span> + unrealized</span></div><div class="card kpi"><small>Positions</small><b data-npos style="font-size:14px"></b><span class="muted">${App.positions.length} open</span></div><div class="card kpi"><small>Buying power</small><b data-cash></b><span class="muted">Available cash</span></div></div>
@@ -3452,6 +3451,7 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
     const optSignal=c?c.signal:(p.signal==='BUY'||p.signal==='SELL')?`BUY ${side==='CE'?'CALL':'PUT'}`:ps?`WATCH · ${side==='CE'?'CALL':'PUT'} bias`:'NO SIGNAL';
     const isPut=optSignal.includes('PUT')||side==='PE';
     
+    const live=!!(c&&c.entry>0);   /* only a real contract quote is shown: the ltp x 0.5% fallback made MIDCPNIFTY 13300 PE look like Rs 67 when the chain says 256 */
     let optEntry=baseEntry,optSl,optT1,optT2,hzText='INTRADAY';
     if(App.pk.hz==='SWING'){
       optSl=round(baseEntry*0.85,2);optT1=round(baseEntry*1.25,2);optT2=round(baseEntry*1.50,2);hzText='SWING (NEXT EXPIRY)';
@@ -3469,9 +3469,10 @@ function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
       <div class="pk-p"><b class="num" data-px="${esc(p.s)}">${fmtP(p.ltp)}</b><span class="num ${cls(p.chg)}" data-chg="${esc(p.s)}">${p.chg>=0?'+':'−'}${Math.abs(p.chg).toFixed(2)}%</span></div></div>
      <div class="pk-sig"><span class="badge ${isPut?'b-down':'b-up'}">${esc(optSignal)}</span><div class="bar"><i style="width:${p.strength||80}%;background:${isPut?'var(--down)':'var(--up)'}"></i></div><small class="muted">Strength ${p.strength||80}</small></div>
      <div class="pk-hz">${hz('Intraday',p.intraday)}${hz('Swing',p.swing)}${hz('Positional',p.positional)}</div>
-     <div class="pk-act ${isPut?'be-dn':'be-up'}"><b>${esc(optSignal)}</b> — ${esc(contract)} @ Premium <b>₹${fmtP(optEntry)}</b></div>
+     <div class="pk-act ${isPut?'be-dn':'be-up'}"><b>${esc(optSignal)}</b> — ${esc(contract)}${live?` @ Premium <b>₹${fmtP(optEntry)}</b>`:' · live premium in the Option Chain'}</div>
      ${pkLiveBox({sym:p.s,dir:isPut?'S':'L',entry:p.ltp,stop:p.stop,ts:[p.target,p.target2],label:p.s+' '+optSignal,kind:'index',key:'ix|'+p.s+'|'+(isPut?'S':'L'),morning:pkMorning()})}
-     <div class="pk-lv" style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:8px 0">
+     ${live?'':`<div class="muted" style="font-size:11.5px;margin:8px 0">No live option quote for this contract yet, so no premium is shown (a guessed premium was misleading: the real price is in the Option Chain).</div>`}
+     <div class="pk-lv" ${live?'':'hidden'} style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:8px 0">
       <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:3px">🎯 OPTION PREMIUM LEVELS (${hzText})</div>
       <div><small>Premium Entry</small><b class="num">₹${fmtP(optEntry)}</b></div>
       <div><small>Premium SL</small><b class="num down">₹${fmtP(optSl)}</b></div>
@@ -3914,8 +3915,11 @@ function pdEval(leg,isExp){if(!leg||!(leg.ltp>0)||!(leg.open>0))return null;cons
     const touched=l<=x.lv+0.05,zone=Math.max(3,x.lv*0.1);
     x.st=touched?(p<x.sl?'stop':p<=x.lv+zone?'hit':'ran'):(p<=x.lv*1.08+1?'near':'wait')}
   const sigs=lv.filter(x=>x.st!=='wait');
-  if(!isExp&&o>=5&&Math.abs(l-o)<=PD_TOL&&p>o&&h>l)sigs.push({name:'O=L',ind:'Open = Low clean buy',entry:p,sl:pdSl(p,10),sl5:pdSl(p,5),st:'hit'});
-  else if(o>=5&&l>=o-10&&p>=o&&h>l)sigs.push({name:'O=L±10',ind:'Open = Low within 10 pts',entry:p,sl:pdSl(p,3),st:'hit',soft:1});
+  /* Open = Low: once the day's low is made the entry is that LOW, stop = low - 10 pts, targets 1.5x / 2x / 3x ... the entry. It is a buy only while the price is still near the low
+     (up to just above the open); past that it "ran", and once the first target (1.5x) has traded the setup is finished - it must not keep saying BUY at 141 after a low of 86. */
+  if(!isExp&&o>=5&&l>=o-10-0.05&&h>l&&p>l){const clean=Math.abs(l-o)<=PD_TOL,soft=!clean&&p<o;
+    if(!soft){const sl=pdSl(l,10),top=Math.max(l+Math.max(3,l*0.1),o*1.05),done=h>=l*1.5;
+      sigs.push({name:clean?'O=L':'O=L±10',ind:clean?'Open = Low clean buy':'Open = Low within 10 pts',entry:+l.toFixed(2),sl,sl5:clean?pdSl(l,5):undefined,st:p<sl?'stop':(done||p>top)?'ran':'hit',soft:clean?0:1})}}
   /* user zone indicators: SENSEX 310-340 -> 52-58 and premium 38-42 -> 7.80-8.45 */
   for(const [k,z] of Object.entries(ZONES)){if(z.only&&z.only!==OPT.sym)continue;const ref=z.ref==='prev'?pc:o;if(!(ref>=z.refLo&&ref<=z.refHi))continue;
     const inZone=l>=z.lo&&l<=z.hi,near=!inZone&&l>z.hi&&p<=z.hi*1.15;
@@ -4795,9 +4799,7 @@ function updOptTrade(){const o=OPT.osym;if(!o||!$('#opQty'))return;const lots=Ma
   {const pe=$('#opPend'),od=App.orders.filter(x=>x.sym===o.s&&x.status==='Open');if(pe)pe.innerHTML=od.length?'<b>Pending limit orders</b>'+od.map(x=>`<div><span>${x.side==='buy'?'Buy':'Sell'} ${qn(x.qty)} @ <b class="num">${fmtP(x.price)}</b></span><button class="btn-xs" data-opcancel="${x.id}">Cancel</button></div>`).join(''):''}
   if(p){const pnl=p.q*(o.last-p.avg);el.innerHTML=`<b>${p.q<0?'You are short '+qn(-p.q):'You hold '+qn(p.q)} @ ${fmtP(p.avg)}</b> · unrealized <span class="num ${cls(pnl)}">${smoney(pnl)}</span>${p.sl?` · SL ${fmtP(p.sl)}`:''}${p.tp?` · target ${fmtP(p.tp)}`:''}`}else el.innerHTML='<span class="muted">No open position in this contract.</span>'}
 /* manual selling rule: buying is open everywhere; writing (sell to open) is stock options only, max 1 lot; index options are buy-only */
-function sellRule(o,qty){const p0=posOf(o.s),lot=o.lot||1,closing=p0&&p0.q>0?Math.min(qty,p0.q):0,opening=qty-closing;if(opening<=0)return'';
-  const u=SYMS.find(x=>x.s===OPT.sym);if(u&&u.cls==='Indices')return'Index options are buy-only. You can sell (write) stock options only.';
-  const have=p0&&p0.q<0?-p0.q:0;if(have+opening>lot)return have>=lot?'You already have 1 lot sold in this stock option.':'Selling a stock option is limited to 1 lot.';return''}
+function sellRule(o,qty){return''}   /* manual selling (writing) has no limit: any option, any size; only the margin check applies. The auto trader never sells. */
 function optOrder(side){if(!netGuard())return;const o=OPT.osym;if(!o||!OPT.sel)return;const lots=Math.max(1,parseInt($('#opLots').value)||1),lot=o.lot||1;let qty=lots*lot;
   if(side==='exit'){const p=posOf(o.s);if(!p){toast('No open position in this contract to exit.','warn');return}closePos(o.s,'manual');updOptTrade();drawOptTrade();return}
   if(side==='sell'){const g=sellRule(o,qty);if(g){toast(g,'warn');return}}

@@ -1075,10 +1075,15 @@ def premium_oel(ct):
     o, h, l, p = float(ct.get("pOpen") or 0), float(ct.get("pHigh") or 0), float(ct.get("pLow") or 0), float(ct.get("ltp") or ct.get("premium") or 0)
     if o < 5 or not (h > l > 0) or p <= 0:
         return None
+    # the setup is only live while the price is still near the low it bounced from: stop = low - 10 pts, targets 1.5x / 2x / 3x the entry. Once
+    # price has run past the buy zone or already touched the first target the signal is over (it used to keep saying BUY at 141 after a low of 86)
+    if p < l - OEL_WIDE or p > max(l + max(3.0, 0.1 * l), o * 1.05) or h >= 1.5 * l:
+        return None
+    stop = round(max(0.5, p - (l - 10.0)), 2)
     if abs(l - o) <= OEL_TOL and p > o:
-        return "clean", 10.0
+        return "clean", stop
     if l >= o - OEL_WIDE and p >= o:
-        return "wide", 3.0
+        return "wide", stop
     return None
 
 

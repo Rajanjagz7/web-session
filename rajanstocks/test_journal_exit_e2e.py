@@ -561,3 +561,20 @@ def test_picking_an_underlying_survives_a_later_trade_tab_tap(server, browser):
     pg.evaluate("go('trade')")
     assert pg.evaluate("OPT.sym") == "ADANIENT" and not errs
     c.close()
+
+
+def test_stale_hedge_tag_does_not_sell_a_new_manual_buy(server, browser):
+    """Bug 29 Oct 13:16: 'Bought 20 ... Sold 20 ...' within seconds and no position. An old hedge tag left in App.meta made the 5 s hedge timer close any later buy of that contract."""
+    w = World()
+    c = browser.new_context(viewport={"width": 420, "height": 900})
+    pg = c.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route("**/api/**", w.handle)
+    pg.goto(BASE + "/#options")
+    pg.wait_for_selector("#optChain", timeout=20000)
+    pg.evaluate("""() => { SYMS.push({s:'ZZ 100 CE', n:'ZZ', cls:'Options', last:100, prev:100, dp:2, qdp:0, bid:99.9, ask:100.1, hi:100, lo:100, open:100});
+      App.meta['ZZ 100 CE'] = {hedgeOf: 'ZZ 90 PE', ikey: 'x'}; fill({id: 9001, t: Date.now(), sym: 'ZZ 100 CE', side: 'buy', type: 'market', qty: 20}, 100.1); }""")
+    pg.wait_for_timeout(7500)
+    assert pg.evaluate("App.positions.filter(p => p.sym === 'ZZ 100 CE').length") == 1 and not errs
+    c.close()

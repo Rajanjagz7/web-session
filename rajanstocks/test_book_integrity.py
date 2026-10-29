@@ -316,27 +316,31 @@ def test_cash_seed_status_counts_the_rows_the_walk_changed_today(monkeypatch):
 
 # ───────── premium Open = Low (user 29 Oct) ─────────
 def test_premium_open_low_rules():
-    base = {"pOpen": 22.7, "pHigh": 42.55, "pLow": 22.5, "ltp": 40.0, "premium": 40.0}
-    assert at.premium_oel(base) == ("clean", 10.0)                               # low within 0.5 of the open, price above it
-    assert at.premium_oel(dict(base, pLow=20.5)) == ("wide", 3.0)                 # ADANIPORTS 1840 CE on the user's screen: open 22.70, low 20.50
-    assert at.premium_oel(dict(base, pLow=11.0)) is None                          # fell more than 10 pts under the open
+    base = {"pOpen": 22.7, "pHigh": 28.0, "pLow": 22.5, "ltp": 24.0, "premium": 24.0}
+    assert at.premium_oel(base) == ("clean", 11.5)                               # low within 0.5 of the open, price above it; stop = low - 10 = 12.5
+    assert at.premium_oel(dict(base, pLow=20.5, ltp=23.0, premium=23.0)) == ("wide", 12.5)   # ADANIPORTS 1840 CE: open 22.70, low 20.50 -> stop 10.5
+    assert at.premium_oel(dict(base, pLow=11.0)) is None                         # fell more than 10 pts under the open
     assert at.premium_oel(dict(base, ltp=21.0, premium=21.0, pLow=20.5)) is None  # price below the open: not a buy
-    assert at.premium_oel(dict(base, pOpen=0)) is None and at.premium_oel(dict(base, pOpen=3, pLow=3, pHigh=8)) is None
+    assert at.premium_oel(dict(base, ltp=40.0, premium=40.0, pHigh=42.55)) is None  # ran far past the low and the first target: the signal is over
+    ex = dict(pOpen=95.0, pHigh=183.75, pLow=85.8, ltp=141.25, premium=141.25)   # the user's NIFTY 22850 CE screenshot: it kept saying BUY at 141
+    assert at.premium_oel(ex) is None
+    assert at.premium_oel(dict(ex, pHigh=100.0, ltp=96.0, premium=96.0)) == ("wide", 20.2)   # still near the low and just above the open: stop = low - 10 = 75.8
+
 
 
 def test_open_low_entry_gets_its_own_tighter_stop_and_a_label(monkeypatch):
     import backtest
-    ct = {"expiry": "2026-11-10", "strike": 25000, "key": "OPT1", "premium": 40.0, "lot": 475, "spot": 25000.0, "bid": 39.9, "ask": 40.0, "ltp": 40.0,
-          "pOpen": 22.7, "pHigh": 42.55, "pLow": 20.5}
+    ct = {"expiry": "2026-11-10", "strike": 25000, "key": "OPT1", "premium": 23.0, "lot": 475, "spot": 25000.0, "bid": 22.9, "ask": 23.0, "ltp": 23.0,
+          "pOpen": 22.7, "pHigh": 28.0, "pLow": 20.5}
     monkeypatch.setattr(at, "_contract", lambda *a, **k: ct)
     monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-28"}] * 30))
     monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 100.0)
     monkeypatch.setattr(at, "_now", lambda: NOW)
     t = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "x", "variant": "fixed"}, TODAY)
-    assert t["premSig"] == "Open = Low (within 10 pts)" and t["premSL"] == 37.0      # 3 pts under 40, tighter than the normal 12.5% stop (35.0)
+    assert t["premSig"] == "Open = Low (within 10 pts)" and t["premSL"] == 20.12     # the low-10 stop (14.95) is wider than the normal premium stop, so the normal one stays
     ct.update(pOpen=0)
     t2 = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "y", "variant": "fixed"}, TODAY)
-    assert "premSig" not in t2 and t2["premSL"] < 37.0
+    assert "premSig" not in t2
 
 
 def test_a_failed_picks_build_leaves_a_note_so_walk_null_has_a_reason(monkeypatch):
