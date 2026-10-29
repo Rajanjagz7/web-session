@@ -1,7 +1,7 @@
 """Open = Low on the Trade screen: entry is the day's LOW, stop low-10, and the signal ends once price ran / the 1.5x target traded (user's NIFTY 22850 CE example)."""
 import json, pathlib, re, subprocess
 
-SRC = (pathlib.Path(__file__).parent / "public/index.html").read_text()
+SRC = (pathlib.Path(__file__).parent / "public/index.html").read_text(encoding="utf-8")
 
 
 def run(leg, exp=False):

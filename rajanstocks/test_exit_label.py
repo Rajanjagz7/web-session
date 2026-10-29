@@ -1,7 +1,7 @@
 """A trade the ROBOT closed (reversal, breakeven stop, late square-off ...) must not be labelled "Manual Exit" in the Journal."""
 import json, re, subprocess, pathlib
 
-SRC = (pathlib.Path(__file__).parent / "public/static/journal.js").read_text()
+SRC = (pathlib.Path(__file__).parent / "public/static/journal.js").read_text(encoding="utf-8")
 
 
 def labels(reasons):

@@ -3376,8 +3376,8 @@ function pkfDetect(p){const s=SYM(p.s);if(!s||!(s.last>0)||!(s.hi>0)||!(s.lo>0)|
   const ring=pkfRing(p.s,L);if(rg/ref*100<C.rng)return null;
   const t3=Date.now()-180000,old=ring.find(x=>x[0]>=t3-20000&&x[0]<=t3+20000),have=ring.length>=18&&ring[0][0]<=Date.now()-170000,since=ring.filter(x=>x[0]>=Date.now()-2400000).map(x=>x[1]);
   const up=L-lo,dn=hi-L;let dir=null;
-  if(up/lo*100>=C.bnc&&up>=rg*(have?.35:.4)&&up<=rg*(have?.8:.7)&&(!have||(L>(old?old[1]:L-1)&&Math.min(...since)<=lo*1.0015)))dir='L';
-  else if(dn/hi*100>=C.bnc&&dn>=rg*(have?.35:.4)&&dn<=rg*(have?.8:.7)&&(!have||(L<(old?old[1]:L+1)&&Math.max(...since)>=hi*.9985)))dir='S';
+  const okL=up/lo*100>=C.bnc&&up>=rg*(have?.35:.4)&&up<=rg*(have?.8:.7)&&(!have||(L>(old?old[1]:L-1)&&Math.min(...since)<=lo*1.0015)),okS=dn/hi*100>=C.bnc&&dn>=rg*(have?.35:.4)&&dn<=rg*(have?.8:.7)&&(!have||(L<(old?old[1]:L+1)&&Math.max(...since)>=hi*.9985));
+  dir=okL&&okS?(p.signal==='SELL'?'S':'L'):okL?'L':okS?'S':null;   /* a first look with no price history can fit both: follow the stock's own signal instead of always calling it a bounce */
   if(!dir)return null;
   const buf=L*.0005,stop=dir==='L'?lo-buf:hi+buf,R=Math.abs(L-stop);if(R/L*100>C.rmax||R<=0)return null;
   const dp=s.dp==null?2:s.dp,r2=v=>+v.toFixed(dp),side=dir==='L'?1:-1;
@@ -3601,6 +3601,12 @@ function pkLookHTML(f){const q=(f.q||'').trim().toLowerCase();if(q.length<2||f.k
   const rows=PKL.items.filter(x=>!(window._pkShown&&window._pkShown.has(x.s)));if(PKL.err)return '<div class="pklook"><div class="muted" style="font-size:12px">Could not search the full stock list just now (market data is busy). <button type="button" class="btn-xs" data-pklretry="1">Try again</button></div></div>';if(!rows.length)return PKL.items.length?'':`<div class="pklook"><div class="muted" style="font-size:12px">No other listed stock matches “${esc(f.q.trim())}”${PKL.src==='symbols'?' (searching symbols only right now - try the exact symbol)':''}.</div></div>`;
   return `<div class="pklook"><div class="pklook-h">Other listed stocks matching “${esc(f.q.trim())}”</div>${rows.map(x=>{const k=PKL.px[x.s],c=k&&k.last>0&&k.prev>0?(k.last/k.prev-1)*100:null;
     return `<button class="pklook-r" data-sym="${esc(x.s)}"><span class="t"><b>${esc(x.s)}</b><small>${esc(x.n||'')}${x.ind?' · '+esc(x.ind):''}</small></span><span class="num">${k&&k.last>0?k.last.toFixed(2):''}</span><span class="badge ${c==null?'':c>=0?'b-up':'b-down'} num">${c==null?'–':(c>=0?'+':'')+c.toFixed(2)+'%'}</span></button>`}).join('')}<div class="muted" style="font-size:12px;margin-top:6px">These have no trade setup in the current list: strength below 55%, too little volume, or not scanned yet today. Tap one to open its chart.</div></div>`}
+/* Industry filter: F&O rows and the whole-market (cash) seed use different industry names for the same thing (Auto / Auto & Ancillaries ...), and
+   the dropdown listed every name from every tab - a third of its options led to an empty list. One canonical name, and only the industries
+   that actually have rows on the tab being viewed (with a count). */
+const PK_IND_ALIAS={'Auto & Ancillaries':'Auto','Pharma & Healthcare':'Pharma','Healthcare':'Pharma','IT & Software':'IT','Metals & Steel':'Metals','Power & Energy':'Power','FMCG & Consumer':'FMCG','Consumer':'FMCG','Realty & Construction':'Realty','Defence & Shipbuilding':'Defence'};
+const pkIndKey=p=>{const k=p.ind||p.sec||'';return PK_IND_ALIAS[k]||k};
+function pkIndOptions(){const c=new Map();(App._pkIndPool||[]).forEach(p=>{const k=pkIndKey(p);if(k)c.set(k,(c.get(k)||0)+1)});return[...c].sort((a,b)=>a[0].localeCompare(b[0]))}   /* counted over the rows that already pass the tab / Buy-Sell / horizon / strength / search filters */
 function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.picks,f=App.pk;
   if(f.kind!=='INDEX'&&f.mkt!=='CASH')f.mkt='FNO'   // three tabs: Options (index) / Stock options (F&O) / Stock only (cash)
   if(f.kind==='INDEX'){f.hz='ALL';f.mkt='ALL';f.str='ALL';f.q='';if(f.sig==='EVERY')f.sig='TOP'}else if(f.sig==='TOP')f.sig='ALL'   // stocks have no Top 10-15 chip any more (it leads Fresh picks); index calls only have the Show filter: nothing hidden can empty the list
@@ -3608,11 +3614,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
   if(P&&Array.isArray(P.picks)&&!P.picks.some(p=>p.universe==='cash')&&!window._pkCashLoading){
     window._pkCashLoading=true;
     loadCashSeed().then(cl=>{
-      if(!cl.length)return;
-      P.picks=(P.picks||[]).concat(cl);P.count=P.picks.length;
-      if(Array.isArray(P.buy))P.buy=P.buy.concat(cl.filter(x=>x.signal==='BUY'));
-      if(Array.isArray(P.sell))P.sell=P.sell.concat(cl.filter(x=>x.signal==='SELL'));
-      renderPicks();
+      if(mergeCashSeed(P,cl))renderPicks();
     }).catch(()=>{})
     .finally(()=>{window._pkCashLoading=false;});
   }
@@ -3637,10 +3639,12 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
     if(f.mkt==='FNO')l=l.filter(p=>p.universe!=='cash');else if(f.mkt==='CASH')l=l.filter(p=>p.universe==='cash');
     if(f.q){const q=f.q.toLowerCase();l=l.filter(p=>(p.s+' '+p.n).toLowerCase().includes(q))}
-    if(f.ind&&f.ind!=='ALL')l=l.filter(p=>p.kind==='index'||(p.ind||p.sec)===f.ind);
     if(f.str==='STRONG')l=l.filter(p=>p.kind==='index'||(p.strength||0)>=65);
     else if(f.str==='WEAK')l=l.filter(p=>p.kind!=='index'&&(p.strength||0)<65);
     else if(f.str==='HIGH')l=l.filter(p=>p.kind==='index'||(p.strength||0)>=75);
+    App._pkIndPool=l.filter(p=>p.kind!=='index');   // every other filter has been applied: these are the rows an industry can still narrow
+    if(f.ind&&f.ind!=='ALL'&&!pkIndOptions().some(o=>o[0]===f.ind))f.ind='ALL';   // an industry the new tab does not have: back to All instead of an empty list
+    if(f.ind&&f.ind!=='ALL')l=l.filter(p=>p.kind==='index'||pkIndKey(p)===f.ind);
     const hi75=x=>(x.strength||0)>=75?1:0,SORTS={strength:(a,b)=>(hi75(b)-hi75(a))||(b.strength-a.strength)||(b.volx-a.volx),chgdesc:(a,b)=>b.chg-a.chg,chgasc:(a,b)=>a.chg-b.chg,volx:(a,b)=>b.volx-a.volx,name:(a,b)=>a.s.localeCompare(b.s)};
     
     // Sort indices strictly to the top
@@ -3674,7 +3678,7 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
      <div class="pkf-top"><div class="seg pkf-kind" role="group" aria-label="Instrument type">${segs([['OPT','Options'],['SOPT','Stock options'],['STK','Stock only'],['VOL','Volume surge']],isIdx?'OPT':f.mkt==='CASH'?'STK':f.sort==='volx'?'VOL':'SOPT','tab')}</div>${isIdx?'':`<div class="pkf-q"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" id="pkQ" placeholder="Search stock" value="${esc(f.q||'')}" aria-label="Search stock" autocomplete="off"></div>`}</div>
      <div class="pkf-row pkf-show"><span class="pkf-l">Show</span><div class="pkf-scroll">${isIdx?chips([['TOP','Top calls'],['ALL','All indices'],['BUY','Buy'],['SELL','Sell']],f.sig,'sig'):(f.mkt==='CASH'?chips([['ALL','All ideas'],['BUY','Buy'],['SELL','Sell / short'],['EVERY','All stocks']],f.sig,'sig'):chips([['ALL','All ideas'],['BUY','Buy · call'],['SELL','Sell · put / short'],['EVERY','All F&O stocks']],f.sig,'sig'))}</div></div>
      ${isIdx?'':`<div class="pkf-row"><span class="pkf-l">Horizon</span><div class="seg pkf-seg">${segs([['ALL','Any'],['INTRA','Intraday'],['SWING','Swing'],['POS','Positional']],f.hz,'hz')}</div></div>`}
-     ${isIdx?'':`<div class="pkf-sel"><label>Industry<select class="inp" id="pkInd" aria-label="Filter industry"><option value="ALL">All industries</option>${[...new Set(((P&&P.picks)||[]).filter(p=>p.kind!=='index').map(p=>p.ind||p.sec).filter(Boolean))].sort().map(k=>`<option value="${esc(k)}" ${f.ind===k?'selected':''}>${esc(k)}</option>`).join('')}</select></label><label>Strength<select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong ≥65%</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High ≥75%</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker &lt;65%</option></select></label><label>Sort<select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Per page<select class="inp" id="pkSize" aria-label="Per page">${[10,15,30,100,500,1000].map(k=>`<option value="${k}" ${f.size===k?'selected':''}>${k}</option>`).join('')}</select></label></div>`}
+     ${isIdx?'':`<div class="pkf-sel"><label>Industry<select class="inp" id="pkInd" aria-label="Filter industry"><option value="ALL">All industries</option>${pkIndOptions().map(([k,n])=>`<option value="${esc(k)}" ${f.ind===k?'selected':''}>${esc(k)} (${n})</option>`).join('')}</select></label><label>Strength<select class="inp" id="pkStr" aria-label="Filter strength"><option value="ALL" ${(f.str||'ALL')==='ALL'?'selected':''}>All</option><option value="STRONG" ${f.str==='STRONG'?'selected':''}>Strong ≥65%</option><option value="HIGH" ${f.str==='HIGH'?'selected':''}>High ≥75%</option><option value="WEAK" ${f.str==='WEAK'?'selected':''}>Weaker &lt;65%</option></select></label><label>Sort<select class="inp" id="pkSort" aria-label="Sort">${[['strength','Strongest'],['chgdesc','Top gainers'],['chgasc','Top losers'],['volx','Volume surge'],['name','A to Z']].map(([k,l])=>`<option value="${k}" ${f.sort===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Per page<select class="inp" id="pkSize" aria-label="Per page">${[10,15,30,100,500,1000].map(k=>`<option value="${k}" ${f.size===k?'selected':''}>${k}</option>`).join('')}</select></label></div>`}
      <div id="pkFoot">${pkDirty(f)?'<div class="pkf-foot"><span>Filters applied</span><button type="button" class="pkf-rst" data-pkreset="1">Reset filters</button></div>':''}</div>
    </div>
    
@@ -3978,7 +3982,10 @@ const c0atm=()=>OPT.chain&&OPT.chain.atm;
    The stop for the sell mirrors the signal's risk: the same distance above the entry, but never more than 10 points or 25% of the
    premium; target = the signal's own stop (where the buy idea would be proven wrong). Each trade is tagged with its signal so the
    Journal can show the win rate of buying vs selling every signal. */
+const MIN_SIGNAL_RR=1.5;   /* an indicator BUY only goes into the Journal when its first target is at least 1.5x the stop distance */
 function sigTrade(dir,sd,strike){const h=(OPT.hits||[]).find(x=>x.sd===sd&&x.k===strike);if(!h)return;const t=h.t,was=OPT.att,keep=OPT.sel?{s:OPT.sel.side,k:OPT.sel.strike}:null;
+  if(dir==='buy'){const tg=t.zone?t.zone.t[0]:t.entry*1.5,risk=t.entry-t.sl,rr=risk>0?(tg-t.entry)/risk:0;
+    if(!(risk>0)||rr<MIN_SIGNAL_RR){toast(`Skipped: ${t.name} has R:R 1:${rr>0?rr.toFixed(1):'0'} - only 1:${MIN_SIGNAL_RR} or better is taken`,'warn');return}}
   try{selectOption(sd,strike,true);OPT.att=false;const a=$('#opAtt');if(a)a.checked=false;OPT.otype='market';const sym=OPT.osym&&OPT.osym.s;if(!sym)return;
     const before=posOf(sym);if(before){toast('You already hold this contract - exit it first to start a clean test.','warn');return}
     optOrder(dir);const p=posOf(sym);if(!p)return;const e=p.avg,tg1=t.zone?t.zone.t[0]:t.entry*1.5;
@@ -5162,8 +5169,14 @@ function showUpdatePill(){
    open tab drives the signal-push cycle instead during market hours; the server still dedupes/caps
    sends per device per day, so multiple open tabs triggering this is harmless. */
 function triggerSignalPush(){if(!MKT.open)return;fetch('/api/cron/signal-push',{method:'POST'}).catch(()=>{})}
-function loadCashSeed(){return window._cashSeedP||(window._cashSeedP=fetch('/static/picks_cash_seed.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(cs=>Object.values(cs).filter(x=>(x.strength||0)>=55)).catch(()=>{window._cashSeedP=null;return[]}))}
-async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{const cl=await loadCashSeed();if(cl.length){App.picks.picks=App.picks.picks.concat(cl);App.picks.count=App.picks.picks.length;if(Array.isArray(App.picks.buy))App.picks.buy=App.picks.buy.concat(cl.filter(x=>x.signal==='BUY'));if(Array.isArray(App.picks.sell))App.picks.sell=App.picks.sell.concat(cl.filter(x=>x.signal==='SELL'));}}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)+(e&&e.detail?' - '+e.detail:'')}}
+const CASH_MIN_STRENGTH=55;   /* same floor as market_api.PICK_CASH_MIN_STRENGTH */
+function loadCashSeed(){return window._cashSeedP||(window._cashSeedP=fetch('/static/picks_cash_seed.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(cs=>Object.values(cs).filter(x=>(x.strength||0)>=CASH_MIN_STRENGTH)).catch(()=>{window._cashSeedP=null;return[]}))}
+/* add the whole-market (cash) seed rows to a picks payload ONCE: the Picks screen and loadPicks both ask for it and race - a symbol already there is never added twice */
+function mergeCashSeed(P,cl){if(!P||!Array.isArray(P.picks)||!cl||!cl.length)return false;
+  const have=new Set(P.picks.filter(p=>p.universe==='cash').map(p=>p.s)),add=cl.filter(x=>!have.has(x.s));if(!add.length)return false;
+  P.picks=P.picks.concat(add);P.count=P.picks.length;
+  if(Array.isArray(P.buy))P.buy=P.buy.concat(add.filter(x=>x.signal==='BUY'));if(Array.isArray(P.sell))P.sell=P.sell.concat(add.filter(x=>x.signal==='SELL'));return true}
+async function loadPicks(force){try{App.picks=await api('/api/m/picks'+(force?'?refresh=true':''));if(App.picks&&Array.isArray(App.picks.picks)){if(!App.picks.picks.some(p=>p.universe==='cash')){try{mergeCashSeed(App.picks,await loadCashSeed())}catch(ce){}}for(const p of App.picks.picks){const s=SYM(p.s);if(s)s.spark=p.spark}}}catch(e){console.warn('picks',e);App.picks=App.picks||{error:String(e)+(e&&e.detail?' - '+e.detail:'')}}
   if(App.view==='picks')renderPicks(true);renderWatchlist();
   const noFno=App.picks&&Array.isArray(App.picks.picks)&&!App.picks.picks.some(p=>p.kind!=='index'&&p.universe!=='cash');
   if(App.picks&&!App.picks.error&&(App.picks.complete===false||App.picks.refreshing||noFno)&&(window._pkTry=(window._pkTry||0)+1)<=15)setTimeout(()=>loadPicks(false),noFno?20000:5000);else window._pkTry=0;
