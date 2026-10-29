@@ -376,7 +376,7 @@ def test_manual_trade_without_a_live_quote_asks_for_the_price_instead(server, br
 
 # ───────────────────────── "Today's profit": the move since the start of today ─────────────────────────
 def hero(pg):
-    return pg.inner_text("#jvToday .jv-hero-big").strip()
+    return pg.inner_text("#jvToday .jv-hero-big").replace("updating…", "").strip()      # the "updating…" tag is not part of the figure
 
 
 def carried(**kw):

@@ -2003,10 +2003,19 @@ function paperList() {
      if (!R.stock && d) R.stock = { b: (d.closed || []).filter(t => (t.closedAt || '').slice(0, 10) === day).reduce((a, t) => a + (t.net || 0), 0), o: 0, est: true, wait: !!(d.open || []).length };
      if (!R.stock) R.stock = { b: 0, o: 0, est: true };
      R.carry = carry;
+     /* inputs still arriving (the first answer from the server / the live share feed after a page refresh): a carried open trade with no "yesterday's price" yet
+        counts as 0 today - that made the number start low (-13k) and jump to the real one (-31k). Flag it so nobody shows that half-built figure. */
+     R.pend = !AUTO.ts || (R.stock && R.stock.wait) || allTrades().some(t => (t.auto || t.isStock) && entered(t) && statusOf(t) !== 'Closed' && t.date !== day && dayBase(t) == null);
      return R;
    }
    /* THE one "today" figure: locked in + running, all three books. The Today card, the header chip and the Running-trades header all use it. */
-   function todayTotal() { const R = todayRows(); const b = R.buy.b + R.sell.b + R.stock.b, o = R.buy.o + R.sell.o + R.stock.o; return { booked: b, open: o, total: b + o }; }
+   function todayTotal() {
+     const R = todayRows(), b = R.buy.b + R.sell.b + R.stock.b, o = R.buy.o + R.sell.o + R.stock.o, day = today();
+     const ready = !R.pend || (typeof performance !== 'undefined' && performance.now() > 25000);          // never wait longer than 25 s for a feed that does not come
+     if (ready) { try { localStorage.setItem('rs-today-total', JSON.stringify({ day, v: b + o })); } catch (e) { } return { booked: b, open: o, total: b + o, ready: true }; }
+     let held = null; try { const j = JSON.parse(localStorage.getItem('rs-today-total') || 'null'); if (j && j.day === day && typeof j.v === 'number') held = j.v; } catch (e) { }
+     return { booked: b, open: o, total: held == null ? b + o : held, ready: false, held: held != null };     // not ready: show the last complete figure, not a half-built one
+   }
    /* how old the option prices on screen are: the oldest "seen at" time the server stamped on a running option trade (it re-stamps it every time it marks the trade) */
    function priceAgeS() {
      const ts = AUTO.list.filter(t => t.status !== 'Closed' && t.raw && t.raw.lastAt).map(t => Date.parse(t.raw.lastAt)).filter(x => x > 0);
@@ -2023,22 +2032,21 @@ function paperList() {
    function todayCard() {
      const AL = liveTotals(today());
      const R = todayRows(), mk = (typeof MKT !== 'undefined' && typeof MKT.open === 'boolean') ? MKT.open : ((typeof window.rjMkt === 'function') ? window.rjMkt() : false);
-     const bk = R.buy.b + R.sell.b + R.stock.b, op = R.buy.o + R.sell.o + R.stock.o, tot = bk + op;
+     const bk = R.buy.b + R.sell.b + R.stock.b, op = R.buy.o + R.sell.o + R.stock.o, TT = todayTotal(), tot = TT.total;
      const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
-     const num = (lab, v) => `<div><small>${lab}</small><span class="${cc(v)}">${sinr(v)}</span></div>`;
-     const row = (name, x, hint) => `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>${hint}</small></div>${x
-       ? (x.wait ? `<div class="jv-hr-n"><div><small>Locked in</small><span class="${cc(x.b)}">${sinr(x.b)}</span></div><div><small>Running</small><span class="muted">loading…</span></div></div>` : `<div class="jv-hr-n">${num('Locked in', x.b)}${num('Running', x.o)}${num('Total', x.b + x.o)}</div>`)
-       : '<div class="jv-hr-n"><span class="muted">loading…</span></div>'}</div>`;
+     /* 29 Oct, simplified (user: "too many numbers"): ONE big number (today), two plain parts (closed / open), then one short line per book. */
+     const row = (name, x) => !x ? `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b></div><div class="jv-hr-n"><span class="muted">loading…</span></div></div>`
+       : `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>closed ${TT.ready ? sinr(x.b) : '…'} · open ${TT.ready ? sinr(x.o) : '…'}</small></div><div class="jv-hr-n"><div><span class="${TT.ready ? cc(x.b + x.o) : ''}">${TT.ready ? sinr(x.b + x.o) : '…'}</span></div></div></div>`;
+     const used = x => x && (x.b || x.o || x.wait);
      return `<div class="card jv-hero ${box}" id="jvToday">
-       <div class="jv-hero-top"><span>Today's profit</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em>${liveBadge(mk)}<button class="btn" data-jv="refreshnow" title="Read the latest prices now" style="margin-left:auto;padding:2px 10px">${AUTO.refreshing ? 'Refreshing…' : '↻ Refresh'}</button></div>
-       <div class="jv-hero-big ${cls}">${sinr(tot)}</div>
+       <div class="jv-hero-top"><span>Today</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em>${liveBadge(mk)}<button class="btn" data-jv="refreshnow" title="Read the latest prices now" style="margin-left:auto;padding:2px 10px">${AUTO.refreshing ? 'Refreshing…' : '↻ Refresh'}</button></div>
+       <div class="jv-hero-big ${cls}">${sinr(tot)}${TT.ready ? '' : ' <small class="muted" style="font-size:12px;font-weight:500">updating…</small>'}</div>
        <div class="jv-chips">
-         <div class="jv-chip2"><small>Locked in</small><b class="${cc(bk)}">${sinr(bk)}</b><span>trades already closed</span></div>
-         <div class="jv-chip2"><small>Running now</small><b class="${cc(op)}">${sinr(op)}</b><span>can still change</span></div>
+         <div class="jv-chip2"><small>Closed trades</small><b class="${cc(bk)}">${TT.ready ? sinr(bk) : '…'}</b><span>final</span></div>
+         <div class="jv-chip2"><small>Open trades</small><b class="${cc(op)}">${TT.ready ? sinr(op) : '…'}</b><span>moves with the market</span></div>
        </div>
-       ${row('Options Buy', R.buy, 'you bought options')}${row('Options Sell', R.sell, 'you sold options')}${row('Stock trader', R.stock, 'shares')}
-       <p class="jv-hint" id="jvAllTime"><b>Since the very start</b> (every trade, from its entry price): ${sinr(AL.booked + AL.unr)} = closed ${sinr(AL.booked)} + running ${sinr(AL.unr)}. The big number above is only what changed <u>today</u>.</p>
-       <p class="jv-hint">Only "Locked in" is final. "Running now" moves with price until the trade closes. Stock trades that day-trade are closed at 3:15 pm; option trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open option trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
+       ${row('Options bought', R.buy)}${used(R.sell) ? row('Options sold', R.sell) : ''}${used(R.stock) || R.stock ? row('Shares', R.stock) : ''}
+       <p class="jv-hint" id="jvAllTime">Since the very start, all trades: <b class="${cc(AL.booked + AL.unr)}">${sinr(AL.booked + AL.unr)}</b>. Open trades change with every price tick, so the numbers move every few seconds. "Today" counts only what changed since this morning.</p></div>`;
    }
    function insightCard(m) {
      if (!m || m.n < 5) return `<div class="card jv-ins" id="jvInsight"><b>How you're doing</b><p>Not enough closed trades yet (${m ? m.n : 0}). Come back after about 5 closed trades.</p></div>`;

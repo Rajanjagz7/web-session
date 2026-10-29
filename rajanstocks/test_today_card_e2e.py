@@ -51,14 +51,14 @@ def test_today_card_never_shows_the_since_entry_total(server, browser):
     set_sym(pg, "TCS", 100)
     pg.wait_for_timeout(7000)
     txt = " | ".join(seen(pg))
-    assert "Stock trader" in txt and "20,000" not in txt and "19,9" not in txt, txt   # the book's since-entry open profit never reached the card
+    assert "Shares" in txt and "20,000" not in txt and "19,9" not in txt, txt   # the book's since-entry open profit never reached the card
     c.close()
 
 
 def test_running_figure_is_today_move_only(server, browser):
     w = StockWorld()
     c, pg, errs = open_journal(browser, w, tab="portfolio", sym_prices={"TCS": 100})
-    pg.wait_for_function("document.querySelector('#jvToday') && /Stock trader/.test(document.querySelector('#jvToday').innerText)", timeout=15000)
+    pg.wait_for_function("document.querySelector('#jvToday') && /Shares/.test(document.querySelector('#jvToday').innerText)", timeout=15000)
     pg.wait_for_timeout(2500)
     txt = pg.inner_text("#jvToday")
     assert "20,000" not in txt and not errs
@@ -112,4 +112,20 @@ def test_a_dead_price_feed_is_shown_not_hidden(server, browser):
     w.live["ok"] = False
     pg.wait_for_function("document.querySelector('#jvLiveB') && /old/.test(document.querySelector('#jvLiveB').textContent)", timeout=25000)
     assert "110.00" in pg.inner_text('#jvOpen tr[data-id="A-1"] [data-c=cur]') and not errs                                      # last price kept, honestly labelled
+    c.close()
+
+
+def test_header_and_card_hold_the_last_full_figure_until_every_input_has_arrived(server, browser):
+    """Video 29 Oct: after each page refresh the number started low (-13k, carried shares not priced yet) and jumped to the real -31k.
+    While a carried trade has no 'yesterday's price' yet, show the last complete figure, never the half-built one."""
+    from test_journal_refresh_e2e import _num
+    w = StockWorld()
+    c, pg, errs = open_journal(browser, w, tab="portfolio", sym_prices={})              # TCS has no live quote yet
+    pg.evaluate(f"MKT.open = true; localStorage.setItem('rs-today-total', JSON.stringify({{day: '{TODAY}', v: -31000}})); JV.render(); renderPfChip()")
+    pg.wait_for_selector("#jvToday")
+    assert pg.evaluate("JV.totals().today") == -31000                                   # held, not recomputed from the unpriced share
+    assert abs(_num(pg.inner_text("#pfChip")) + 31000) < 1 and "updating" in pg.inner_text("#jvToday")
+    set_sym(pg, "TCS", 100)                                                             # the live quote arrives
+    pg.evaluate("JV.render(); renderPfChip()")
+    assert pg.evaluate("JV.totals().today") != -31000 and "updating" not in pg.inner_text("#jvToday") and not errs
     c.close()
