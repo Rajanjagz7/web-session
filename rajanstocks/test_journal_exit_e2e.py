@@ -636,3 +636,25 @@ def test_sell_with_a_long_open_keeps_the_long_and_opens_a_separate_short(server,
     pg.evaluate("optOrder('exit')")
     assert pg.evaluate("App.positions.length") == 0
     c.close()
+
+
+def test_picks_log_reset_stays_cleared_even_while_the_cards_are_on_screen(server, browser):
+    """Reset log clears the day's records and the same cards must not write them straight back."""
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    set_sym(pg, "ZZTEST", 100)
+    ev = """() => {
+      const o = {sym:'ZZTEST', dir:'L', entry:100, stop:95, ts:[105,110], key:'st|ZZTEST|L|intraday', dp:2};
+      pkLiveEval(o);
+      const before = pkLogDays().reduce((n,d)=>n+d.rows.length,0);
+      pkHidAdd(Object.keys(pkLiveStore()));
+      for (let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(/^pkl-/.test(k))localStorage.removeItem(k)}
+      App.pkl = null;
+      pkLiveEval(o);
+      const after = pkLogDays().reduce((n,d)=>n+d.rows.length,0);
+      return [before, after];
+    }"""
+    before, after = pg.evaluate(ev)
+    assert before == 1 and after == 0
+    assert not errs
+    c.close()
