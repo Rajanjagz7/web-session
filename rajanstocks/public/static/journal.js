@@ -654,7 +654,12 @@ function paperList() {
   }
   function tslShow(t) { if (t.auto && statusOf(t) !== 'Closed') return autoTsl_(t); if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
-  const liveTick = () => { const h = document.getElementById('v-journal'); if (!document.hidden && window.rjMkt() && h && h.offsetParent && AUTO.list.some(t => t.status !== 'Closed')) pullLive(false).then(refreshLive); };
+  const liveTick = () => {
+    if (document.hidden || !window.rjMkt() || !AUTO.list.some(t => t.status !== 'Closed')) return;
+    const h = document.getElementById('v-journal'), on = !!(h && h.offsetParent);
+    if (!on && Date.now() - AUTO.qTs < 9000) return;           // other screens: a live look every 10 s keeps the header P&L chip equal to the Journal's figure
+    pullLive(false).then(() => { if (on) refreshLive(); else if (typeof renderPfChip === 'function') { try { renderPfChip(); } catch (e) { } } });
+  };
   setInterval(liveTick, 3000);
   setInterval(() => { refreshLive(); if (!document.hidden && window.rjMkt()) syncAuto(false); }, 5000);  // syncAuto self-throttles to 30 s
   setInterval(() => { const h = document.getElementById('v-journal'); if (h && h.offsetParent && !document.hidden && window.rjMkt()) syncAuto(true).then(refreshLive); }, 60000);   // was 15 s: each read costs shared-store requests
@@ -2016,6 +2021,7 @@ function paperList() {
      return `<em class="jv-mkt" id="jvLiveB" style="color:var(--down,#e5484d)" title="Option prices are ${txt} old - tap Refresh">prices ${txt} old</em>`;
    }
    function todayCard() {
+     const AL = liveTotals(today());
      const R = todayRows(), mk = (typeof MKT !== 'undefined' && typeof MKT.open === 'boolean') ? MKT.open : ((typeof window.rjMkt === 'function') ? window.rjMkt() : false);
      const bk = R.buy.b + R.sell.b + R.stock.b, op = R.buy.o + R.sell.o + R.stock.o, tot = bk + op;
      const cls = tot > 0 ? 'up' : tot < 0 ? 'down' : '', box = tot > 0 ? 'jv-pos' : tot < 0 ? 'jv-neg' : '';
@@ -2031,6 +2037,7 @@ function paperList() {
          <div class="jv-chip2"><small>Running now</small><b class="${cc(op)}">${sinr(op)}</b><span>can still change</span></div>
        </div>
        ${row('Options Buy', R.buy, 'you bought options')}${row('Options Sell', R.sell, 'you sold options')}${row('Stock trader', R.stock, 'shares')}
+       <p class="jv-hint" id="jvAllTime"><b>Since the very start</b> (every trade, from its entry price): ${sinr(AL.booked + AL.unr)} = closed ${sinr(AL.booked)} + running ${sinr(AL.unr)}. The big number above is only what changed <u>today</u>.</p>
        <p class="jv-hint">Only "Locked in" is final. "Running now" moves with price until the trade closes. Stock trades that day-trade are closed at 3:15 pm; option trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open option trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
    }
    function insightCard(m) {

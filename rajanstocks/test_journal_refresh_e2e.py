@@ -33,3 +33,28 @@ def test_card_shows_the_age_of_the_prices_and_refresh_reads_again(server, browse
     pg.wait_for_function("document.getElementById('jvLiveB') && document.getElementById('jvLiveB').innerText.includes('live')", timeout=15000)
     assert w.status_calls > before and not errs
     c.close()
+
+
+def _num(txt):
+    import re
+    m = re.search(r"([+\-−])?₹\s*([\d,]+(?:\.\d+)?)", txt)
+    v = float(m.group(2).replace(",", ""))
+    return -v if m.group(1) in ("-", "−") else v
+
+
+def test_header_chip_equals_the_today_card_and_follows_live_prices_on_other_screens(server, browser):
+    w = World()
+    w.set_price("A-1", 120.0)
+    c, pg, errs = open_journal(browser, w, tab="portfolio")
+    pg.evaluate("MKT.open = true; JV.render()")
+    pg.wait_for_selector("#jvToday")
+    pg.wait_for_function("document.getElementById('jvLiveB') && document.getElementById('jvLiveB').innerText.includes('live')", timeout=15000)
+    card = _num(pg.inner_text("#jvToday .jv-hero-big"))
+    pg.evaluate("renderPfChip()")
+    assert abs(_num(pg.inner_text("#pfChip")) - card) < 1.0                           # the same figure in the header and on the card
+    pg.evaluate("go('picks')")                                                         # another screen: the Journal is not on show any more
+    w.set_price("A-1", 80.0)                                                           # the option falls 40 points
+    pg.wait_for_function("(old) => { const t = document.getElementById('pfChip').innerText; return t && t !== old }", arg=pg.inner_text("#pfChip"), timeout=20000)
+    chip = _num(pg.inner_text("#pfChip"))
+    assert chip < card - 1000 and not errs                                             # 2 lots x 75 x 40 = about Rs 6,000 down, without opening the Journal
+    c.close()
