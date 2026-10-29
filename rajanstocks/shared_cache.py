@@ -364,6 +364,20 @@ def read_ver(key):
     return True, ver_of(j.get("result") or "")
 
 
+def cached_raw(key, rc, ttl=60.0, verify=False):
+    """The book text this instance read less than `ttl` seconds ago, or None when it has to be read again. With verify=True the stored
+    version is compared first (one tiny GETRANGE): another instance may have saved since - a closed trade, a new mark - and serving this
+    instance's older copy made the Journal's totals flip between two values on every refresh. If the store cannot answer the check, the copy is used."""
+    raw = rc.get("raw")
+    if raw is None or time.time() - rc.get("t", 0) >= ttl:
+        return None
+    if verify:
+        known, cur = read_ver(key)
+        if known and cur != ver_of(raw):
+            return None
+    return raw
+
+
 def versioned_set(key, rest, rc, ver0, timeout=8.0):
     """Write `rest` (the book without its version) if nobody saved since version `ver0` was read. rc is the caller's cache dict whose
     'raw' holds the text last read or written. Returns ("ok", new_ver) | ("same", ver0) | ("conflict", None) | ("error", message)."""

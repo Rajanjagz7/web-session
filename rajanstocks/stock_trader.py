@@ -63,12 +63,12 @@ def _remote():
 _RC = {}
 
 
-def _load(cached=False):
+def _load(cached=False, verify=False):
     st = {"trades": [], "log": [], "seq": 0}
     try:
         r = _remote()
         if r:
-            raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 60 else None
+            raw = shared_cache.cached_raw(KEY, _RC, 60.0, verify) if cached else None
             if raw is None:
                 j = shared_cache.kv([["GET", KEY]], 8.0)[0]                # primary, or the backup database
                 if j.get("error"):
@@ -396,7 +396,7 @@ def _stats(trades):
 def status():
     import nse_calendar
     now = _now()
-    st = _load(cached=True)
+    st = _load(cached=True, verify=True)
     if st.get("_dirty"):                                    # the 28 Oct fresh start: persist the cleared book once
         with _lock:
             _save(st)
@@ -404,7 +404,7 @@ def status():
     if nse_calendar.session_open(now) and (not last or (now - datetime.fromisoformat(last)).total_seconds() > 180):
         try:
             run_cycle()
-            st = _load(cached=True)
+            st = _load(cached=True, verify=True)
         except Exception as e:
             print(f"[stockbot] cycle failed: {e}")
     cash, used, booked = _cash(st)

@@ -82,12 +82,12 @@ def _read_ver():
     return shared_cache.read_ver(KEY)
 
 
-def _load(cached=False):
+def _load(cached=False, verify=False):
     st = {"cfg": dict(DEFAULT_CFG), "trades": [], "log": []}
     try:
         r = _remote()
         if r:
-            raw = _RC.get("raw") if cached and time.time() - _RC.get("t", 0) < 60 else None     # 30 s local copy: saves store requests
+            raw = shared_cache.cached_raw(KEY, _RC, 60.0, verify) if cached else None     # a short local copy saves store requests; verify=True checks the stored version first
             if raw is None:
                 j = shared_cache.kv([["GET", KEY]], 8.0)[0]                # primary, or the backup database
                 if j.get("error"):                                  # store refused (e.g. request limit): never treat as "empty"
@@ -912,7 +912,10 @@ def _quality(p):
     if not p:
         return 0.0
     st_ = float(p.get("strength") or 0)
-    return (0.5 if st_ >= 75 else 0.0) + min(st_, 100) / 400 + min(float(p.get("volx") or 0), 3.0) / 6
+    vx = float(p.get("volx") or 0)
+    top = 1.0 if st_ >= 99.5 else 0.0                       # user, 29 Oct: strength-100 stocks first, and those with a volume surge (1.5x+) before the rest of them
+    top += 0.5 if top and vx >= 1.5 else 0.0
+    return top + (0.5 if st_ >= 75 else 0.0) + min(st_, 100) / 400 + min(vx, 3.0) / 6
 
 
 def choose(cands, st, today):
@@ -1995,7 +1998,7 @@ def status():
             run_cycle()
     except Exception as e:
         print(f"[auto] status cycle trigger failed: {e}")
-    st = _load(cached=True)                                    # read-only screen: a 30 s old copy is fine
+    st = _load(cached=True, verify=True)                       # read-only screen: this instance's copy, but only if nobody saved since (else two refreshes could show two different books)
     if st.get("_dirty"):
         with _lock:
             _save(st)

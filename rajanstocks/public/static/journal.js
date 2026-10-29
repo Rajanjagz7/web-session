@@ -2101,6 +2101,7 @@ function paperList() {
      const row = (name, x, hint) => `<div class="jv-hr-row"><div class="jv-hr-name"><b>${name}</b><small>${hint}</small></div>${x
        ? (x.wait ? `<div class="jv-hr-n"><div><small>Locked in</small><span class="${cc(x.b)}">${sinr(x.b)}</span></div><div><small>Running</small><span class="muted">loading…</span></div></div>` : `<div class="jv-hr-n">${num('Locked in', x.b)}${num('Running', x.o)}${num('Total', x.b + x.o)}</div>`)
        : '<div class="jv-hr-n"><span class="muted">loading…</span></div>'}</div>`;
+     const buyOnly = !!(AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.buyOnly), sellRow = buyOnly && !R.sell.b && !R.sell.o ? '' : row('Options Sell', R.sell, 'you sold options');   // buy-only mode: no empty "sold options" row
      return `<div class="card jv-hero ${box}" id="jvToday">
        <div class="jv-hero-top"><span>Today's profit</span><em class="jv-mkt ${mk ? 'on' : ''}">${mk ? 'Market open' : 'Market closed'}</em></div>
        <div class="jv-hero-big ${cls}">${sinr(tot)}</div>
@@ -2108,8 +2109,8 @@ function paperList() {
          <div class="jv-chip2"><small>Locked in</small><b class="${cc(bk)}">${sinr(bk)}</b><span>trades already closed</span></div>
          <div class="jv-chip2"><small>Running now</small><b class="${cc(op)}">${sinr(op)}</b><span>can still change</span></div>
        </div>
-       ${row('Options Buy', R.buy, 'you bought options')}${row('Options Sell', R.sell, 'you sold options')}${row('Stock trader', R.stock, 'shares')}
-       <p class="jv-hint">Only "Locked in" is final. "Running now" moves with price until the trade closes. Stock trades that day-trade are closed at 3:15 pm; option trades stay open until their stop, target, 10 sessions or expiry, so ${R.carry} open option trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
+       ${row('Options Buy', R.buy, 'you bought options')}${sellRow}${row('Stock trader', R.stock, 'shares')}
+       <p class="jv-hint"><b>Locked in</b> = trades already closed today (final). <b>Running now</b> = trades still open, it moves with the price. ${R.carry} open option trade${R.carry === 1 ? '' : 's'} may carry into tomorrow.</p></div>`;
    }
    function insightCard(m) {
      if (!m || m.n < 5) return `<div class="card jv-ins" id="jvInsight"><b>How you're doing</b><p>Not enough closed trades yet (${m ? m.n : 0}). Come back after about 5 closed trades.</p></div>`;

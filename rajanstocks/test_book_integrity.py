@@ -255,3 +255,39 @@ def test_cycle_state_survives_a_save_and_load(monkeypatch):
     back = at._load()
     for k in at.PERSIST_KEYS:
         assert back.get(k) == st[k], k
+
+
+# ───────────── 7. two refreshes must not show two different books ─────────────
+def test_status_read_notices_a_save_made_by_another_instance(monkeypatch):
+    """Instance A holds a 60 s copy; instance B closes a trade. A's next status read must show B's book, not its older copy."""
+    fs = FakeStore()
+    monkeypatch.setattr(at.shared_cache, "kv", fs.kv)
+    monkeypatch.setattr(at, "_remote", lambda: ("https://x.upstash.io", "t"))
+    at._RC.clear()
+    a = at._load()
+    a["log"].append({"at": "x", "msg": "v1"})
+    assert at._save(a) is True
+    assert any(l["msg"] == "v1" for l in at._load(cached=True)["log"])                  # A's own copy
+    other = json.loads(fs.d[at.KEY])                                                      # B saves behind A's back
+    other["log"].append({"at": "y", "msg": "v2 from B"})
+    fs.d[at.KEY] = json.dumps({"ver": "b" * 16, **{k: v for k, v in other.items() if k != "ver"}})
+    assert not any(l["msg"] == "v2 from B" for l in at._load(cached=True)["log"])       # unchecked read: the old copy (the flip)
+    assert any(l["msg"] == "v2 from B" for l in at._load(cached=True, verify=True)["log"])   # verified read: the newest
+
+
+def test_verified_read_uses_the_copy_when_nothing_changed_and_when_the_store_is_silent(monkeypatch):
+    fs = FakeStore()
+    monkeypatch.setattr(at.shared_cache, "kv", fs.kv)
+    monkeypatch.setattr(at, "_remote", lambda: ("https://x.upstash.io", "t"))
+    at._RC.clear()
+    st = at._load()
+    assert at._save(st) is True
+    gets = []
+    real = fs.kv
+    monkeypatch.setattr(at.shared_cache, "kv", lambda cmds, t=8.0: (gets.append(cmds[0][0]), real(cmds, t))[1])
+    at._load(cached=True, verify=True)
+    assert gets == ["GETRANGE"]                                                           # one tiny version check, no full read
+    monkeypatch.setattr(at.shared_cache, "read_ver", lambda key: (False, None))           # store silent: keep serving the copy
+    gets.clear()
+    at._load(cached=True, verify=True)
+    assert gets == []

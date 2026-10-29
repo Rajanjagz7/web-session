@@ -155,3 +155,23 @@ def test_carried_candidates_expire_and_skip_symbols_already_held(world, monkeypa
     assert at._save(st) is True
     at.run_cycle()
     assert [t["sym"] for t in saved(fs)["trades"]] == ["SENSEX"]       # the expired one is dropped
+
+
+def test_strength_100_stocks_with_volume_come_before_the_rest():
+    q = at._quality
+    s100_vol, s100, s90_vol, s75 = ({"strength": 100, "volx": 2.5}, {"strength": 100, "volx": 0.8}, {"strength": 90, "volx": 3.0}, {"strength": 75, "volx": 1.0})
+    assert q(s100_vol) > q(s100) > q(s90_vol) > q(s75)
+    assert q({"strength": 100, "volx": 2.5}) - q({"strength": 99, "volx": 2.5}) > 1.0        # 100 is a different class, not a rounding step
+
+
+def test_order_is_index_options_then_100_strength_volume_stocks_then_the_rest(world, monkeypatch):
+    box, fs = world
+    box["cands"] = []
+    mk = lambda sym, kind, q: screen(sym, kind, 1.0 + q, "stock-screen" if kind == "stock" else "index-call-put")
+    monkeypatch.setattr(at, "fill_slots", lambda st, today, chosen: [mk("AAA", "stock", at._quality({"strength": 80, "volx": 1})), mk("BBB", "stock", at._quality({"strength": 100, "volx": 2.5})),
+                                                                       mk("NIFTY", "index", -0.4), mk("CCC", "stock", at._quality({"strength": 100, "volx": 0.9}))])
+    order = []
+    real = at.open_trade
+    monkeypatch.setattr(at, "open_trade", lambda st, c, today: (order.append(c["sym"]), real(st, c, today))[1])
+    at.run_cycle()
+    assert order[:4] == ["NIFTY", "BBB", "CCC", "AAA"]
