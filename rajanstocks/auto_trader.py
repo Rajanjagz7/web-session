@@ -481,7 +481,7 @@ def _index_backing(c, side):
 
 
 REENTRY_GAP_MIN = 0       # minutes after a trade closes before the same symbol can be entered again (user, 29 Oct: no restriction - a fresh signal re-enters at once)
-BLOCK_SAME_CONTRACT = False   # True would refuse an option contract already traded today (user, 29 Oct: the same index / stock option may be taken again)
+BLOCK_SAME_CONTRACT = True    # an option contract (same strike / expiry / side) already traded today or still open is refused; any other strike of the same index or stock may be entered (user, 30 Oct)
 
 
 def _remember_cleared(st, trades):
@@ -504,8 +504,10 @@ def _taken_syms(st, today, now=None):
     out = set()
     cl = st.get("cleared")
     if isinstance(cl, dict) and cl.get("date") == today:
-        out.update(cl.get("syms") or [])                 # traded today, then cleared by the user: no second entry today
+        out.update(x for x in (cl.get("syms") or []) if x not in INDEX_SYMS)   # traded today, then cleared by the user: no second entry today
     for t in st["trades"]:
+        if t["sym"] in INDEX_SYMS:
+            continue                                     # 30 Oct (user): an index takes any number of trades a day, only the identical option contract is refused
         if t["status"] == "OPEN":
             out.add(t["sym"])
         elif REENTRY_GAP_MIN > 0 and t.get("date") == today and t.get("closedAt"):
@@ -560,7 +562,7 @@ def fill_slots(st, today, already):
                 # an index is blocked while a trade in it is open, or once one was OPENED today (no re-entry after a stop - the 30-minute
                 # re-entry rule bought the same index again after a loss). A carried trade that merely exited today (opened on an earlier
                 # day, e.g. out at 09:07) does not count, so it never blocks the index all day.
-                busy_idx = _taken_syms(st, today) | {x["sym"] for x in already} | {x["sym"] for x in out}
+                busy_idx = {x["sym"] for x in already} | {x["sym"] for x in out}
                 if c["instrument"] in busy_idx:
                     _idx_note(st, c["instrument"], "not looked at - a trade in it is still open")
                     continue
@@ -1304,7 +1306,7 @@ def open_trade(st, c, today):
     atr, last_close, bars = _atr_for(c["sym"])
     cap = float((cfg.get("maxOutlay") or MAX_OUTLAY).get(c["sym"]) or 0) or None
     ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap)
-    if BLOCK_SAME_CONTRACT and any(t.get("key") == ct["key"] and (t.get("date") == today or (t.get("closedAt") or "") >= today) for t in st["trades"]):
+    if BLOCK_SAME_CONTRACT and any(t.get("key") == ct["key"] and (t.get("status") == "OPEN" or t.get("date") == today or (t.get("closedAt") or "") >= today) for t in st["trades"]):
         raise RuntimeError("skipped: this option contract was already traded today (a new entry has to be in another option)")
     ask_, bid_ = float(ct.get("ask") or 0), float(ct.get("bid") or 0)
     if ask_ > 0 and bid_ > 0:                           # the stop is judged on the bid but the entry is paid at the ask: the spread must leave room for the stop
