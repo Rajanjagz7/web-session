@@ -56,6 +56,7 @@ DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnl
                "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1}
 MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade needs at least 2 indicators pointing the same way ...
 INDEX_MIN_AGREE = 2                      # 30 Oct (user): an index option trade needs 2+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
+INDEX_BACK_STRENGTH = 50.0               # 30 Oct (user): an index's own strength counts as one agreeing indicator from 50% (was 75%)
 INDEX_MAX_PER_DAY = 3                    # 30 Oct (user): at most 3 trades a day in any one index OR stock option (was 5) - the best ranked (risk/reward + indicators) go first, so wins and losses come from 2-3 trades, not a stream of them
 SOLO_STRENGTH = 75.0                     # ... unless a single signal comes with Picks strength >= 75 (100 ranks first). Index trades are not affected.
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
@@ -461,7 +462,7 @@ def _index_backing(c, side):
     (the calls / puts share of volume near ATM) >= 75% on the trade's side, and at least 3 of the index's own stocks with a strength >= 75% signal
     the same way on the Picks list. Used to rank index entries - the more of them, the earlier the entry."""
     pts, bits = 0, []
-    if (c.get("strength") or 0) >= 75:
+    if (c.get("strength") or 0) >= INDEX_BACK_STRENGTH:
         pts += 1
         bits.append(f"index strength {c['strength']:.0f}%")
     pct = c.get("callPct") if side == "BUY" else c.get("putPct")

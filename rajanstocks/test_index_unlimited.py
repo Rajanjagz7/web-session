@@ -25,3 +25,9 @@ def _run(entries, trades=None, monkeypatch=None):
 
 def test_constants_for_the_index_rule():
     assert at.INDEX_MIN_AGREE == 2 and at.INDEX_MAX_PER_DAY == 3
+
+
+def test_index_strength_from_50_counts_as_an_indicator(monkeypatch):
+    pts, bits = at._index_backing({"instrument": "NOSUCH", "strength": 55}, "BUY")
+    assert pts == 1 and "index strength" in bits[0]
+    assert at._index_backing({"instrument": "NOSUCH", "strength": 45}, "BUY")[0] == 0
