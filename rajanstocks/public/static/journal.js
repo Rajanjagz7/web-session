@@ -666,7 +666,8 @@ function paperList() {
     if (l) return l.mode === 'trail' ? `Trail · locks ₹${Math.round(Number(l.keep) || 0).toLocaleString('en-IN')} · SL ${px(a.premSL)}` : `Breakeven · SL ${px(a.premSL)}`;
     if (a.variant === 'trail' || (a.tsl && a.tsl.mode && a.tsl.mode !== 'off')) return `Trailing · ${a.sym} stop ${px(a.stopU)}${a.stopMoved ? ' ↑' : ''}`;
     const u = unrealised(t);
-    return `Arms at +₹2,500${u != null ? ' (now ' + sinr(u) + ')' : ''}`;
+    const lm = (typeof SV !== 'undefined' && SV.auto && SV.auto.cfg && SV.auto.cfg.lockMode) === 'new' ? '2,500' : '1,500';   // old lock arms at 1,500, new at 2,500
+    return `Arms at +₹${lm}${u != null ? ' (now ' + sinr(u) + ')' : ''}`;
   }
   function tslShow(t) { if (t.auto && statusOf(t) !== 'Closed') return autoTsl_(t); if (t.paper) return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; if (t.auto) { const l = t.raw && t.raw.lock; return l ? (l.mode === 'trail' ? `Auto trail · locks ₹${Number(l.keep).toLocaleString('en-IN')}` : 'Auto · breakeven') : (t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'); } return t.tsl && t.tsl !== 'Off / Fixed SL' ? t.tsl : '—'; }
   setInterval(() => { try { capUse(); } catch (e) { } }, 20000);       // today's peak is tracked on every screen, not only the Journal
@@ -1887,7 +1888,7 @@ function paperList() {
      const sw = `<div class="jv-pos-bar">${sideBar(allOpen.concat(closedAll))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>`;
      const openCard = `<div class="card"><div class="card-h"><h3>${oldView() ? 'Old filter · ' : ''}Current Positions (${open.length})</h3></div>
        <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(part.map(t => t.id).join(','))}">${open.length ? positionTable(part) : `<div class="empty">No open ${ui.side === 'buy' ? 'buy ' : ui.side === 'sell' ? 'sell ' : ''}positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div>`}</div>${bar}
-       <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹2,500 open profit the stop moves to cost + charges; from ₹3,500 it trails with breathing room (keeping 40%–65% of the best profit).</p></div>`;
+       <p class="muted" style="font-size:12px;margin:6px 2px 0">${c.lockMode === 'new' ? 'Auto profit lock on every trade (buy or sell): at ₹2,500 open profit the stop moves to cost + charges; from ₹3,500 it trails with breathing room (keeping 40%–65% of the best profit).' : 'Auto profit lock on every trade (buy or sell): at ₹1,500 open profit the stop moves to cost + charges; from ₹2,000 it trails, keeping 50% of the best profit (60% from ₹4,000, 70% from ₹6,000).'}</p></div>`;
      const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>${oldView() ? 'Old filter · ' : ''}Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
      const note = oldView() ? `<p class="muted" style="font-size:12px;margin:0 2px 8px">Old filter (OLD FILT): the trades the auto trader takes on the 22 Oct filter - "N indicator(s) agree", stock screen, index call/put. Everything else is under Positions.</p>` : '';
      return note + sw + sigCard + openCard + closedCard;

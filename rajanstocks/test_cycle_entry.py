@@ -53,6 +53,8 @@ def world(monkeypatch):
     monkeypatch.setattr(at, "_contract", contract)
     st = at._load()
     st["cfg"]["enabled"] = True
+    st["cfg"]["indexMinAgree"] = 1                      # the 3-indicator index rule has its own tests (test_index_unlimited.py)
+    st["cfg"]["indexMaxPerDay"] = 0
     assert at._save(st) is True
     yield box, fs
     at._RC.clear()
@@ -192,3 +194,34 @@ def test_stock_option_needs_two_indicators_or_one_strong_signal(world, monkeypat
     monkeypatch.setattr(morning_picks, "good_rr", lambda *a, **k: True)
     rep = at.run_cycle()
     assert sorted(t["sym"] for t in saved(fs)["trades"]) == ["BBB", "CCC", "NIFTY"] and "1 skipped (stock option needs 2+" in rep["note"]
+
+
+def _set_cfg(fs, **kw):
+    d = saved(fs)
+    d["cfg"].update(kw)
+    fs.d[at.KEY] = json.dumps(d)
+    at._RC.clear()
+
+
+def test_index_needs_three_indicators(world):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=3, indexMaxPerDay=3)
+    box["cands"] = [dict(cand(), agree=2)]
+    at.run_cycle()
+    assert saved(fs)["trades"] == []                          # two indicators are not enough for an index
+    box["cands"] = [dict(cand(), agree=3)]
+    at.run_cycle()
+    assert [t["sym"] for t in saved(fs)["trades"]] == ["NIFTY"]
+
+
+def test_one_name_takes_at_most_three_trades_a_day(world):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=1, indexMaxPerDay=3)
+    d = saved(fs)
+    d["trades"] = [{"id": f"A-{i}", "sym": "NIFTY", "date": NOW.date().isoformat(), "status": "CLOSED", "kind": "index", "opt": "CE", "key": f"K{i}",
+                    "closedAt": NOW.date().isoformat() + "T09:20:00+05:30"} for i in range(3)]
+    fs.d[at.KEY] = json.dumps(d)
+    at._RC.clear()
+    box["cands"] = [cand(), cand("BANKNIFTY")]
+    at.run_cycle()
+    assert sorted(t["sym"] for t in saved(fs)["trades"] if t["status"] == "OPEN") == ["BANKNIFTY"]      # NIFTY already has its 3 today

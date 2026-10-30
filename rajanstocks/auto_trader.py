@@ -55,6 +55,8 @@ DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnl
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1}
 MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade needs at least 2 indicators pointing the same way ...
+INDEX_MIN_AGREE = 3                      # 30 Oct (user): an index option trade needs 3+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
+INDEX_MAX_PER_DAY = 3                    # 30 Oct (user): at most 3 trades a day in any one index OR stock option (was 5) - the best ranked (risk/reward + indicators) go first, so wins and losses come from 2-3 trades, not a stream of them
 SOLO_STRENGTH = 75.0                     # ... unless a single signal comes with Picks strength >= 75 (100 ranks first). Index trades are not affected.
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
@@ -583,7 +585,7 @@ def fill_slots(st, today, already):
                     break
                 score = (-neg) / 100 if tier == 0 else (-neg) / 200
                 out.append({"_fill": True, "key": "index-call-put", "sym": c["instrument"], "side": side, "kind": "index", "variant": "fixed",
-                            "filter": "none", "score": score, "rank": (1.0 if tier == 0 else 0.5) + score + 0.3 * pts, "agree": 1,
+                            "filter": "none", "score": score, "rank": (1.0 if tier == 0 else 0.5) + score + 0.3 * pts, "agree": 1 + pts,
                             "source": why, "label": "index call/put screen"})
                 used.add(c["instrument"])
                 need["index"] -= 1
@@ -1988,6 +1990,46 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(few)} skipped (stock option needs {need}+ indicators or strength {solo:.0f}+)"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"agreement check failed: {str(e)[:80]}"})
+            try:                                                  # index rule (user 30 Oct): 3+ indicators agree, at most 5 trades a day per index
+                need_i, max_i = int(cfg.get("indexMinAgree", INDEX_MIN_AGREE)), int(cfg.get("indexMaxPerDay", INDEX_MAX_PER_DAY))
+                same = {}
+                for c in entries:
+                    same.setdefault((c["sym"], c["side"]), set()).add(c.get("key"))
+                done_idx = {}
+                for t in st["trades"]:
+                    if t.get("date") == today and not t.get("pairOf") and t.get("pos") != "short":
+                        done_idx[t["sym"]] = done_idx.get(t["sym"], 0) + 1
+                keep_i, few_i, cap_i = [], 0, 0
+                for c in entries:
+                    if c.get("key") == "rzt-hedge" or c.get("pos") == "short":
+                        keep_i.append(c)
+                        continue
+                    if c.get("kind") != "index":                  # stock options: the same daily limit per stock, no indicator minimum here (the stock rule above has its own)
+                        if max_i > 0 and done_idx.get(c["sym"], 0) >= max_i:
+                            cap_i += 1
+                            continue
+                        done_idx[c["sym"]] = done_idx.get(c["sym"], 0) + 1
+                        keep_i.append(c)
+                        continue
+                    n_ind = int(c.get("agree") or 1) + len(same.get((c["sym"], c["side"]), set()) - {c.get("key")})
+                    if need_i > 1 and n_ind < need_i:
+                        few_i += 1
+                        _idx_note(st, c["sym"], f"no entry - only {n_ind} indicator(s) agree, {need_i} needed")
+                        continue
+                    if max_i > 0 and done_idx.get(c["sym"], 0) >= max_i:
+                        cap_i += 1
+                        _idx_note(st, c["sym"], f"no entry - {max_i} trades already taken today")
+                        continue
+                    done_idx[c["sym"]] = done_idx.get(c["sym"], 0) + 1
+                    c["agree"] = n_ind
+                    keep_i.append(c)
+                if few_i or cap_i:
+                    entries = keep_i
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{few_i} index skipped (under {need_i} indicators), {cap_i} skipped (max {max_i} trades a day in one name)"
+                else:
+                    entries = keep_i
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"index agreement check failed: {str(e)[:80]}"})
             if cfg.get("stockOnly") or cfg.get("buyOnly"):        # from 28 Oct: options are only BOUGHT (call for a bullish signal, put for a bearish one) - nothing is written / sold (stock options only too when stockOnly is switched on)
                 n0 = len(entries)
                 entries = [c for c in entries if not (cfg.get("stockOnly") and c.get("kind") != "stock")

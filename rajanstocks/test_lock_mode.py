@@ -52,14 +52,16 @@ def test_index_can_be_entered_again_after_a_stop_and_in_the_same_option(monkeypa
     monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-26"}] * 30))
     import backtest
     monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 100.0)
-    t = at.open_trade(st, {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "x", "variant": "fixed"}, today)
-    assert t["key"] == "NSE_FO|111" and t["status"] == "OPEN"            # the very contract that was stopped out earlier today
+    import pytest
+    with pytest.raises(RuntimeError, match="already traded today"):      # 30 Oct (user): the very contract stopped out earlier today is refused, any other strike is fine
+        at.open_trade(st, {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "x", "variant": "fixed"}, today)
 
 
-def test_a_symbol_with_an_open_trade_is_still_not_doubled(monkeypatch):
+def test_an_index_with_an_open_trade_is_still_screened(monkeypatch):
+    """30 Oct (user): an open trade does not hide the index from the screen; open_trade refuses a second entry in the same direction / same contract."""
     today, st = _screen_world(monkeypatch, 9, 45)
     st["trades"][0].update(status="OPEN", closedAt=None)
-    assert "NIFTY" not in {c["sym"] for c in at.fill_slots(st, today, []) if c.get("kind") == "index"}
+    assert "NIFTY" in {c["sym"] for c in at.fill_slots(st, today, []) if c.get("kind") == "index"}
 
 
 def test_day_break_is_45k_and_works_in_research_mode():
