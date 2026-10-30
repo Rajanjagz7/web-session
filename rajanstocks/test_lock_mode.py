@@ -146,5 +146,5 @@ def test_index_options_are_bought_by_default(monkeypatch):
 
 def test_entry_priority_by_strength_band_with_eagle_first_inside_a_band():
     pm = {"A": {"strength": 100}, "B": {"strength": 96}, "C": {"strength": 88}, "D": {"strength": 80}, "E": {"strength": 80}, "F": {"strength": 70}, "G": {"strength": 55}, "H": {"strength": 30}}
-    rows = [{"kind": "stock", "sym": s, "key": "x"} for s in "HGFDCBA"] + [{"kind": "index", "sym": "NIFTY", "key": "x"}, {"kind": "stock", "sym": "E", "key": at.EAGLE}]
-    assert [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))] == ["A", "B", "C", "E", "D", "NIFTY", "F", "G", "H"]
+    rows = [{"kind": "stock", "sym": s, "key": "x"} for s in "HGFDCBA"] + [{"kind": "index", "sym": "NIFTY", "key": "x", "agree": 2}, {"kind": "stock", "sym": "E", "key": at.EAGLE}]
+    assert [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))] == ["A", "B", "C", "E", "NIFTY", "D", "F", "G", "H"]

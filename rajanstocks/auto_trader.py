@@ -1019,15 +1019,15 @@ STRENGTH_BANDS = (99.5, 95.0, 85.0, 75.0)       # then index options, then 65+, 
 
 
 def entry_priority(c, pmap):
-    """Order in which entries are taken (user, 30 Oct): by Picks strength, highest first - 100, then 95+, 85+, 75+; index options after those, then 65+, 50+ and
-    the rest last. Inside one band an Eagle trade (Open = High -> put, Open = Low -> call) goes before the others; equal entries keep their existing order."""
-    if c.get("kind") == "index":
-        return (len(STRENGTH_BANDS), 1)
+    """Order in which entries are taken (user, 30 Oct): by Picks strength, highest first - 100, then 95+, 85+, 75+, 65+, 50+ and the rest last; index options sit in the same bands by their own
+    Picks strength (30 Oct, user), and inside a band the one with more agreeing indicators goes first. Inside one band an Eagle trade (Open = High -> put, Open = Low -> call) goes before the others; equal entries keep their existing order."""
     stren = float((pmap.get(c.get("sym")) or {}).get("strength") or 0)
+    if c.get("kind") == "index" and stren <= 0:               # 30 Oct (user): an index is ranked like a stock - its own Picks strength; without a Picks row, by how many fresh indicators agree
+        stren = 85.0 if int(c.get("agree") or 1) >= 3 else 75.0 if int(c.get("agree") or 1) >= 2 else 0.0
     band = next((i for i, lvl in enumerate(STRENGTH_BANDS) if stren >= lvl), None)
     if band is None:
         band = len(STRENGTH_BANDS) + 1 + (0 if stren >= 65 else 1 if stren >= 50 else 2)
-    return (band, 0 if c.get("key") == EAGLE else 1)
+    return (band, 0 if c.get("key") == EAGLE else 1, -int(c.get("agree") or 1))     # then the entry with more agreeing (fresh) indicators first
 
 
 def _quality(p):
