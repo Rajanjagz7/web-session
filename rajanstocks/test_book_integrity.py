@@ -376,3 +376,16 @@ def test_eagle_waits_for_the_open_price(monkeypatch):
         _open_eagle(monkeypatch, prem=115.0, p_open=100.0)             # already 15% above its open
     with pytest.raises(RuntimeError, match="open price"):
         _open_eagle(monkeypatch, prem=85.0, p_open=100.0)              # fell more than 10 points under the open
+
+
+def test_old_filter_always_takes_exactly_one_lot(monkeypatch):
+    import backtest
+    ct = {"expiry": "2026-11-10", "strike": 25000, "key": "OPT1", "premium": 50.0, "lot": 75, "spot": 25000.0, "bid": 49.5, "ask": 50.0, "ltp": 50.0}
+    monkeypatch.setattr(at, "_contract", lambda *a, **k: ct)
+    monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-28"}] * 30))
+    monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 2.0)          # a tiny stop: the risk budget alone would buy many lots
+    monkeypatch.setattr(at, "_now", lambda: NOW)
+    big = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "morning-pick", "variant": "fixed"}, TODAY)
+    old = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "stock-screen", "variant": "fixed"}, TODAY)
+    assert big["lots"] > 1                                                    # NEW IND keeps the risk-based sizing
+    assert old["lots"] == 1 and old["fset"] == "OLD FILT"

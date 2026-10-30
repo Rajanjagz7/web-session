@@ -1347,6 +1347,8 @@ def open_trade(st, c, today):
         budget /= 2                                          # the paired sell takes the other half of the risk budget
     per_lot = ct["lot"] * 0.5 * risk_u
     lots = max(1, int(budget // per_lot)) if per_lot > 0 else 1
+    if filter_set(c) == "OLD FILT":                          # 30 Oct (user): the old filter always takes exactly 1 lot - the risk-budget sizing above is bypassed
+        lots = 1
     max_out = base_eq * 0.2
     while lots > 1 and lots * ct["lot"] * ct["premium"] > max_out:
         lots -= 1
