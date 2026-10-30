@@ -389,3 +389,16 @@ def test_every_auto_entry_takes_exactly_one_lot(monkeypatch):
     old = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "stock-screen", "variant": "fixed"}, TODAY)
     assert big["lots"] == 1 and big["fset"] == "NEW IND"                       # NEW IND: 1 lot too
     assert old["lots"] == 1 and old["fset"] == "OLD FILT"
+
+
+def test_old_filter_trades_use_the_21_oct_rules_and_new_ones_do_not(monkeypatch):
+    import backtest
+    ct = {"expiry": "2026-11-10", "strike": 25000, "key": "OPT1", "premium": 100.0, "lot": 75, "spot": 25000.0, "bid": 99.5, "ask": 100.0, "ltp": 100.0}
+    monkeypatch.setattr(at, "_contract", lambda *a, **k: ct)
+    monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-28"}] * 30))
+    monkeypatch.setattr(backtest, "plan_risk", lambda *a, **k: 60.0)           # a wide signal-candle stop: 60 underlying points = 30 premium points
+    monkeypatch.setattr(at, "_now", lambda: NOW)
+    old = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "stock-screen", "variant": "fixed"}, TODAY)
+    new = at.open_trade(book(), {"sym": "NIFTY", "side": "BUY", "kind": "index", "key": "morning-pick", "variant": "fixed"}, TODAY)
+    assert old["riskU"] == 60.0 and "tgts" not in old and old["targetU"] == round(25000 + 2 * 60.0, 2)     # 30% stop kept, one 2R target
+    assert new["riskU"] < 60.0 and len(new["tgts"]) == 7                                                  # new: 12.5% cap and the ladder

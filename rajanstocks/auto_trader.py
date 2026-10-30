@@ -1313,7 +1313,7 @@ def open_trade(st, c, today):
             raise RuntimeError(f"skipped: bid/ask spread {sp_ * 100:.1f}% is too wide for the {float(cfg.get('premSlPct', PREM_SL_PCT)) * 100:.1f}% stop (max {lim_ * 100:.1f}%)")
     # the bearish-contract veto does not apply when the open itself backs the trade: the option opened at its day low (premium Open = Low, stop low - 10),
     # or it is an Eagle trade (stock Open = Low for a BUY / Open = High for a SELL). Those are the user's own entry rules (29 Oct).
-    open_backed = bool(premium_oel(ct)) or c.get("key") == EAGLE or stock_open_backs(c["sym"], c["side"])
+    open_backed = filter_set(c) == "OLD FILT" or bool(premium_oel(ct)) or c.get("key") == EAGLE or stock_open_backs(c["sym"], c["side"])
     if c.get("pos") != "short" and c.get("key") != "rzt-hedge" and not str(c.get("id", "")).endswith("-W") and not open_backed:
         why_ = contract_blocked(ct, cfg)
         if why_:
@@ -1328,7 +1328,11 @@ def open_trade(st, c, today):
     # 28 Oct (user: the stops were too big - up to 30% of the premium): the option stop is capped at premSlPct (default 12.5%) of the premium.
     # The target keeps its 2R distance, so the reward shrinks with the risk; position size is set from the risk budget, so a tighter stop
     # means more lots for the same money at risk.
-    risk_u = min(risk_u, float(cfg.get("premSlPct", PREM_SL_PCT)) * ct["premium"] / 0.5)
+    # 30 Oct (user): the OLD FILT set trades by its 21 Oct rules so its accuracy can be compared with the new indicators: the stop is the signal-candle stop
+    # capped at 30% of the premium (backtest.plan_risk - no 12.5% cap), ONE target at 2R (no 1.5R-10R ladder), no premium Open = Low stop, no contract veto.
+    old_rules = filter_set(c) == "OLD FILT"
+    if not old_rules:
+        risk_u = min(risk_u, float(cfg.get("premSlPct", PREM_SL_PCT)) * ct["premium"] / 0.5)
     if c.get("key") == EAGLE:                           # Eagle: a fixed 5-point premium stop; 1R = 5 premium points = 10 underlying points at delta 0.5, so the whole ladder follows
         p0, o0 = float(ct["premium"]), float(ct.get("pOpen") or 0)
         if o0 >= 5 and (p0 > o0 * (1 + EAGLE_OPEN_TOL) or p0 < o0 - EAGLE_DIP_PTS):
@@ -1336,8 +1340,8 @@ def open_trade(st, c, today):
         if EAGLE_STOP_PTS <= 0.35 * p0:                  # on a very cheap option 5 points is more than 35% of the premium: it keeps the percentage stop
             risk_u = min(risk_u, EAGLE_STOP_PTS / 0.5)
     stop_u = entry_u - d * risk_u
-    tgts = [round(entry_u + d * r * risk_u, 2) for r in TARGET_LADDER] if variant == "fixed" else None     # T1..T7 on the underlying
-    target_u = tgts[-1] if tgts else None                                                                    # the last one (10R) ends the trade
+    tgts = [round(entry_u + d * r * risk_u, 2) for r in TARGET_LADDER] if (variant == "fixed" and not old_rules) else None     # T1..T7 on the underlying
+    target_u = tgts[-1] if tgts else (entry_u + d * backtest.TARGET_R * risk_u if (old_rules and variant == "fixed") else None)   # the last one (10R) ends the trade; old rules: one 2R target
     sl_name = _sleeve_of(c)
     sl_eq = _sleeve_equity(st, sl_name)
     base_eq = sl_eq if sl_eq else _equity(st)                # a sleeve sizes its own trades (risk % and the 20% position cap)
@@ -1374,7 +1378,7 @@ def open_trade(st, c, today):
         "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
         "fset": filter_set(c),
     }
-    oel = premium_oel(ct)
+    oel = None if old_rules else premium_oel(ct)
     if oel:                                                  # the bought option opened at its day low: its own point stop, when that is tighter than the normal one
         t["premSig"] = "Open = Low" if oel[0] == "clean" else "Open = Low (within 10 pts)"
         sl_ = _oel_stop(t["entry"], oel[1])
