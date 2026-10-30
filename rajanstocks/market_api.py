@@ -2076,6 +2076,26 @@ def cash_seed_export():
                     headers={"Content-Disposition": "attachment; filename=picks_cash_seed.json", "Cache-Control": "no-store", "X-Rows": str(len(d))})
 
 
+@router.api_route("/cron/cash-seed", methods=["GET", "POST"])
+def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = Header(default="")):
+    """Scheduled picks build that walks the cash-stock universe (08:46 and 16:00 IST on weekdays, from Upstash QStash). Every build moves the cash walk on by one
+    slice and downloads more of the bhav history, so the cash list fills up before the open and again after the close. Needs CRON_SECRET (Bearer) or GODS_EYE_ADMIN_KEY."""
+    secrets = [x for x in (os.environ.get("CRON_SECRET"), os.environ.get("GODS_EYE_ADMIN_KEY")) if x]
+    given = [authorization[7:] if authorization.lower().startswith("bearer ") else authorization, x_admin_key]
+    if secrets and not any(g and hmac.compare_digest(g.encode(), sec.encode()) for g in given for sec in secrets):
+        raise HTTPException(401, "Unauthorized")
+    ensure_universe()
+    t0 = time.time()
+    try:
+        _cache.pop("picks", None)
+        v = picks(refresh=True)
+    except HTTPException as e:
+        return {"ok": False, "error": str(e.detail), "tookS": round(time.time() - t0, 1)}
+    rows = (v or {}).get("picks", []) if isinstance(v, dict) else []
+    return {"ok": True, "rows": len(rows), "cashRows": sum(1 for r in rows if r.get("universe") == "cash"), "fnoRows": sum(1 for r in rows if r.get("universe") != "cash"),
+            "complete": bool((v or {}).get("complete")), "tookS": round(time.time() - t0, 1)}
+
+
 @router.get("/picks")
 def picks(refresh: bool = False, response: Response = None):
     if response and not refresh:
