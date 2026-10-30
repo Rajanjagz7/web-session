@@ -481,6 +481,7 @@ def _index_backing(c, side):
 
 
 REENTRY_GAP_MIN = 0       # minutes after a trade closes before the same symbol can be entered again (user, 29 Oct: no restriction - a fresh signal re-enters at once)
+INDEX_ONE_OPEN_PER_SIDE = True   # an index takes any number of trades a day, but not a second one in the same direction (CE / PE) while one is still open
 BLOCK_SAME_CONTRACT = True    # an option contract (same strike / expiry / side) already traded today or still open is refused; any other strike of the same index or stock may be entered (user, 30 Oct)
 
 
@@ -1313,6 +1314,10 @@ def open_trade(st, c, today):
     atr, last_close, bars = _atr_for(c["sym"])
     cap = float((cfg.get("maxOutlay") or MAX_OUTLAY).get(c["sym"]) or 0) or None
     ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap)
+    if INDEX_ONE_OPEN_PER_SIDE and c["sym"] in INDEX_SYMS:        # 30 Oct (user): the ATM strike rolls up with the price, so a standing signal bought a "new" contract every 2-minute cycle
+        want = "CE" if c["side"] == "BUY" else "PE"
+        if any(t.get("status") == "OPEN" and t.get("sym") == c["sym"] and t.get("opt") == want and not t.get("pairOf") and t.get("pos") != "short" for t in st["trades"]):
+            raise RuntimeError(f"skipped: a {c['sym']} {want} trade is still open - the next one comes after it exits or on the opposite side")
     if BLOCK_SAME_CONTRACT and any(t.get("key") == ct["key"] and (t.get("status") == "OPEN" or t.get("date") == today or (t.get("closedAt") or "") >= today) for t in st["trades"]):
         raise RuntimeError("skipped: this option contract was already traded today (a new entry has to be in another option)")
     ask_, bid_ = float(ct.get("ask") or 0), float(ct.get("bid") or 0)
