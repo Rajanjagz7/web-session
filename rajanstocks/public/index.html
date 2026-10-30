@@ -3445,6 +3445,15 @@ document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest
     ks.forEach(k=>localStorage.removeItem(k));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/^pkoff-\d{4}-\d\d-\d\d$/.test(k)&&k!==pkOffKey())localStorage.removeItem(k)}}catch(x){}App.pkl=null;App.pkf=null;pkLogRefresh();toast('Picks log cleared - new picks are tracked from now')}
     else{App.pkLogArm=Date.now();pkLogRefresh();setTimeout(pkLogRefresh,6100)}}});
 window.pkLogHTML=pkLogHTML;
+/* 30 Oct: the log used to follow only the cards drawn on the Today's Picks screen, so it stayed empty while the app sat on Journal. This builds the same cards off-screen
+   and runs the same stop / target check, every 15 s while the market is open */
+function pkBgTick(){try{if(typeof App==='undefined'||document.hidden||!MKT.open||!App.picks||!Array.isArray(App.picks.picks)||!App.pk)return;
+  const m=(d=>d.getUTCHours()*60+d.getUTCMinutes())(new Date(Date.now()+330*60000));if(m<555||m>930)return;
+  const box=document.createElement('div');let h='';
+  App.picks.picks.filter(p=>p.universe!=='cash'&&p.signal&&p.signal!=='NEUTRAL').slice(0,250).forEach(p=>{try{h+=pickCard(p)}catch(e){}});
+  try{((App.calls&&App.calls.calls)||[]).forEach(c=>{try{h+=callCard(c)}catch(e){}})}catch(e){}
+  box.innerHTML=h;box.querySelectorAll('.pk-live[data-pkl]').forEach(e=>{try{pkLiveEval(JSON.parse(e.dataset.pkl))}catch(x){}})}catch(e){}}
+setInterval(pkBgTick,15000);setTimeout(pkBgTick,5000);
 setInterval(()=>{try{if(pkfScan())pkFreshTick();pkLiveTick();pkFreshTick()}catch(e){}},4000);
 /* an index's side for the Buy / Sell filters: a clear signal, or - when it is only WATCH - the way its three horizons lean (intraday counts double) */
 function pkIdxCall(p){const c=(App.calls&&App.calls.calls)?App.calls.calls.find(x=>x.instrument===p.s):null;return c&&/CALL|PUT/.test(c.signal||'')?c:null}   /* the live call screen's index call, only when it is a real call */

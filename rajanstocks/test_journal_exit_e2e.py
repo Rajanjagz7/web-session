@@ -706,3 +706,17 @@ def test_picks_log_has_reset_when_empty_and_pages_long_lists(server, browser):
     assert html.count('class="pkr ') == 5 and "21–25 of 25" in html
     assert not errs
     c.close()
+
+
+def test_picks_log_fills_in_the_background_without_the_picks_screen(server, browser):
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    set_sym(pg, "ZZBG", 100)
+    n = pg.evaluate("""() => {
+      MKT.open = true;
+      App.picks = {picks:[{s:'ZZBG',n:'ZZ',sec:'X',kind:'stock',universe:'fno',signal:'BUY',ltp:100,chg:1,strength:80,stop:95,target:105,target2:110,intraday:'Bullish',swing:'Bullish',positional:'Bullish',plans:null,reasons:[]}]};
+      const box = document.createElement('div'); box.innerHTML = pickCard(App.picks.picks[0]);
+      box.querySelectorAll('.pk-live[data-pkl]').forEach(e => pkLiveEval(JSON.parse(e.dataset.pkl)));   // what pkBgTick does inside market hours
+      return pkLogDays().reduce((n,d)=>n+d.rows.length,0)}""")
+    assert n == 1 and not errs
+    c.close()
