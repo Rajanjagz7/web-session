@@ -593,21 +593,29 @@ def fill_slots(st, today, already):
             # the morning shortlist (morning_picks.py, same ranking as the Picks screen's `top`): strength >= 75 with good risk/reward first
             # (+ Open = Low / High agreeing), then Open = Low BUY / Open = High SELL, then fill-up - 10 to 15 stock trades a day in all
             import morning_picks
-            if cfg.get("classicOnly", True):                                   # the classic "stock screen (trend + volume + RSI)": the Picks engine's BUY / SELL stock signals with good risk/reward
+            classic = bool(cfg.get("classicOnly", True))
+            n_before, screen_rows = len(out), []
+            short_syms = set() if classic else {x["s"] for x in morning_picks.select([q for q in _picks().get("picks", []) if q.get("s") not in INDEX_SYMS and q.get("universe") != "cash"], max_n=NO_LIMIT, per_sector=NO_LIMIT)}
+            if True:                                                           # 30 Oct (user): the stock screen runs in every mode, besides Today's Picks / Eagle, with no daily cap. The classic "stock screen (trend + volume + RSI)": the Picks engine's BUY / SELL stock signals with good risk/reward
                 took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "stock-screen") + sum(1 for c in already if c.get("key") == "stock-screen")
                 rows = []
                 for p in _picks().get("picks", []):
                     if p.get("s") in INDEX_SYMS or p.get("universe") == "cash" or p.get("s") in used or p.get("signal") not in ("BUY", "SELL"):
                         continue
+                    if not classic and p.get("s") in short_syms:
+                        continue                                              # the shortlist takes its own names first
                     if (p.get("strength") or 0) >= morning_picks.FILL_STRENGTH_MIN and morning_picks.good_rr(p, p["signal"]):
                         rows.append(p)
                 rows.sort(key=lambda p: -_quality(p))                    # strength >= 75% first, then strength and volume
-                for p in rows[:max(0, min(need["stock"], morning_picks.MAX_PICKS - took))]:
+                for p in rows[:max(0, need["stock"])]:
                     d = 1 if p["signal"] == "BUY" else -1
                     out.append({"_fill": True, "key": "stock-screen", "sym": p["s"], "side": p["signal"], "kind": "stock", "variant": "fixed", "filter": "none",
                                 "indStop": round(p["ltp"] - d * morning_picks.swing_risk(p, p["signal"]), 2), "score": (p.get("strength") or 0) / 100,
-                                "rank": 1.0 + _quality(p), "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
-                return out[:room]
+                                "rank": (1.0 if classic else 0.01) + _quality(p) * (1 if classic else 0.01), "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
+                    used.add(p["s"]); need["stock"] -= 1
+                if classic:
+                    return out[:room]
+                screen_rows, out = out[n_before:], out[:n_before]          # not classic: the shortlist keeps priority, the screen's picks follow it
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
             left = NO_LIMIT                                    # 30 Oct (user): the 15-a-day number belongs to the Fresh picks list on screen, not to the trades - every qualifying pick is taken
             picks = [p for p in _picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
@@ -619,6 +627,7 @@ def fill_slots(st, today, already):
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
                             "source": f"Today's Picks · tier {p['tier']} · {p['why']}", "label": "Today's Picks shortlist"})
+            out.extend(screen_rows)
         except Exception as e:
             st["log"].append({"at": _now().isoformat(), "msg": f"stock screen failed: {str(e)[:80]}"})
     return out[:room]
