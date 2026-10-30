@@ -225,3 +225,19 @@ def test_one_name_takes_at_most_three_trades_a_day(world):
     box["cands"] = [cand(), cand("BANKNIFTY")]
     at.run_cycle()
     assert sorted(t["sym"] for t in saved(fs)["trades"] if t["status"] == "OPEN") == ["BANKNIFTY"]      # NIFTY already has its 3 today
+
+
+def test_no_more_entries_on_a_side_after_its_stop_hit(world):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=1, indexMaxPerDay=3)
+    d = saved(fs)
+    d["trades"] = [{"id": "A-1", "sym": "NIFTY", "date": NOW.date().isoformat(), "status": "CLOSED", "kind": "index", "opt": "CE", "key": "K1", "exitReason": "STOP",
+                    "closedAt": NOW.date().isoformat() + "T09:20:00+05:30"}]
+    fs.d[at.KEY] = json.dumps(d)
+    at._RC.clear()
+    box["cands"] = [cand("NIFTY", side="BUY")]
+    at.run_cycle()
+    assert not [t for t in saved(fs)["trades"] if t["status"] == "OPEN"]                  # the call side is finished for today
+    box["cands"] = [cand("NIFTY", side="SELL")]
+    at.run_cycle()
+    assert [t["opt"] for t in saved(fs)["trades"] if t["status"] == "OPEN"] == ["PE"]     # the put side is still open to trade

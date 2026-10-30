@@ -1999,10 +1999,17 @@ def _run_cycle(now, force, dry):
                 for t in st["trades"]:
                     if t.get("date") == today and not t.get("pairOf") and t.get("pos") != "short":
                         done_idx[t["sym"]] = done_idx.get(t["sym"], 0) + 1
+                dead = {(t["sym"], t.get("opt")) for t in st["trades"]       # user 30 Oct: once an entry in a name + side hit its stop (or the signal reversed), no more entries on that side today
+                        if t.get("date") == today and t.get("status") == "CLOSED" and t.get("exitReason") in ("STOP", "REVERSE") and not t.get("pairOf") and t.get("pos") != "short"}
                 keep_i, few_i, cap_i = [], 0, 0
                 for c in entries:
                     if c.get("key") == "rzt-hedge" or c.get("pos") == "short":
                         keep_i.append(c)
+                        continue
+                    if (c["sym"], "CE" if c["side"] == "BUY" else "PE") in dead:
+                        cap_i += 1
+                        if c.get("kind") == "index":
+                            _idx_note(st, c["sym"], "no entry - the earlier trade on this side hit its stop (or reversed) today")
                         continue
                     if c.get("kind") != "index":                  # stock options: the same daily limit per stock, no indicator minimum here (the stock rule above has its own)
                         if max_i > 0 and done_idx.get(c["sym"], 0) >= max_i:
