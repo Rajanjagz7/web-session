@@ -2077,11 +2077,11 @@ def cash_seed_export():
 
 
 @router.api_route("/cron/cash-seed", methods=["GET", "POST"])
-def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = Header(default="")):
+def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = Header(default=""), key: str = ""):
     """Scheduled picks build that walks the cash-stock universe (08:46 and 16:00 IST on weekdays, from Upstash QStash). Every build moves the cash walk on by one
     slice and downloads more of the bhav history, so the cash list fills up before the open and again after the close. Needs CRON_SECRET (Bearer) or GODS_EYE_ADMIN_KEY."""
     secrets = [x for x in (os.environ.get("CRON_SECRET"), os.environ.get("GODS_EYE_ADMIN_KEY")) if x]
-    given = [authorization[7:] if authorization.lower().startswith("bearer ") else authorization, x_admin_key]
+    given = [authorization[7:] if authorization.lower().startswith("bearer ") else authorization, x_admin_key, key]      # ?key= lets you run it once from a browser address bar
     if secrets and not any(g and hmac.compare_digest(g.encode(), sec.encode()) for g in given for sec in secrets):
         raise HTTPException(401, "Unauthorized")
     ensure_universe()
