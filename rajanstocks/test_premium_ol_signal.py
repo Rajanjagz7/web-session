@@ -1,3 +1,6 @@
+import shutil, pytest
+if not shutil.which("node"):
+    pytest.skip("Node.js not installed on this system", allow_module_level=True)
 """Open = Low on the Trade screen: entry is the day's LOW, stop low-10, and the signal ends once price ran / the 1.5x target traded (user's NIFTY 22850 CE example)."""
 import json, pathlib, re, subprocess
 

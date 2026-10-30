@@ -54,12 +54,13 @@ def test_classic_mode_shadows_the_extras(monkeypatch):
 def test_classic_stock_screen_candidates(monkeypatch):
     import market_api
     from datetime import datetime
-    from zoneinfo import ZoneInfo
+    from datetime import timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
     import auto_trader as a
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: [])
     row = dict(s="AAA", kind="stock", universe="fno", signal="BUY", strength=70, ltp=100.0, op=100.0, lo=99.0, hi=101.0, volx=1.5, h20=110.0, l20=90.0, atr=2.0)
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [row]})
-    monkeypatch.setattr(a, "_now", lambda: datetime(2026, 10, 29, 11, 0, tzinfo=ZoneInfo("Asia/Kolkata")))
+    monkeypatch.setattr(a, "_now", lambda: datetime(2026, 10, 29, 11, 0, tzinfo=IST))
     st = {"cfg": dict(a.DEFAULT_CFG), "trades": [], "log": []}
     out = a.fill_slots(st, "2026-10-29", [])
     assert all(c["key"] != "morning-pick" for c in out)
@@ -79,7 +80,8 @@ def test_classic_filter_extras_need_a_classic_agreement():
 
 def test_share_trader_cash_only_switch_still_works(monkeypatch):      # 30 Oct: the default is the 22 Oct logic (every Picks stock, cashOnly False); cashOnly True is the Stock only tab
     import datetime as dt
-    from zoneinfo import ZoneInfo
+    from datetime import timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
     import market_api
     import stock_trader as s
     plan = {"ok": True, "side": "BUY", "fit": 5, "entry": 100.0, "stop": 98.0, "t1": 103.0, "t2": 106.0}
@@ -90,7 +92,7 @@ def test_share_trader_cash_only_switch_still_works(monkeypatch):      # 30 Oct: 
     monkeypatch.setattr(s, "_quotes", lambda syms: seen.setdefault("syms", list(syms)) and {x: {"last": 100.0} for x in syms})
     st = {"trades": [], "cash": 500000.0}
     try:
-        s.enter(st, dt.datetime(2026, 10, 29, 10, 0, tzinfo=ZoneInfo("Asia/Kolkata")))
+        s.enter(st, dt.datetime(2026, 10, 29, 10, 0, tzinfo=IST))
     except Exception:
         pass
     assert "FNOSTK" not in seen.get("syms", [])
@@ -156,7 +158,8 @@ def test_industry_labels_and_lookup():
 
 def test_share_trader_default_trades_every_picks_stock(monkeypatch):
     import datetime as dt
-    from zoneinfo import ZoneInfo
+    from datetime import timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
     import market_api
     import stock_trader as s
     assert s.CFG["cashOnly"] is False and s.CFG["profitLock"] is False and s.CFG["windowStart"] == "09:20"
@@ -166,7 +169,7 @@ def test_share_trader_default_trades_every_picks_stock(monkeypatch):
     seen = {}
     monkeypatch.setattr(s, "_quotes", lambda syms: seen.setdefault("syms", list(syms)) and {x: {"last": 100.0} for x in syms})
     try:
-        s.enter({"trades": [], "cash": 500000.0}, dt.datetime(2026, 10, 29, 10, 0, tzinfo=ZoneInfo("Asia/Kolkata")))
+        s.enter({"trades": [], "cash": 500000.0}, dt.datetime(2026, 10, 29, 10, 0, tzinfo=IST))
     except Exception:
         pass
     assert "FNOSTK" in seen.get("syms", [])

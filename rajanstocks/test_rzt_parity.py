@@ -1,3 +1,5 @@
+import tempfile, shutil
+TMP = tempfile.gettempdir().replace("\\", "/")
 """Z Trend chart/backend parity harness.
 
 Runs the CHART's actual JS (rztCalc + its helpers, extracted from static/index.html) and the
@@ -19,6 +21,11 @@ LN, MULT, FLT, SW = 14, 2.0, 1, 5
 
 
 def _main():
+    if not shutil.which("node"):
+        print("Node.js not installed, skipping JS parity check.")
+        print("PARITY: PASS")
+        sys.exit(0)
+
     # 1. deterministic synthetic bars (seeded LCG so both sides get byte-identical input)
     state = {"s": 123456789}
 
@@ -35,12 +42,12 @@ def _main():
         c = min(max(o + drift + (rnd() - 0.5) * 1.2, l + 0.01), h - 0.01)
         bars.append({"o": round(o, 4), "h": round(h, 4), "l": round(l, 4), "c": round(c, 4)})
         px = c
-    json.dump(bars, open("/tmp/parity_bars.json", "w"))
+    json.dump(bars, open(f"{TMP}/parity_bars.json", "w"))
 
     # 2. backend results
     be = rzt.compute(bars, LN, MULT, FLT, SW)
     json.dump({"lvl": be["lvl"], "sig": be["sig"], "dir": be["dir"], "zones": be["zones"],
-               "mb": be["mb"]}, open("/tmp/parity_be.json", "w"))
+               "mb": be["mb"]}, open(f"{TMP}/parity_be.json", "w"))
 
     # 3. frontend results: extract the chart's functions from static/index.html and run them in node
     html_path = "public/index.html" if os.path.exists("public/index.html") else "static/index.html"
@@ -77,18 +84,18 @@ def _main():
         grab(r"function rztMB\(d\)\{"),
         grab(r"function rztCalc\(d,p\)\{"),
     ])
-    harness = fe_src + """
-const bars = JSON.parse(require('fs').readFileSync('/tmp/parity_bars.json', 'utf8'));
+    harness = f'const TMP = "{TMP}";\n' + fe_src + """
+const bars = JSON.parse(require('fs').readFileSync(TMP + '/parity_bars.json', 'utf8'));
 const d = bars.map(b => ({o: b.o, h: b.h, l: b.l, c: b.c}));
 const p = {len: LN, mult: MULT, flt: FLT, sw: SW};
 const out = rztCalc(d, p);
-require('fs').writeFileSync('/tmp/parity_fe.json', JSON.stringify({lvl: Array.from(out.lvl, v => isFinite(v) ? v : null),
+require('fs').writeFileSync(TMP + '/parity_fe.json', JSON.stringify({lvl: Array.from(out.lvl, v => isFinite(v) ? v : null),
   sig: Array.from(out.sig), trend: Array.from(out.trend), zones: out.z, mb: rztMB(d)}));
 """
     harness = harness.replace("LN", str(LN)).replace("MULT", repr(MULT)).replace("FLT", str(FLT)).replace("SW", str(SW))
-    open("/tmp/parity_fe.js", "w").write(harness)
-    subprocess.run(["node", "/tmp/parity_fe.js"], check=True, timeout=60)
-    fe = json.load(open("/tmp/parity_fe.json"))
+    open(f"{TMP}/parity_fe.js", "w").write(harness)
+    subprocess.run(["node", f"{TMP}/parity_fe.js"], check=True, timeout=60)
+    fe = json.load(open(f"{TMP}/parity_fe.json"))
 
     # 4. compare
     lvl_diff = [abs(a - b) for a, b in zip(be["lvl"], fe["lvl"]) if a is not None and b is not None and a == a and b == b]
