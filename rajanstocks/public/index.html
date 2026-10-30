@@ -3301,6 +3301,7 @@ try{if(!localStorage.getItem('pkk-rst2')){for(let i=localStorage.length-1;i>=0;i
 function pkHidKeys(){const k='pkk-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);if(!_pkHid||_pkHid.k!==k){let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]')||[]}catch(e){}_pkHid={k,s:new Set(a)}}return _pkHid.s}
 /* "Reset log" = nothing is recorded again until tomorrow (a card that appears later - a new pick, another tab, a refresh - used to start the log again) */
 const pkOffKey=()=>'pkoff-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);
+function pkResetAt(){try{return +localStorage.getItem('pkrs-'+new Date(Date.now()+330*60000).toISOString().slice(0,10))||0}catch(e){return 0}}
 function pkLogOff(){try{if(localStorage.getItem(pkOffKey())==='1'){localStorage.removeItem(pkOffKey());localStorage.removeItem('pkk-'+new Date(Date.now()+330*60000).toISOString().slice(0,10));_pkHid=null}}catch(e){}return false}   /* 30 Oct: Reset no longer switches the log off for the day (it showed empty all day); it clears what is there and new picks track again */
 function pkHidAdd(keys){const s=pkHidKeys();keys.forEach(x=>s.add(x));try{localStorage.setItem(_pkHid.k,JSON.stringify([...s]))}catch(e){}}
 const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
@@ -3326,9 +3327,10 @@ function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).f
   const L=o.dir==='L',hidK=pkLogOff()||pkHidKeys().has(o.key),st=hidK?_pkTmp:pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec),h=rec.h||(rec.h={});
   const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl),mark=(k,t,pp)=>{if(!h[k]){h[k]=t;(rec.hp||(rec.hp={}))[k]=pp!=null?pp:px}};
   if(beyond(px,o.stop,true))mark('sl',now);T.forEach((v,i)=>{if(beyond(px,v,false))mark('t'+(i+1),now)});
-  if(o.morning&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
+  const _rs=pkResetAt();   /* after "Reset log" only what happens from now on counts: the day's range since the open is not replayed into the fresh log */
+  if(o.morning&&!_rs&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
     if(L?lo<=o.stop:hi>=o.stop)mark('sl',1,o.stop);T.forEach((v,i)=>{if(L?hi>=v:lo<=v)mark('t'+(i+1),1,v)})}
-  const ext=o.morning&&s.hi>0&&s.lo>0?(L?s.hi:s.lo):px;rec.best=rec.best==null?ext:(L?Math.max(rec.best,ext,px):Math.min(rec.best,ext,px));
+  const ext=o.morning&&!_rs&&s.hi>0&&s.lo>0?(L?s.hi:s.lo):px;rec.best=rec.best==null?ext:(L?Math.max(rec.best,ext,px):Math.min(rec.best,ext,px));
   if(h.sl>1)rec.post=rec.post==null?px:(L?Math.max(rec.post,px):Math.min(rec.post,px));   /* the furthest the price went in the pick's favour since the stop was hit */
   if(!rec.m||!Object.keys(h).length)rec.m={s:o.sym,l:o.label||o.sym,d:o.dir,k:o.kind||'stock',e:o.entry,sl:o.stop,t:T,at:(rec.m&&rec.m.at)||now,dp:o.dp==null?2:o.dp};
   if(!hidK&&JSON.stringify(rec)!==was)pkLiveSave();
@@ -3441,8 +3443,8 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('[data-pklf]'),r=e.target.closest&&e.target.closest('[data-pklreset]');
   if(f){App.pkLogF=f.dataset.pklf;if(App.pkLogPg)App.pkLogPg.p=0;pkLogRefresh();return}
   if(r){if(App.pkLogArm&&Date.now()-App.pkLogArm<6000){App.pkLogArm=0;try{const ks=[],hid=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&/^pk[lf]-\d{4}-\d\d-\d\d$/.test(k))ks.push(k)}
-    try{pkHidAdd(Object.keys(pkLiveStore()))}catch(y){}try{pkfLoad().forEach(x=>hid.push(x.sym+'|'+x.dir));(App.picks.picks||[]).forEach(q=>{const d=pkfDetect(q);if(d)hid.push(d.sym+'|'+d.dir)});localStorage.setItem('pkx-'+pkfKey().slice(4),JSON.stringify(hid))}catch(y){}   /* remember what was cleared so the same picks are not tracked again today */
-    ks.forEach(k=>localStorage.removeItem(k));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/^pkoff-\d{4}-\d\d-\d\d$/.test(k)&&k!==pkOffKey())localStorage.removeItem(k)}}catch(x){}App.pkl=null;App.pkf=null;pkLogRefresh();toast('Picks log cleared - new picks are tracked from now')}
+    try{localStorage.setItem('pkrs-'+new Date(Date.now()+330*60000).toISOString().slice(0,10),String(Date.now()))}catch(y){}try{pkfLoad().forEach(x=>hid.push(x.sym+'|'+x.dir));(App.picks.picks||[]).forEach(q=>{const d=pkfDetect(q);if(d)hid.push(d.sym+'|'+d.dir)});localStorage.setItem('pkx-'+pkfKey().slice(4),JSON.stringify(hid))}catch(y){}   /* remember what was cleared so the same picks are not tracked again today */
+    ks.forEach(k=>localStorage.removeItem(k));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/^pkoff-\d{4}-\d\d-\d\d$/.test(k)&&k!==pkOffKey())localStorage.removeItem(k)}}catch(x){}App.pkl=null;App.pkf=null;pkLogRefresh();toast('Picks log cleared - every pick is tracked again from now')}
     else{App.pkLogArm=Date.now();pkLogRefresh();setTimeout(pkLogRefresh,6100)}}});
 window.pkLogHTML=pkLogHTML;
 /* 30 Oct: the log used to follow only the cards drawn on the Today's Picks screen, so it stayed empty while the app sat on Journal. This builds the same cards off-screen

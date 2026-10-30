@@ -753,3 +753,22 @@ def test_browse_list_is_sorted_by_strength_descending_or_ascending(server, brows
     assert res["strength"] == ["S100", "S90", "S80", "S75", "S60"] and res["strengthasc"] == ["S60", "S75", "S80", "S90", "S100"], res
     assert not errs
     c.close()
+
+
+def test_after_reset_the_cards_are_tracked_again_without_replaying_the_morning(server, browser):
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    set_sym(pg, "ZZRS", 100)
+    res = pg.evaluate("""() => {
+      const S = SYM('ZZRS'); S.hi = 112; S.lo = 99;
+      const o = {sym:'ZZRS', dir:'L', entry:100, stop:95, ts:[105,110], key:'st|ZZRS|L|intraday', dp:2, morning:true};
+      pkLiveEval(o);
+      const first = Object.keys(pkLogDays()[0].rows[0].h).length;            // before the reset: the day's high replays T1 / T2
+      for (let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(/^pkl-/.test(k))localStorage.removeItem(k)}
+      localStorage.setItem('pkrs-'+new Date(Date.now()+330*60000).toISOString().slice(0,10), String(Date.now())); App.pkl = null;
+      pkLiveEval(o);
+      const rows = pkLogDays().reduce((a,d)=>a.concat(d.rows),[]);
+      return [first, rows.length, rows[0] ? Object.keys(rows[0].h).length : -1]}""")
+    assert res[0] == 2 and res[1] == 1 and res[2] == 0, res
+    assert not errs
+    c.close()
