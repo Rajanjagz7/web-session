@@ -142,7 +142,7 @@ def test_eagle_cands_have_no_cap_are_tagged_and_ranked_first(monkeypatch):
     monkeypatch.setattr(auto_trader, "_now", lambda: datetime(2026, 10, 27, 9, 35, tzinfo=auto_trader.IST))
     st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False, "classicOnly": False}, "trades": [{"date": "2026-10-27", "sym": "E0", "status": "OPEN"}], "log": []}
     out = auto_trader.eagle_cands(st, "2026-10-27")
-    assert len(out) == 29 and "E0" not in {c["sym"] for c in out}                  # all 30 qualify, minus the one already held; no 15-cap, no sector cap
+    assert len(out) == 30                  # all 30 qualify (a held symbol may be entered again, only an identical contract is refused); no 15-cap, no sector cap
     assert all(c["key"] == "Eagle Trades" and c["source"] == "Eagle Trades" and c["rank"] >= 20 for c in out)
     assert "PLAIN" not in {c["sym"] for c in out}
 

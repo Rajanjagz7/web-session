@@ -506,11 +506,9 @@ def _taken_syms(st, today, now=None):
     if isinstance(cl, dict) and cl.get("date") == today:
         out.update(x for x in (cl.get("syms") or []) if x not in INDEX_SYMS)   # traded today, then cleared by the user: no second entry today
     for t in st["trades"]:
-        if t["sym"] in INDEX_SYMS:
-            continue                                     # 30 Oct (user): an index takes any number of trades a day, only the identical option contract is refused
         if t["status"] == "OPEN":
-            out.add(t["sym"])
-        elif REENTRY_GAP_MIN > 0 and t.get("date") == today and t.get("closedAt"):
+            continue                                     # 30 Oct (user): an index or stock may hold and re-enter any number of trades a day; only the identical option contract is refused (open_trade)
+        if REENTRY_GAP_MIN > 0 and t.get("date") == today and t.get("closedAt"):
             try:
                 if (now - datetime.fromisoformat(t["closedAt"])).total_seconds() < REENTRY_GAP_MIN * 60:
                     out.add(t["sym"])
