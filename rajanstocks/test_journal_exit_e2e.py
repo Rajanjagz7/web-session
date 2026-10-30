@@ -737,3 +737,19 @@ def test_horizon_filter_follows_bullish_buy_bearish_sell_even_when_the_plan_says
     assert names["BUY"] == ["BUYER"] and names["SELL"] == ["SELLER"] and sorted(names["ALL"]) == ["BUYER", "SELLER"], names
     assert not errs
     c.close()
+
+
+def test_browse_list_is_sorted_by_strength_descending_or_ascending(server, browser):
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    res = pg.evaluate("""() => {
+      const mk = (s, st) => ({s, n:s, sec:'X', kind:'stock', universe:'fno', signal:'BUY', ltp:100, chg:1, strength:st, entry:100, stop:95, target:110, target2:115, intraday:'Bullish', swing:'Bullish', positional:'Bullish', volx:1, plans:null, reasons:[]});
+      App.picks = {picks:[mk('S60',60), mk('S100',100), mk('S75',75), mk('S90',90), mk('S80',80)], top:[]};
+      if(!document.getElementById('v-picks'))document.body.insertAdjacentHTML('beforeend','<div id="v-picks"></div>');
+      const out = {};
+      for (const so of ['strength','strengthasc']) { App.pk = {...App.pk, kind:'STOCK', mkt:'FNO', hz:'ALL', sig:'ALL', str:'ALL', ind:'ALL', q:'', sort:so, size:15, page:0};
+        renderPicks(); out[so] = [...document.querySelectorAll('#v-picks article.pk b')].map(e=>e.textContent).filter(t=>/^S\\d+$/.test(t)) }
+      return out}""")
+    assert res["strength"] == ["S100", "S90", "S80", "S75", "S60"] and res["strengthasc"] == ["S60", "S75", "S80", "S90", "S100"], res
+    assert not errs
+    c.close()
