@@ -3297,10 +3297,11 @@ function pkLiveStore(){const k='pkl-'+new Date(Date.now()+330*60000).toISOString
 function pkLiveSave(){try{localStorage.setItem(App.pkl._k,JSON.stringify(App.pkl.d))}catch(e){}}
 /* keys cleared with "Reset log" stay out of the log for the rest of the day (their cards are still shown, just not recorded again) */
 let _pkHid=null,_pkTmp={};
+try{if(!localStorage.getItem('pkk-rst2')){for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/^pk(k|off)-\d{4}-\d\d-\d\d$/.test(k))localStorage.removeItem(k)}localStorage.setItem('pkk-rst2','1')}}catch(e){}
 function pkHidKeys(){const k='pkk-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);if(!_pkHid||_pkHid.k!==k){let a=[];try{a=JSON.parse(localStorage.getItem(k)||'[]')||[]}catch(e){}_pkHid={k,s:new Set(a)}}return _pkHid.s}
 /* "Reset log" = nothing is recorded again until tomorrow (a card that appears later - a new pick, another tab, a refresh - used to start the log again) */
 const pkOffKey=()=>'pkoff-'+new Date(Date.now()+330*60000).toISOString().slice(0,10);
-function pkLogOff(){try{if(localStorage.getItem(pkOffKey())==='1'){localStorage.removeItem(pkOffKey());localStorage.removeItem(pkHidKeys&&_pkHid?_pkHid.k:'pkk-x');_pkHid=null}}catch(e){}return false}   /* 30 Oct: Reset no longer switches the log off for the day (it showed empty all day); it clears what is there and new picks track again */
+function pkLogOff(){try{if(localStorage.getItem(pkOffKey())==='1'){localStorage.removeItem(pkOffKey());localStorage.removeItem('pkk-'+new Date(Date.now()+330*60000).toISOString().slice(0,10));_pkHid=null}}catch(e){}return false}   /* 30 Oct: Reset no longer switches the log off for the day (it showed empty all day); it clears what is there and new picks track again */
 function pkHidAdd(keys){const s=pkHidKeys();keys.forEach(x=>s.add(x));try{localStorage.setItem(_pkHid.k,JSON.stringify([...s]))}catch(e){}}
 const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
 /* SL 🚫 / T1 ✅ marks: a hit shows the mark (and the time if known), a level not reached yet shows its price */
