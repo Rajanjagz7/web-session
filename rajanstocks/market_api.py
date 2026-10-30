@@ -2089,9 +2089,17 @@ def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = H
     try:
         _cache.pop("picks", None)
         v = picks(refresh=True)
-    except HTTPException as e:
-        return {"ok": False, "error": str(e.detail), "tookS": round(time.time() - t0, 1)}
+    except Exception as e:                      # a failure must NOT answer 200: QStash would show it as a success and nobody would see why the list never filled
+        detail = str(getattr(e, "detail", None) or e)[:300]
+        last = None
+        try:
+            last = shared_cache.get(f"picks:build|{date.today().isoformat()}")
+        except Exception:
+            pass
+        raise HTTPException(502, f"cash-seed build failed after {time.time() - t0:.1f}s: {type(e).__name__}: {detail}" + (f" · last build note: {last}" if last else ""))
     rows = (v or {}).get("picks", []) if isinstance(v, dict) else []
+    if not rows:
+        raise HTTPException(502, f"cash-seed build returned no rows after {time.time() - t0:.1f}s")
     return {"ok": True, "rows": len(rows), "cashRows": sum(1 for r in rows if r.get("universe") == "cash"), "fnoRows": sum(1 for r in rows if r.get("universe") != "cash"),
             "complete": bool((v or {}).get("complete")), "tookS": round(time.time() - t0, 1)}
 
