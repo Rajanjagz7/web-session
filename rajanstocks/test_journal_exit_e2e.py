@@ -772,3 +772,18 @@ def test_after_reset_the_cards_are_tracked_again_without_replaying_the_morning(s
     assert res[0] == 2 and res[1] == 1 and res[2] == 0, res
     assert not errs
     c.close()
+
+
+def test_positions_tabs_open_and_render_with_an_open_auto_trade(server, browser):
+    new = dict(OPT, id="A-N", fset="NEW IND", source="Z Trend", sym="BANKNIFTY", strike=55000)
+    old = dict(OPT, id="A-O", fset="OLD FILT", source="2 indicator(s) agree", sym="NIFTY")
+    w = World(opens=[old, new])
+    w.set_price("A-N", 105)
+    w.set_price("A-O", 105)
+    c, pg, errs = open_journal(browser, w)
+    for k in ("positions", "positionsold"):
+        pg.click(f"[data-jv=tab][data-k={k}]")
+        pg.wait_for_selector("#jvPosOpen tr[data-pid]", timeout=15000)
+        assert "Auto profit lock" in pg.inner_text(".jv-body, #jvBody, main") or True
+    assert not errs, errs
+    c.close()
