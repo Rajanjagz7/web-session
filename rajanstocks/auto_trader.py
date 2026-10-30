@@ -1999,8 +1999,8 @@ def _run_cycle(now, force, dry):
                 for t in st["trades"]:
                     if t.get("date") == today and not t.get("pairOf") and t.get("pos") != "short":
                         done_idx[t["sym"]] = done_idx.get(t["sym"], 0) + 1
-                dead = {(t["sym"], t.get("opt")) for t in st["trades"]       # user 30 Oct: once an entry in a name + side hit its stop, no more entries on that side today (a reversed signal does not block: a fresh call or put entry is taken)
-                        if t.get("date") == today and t.get("status") == "CLOSED" and t.get("exitReason") == "STOP" and not t.get("pairOf") and t.get("pos") != "short"}
+                dead = {(t["sym"], t.get("opt")) for t in st["trades"]       # user 30 Oct: (switched off, user 30 Oct: after a stop hit a fresh entry in another strike is taken; the 3-a-day limit and the same-contract rule still apply)
+                        if t.get("date") == today and t.get("status") == "CLOSED" and False and not t.get("pairOf") and t.get("pos") != "short"}
                 keep_i, few_i, cap_i = [], 0, 0
                 for c in entries:
                     if c.get("key") == "rzt-hedge" or c.get("pos") == "short":
