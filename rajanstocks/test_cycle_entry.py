@@ -42,6 +42,7 @@ def world(monkeypatch):
     monkeypatch.setattr(at, "shadow_resolve", lambda st, now: None)
     monkeypatch.setattr(at, "shadow_record", lambda *a, **k: None)
     monkeypatch.setattr(at, "_notify", lambda t: None)
+    monkeypatch.setattr(at, "index_expiry_today", lambda today: False)        # a regular day unless a test says otherwise
     monkeypatch.setattr(rzt, "intraday_cands", lambda: [])
     monkeypatch.setattr(premium_rider, "scan", lambda: {})
     monkeypatch.setattr(at, "_atr_for", lambda sym: (100.0, 25000.0, [{"date": "2026-10-28"}] * 30))
@@ -141,6 +142,7 @@ def test_what_the_cycle_did_not_get_to_is_carried_to_the_next_cycle(world, monke
         return [screen("NIFTY", "index", 0.6, "index-call-put"), screen("BANKNIFTY", "index", 0.6, "index-call-put"), screen("SENSEX", "index", 0.6, "index-call-put")] if calls["n"] == 1 else []
     monkeypatch.setattr(at, "fill_slots", once)
     monkeypatch.setattr(at, "CYCLE_BUDGET", 0.0)
+    monkeypatch.setattr(at, "INDEX_ONE_OPEN_PER_SIDE", False)         # this test is about carrying, not about the one-index-per-side rule
     for _ in range(4):
         monkeypatch.setattr(at, "FILL_EVERY", 0)
         at.run_cycle()
@@ -268,3 +270,26 @@ def test_majority_side_wins_and_a_tie_does_not_trade(world, monkeypatch):
     box["cands"] = [dict(cand("BANKNIFTY", "index", "SELL"), agree=2, key="a"), dict(cand("BANKNIFTY", "index", "BUY"), agree=2, key="b")]
     at.run_cycle()
     assert not saved(fs)["trades"]                                                          # equal numbers: no view, no trade
+
+
+def test_all_indices_with_the_same_signal_make_one_trade(world, monkeypatch):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=1, indexMaxPerDay=0)
+    monkeypatch.setattr(at, "_screen_score", lambda: {})
+    box["cands"] = [dict(cand("NIFTY", "index", "BUY"), agree=2, rank=1.0), dict(cand("SENSEX", "index", "BUY"), agree=3, rank=1.2),
+                    dict(cand("FINNIFTY", "index", "BUY"), agree=2, rank=0.9), dict(cand("BANKNIFTY", "index", "SELL"), agree=2, rank=1.1)]
+    at.run_cycle()
+    got = sorted((t["sym"], t["opt"]) for t in saved(fs)["trades"] if t["status"] == "OPEN")
+    assert got == [("BANKNIFTY", "PE"), ("SENSEX", "CE")]          # the best call, and the index that diverges (its own put); the other two calls are duplicates
+
+
+def test_on_an_expiry_day_two_indices_may_take_the_same_side(world, monkeypatch):
+    box, fs = world
+    monkeypatch.setattr(at, "index_expiry_today", lambda today: True)
+    _set_cfg(fs, indexMinAgree=1, indexMaxPerDay=0)
+    monkeypatch.setattr(at, "_screen_score", lambda: {})
+    box["cands"] = [dict(cand("NIFTY", "index", "BUY"), agree=2, rank=1.0), dict(cand("SENSEX", "index", "BUY"), agree=3, rank=1.2),
+                    dict(cand("FINNIFTY", "index", "BUY"), agree=2, rank=0.9)]
+    at.run_cycle()
+    got = sorted(t["sym"] for t in saved(fs)["trades"] if t["status"] == "OPEN")
+    assert got == ["NIFTY", "SENSEX"]                               # the two best calls; the third would be a third copy of the same view

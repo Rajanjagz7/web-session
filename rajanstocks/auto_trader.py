@@ -486,7 +486,7 @@ def _index_backing(c, side):
 
 
 REENTRY_GAP_MIN = 0       # minutes after a trade closes before the same symbol can be entered again (user, 29 Oct: no restriction - a fresh signal re-enters at once)
-INDEX_ONE_OPEN_PER_SIDE = True   # an index takes any number of trades a day, but not a second one in the same direction (CE / PE) while one is still open
+INDEX_ONE_OPEN_PER_SIDE = True   # one index trade per side (CE / PE) at a time across ALL indices (they move together); any number of trades a day, an opposite-side index (divergence) is still taken
 BLOCK_SAME_CONTRACT = True    # an option contract (same strike / expiry / side) already traded today or still open is refused; any other strike of the same index or stock may be entered (user, 30 Oct)
 
 
@@ -1024,6 +1024,36 @@ STRENGTH_BANDS = (99.5, 95.0, 85.0, 75.0)       # then index options, then 65+, 
 FRESH_CFG = {"index": (0.35, 0.18, 1.0), "stock": (1.0, 0.45, 2.5)}      # (min day range %, min bounce %, max stop distance %) - the same numbers as the browser's Fresh picks
 
 
+_EXP = {}
+INDEX_EXPIRY_WEEKDAY = {"NIFTY": 1, "SENSEX": 3}      # fallback when the option chain is not readable: NIFTY weekly expiry Tuesday, SENSEX Thursday
+
+
+def index_expiry_today(today):
+    """True when one of the indices has its (weekly / monthly) expiry today. User 30 Oct: on such a day two index trades per side are allowed (for example NIFTY and
+    SENSEX together), on every other day one. Read from the option chains' nearest expiry (cached for the day); the weekday table is the fallback."""
+    if today in _EXP:
+        return _EXP[today]
+    hit = None
+    try:
+        import market_api
+        for sym in INDEX_SYMS:
+            ch = market_api.chain(sym, "")
+            exps = sorted(e for e in (ch.get("expiries") or [ch.get("expiry")]) if e)
+            if exps:
+                hit = (hit or False) or exps[0] == today
+    except Exception:
+        hit = None
+    if hit is None:
+        hit = date.fromisoformat(today).weekday() in INDEX_EXPIRY_WEEKDAY.values()
+    _EXP.clear()
+    _EXP[today] = bool(hit)
+    return _EXP[today]
+
+
+def index_per_side(today):
+    return 2 if index_expiry_today(today) else 1
+
+
 def fresh_reversal(p):
     """Server copy of the Fresh picks idea (user, 30 Oct: it counts as one more agreeing indicator, it never trades alone): 'BUY' when the price took support
     off its day low and is turning up, 'SELL' when it was rejected at the day high. Uses the Picks row's live price and day high / low (no price history here,
@@ -1354,8 +1384,9 @@ def open_trade(st, c, today):
     ct = _contract(c["sym"], c["side"], today, cfg["minDaysToExpiry"], cap)
     if INDEX_ONE_OPEN_PER_SIDE and c["sym"] in INDEX_SYMS:        # 30 Oct (user): the ATM strike rolls up with the price, so a standing signal bought a "new" contract every 2-minute cycle
         want = "CE" if c["side"] == "BUY" else "PE"
-        if any(t.get("status") == "OPEN" and t.get("sym") == c["sym"] and t.get("opt") == want and not t.get("pairOf") and t.get("pos") != "short" for t in st["trades"]):
-            raise RuntimeError(f"skipped: a {c['sym']} {want} trade is still open - the next one comes after it exits or on the opposite side")
+        open_same = [t for t in st["trades"] if t.get("status") == "OPEN" and t.get("sym") in INDEX_SYMS and t.get("opt") == want and not t.get("pairOf") and t.get("pos") != "short"]
+        if any(t.get("sym") == c["sym"] for t in open_same) or len(open_same) >= index_per_side(today):
+            raise RuntimeError(f"skipped: an index {want} trade is still open - indices move together, so one per side at a time ({index_per_side(today)} on an expiry day; the other side, or a stock, is still open to trade)")
     if BLOCK_SAME_CONTRACT and any(t.get("key") == ct["key"] and (t.get("status") == "OPEN" or t.get("date") == today or (t.get("closedAt") or "") >= today) for t in st["trades"]):
         raise RuntimeError("skipped: this option contract was already traded today (a new entry has to be in another option)")
     ask_, bid_ = float(ct.get("ask") or 0), float(ct.get("bid") or 0)
@@ -2090,9 +2121,34 @@ def _run_cycle(now, force, dry):
                     done_idx[c["sym"]] = done_idx.get(c["sym"], 0) + 1
                     c["agree"] = n_ind
                     keep_i.append(c)
-                if few_i or cap_i:
+                dup_i = 0
+                if INDEX_ONE_OPEN_PER_SIDE:                                   # 30 Oct (user): all indices showing the same signal = ONE trade (the best), not one per index; an index on the other side (a divergence) still gets its own
+                    per_side = index_per_side(today)
+                    open_n = {}
+                    for t in st["trades"]:
+                        if t.get("status") == "OPEN" and t.get("sym") in INDEX_SYMS and not t.get("pairOf") and t.get("pos") != "short":
+                            open_n[t.get("opt")] = open_n.get(t.get("opt"), 0) + 1
+                    ranked_i = sorted([c for c in keep_i if c.get("kind") == "index" and c.get("key") != "rzt-hedge" and c.get("pos") != "short"],
+                                      key=lambda c: (-int(c.get("agree") or 1), -float(c.get("rank", c.get("score")) or 0)))
+                    allowed, took_n = [], dict(open_n)
+                    for c in ranked_i:                                  # best first: one per index, up to per_side (2 on an expiry day) per direction
+                        sd_ = "CE" if c["side"] == "BUY" else "PE"
+                        if took_n.get(sd_, 0) < per_side and not any(a_["sym"] == c["sym"] and a_["side"] == c["side"] for a_ in allowed):
+                            allowed.append(c)
+                            took_n[sd_] = took_n.get(sd_, 0) + 1
+                    keep2 = []
+                    for c in keep_i:
+                        if c.get("kind") == "index" and c.get("key") != "rzt-hedge" and c.get("pos") != "short":
+                            sd_ = "CE" if c["side"] == "BUY" else "PE"
+                            if not any(a_ is c for a_ in allowed):
+                                dup_i += 1
+                                _idx_note(st, c["sym"], f"no entry - another index {sd_} is already taken or open (indices move together: one trade per side)")
+                                continue
+                        keep2.append(c)
+                    keep_i = keep2
+                if few_i or cap_i or dup_i:
                     entries = keep_i
-                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{few_i} index skipped (under {need_i} indicators), {cap_i} skipped (max {max_i} trades a day in one name)"
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{few_i} index skipped (under {need_i} indicators), {cap_i} skipped (max {max_i} trades a day in one name), {dup_i} index skipped (same side as another index)"
                 else:
                     entries = keep_i
             except Exception as e:
