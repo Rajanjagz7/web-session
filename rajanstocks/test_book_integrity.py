@@ -81,9 +81,9 @@ def test_stop_in_a_gap_fills_at_the_price_seen_not_at_the_stop(monkeypatch):
     assert t["gross"] == pytest.approx((60 - 100) * 150)
 
 
-def test_stop_just_crossed_fills_at_the_stop(monkeypatch):
-    t = run_manage(monkeypatch, trade(), opt_last=87, bid=86.8, ask=87.4)   # 0.8% beyond the stop: inside the tolerance
-    assert t["status"] == "CLOSED" and t["exit"] == 87.5
+def test_stop_just_crossed_books_the_bid_seen_not_the_stop_level(monkeypatch):
+    t = run_manage(monkeypatch, trade(), opt_last=87, bid=86.8, ask=87.4)   # 30 Oct (user): never better than the bid - it used to book the stop level 87.5
+    assert t["status"] == "CLOSED" and t["exit"] == 86.8
 
 
 def test_short_stop_gap_fills_at_the_ask_seen(monkeypatch):
