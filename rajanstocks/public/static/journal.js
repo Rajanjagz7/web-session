@@ -14,7 +14,7 @@ window.rjMkt=window.rjMkt||function(){try{const n=new Date(new Date().toLocaleSt
   const MARKETS = ['Equity Intraday', 'Index', 'Options', 'Futures', 'Other'];
   const TSL_MODES = ['Off / Fixed SL', 'Breakeven', 'Step Trail', 'Distance Trail', 'ATR-style (manual)'];
   const EXIT_TYPES = ['SL', 'TSL', 'T1', 'T2', 'T3', 'Manual Exit', 'Time Exit', 'Breakeven'];
-const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', 'Algo'], ['picklog', 'Picks log'], ['stocks', 'Stock trader']];
+const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['positionsold', 'Positions old'], ['algo', 'Algo'], ['picklog', 'Picks log'], ['stocks', 'Stock trader']];
    const GROUPS = {};
    const TAB_TIPS = { picklog: 'What every pick hit today and on earlier days: SL 🚫 stop-loss hit, T1/T2 ✅ targets reached', new: 'Log a manual paper trade: entry price, SL, target, quantity - R:R and risk budget calculated for you', portfolio: 'Equity, P&L, stats and quick actions', positions: 'Current positions with SL, Target, Entry, Exit, Current Price, Exit Button', algo: 'Auto trading status, exits and trade outcomes', stocks: 'Stock paper trader - its own Rs 10 L, intraday / swing / positional' };
   const parentOf = k => Object.keys(GROUPS).find(g => GROUPS[g].some(([sk]) => sk === k)) || k;
@@ -209,7 +209,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['algo', '
       const changed = shapeA() !== before || shapeS() !== beforeStock;
       const pxMoved = pricesA() !== beforePx;
       const ok = document.getElementById('v-journal') && !document.querySelector('.modal-bg');
-      if (ok && changed && ['portfolio', 'positions', 'algo', 'stocks'].includes(effTab())) render();
+      if (ok && changed && ['portfolio', 'positions', 'positionsold', 'algo', 'stocks'].includes(effTab())) render();
       else if (ok && pxMoved && ['algo', 'stocks'].includes(effTab())) render();        // these two have no in-place price updater
       else if (ok && pxMoved) refreshLive();
     } catch (e) {
@@ -585,7 +585,7 @@ function paperList() {
     const host = document.getElementById('v-journal');
     if (!host || !host.offsetParent || document.querySelector('.modal-bg') || document.hidden) return;
     if (ui.tab === 'picklog') { const b = document.getElementById('jvPickLog'), h = window.pkLogHTML ? window.pkLogHTML() : ''; if (b && b._h !== h) { b._h = h; b.innerHTML = h; } return; }
-    if (ui.tab === 'positions') { liveCap(); if (!livePositions()) render(); return; }
+    if (ui.tab === 'positions' || ui.tab === 'positionsold') { liveCap(); if (!livePositions()) render(); return; }
     if (ui.tab === 'algo' || ui.tab === 'stocks') { liveCap(); return; }
     if (ui.tab !== 'portfolio') return;
     const k = document.getElementById('jvKpis'); if (!k) return;
@@ -1521,7 +1521,7 @@ function paperList() {
     const head = `<div class="jv-head"><h1 title="Plan, log and review paper trades — portfolio, risk rules and analytics in one place">Journal</h1>${banner()}</div>`;
     const tabs = `<div class="jv-tabs" role="tablist">${TABS.filter(([k]) => k !== 'stocks' || !stockHidden()).map(([k, l]) => `<button role="tab" aria-selected="${ui.tab === k}" class="${ui.tab === k ? 'on' : ''}" data-jv="tab" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>`;
     const subtabs = GROUPS[ui.tab] ? `<div class="jv-tabs jv-subtabs" role="tablist">${GROUPS[ui.tab].map(([k, l]) => `<button role="tab" aria-selected="${ui.sub[ui.tab] === k}" class="${ui.sub[ui.tab] === k ? 'on' : ''}" data-jv="subtab" data-grp="${ui.tab}" data-k="${k}" title="${TAB_TIPS[k] || ''}">${l}</button>`).join('')}</div>` : '';
-    const bodies = { portfolio: viewOverview, positions: viewPositions, algo: viewAlgo, picklog: () => `<section class="jv-card" style="padding:12px 14px"><h3 style="margin:0 0 4px">Picks log</h3><p class="muted" style="margin:0 0 8px;font-size:12px">SL 🚫 = stop-loss hit · T1 / T2 ✅ = target reached. Followed while the app is open and kept on this device for 14 days.</p><div id="jvPickLog">${window.pkLogHTML ? window.pkLogHTML() : ''}</div></section>`, stocks: () => sbCard(), new: viewNew };
+    const bodies = { portfolio: viewOverview, positions: viewPositions, positionsold: viewPositions, algo: viewAlgo, picklog: () => `<section class="jv-card" style="padding:12px 14px"><h3 style="margin:0 0 4px">Picks log</h3><p class="muted" style="margin:0 0 8px;font-size:12px">SL 🚫 = stop-loss hit · T1 / T2 ✅ = target reached. Followed while the app is open and kept on this device for 14 days.</p><div id="jvPickLog">${window.pkLogHTML ? window.pkLogHTML() : ''}</div></section>`, stocks: () => sbCard(), new: viewNew };
     if (!bodies[ui.tab] || (ui.tab === 'stocks' && stockHidden())) ui.tab = 'portfolio';   // the Stock trader tab is hidden while it is switched off - never land on it
     el.innerHTML = `<div class="page jv">${head}${tabs}${subtabs}${ui.tab === 'new' || ui.tab === 'portfolio' || ui.tab === 'stocks' || ui.tab === 'picklog' ? '' : topStrip()}${bodies[effTab()]()}</div>`;
     if (ui.tab === 'portfolio') {
@@ -1868,23 +1868,29 @@ function paperList() {
      }
    }
 
+   /* 30 Oct (user): the auto trader's two filter sets are kept apart - "Positions old" holds the OLD FILT trades (the 22 Oct filter: N indicators agree,
+      stock screen, index call/put); "Positions" holds every NEW IND trade (Z Trend, time cycle, Today's Picks, Eagle, Gann ...) and the manual / Trade screen ones */
+   const oldView = () => ui.tab === 'positionsold';
+   const inSet = t => (t.fset === 'OLD FILT') === oldView();
+   const setTrades = () => allTrades().filter(inSet);
    function posOpenPage() {
-     const open = allTrades().filter(t => entered(t) && statusOf(t) !== 'Closed' && sideOk(t));
+     const open = setTrades().filter(t => entered(t) && statusOf(t) !== 'Closed' && sideOk(t));
      return { open, ...pagerBar(open, 'po') };
    }
    function viewPositions() {
-     const all = allTrades();
+     const all = setTrades();
      const sigCard = sigResults(all);
      const allOpen = all.filter(t => entered(t) && statusOf(t) !== 'Closed');
      const { open, part, bar } = posOpenPage();
      const closedAll = all.filter(t => statusOf(t) === 'Closed').sort((a, b) => lastExit(b).localeCompare(lastExit(a)));
      const closed = closedAll.filter(sideOk), pc = pagerBar(closed, 'pc');
      const sw = `<div class="jv-pos-bar">${sideBar(allOpen.concat(closedAll))}<span class="muted" style="font-size:12px">Buy = long trades · Sell = short / option writing</span></div>`;
-     const openCard = `<div class="card"><div class="card-h"><h3>Current Positions (${open.length})</h3></div>
+     const openCard = `<div class="card"><div class="card-h"><h3>${oldView() ? 'Old filter · ' : ''}Current Positions (${open.length})</h3></div>
        <div class="tbl-wrap" id="jvPosOpen" data-ids="${E(part.map(t => t.id).join(','))}">${open.length ? positionTable(part) : `<div class="empty">No open ${ui.side === 'buy' ? 'buy ' : ui.side === 'sell' ? 'sell ' : ''}positions. Place trades from the <b>Trade</b> screen (buy or sell, market or limit).</div>`}</div>${bar}
        <p class="muted" style="font-size:12px;margin:6px 2px 0">Auto profit lock on every trade (buy or sell): at ₹2,500 open profit the stop moves to cost + charges; from ₹3,500 it trails with breathing room (keeping 40%–65% of the best profit).</p></div>`;
-     const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
-     return sw + sigCard + openCard + closedCard;
+     const closedCard = closed.length ? `<div class="card"><div class="card-h"><h3>${oldView() ? 'Old filter · ' : ''}Closed Positions (${closed.length})</h3></div><div class="tbl-wrap">${positionTable(pc.part)}</div>${pc.bar}</div>` : '';
+     const note = oldView() ? `<p class="muted" style="font-size:12px;margin:0 2px 8px">Old filter (OLD FILT): the trades the auto trader takes on the 22 Oct filter - "N indicator(s) agree", stock screen, index call/put. Everything else is under Positions.</p>` : '';
+     return note + sw + sigCard + openCard + closedCard;
    }
 
    /* accuracy of the Buy / Sell test trades placed from Trade -> Signals, per signal and side */

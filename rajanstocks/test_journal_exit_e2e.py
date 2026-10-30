@@ -670,3 +670,22 @@ def test_picks_log_reset_stays_cleared_even_while_the_cards_are_on_screen(server
     assert before == 1 and after == 0
     assert not errs
     c.close()
+
+
+def test_positions_old_tab_keeps_old_filter_trades_apart_from_new_ones(server, browser):
+    old = dict(OPT, id="A-OLD", fset="OLD FILT", source="2 indicator(s) agree", sym="NIFTY")
+    new = dict(OPT, id="A-NEW", fset="NEW IND", source="Z Trend", sym="BANKNIFTY", strike=55000)
+    w = World(opens=[old, new])
+    w.set_price("A-OLD", 105)
+    w.set_price("A-NEW", 105)
+    c, pg, errs = open_journal(browser, w)
+    pg.wait_for_selector("#jvPosOpen tr[data-pid]", timeout=15000)
+    ids = pg.eval_on_selector_all("#jvPosOpen tr[data-pid]", "els => els.map(e => e.dataset.pid)")
+    assert ids == ["A-NEW"]                                                      # Positions: new-indicator trades only
+    pg.click("[data-jv=tab][data-k=positionsold]")
+    pg.wait_for_selector("#jvPosOpen tr[data-pid]", timeout=15000)
+    ids = pg.eval_on_selector_all("#jvPosOpen tr[data-pid]", "els => els.map(e => e.dataset.pid)")
+    assert ids == ["A-OLD"]                                                      # Positions old: old-filter trades only
+    assert "Positions old" in pg.inner_text(".jv-tabs")
+    assert not errs
+    c.close()
