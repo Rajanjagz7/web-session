@@ -720,3 +720,20 @@ def test_picks_log_fills_in_the_background_without_the_picks_screen(server, brow
       return pkLogDays().reduce((n,d)=>n+d.rows.length,0)}""")
     assert n == 1 and not errs
     c.close()
+
+
+def test_horizon_filter_follows_bullish_buy_bearish_sell_even_when_the_plan_says_wait(server, browser):
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    names = pg.evaluate("""() => {
+      const mk = (s, sig, bias) => ({s, n:s, sec:'X', kind:'stock', universe:'fno', signal:sig, ltp:100, chg:1, strength:80, entry:100, stop:sig==='BUY'?95:105, target:sig==='BUY'?110:90, target2:sig==='BUY'?115:85,
+        intraday:bias, swing:bias, positional:bias, volx:1, plans:{intraday:{side:'WAIT', ok:false}, swing:{side:'WAIT'}, positional:{side:'WAIT'}}, reasons:[]});
+      App.picks = {picks:[mk('SELLER','SELL','Bearish'), mk('BUYER','BUY','Bullish')], top:[]};
+      if(!document.getElementById('v-picks'))document.body.insertAdjacentHTML('beforeend','<div id="v-picks"></div>');
+      const out = {};
+      for (const sig of ['ALL','BUY','SELL']) { App.pk = {...App.pk, kind:'STOCK', mkt:'FNO', hz:'INTRA', sig, str:'ALL', ind:'ALL', q:''};
+        renderPicks(); out[sig] = [...document.querySelectorAll('#v-picks article.pk b')].map(e=>e.textContent).filter(t=>/SELLER|BUYER/.test(t)) }
+      return out}""")
+    assert names["BUY"] == ["BUYER"] and names["SELL"] == ["SELLER"] and sorted(names["ALL"]) == ["BUYER", "SELLER"], names
+    assert not errs
+    c.close()

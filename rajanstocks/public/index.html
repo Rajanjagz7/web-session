@@ -3619,10 +3619,14 @@ function renderPicks(partial){const el=$('#v-picks');if(!el)return;const P=App.p
     if(hzKey){   /* a horizon is chosen: Buy / Sell follow THAT horizon's own plan, so intraday and positional lists differ */
       l=P.picks.filter(p=>{if(p.kind==='index')return f.hz==='ALL'&&(f.sig!=='SELL'||p.signal==='SELL');const x=p.plans&&p.plans[hzKey];
         if(!x)return f.sig==='BUY'?p.signal==='BUY'&&p[hzKey]==='Bullish':f.sig==='SELL'?p.signal==='SELL'&&p[hzKey]==='Bearish':p[hzKey]!=='Neutral';
-        if(f.sig==='EVERY')return true;if(x.side==='WAIT')return false;if(x.ok===false)return false;if(x.ok===undefined&&p[hzKey]==='Neutral')return false;   // each horizon's own entry test
-        return f.sig==='BUY'?x.side==='BUY':f.sig==='SELL'?x.side==='SELL':true})
+        if(f.sig==='EVERY')return true;
+        /* 30 Oct (user): simple rule - bullish on that horizon = buy / call, bearish = sell / put. A horizon plan that says WAIT / "no setup" used to hide the stock from every list
+           (Intraday showed nothing while Any showed 22); it now falls back to the horizon's own bias when that agrees with the stock's signal (so the levels shown still point the right way) */
+        const sd=x.side==='BUY'||x.side==='SELL'?x.side:(p[hzKey]==='Bullish'&&p.signal==='BUY'?'BUY':p[hzKey]==='Bearish'&&p.signal==='SELL'?'SELL':null);
+        if(!sd)return false;
+        return f.sig==='BUY'?sd==='BUY':f.sig==='SELL'?sd==='SELL':true})
       l=l.map(p=>{const x=p.kind!=='index'&&p.plans&&p.plans[hzKey];return x&&(x.side==='BUY'||x.side==='SELL')&&x.side!==p.signal?{...p,signal:x.side,entry:x.entry||p.entry,stop:x.stop||p.stop,target:x.t1||p.target,target2:x.t2||p.target2}:p})}   /* a horizon list shows that horizon's own side and levels, so a stock listed under Buy never carries a Sell badge */
-    else{const allP=P.picks||[],pBuys=allP.filter(p=>p.signal==='BUY'),pSells=allP.filter(p=>p.signal==='SELL');if(f.sig==='TOP'){const by=new Map(allP.map(x=>[x.s,x]));l=(P.top||[]).map(t=>{const b=by.get(t.s)||{};return {...b,...t,kind:'stock',universe:'fno',signal:t.side,plans:null,reasons:[t.why].concat(b.reasons||[])}})}else if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=allP.slice();else l=pBuys.concat(pSells);
+    else{const allP=P.picks||[],pBuys=allP.filter(p=>p.kind==='index'?p.signal==='BUY':pkIdxSide(p)==='BUY'),pSells=allP.filter(p=>p.kind==='index'?p.signal==='SELL':pkIdxSide(p)==='SELL');if(f.sig==='TOP'){const by=new Map(allP.map(x=>[x.s,x]));l=(P.top||[]).map(t=>{const b=by.get(t.s)||{};return {...b,...t,kind:'stock',universe:'fno',signal:t.side,plans:null,reasons:[t.why].concat(b.reasons||[])}})}else if(f.sig==='BUY')l=pBuys.slice();else if(f.sig==='SELL')l=pSells.slice();else if(f.sig==='EVERY')l=allP.slice();else l=pBuys.concat(pSells);
       if(f.kind==='INDEX'){const ix=allP.filter(p=>p.kind==='index');l=f.sig==='TOP'?ix.filter(p=>p.signal!=='NEUTRAL'||pkIdxCall(p)).sort((a,b)=>(b.strength||0)-(a.strength||0)).slice(0,15):f.sig==='ALL'?ix.slice():(f.sig==='BUY'||f.sig==='SELL')?ix.filter(p=>pkIdxSide(p)===f.sig).sort((a,b)=>(b.strength||0)-(a.strength||0)):l}}   /* Top for index calls = the indices with a clear call, strongest first */
     if(hzKey&&f.sig==='TOP'&&f.kind!=='INDEX'){const ts=new Set((P.top||[]).map(t=>t.s));l=l.filter(p=>ts.has(p.s))}   // Top 10-15 + a horizon: those same stocks, judged on that horizon
     if(f.kind==='STOCK')l=l.filter(p=>p.kind!=='index');else if(f.kind==='INDEX')l=l.filter(p=>p.kind==='index');
