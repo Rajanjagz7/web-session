@@ -55,7 +55,7 @@ DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnl
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
                "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1}
 MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade needs at least 2 indicators pointing the same way ...
-INDEX_MIN_AGREE = 3                      # 30 Oct (user): an index option trade needs 3+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
+INDEX_MIN_AGREE = 2                      # 30 Oct (user): an index option trade needs 2+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
 INDEX_MAX_PER_DAY = 3                    # 30 Oct (user): at most 3 trades a day in any one index OR stock option (was 5) - the best ranked (risk/reward + indicators) go first, so wins and losses come from 2-3 trades, not a stream of them
 SOLO_STRENGTH = 75.0                     # ... unless a single signal comes with Picks strength >= 75 (100 ranks first). Index trades are not affected.
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)

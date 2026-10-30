@@ -203,13 +203,13 @@ def _set_cfg(fs, **kw):
     at._RC.clear()
 
 
-def test_index_needs_three_indicators(world):
+def test_index_needs_two_indicators(world):
     box, fs = world
-    _set_cfg(fs, indexMinAgree=3, indexMaxPerDay=3)
-    box["cands"] = [dict(cand(), agree=2)]
+    _set_cfg(fs, indexMinAgree=2, indexMaxPerDay=3)
+    box["cands"] = [dict(cand(), agree=1)]
     at.run_cycle()
-    assert saved(fs)["trades"] == []                          # two indicators are not enough for an index
-    box["cands"] = [dict(cand(), agree=3)]
+    assert saved(fs)["trades"] == []                          # one indicator is not enough for an index
+    box["cands"] = [dict(cand(), agree=2)]
     at.run_cycle()
     assert [t["sym"] for t in saved(fs)["trades"]] == ["NIFTY"]
 

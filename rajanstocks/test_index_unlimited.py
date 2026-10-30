@@ -24,4 +24,4 @@ def _run(entries, trades=None, monkeypatch=None):
 
 
 def test_constants_for_the_index_rule():
-    assert at.INDEX_MIN_AGREE == 3 and at.INDEX_MAX_PER_DAY == 3
+    assert at.INDEX_MIN_AGREE == 2 and at.INDEX_MAX_PER_DAY == 3
