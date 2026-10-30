@@ -2077,7 +2077,7 @@ def cash_seed_export():
 
 
 @router.api_route("/cron/cash-seed", methods=["GET", "POST"])
-def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = Header(default=""), key: str = ""):
+def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = Header(default=""), key: str = "", force: int = 0):
     """Scheduled picks build that walks the cash-stock universe (08:46 and 16:00 IST on weekdays, from Upstash QStash). Every build moves the cash walk on by one
     slice and downloads more of the bhav history, so the cash list fills up before the open and again after the close. Needs CRON_SECRET (Bearer) or GODS_EYE_ADMIN_KEY."""
     secrets = [x for x in (os.environ.get("CRON_SECRET"), os.environ.get("GODS_EYE_ADMIN_KEY")) if x]
@@ -2086,9 +2086,22 @@ def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = H
         raise HTTPException(401, "Unauthorized")
     ensure_universe()
     t0 = time.time()
+    if not force:                                # already a complete list for today: nothing to do (the schedule can run every few minutes without costing Upstox calls)
+        try:
+            got = shared_cache.get("picks|" + date.today().isoformat()) or {}
+            fno_ = sum(1 for r in got.get("picks", []) if r.get("universe") != "cash")
+            if got.get("complete") and fno_ >= 150 and time.time() - got.get("_t", 0) < 3 * 3600:
+                return {"ok": True, "skipped": "today's list is already complete", "fnoRows": fno_, "complete": True}
+        except Exception:
+            pass
     try:
         _cache.pop("picks", None)
         v = picks(refresh=True)
+        # each build fetches at most 40 new daily candles on Vercel (the Upstox rate budget), so a cold day needs ~5 builds for the ~200 F&O stocks:
+        # one call runs a second build when the first was quick enough to leave room under the 30 s cap
+        if isinstance(v, dict) and not v.get("complete") and time.time() - t0 < 11:
+            _cache.pop("picks", None)
+            v = picks(refresh=True)
     except Exception as e:                      # a failure must NOT answer 200: QStash would show it as a success and nobody would see why the list never filled
         detail = str(getattr(e, "detail", None) or e)[:300]
         last = None
