@@ -166,7 +166,7 @@ def test_a_cycle_enters_eagle_trades_first_and_drops_duplicates(monkeypatch):
     monkeypatch.setattr(auto_trader, "_now", lambda: now)
     monkeypatch.setattr(market_api, "picks", lambda: {"picks": [_eagle_pick("EAG"), pick("OTH", signal="SELL", strength=80, ltp=100.0, stop=103.0)]})   # OTH: a single signal, allowed because its strength is 75+
     monkeypatch.setattr(nse_calendar, "session_open", lambda n: True)
-    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False, "classicOnly": False, "eagleOn": True}, "trades": [], "log": []}    # Eagle is off by default now
+    st = {"cfg": {**auto_trader.DEFAULT_CFG, "buyOnly": False, "stockOnly": False, "classicOnly": False, "eagleOn": True, "soloStrength": 75.0}, "trades": [], "log": []}    # Eagle is off by default now; the solo-strength exception is switched on for this ordering test
     monkeypatch.setattr(auto_trader, "_load", lambda cached=False: st)
     monkeypatch.setattr(auto_trader, "_save", lambda s: None)
     monkeypatch.setattr(auto_trader, "scan_all", lambda s, t: ([], "scan"))

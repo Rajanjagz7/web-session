@@ -31,3 +31,19 @@ def test_index_strength_from_50_counts_as_an_indicator(monkeypatch):
     pts, bits = at._index_backing({"instrument": "NOSUCH", "strength": 55}, "BUY")
     assert pts == 1 and "index strength" in bits[0]
     assert at._index_backing({"instrument": "NOSUCH", "strength": 45}, "BUY")[0] == 0
+
+
+def _row(ltp, hi=102.0, lo=100.0, signal="BUY", kind="stock", chg=1.0):
+    return {"ltp": ltp, "high": hi, "low": lo, "signal": signal, "kind": kind, "chg": chg}
+
+
+def test_fresh_reversal_support_and_rejection():
+    assert at.fresh_reversal(_row(101.0, signal="BUY")) == "BUY"          # mid-range, both fits, follows the row's own signal
+    assert at.fresh_reversal(_row(101.0, signal="SELL")) == "SELL"
+    assert at.fresh_reversal(_row(103.0)) is None                         # outside the day's range: no idea
+    assert at.fresh_reversal(_row(100.2, hi=100.4)) is None               # a flat day (range under 1%) is not a setup for a stock
+
+
+def test_fresh_reversal_adds_one_indicator():
+    assert at._fresh_bonus({"sym": "X", "side": "BUY"}, {"X": _row(101.0)}) == 1
+    assert at._fresh_bonus({"sym": "X", "side": "SELL"}, {"X": _row(101.0)}) == 0

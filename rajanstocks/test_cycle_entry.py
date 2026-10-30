@@ -168,6 +168,7 @@ def test_strength_100_stocks_with_volume_come_before_the_rest():
 
 def test_order_is_index_options_then_100_strength_volume_stocks_then_the_rest(world, monkeypatch):
     box, fs = world
+    _set_cfg(fs, soloStrength=75.0, indexMinAgree=1)       # this test is about the ORDER: allow single-indicator entries
     box["cands"] = []
     mk = lambda sym, kind, q: screen(sym, kind, 1.0 + q, "stock-screen" if kind == "stock" else "index-call-put")
     monkeypatch.setattr(at, "fill_slots", lambda st, today, chosen: [mk("AAA", "stock", at._quality({"strength": 80, "volx": 1})), mk("BBB", "stock", at._quality({"strength": 100, "volx": 2.5})),
@@ -182,18 +183,18 @@ def test_order_is_index_options_then_100_strength_volume_stocks_then_the_rest(wo
     assert order[:4] == ["BBB", "CCC", "AAA", "NIFTY"]      # 30 Oct priority: strength-100 stocks, Eagle, strength 75+, then index options
 
 
-def test_stock_option_needs_two_indicators_or_one_strong_signal(world, monkeypatch):
-    """User 29 Oct: a stock option trade needs 2+ indicators agreeing; a single indicator only counts with Picks strength 75+. Index trades are not affected."""
+def test_stock_option_needs_two_agreeing_indicators_unless_a_solo_strength_is_configured(world, monkeypatch):
+    """User 30 Oct: 2+ agreeing indicators for every stock and index; the old 'one indicator with strength 75+' exception is off unless soloStrength is set."""
     box, fs = world
     one = dict(cand("AAA", "stock"), agree=1)
     two = dict(cand("BBB", "stock"), agree=2)
     strong = dict(cand("CCC", "stock"), agree=1)
-    box["cands"] = [one, two, strong, dict(cand("NIFTY", "index"), agree=1)]
+    box["cands"] = [one, two, strong, dict(cand("NIFTY", "index"), agree=2)]
     monkeypatch.setattr(at, "_screen_score", lambda: {"AAA": {"strength": 60}, "CCC": {"strength": 80}})
     import morning_picks
     monkeypatch.setattr(morning_picks, "good_rr", lambda *a, **k: True)
     rep = at.run_cycle()
-    assert sorted(t["sym"] for t in saved(fs)["trades"]) == ["BBB", "CCC", "NIFTY"] and "1 skipped (stock option needs 2+" in rep["note"]
+    assert sorted(t["sym"] for t in saved(fs)["trades"]) == ["BBB", "NIFTY"] and "2 skipped (stock option needs 2+" in rep["note"]
 
 
 def _set_cfg(fs, **kw):
@@ -251,3 +252,19 @@ def test_a_reversed_exit_does_not_block_a_fresh_entry_on_either_side(world):
     box["cands"] = [cand("NIFTY", side="BUY")]
     at.run_cycle()
     assert [t["opt"] for t in saved(fs)["trades"] if t["status"] == "OPEN"] == ["CE"]     # a new call entry after the reversal is taken
+
+
+def test_majority_side_wins_and_a_tie_does_not_trade(world, monkeypatch):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=2, indexMaxPerDay=0)
+    monkeypatch.setattr(at, "_screen_score", lambda: {})
+    box["cands"] = [dict(cand("NIFTY", "index", "SELL"), agree=5, key="a"), dict(cand("NIFTY", "index", "BUY"), agree=2, key="b")]
+    at.run_cycle()
+    assert [t["opt"] for t in saved(fs)["trades"] if t["status"] == "OPEN"] == ["PE"]       # 5 bearish v 2 bullish: the put side
+    d = saved(fs)
+    d["trades"] = []
+    fs.d[at.KEY] = json.dumps(d)
+    at._RC.clear()
+    box["cands"] = [dict(cand("BANKNIFTY", "index", "SELL"), agree=2, key="a"), dict(cand("BANKNIFTY", "index", "BUY"), agree=2, key="b")]
+    at.run_cycle()
+    assert not saved(fs)["trades"]                                                          # equal numbers: no view, no trade

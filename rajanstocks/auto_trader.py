@@ -58,7 +58,8 @@ MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade nee
 INDEX_MIN_AGREE = 2                      # 30 Oct (user): an index option trade needs 2+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
 INDEX_BACK_STRENGTH = 50.0               # 30 Oct (user): an index's own strength counts as one agreeing indicator from 50% (was 75%)
 INDEX_MAX_PER_DAY = 3                    # 30 Oct (user): at most 3 trades a day in any one index OR stock option (was 5) - the best ranked (risk/reward + indicators) go first, so wins and losses come from 2-3 trades, not a stream of them
-SOLO_STRENGTH = 75.0                     # ... unless a single signal comes with Picks strength >= 75 (100 ranks first). Index trades are not affected.
+SOLO_STRENGTH = 0.0  # 30 Oct (user): no single-indicator exception any more - 2+ agreeing indicators for every stock and index (set soloStrength in the config to bring it back)
+#                   # ... unless a single signal comes with Picks strength >= 75 (100 ranks first). Index trades are not affected.
 SELL_FROM = 9 * 60 + 20                  # option SELL legs (the paired shorts) only from 09:20 - buys start at windowStart (09:16)
 # Vercel kills a function at 30 s and the state is only saved at the end of a cycle: at the open (30+ entries, each with its own option
 # quotes) a cycle ran out of time and NOTHING was kept. A cycle now opens trades for at most this long, saves, and the next cycle
@@ -1019,6 +1020,39 @@ def classic_filter(entries, extras_agree=False):
 STRENGTH_BANDS = (99.5, 95.0, 85.0, 75.0)       # then index options, then 65+, 50+, the rest
 
 
+FRESH_CFG = {"index": (0.35, 0.18, 1.0), "stock": (1.0, 0.45, 2.5)}      # (min day range %, min bounce %, max stop distance %) - the same numbers as the browser's Fresh picks
+
+
+def fresh_reversal(p):
+    """Server copy of the Fresh picks idea (user, 30 Oct: it counts as one more agreeing indicator, it never trades alone): 'BUY' when the price took support
+    off its day low and is turning up, 'SELL' when it was rejected at the day high. Uses the Picks row's live price and day high / low (no price history here,
+    so the browser's 'first look' rule: a bounce inside the middle of the range, and a row that fits both ways follows its own signal)."""
+    try:
+        ltp, hi, lo = float(p.get("ltp") or 0), float(p.get("high") or 0), float(p.get("low") or 0)
+        if not (ltp > 0 and hi > lo > 0) or ltp > hi * 1.0005 or ltp < lo * 0.9995:
+            return None
+        rng_min, bnc, rmax = FRESH_CFG["index" if p.get("kind") == "index" else "stock"]
+        chg = float(p.get("chg") or 0)
+        ref = ltp / (1 + chg / 100) if chg > -99 else ltp
+        rg = hi - lo
+        if rg / ref * 100 < rng_min:
+            return None
+        up, dn = ltp - lo, hi - ltp
+        ok_l = up / lo * 100 >= bnc and rg * 0.4 <= up <= rg * 0.7
+        ok_s = dn / hi * 100 >= bnc and rg * 0.4 <= dn <= rg * 0.7
+        side = ("SELL" if p.get("signal") == "SELL" else "BUY") if ok_l and ok_s else "BUY" if ok_l else "SELL" if ok_s else None
+        if not side:
+            return None
+        stop_d = (ltp - lo) if side == "BUY" else (hi - ltp)
+        return side if stop_d / ltp * 100 <= rmax else None
+    except Exception:
+        return None
+
+
+def _fresh_bonus(c, pmap):
+    return 1 if fresh_reversal(pmap.get(c.get("sym")) or {}) == c.get("side") else 0
+
+
 def entry_priority(c, pmap):
     """Order in which entries are taken (user, 30 Oct): by Picks strength, highest first - 100, then 95+, 85+, 75+, 65+, 50+ and the rest last; index options sit in the same bands by their own
     Picks strength (30 Oct, user), and inside a band the one with more agreeing indicators goes first. Inside one band an Eagle trade (Open = High -> put, Open = Low -> call) goes before the others; equal entries keep their existing order."""
@@ -1974,6 +2008,28 @@ def _run_cycle(now, force, dry):
                     rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(weak)} skipped for weak risk/reward"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"risk/reward check failed: {str(e)[:80]}"})
+            try:                                                  # majority side (user 30 Oct): when bullish and bearish indicators both exist the bigger side trades (5 bearish v 1 bullish = put / sell), a tie or no majority does not
+                pm_n = _screen_score()
+                pro = {}
+                for c in entries:
+                    if c.get("key") == "rzt-hedge" or c.get("pos") == "short":
+                        continue
+                    pro[(c["sym"], c["side"])] = pro.get((c["sym"], c["side"]), 0) + max(1, int(c.get("agree") or 1))
+                for (sy, sd) in list(pro):
+                    pro[(sy, sd)] += _fresh_bonus({"sym": sy, "side": sd}, pm_n)
+                lost = []
+                for c in entries:
+                    if c.get("key") == "rzt-hedge" or c.get("pos") == "short":
+                        continue
+                    opp = pro.get((c["sym"], "SELL" if c["side"] == "BUY" else "BUY"), 0) + int(c.get("against") or 0)
+                    if pro[(c["sym"], c["side"])] <= opp:
+                        lost.append(c)
+                if lost:
+                    lk = {id(c) for c in lost}
+                    entries = [c for c in entries if id(c) not in lk]
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(lost)} skipped (no majority: indicators on the other side are as many or more)"
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"majority check failed: {str(e)[:80]}"})
             try:                                                  # agreement rule (user 29 Oct): stock options need 2+ indicators, or one indicator with strength >= 75
                 need, solo = int(cfg.get("minAgreeStock", MIN_AGREE_STOCK)), float(cfg.get("soloStrength", SOLO_STRENGTH))
                 pm_ = _screen_score()
@@ -1981,18 +2037,19 @@ def _run_cycle(now, force, dry):
                 def _agree_ok(c):
                     if c.get("kind") != "stock" or need <= 1:
                         return True
-                    if int(c.get("agree") or len(c.get("strategies") or []) or 1) >= need:
+                    if int(c.get("agree") or len(c.get("strategies") or []) or 1) + _fresh_bonus(c, pm_) >= need:
                         return True
-                    return float((pm_.get(c["sym"]) or {}).get("strength") or 0) >= solo
+                    return solo > 0 and float((pm_.get(c["sym"]) or {}).get("strength") or 0) >= solo
                 few = [c for c in entries if not _agree_ok(c)]
                 if few:
                     fk = {id(c) for c in few}
                     entries = [c for c in entries if id(c) not in fk]
-                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(few)} skipped (stock option needs {need}+ indicators or strength {solo:.0f}+)"
+                    rep["note"] = (rep["note"] + " · " if rep["note"] else "") + f"{len(few)} skipped (stock option needs {need}+ agreeing indicators)"
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"agreement check failed: {str(e)[:80]}"})
             try:                                                  # index rule (user 30 Oct): 3+ indicators agree, at most 5 trades a day per index
                 need_i, max_i = int(cfg.get("indexMinAgree", INDEX_MIN_AGREE)), int(cfg.get("indexMaxPerDay", INDEX_MAX_PER_DAY))
+                pm_i = _screen_score()
                 same = {}
                 for c in entries:
                     same.setdefault((c["sym"], c["side"]), set()).add(c.get("key"))
@@ -2020,6 +2077,7 @@ def _run_cycle(now, force, dry):
                         keep_i.append(c)
                         continue
                     n_ind = int(c.get("agree") or 1) + len(same.get((c["sym"], c["side"]), set()) - {c.get("key")})
+                    n_ind += _fresh_bonus(c, pm_i)
                     if need_i > 1 and n_ind < need_i:
                         few_i += 1
                         _idx_note(st, c["sym"], f"no entry - only {n_ind} indicator(s) agree, {need_i} needed")
