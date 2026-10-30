@@ -1019,6 +1019,7 @@ def classic_filter(entries, extras_agree=False):
     return kept, paper
 
 
+HIGH_VOLX = 1.5                                  # volume vs its own average: at or above this is a high-volume stock (traded first, 30 Oct user)
 STRENGTH_BANDS = (99.5, 95.0, 85.0, 75.0)       # then index options, then 65+, 50+, the rest
 
 
@@ -1094,7 +1095,16 @@ def entry_priority(c, pmap):
     band = next((i for i, lvl in enumerate(STRENGTH_BANDS) if stren >= lvl), None)
     if band is None:
         band = len(STRENGTH_BANDS) + 1 + (0 if stren >= 65 else 1 if stren >= 50 else 2)
-    return (band, 0 if c.get("key") == EAGLE else 1, -int(c.get("agree") or 1))     # then the entry with more agreeing (fresh) indicators first
+    p = pmap.get(c.get("sym")) or {}
+    try:                                                      # 30 Oct (user): FIRST Open = Low -> call / Open = High -> put (stocks and indices), THEN high-volume stocks, then the strength bands
+        import morning_picks
+        ol, oh = morning_picks.open_flags(p)
+    except Exception:
+        ol = oh = False
+    open_first = 0 if ((c.get("side") == "BUY" and ol) or (c.get("side") == "SELL" and oh)) else 1
+    vx = float(p.get("volx") or 0)
+    vol_tier = 0 if (c.get("kind") == "index" or vx <= 0 or vx >= HIGH_VOLX) else 1      # no volume data = not demoted
+    return (open_first, vol_tier, band, 0 if c.get("key") == EAGLE else 1, -round(vx, 2) if c.get("kind") != "index" else 0, -int(c.get("agree") or 1))
 
 
 def _quality(p):

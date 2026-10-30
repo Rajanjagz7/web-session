@@ -148,3 +148,17 @@ def test_entry_priority_by_strength_band_with_eagle_first_inside_a_band():
     pm = {"A": {"strength": 100}, "B": {"strength": 96}, "C": {"strength": 88}, "D": {"strength": 80}, "E": {"strength": 80}, "F": {"strength": 70}, "G": {"strength": 55}, "H": {"strength": 30}}
     rows = [{"kind": "stock", "sym": s, "key": "x"} for s in "HGFDCBA"] + [{"kind": "index", "sym": "NIFTY", "key": "x", "agree": 2}, {"kind": "stock", "sym": "E", "key": at.EAGLE}]
     assert [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))] == ["A", "B", "C", "E", "NIFTY", "D", "F", "G", "H"]
+
+
+def test_open_low_call_open_high_put_first_then_high_volume_then_strength():
+    pm = {"HV": {"strength": 80, "volx": 2.5}, "LV": {"strength": 100, "volx": 0.8},
+          "OL": {"strength": 60, "volx": 0.5, "open": 100, "low": 100, "high": 103, "ltp": 102},
+          "OH": {"strength": 60, "volx": 0.5, "open": 100, "low": 97, "high": 100, "ltp": 98},
+          "NIFTY": {"strength": 90, "open": 100, "low": 100, "high": 101, "ltp": 100.8}}
+    rows = [{"kind": "stock", "sym": "LV", "side": "BUY", "key": "x"}, {"kind": "stock", "sym": "HV", "side": "BUY", "key": "x"},
+            {"kind": "stock", "sym": "OL", "side": "BUY", "key": "x"}, {"kind": "stock", "sym": "OH", "side": "SELL", "key": "x"},
+            {"kind": "stock", "sym": "OH2", "side": "BUY", "key": "x"}, {"kind": "index", "sym": "NIFTY", "side": "BUY", "key": "x", "agree": 2}]
+    pm["OH2"] = pm["OH"]                                  # Open = High but a CALL: no boost
+    out = [c["sym"] for c in sorted(rows, key=lambda c: at.entry_priority(c, pm))]
+    assert out[:3] == ["NIFTY", "OL", "OH"] or set(out[:3]) == {"NIFTY", "OL", "OH"}
+    assert out.index("HV") < out.index("LV") and out.index("OH2") > out.index("HV")
