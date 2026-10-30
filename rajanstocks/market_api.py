@@ -2113,7 +2113,13 @@ def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = H
     rows = (v or {}).get("picks", []) if isinstance(v, dict) else []
     if not rows:
         raise HTTPException(502, f"cash-seed build returned no rows after {time.time() - t0:.1f}s")
-    return {"ok": True, "rows": len(rows), "cashRows": sum(1 for r in rows if r.get("universe") == "cash"), "fnoRows": sum(1 for r in rows if r.get("universe") != "cash"),
+    diag = {}
+    try:
+        diag = {"fnoUniverse": len(STOCKS) + len(PICK_INDICES), "walk": shared_cache.get(f"picks:walk|{date.today().isoformat()}"),
+                "lastBuild": shared_cache.get(f"picks:build|{date.today().isoformat()}"), "stale": bool((v or {}).get("stale"))}
+    except Exception:
+        pass
+    return {**diag, "ok": True, "rows": len(rows), "cashRows": sum(1 for r in rows if r.get("universe") == "cash"), "fnoRows": sum(1 for r in rows if r.get("universe") != "cash"),
             "complete": bool((v or {}).get("complete")), "tookS": round(time.time() - t0, 1)}
 
 
