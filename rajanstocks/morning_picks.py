@@ -100,7 +100,7 @@ def eagle(p):
     return None
 
 
-def select(picks, min_n=MIN_PICKS, max_n=MAX_PICKS, stocks_only=True):
+def select(picks, min_n=MIN_PICKS, max_n=MAX_PICKS, stocks_only=True, per_sector=None):
     """Ranked shortlist of Picks rows: [{**pick, tier, side, rank, why}]. Tier 3 only fills up to `min_n`."""
     rows = []
     for p in picks or []:
@@ -124,7 +124,7 @@ def select(picks, min_n=MIN_PICKS, max_n=MAX_PICKS, stocks_only=True):
         if r["tier"] == 3 and len(out) >= min_n:
             break
         sec = r.get("sec") or ""
-        if sec and per_sec.get(sec, 0) >= MAX_PER_SECTOR:
+        if sec and per_sec.get(sec, 0) >= (MAX_PER_SECTOR if per_sector is None else per_sector):
             continue
         per_sec[sec] = per_sec.get(sec, 0) + 1
         out.append(r)

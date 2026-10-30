@@ -80,7 +80,7 @@ def test_indices_are_not_in_the_stock_shortlist_and_levels_follow_the_side():
     assert r["side"] == "SELL" and r["stop"] > r["entry"] > r["target"] > r["target2"]       # a short: stop above, targets below
 
 
-def test_fill_slots_takes_the_shortlist_in_priority_order_and_at_most_15_a_day(monkeypatch):
+def test_fill_slots_takes_the_shortlist_in_priority_order_with_no_daily_cap(monkeypatch):
     import market_api
     monkeypatch.setattr(market_api, "quick_index_calls", lambda n: [])
     picks = [pick("OLY", signal="NEUTRAL", strength=25, op=100.0, lo=100.0, hi=101.0, ltp=100.6),
@@ -96,7 +96,8 @@ def test_fill_slots_takes_the_shortlist_in_priority_order_and_at_most_15_a_day(m
     assert [c["sym"] for c in ranked] == ["TOP", "MID", "OLY", "FILL"]
     assert all(c["key"] == "morning-pick" for c in ranked)
     st["trades"] = [{"date": "2026-10-27", "kind": "stock", "strategy": "morning-pick", "sym": f"X{i}", "status": "OPEN"} for i in range(15)]
-    assert auto_trader.fill_slots(st, "2026-10-27", []) == []                 # the day's 15 are already taken
+    again = auto_trader.fill_slots(st, "2026-10-27", [])                      # 30 Oct: 15 already taken does NOT stop the rest - the 15 belongs to the Fresh picks list
+    assert [c["sym"] for c in sorted(again, key=lambda c: -c["rank"])] == ["TOP", "MID", "OLY", "FILL"]
 
 
 def test_rows_without_hi20_use_the_spark_not_free_air():
@@ -279,3 +280,13 @@ def test_banknifty_premium_budget_moves_to_the_nearest_otm_strike_that_fits(monk
     assert pe["strike"] < 54000.0 and pe["key"].startswith("P") and pe["premium"] * 30 <= 15000
     with pytest.raises(RuntimeError, match="premium budget"):
         auto_trader._contract("BANKNIFTY", "BUY", "2026-10-28", 3, 100.0)
+
+
+def test_select_can_return_every_qualifying_pick_when_asked():
+    import morning_picks as mp
+    rows = [{"s": f"S{i}", "n": f"S{i}", "kind": "stock", "signal": "BUY", "strength": 90, "ltp": 100.0, "open": 100.0, "high": 103.0, "low": 100.0,
+             "sec": "Banks", "atr": 2.0, "volx": 1.5, "plans": {}} for i in range(30)]
+    capped = mp.select(rows)
+    free = mp.select(rows, max_n=10 ** 6, per_sector=10 ** 6)
+    assert len(capped) <= mp.MAX_PICKS
+    assert len(free) >= len(capped)

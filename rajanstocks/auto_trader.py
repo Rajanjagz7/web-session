@@ -609,12 +609,12 @@ def fill_slots(st, today, already):
                                 "rank": 1.0 + _quality(p), "agree": 1, "source": "stock screen (trend + volume + RSI)", "label": "stock screen"})
                 return out[:room]
             took = sum(1 for t in todays if t["kind"] == "stock" and t.get("strategy") == "morning-pick") + sum(1 for c in already if c.get("key") == "morning-pick")
-            left = morning_picks.MAX_PICKS - took
+            left = NO_LIMIT                                    # 30 Oct (user): the 15-a-day number belongs to the Fresh picks list on screen, not to the trades - every qualifying pick is taken
             picks = [p for p in _picks().get("picks", []) if p.get("s") not in INDEX_SYMS and p.get("universe") != "cash"]
             # tier 1 (strength >= 75 + good risk/reward on the daily chart) is valid from 09:16; tier 2 rests on Open = Low / High,
             # which nearly every stock shows in the first minutes - it waits for 09:20 (same as Eagle Trades)
             early = _mins(_now()) < EAGLE_FROM
-            for p in [x for x in morning_picks.select(picks) if x["s"] not in used and not (early and x["tier"] == 2)][:max(0, min(need["stock"], left))]:
+            for p in [x for x in morning_picks.select(picks, max_n=NO_LIMIT, per_sector=NO_LIMIT) if x["s"] not in used and not (early and x["tier"] == 2)][:max(0, min(need["stock"], left))]:
                 out.append({"_fill": True, "key": "morning-pick", "sym": p["s"], "side": p["side"], "kind": "stock", "variant": "fixed", "filter": "none",
                             "indStop": p["stop"],          # the shortlist's own stop for that side - the trade's risk is the one the list was ranked on
                             "score": (p.get("strength") or 0) / 100, "rank": p["rank"], "agree": 1, "tier": p["tier"],
