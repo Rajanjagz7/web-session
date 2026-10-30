@@ -2099,7 +2099,7 @@ def cron_cash_seed(authorization: str = Header(default=""), x_admin_key: str = H
         v = picks(refresh=True)
         # each build fetches at most 40 new daily candles on Vercel (the Upstox rate budget), so a cold day needs ~5 builds for the ~200 F&O stocks:
         # one call runs a second build when the first was quick enough to leave room under the 30 s cap
-        if isinstance(v, dict) and not v.get("complete") and time.time() - t0 < 11:
+        if isinstance(v, dict) and not v.get("complete") and not v.get("stale") and time.time() - t0 < 11 and sum(1 for r in v.get("picks", []) if r.get("universe") != "cash") >= 20:
             _cache.pop("picks", None)
             v = picks(refresh=True)
     except Exception as e:                      # a failure must NOT answer 200: QStash would show it as a success and nobody would see why the list never filled
@@ -2177,11 +2177,27 @@ def picks(refresh: bool = False, response: Response = None):
                 if have_lock:                                           # only release a lock this request took (and always, even on failure)
                     shared_cache.unlock("picks-build")
             v_fno = sum(1 for r in v.get("picks", []) if r.get("universe") != "cash")   # count F&O rows only: the 400 cash-seed rows must not make a failed F&O scan look healthy
+            if v_fno < 20:                                              # 30 Oct: a build that lost its F&O rows (Upstox 429 / quotes failed) used to replace a good list with a cash-only one
+                prev = got if (got and sum(1 for r in got.get("picks", []) if r.get("universe") != "cash") >= 20) else (mem[1] if mem else None)
+                prev_fno = [r for r in (prev or {}).get("picks", []) if r.get("universe") != "cash"]
+                if len(prev_fno) < 20:
+                    try:
+                        prev_fno = shared_cache.get("picks:fno-good|" + date.today().isoformat()) or []     # the last good F&O rows of today, kept for the day
+                    except Exception:
+                        prev_fno = []
+                if len(prev_fno) >= 20:
+                    v = {**v, "picks": prev_fno + [r for r in v.get("picks", []) if r.get("universe") == "cash"], "stale": True, "complete": False}
+                    v_fno = len(prev_fno)
             _inject_cash_seed_if_needed(v)
             if v_fno < 20 and v.get("count", 0) > 0:
                 v["_t"] = time.time()
                 v["_bad"] = True
                 shared_cache.set(sk, v, 300)
+            if v_fno >= 20 and not v.get("stale"):
+                try:
+                    shared_cache.set("picks:fno-good|" + date.today().isoformat(), [r for r in v.get("picks", []) if r.get("universe") != "cash"], 20 * 3600)
+                except Exception:
+                    pass
             if v_fno >= 20:
                 v["_t"] = time.time()
                 shared_cache.set(sk, v, 20 * 3600 if v.get("complete") else 300)

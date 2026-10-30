@@ -46,6 +46,6 @@ def test_a_complete_list_is_skipped_and_an_incomplete_one_gets_a_second_build(mo
     assert market_api.cron_cash_seed(authorization="", x_admin_key="", key="", force=0)["skipped"]
     calls = []
     monkeypatch.setattr(shared_cache, "get", lambda k, *a, **kw: None)
-    monkeypatch.setattr(market_api, "picks", lambda refresh=False, response=None: (calls.append(1), {"picks": [{"universe": "fno"}], "complete": False})[1])
+    monkeypatch.setattr(market_api, "picks", lambda refresh=False, response=None: (calls.append(1), {"picks": [{"universe": "fno"}] * 25, "complete": False})[1])
     market_api.cron_cash_seed(authorization="", x_admin_key="", key="", force=0)
     assert len(calls) == 2
