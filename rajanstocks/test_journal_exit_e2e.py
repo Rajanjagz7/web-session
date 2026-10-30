@@ -689,3 +689,20 @@ def test_positions_old_tab_keeps_old_filter_trades_apart_from_new_ones(server, b
     assert "Positions old" in pg.inner_text(".jv-tabs")
     assert not errs
     c.close()
+
+
+def test_picks_log_has_reset_when_empty_and_pages_long_lists(server, browser):
+    w = World()
+    c, pg, errs = open_journal(browser, w)
+    assert "Reset log" in pg.evaluate("() => pkLogHTML()")                       # the button stays even with nothing tracked
+    for i in range(25):
+        set_sym(pg, f"ZZ{i}", 100)
+    html = pg.evaluate("""() => {
+      for (let i=0;i<25;i++){pkLiveEval({sym:'ZZ'+i, dir:'L', entry:100, stop:95, ts:[105,110], key:'st|ZZ'+i+'|L|intraday', dp:2})}
+      App.pkLogPg = null; return pkLogHTML()}""")
+    assert html.count('class="pkr ') == 20 and "1–20 of 25" in html and "data-pklgp" in html
+    pg.evaluate("() => {App.pkLogPg={n:20,p:1}}")
+    html = pg.evaluate("() => pkLogHTML()")
+    assert html.count('class="pkr ') == 5 and "21–25 of 25" in html
+    assert not errs
+    c.close()

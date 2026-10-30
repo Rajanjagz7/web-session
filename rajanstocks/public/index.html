@@ -3417,7 +3417,7 @@ function pkLogDays(){const out=[];try{for(let i=0;i<localStorage.length;i++){con
 function pkOutcome(r){const t=Object.keys(r.h).some(k=>k!=='sl'),l=!!r.h.sl;return t&&!l?'win':l&&!t?'loss':t&&l?'mixed':'open'}
 function pkLogOK(r){const T=(r.m.t||[])[0];if(!(r.m.sl>0)||!(T>0))return true;return r.m.d==='L'?r.m.sl<T:r.m.sl>T}   /* a card whose stop and targets point the wrong way was never a trade */
 function pkLogHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLogOK)})).filter(d=>d.rows.length);
-  if(!days.length)return'<div class="empty">Nothing tracked yet. Open Today\'s Picks while the market is open: every pick card on screen is followed against its stop and targets, and the result is kept here.</div>';
+  if(!days.length)return`<div class="pkl-bar"><span></span><button type="button" class="pkl-reset ${App.pkLogArm&&Date.now()-App.pkLogArm<6000?'arm':''}" data-pklreset="1">${App.pkLogArm&&Date.now()-App.pkLogArm<6000?'Tap again to confirm':'↺ Reset log'}</button></div><div class="empty">Nothing tracked yet. Open Today\'s Picks while the market is open: every pick card on screen is followed against its stop and targets, and the result is kept here.</div>`;
   const KIND={index:'Index option',call:'Index call',stock:'Stock / stock option',fresh:'Fresh buy'},F=App.pkLogF||'ALL',armed=App.pkLogArm&&Date.now()-App.pkLogArm<6000;
   const all=days.flatMap(d=>d.rows),n={win:0,loss:0,mixed:0,open:0};all.forEach(r=>n[pkOutcome(r)]++);
   const done=n.win+n.loss,rate=done?Math.round(n.win/done*100):null;
@@ -3426,15 +3426,20 @@ function pkLogHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLog
   const head=`<div class="pkl-stats">${tile(all.length,'Tracked')}${tile(n.win,'Target hit','up')}${tile(n.loss,'Stopped out','down')}${tile(n.open+n.mixed,'No result yet')}${tile(rate==null?'–':rate+'%','Hit rate','gold')}</div>
    <div class="pkl-bar"><div class="seg pkl-f">${chip('ALL','All',all.length)}${chip('WIN','Targets',n.win)}${chip('LOSS','Stops',n.loss)}${chip('OPEN','Open',n.open+n.mixed)}</div><button type="button" class="pkl-reset ${armed?'arm':''}" data-pklreset="1">${armed?'Tap again to confirm':'↺ Reset log'}</button></div>`;
   const keep=r=>{const o=pkOutcome(r);return F==='ALL'||(F==='WIN'&&o==='win')||(F==='LOSS'&&o==='loss')||(F==='OPEN'&&(o==='open'||o==='mixed'))};
-  return head+days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
-    const shown=rows.filter(keep);if(!shown.length)return'';
+  const pg=App.pkLogPg||(App.pkLogPg={n:20,p:0}),totalShown=days.reduce((a,d)=>a+d.rows.filter(keep).length,0),n_=pg.n||totalShown||1,pages=Math.max(1,Math.ceil(totalShown/n_));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
+  const lo_=pg.p*n_,hi_=lo_+n_;let gi=0;
+  const pager=totalShown>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,0].map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pklgn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pklgp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo_+1}–${Math.min(totalShown,hi_)} of ${totalShown}</small><button data-pklgp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
+  return head+pager+days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
+    const shown_all=rows.filter(keep),shown=shown_all.filter(()=>{const k=gi++;return k>=lo_&&k<hi_});if(!shown_all.length||!shown.length)return'';
     const tg=rows.filter(r=>pkOutcome(r)==='win').length,sl=rows.filter(r=>pkOutcome(r)==='loss').length;
     const x=new Date(d.date+'T12:00:00Z'),lab=x.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',timeZone:'UTC'});
     return`<section class="pkg"><h4>${di===0?'Today · ':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks</span><span class="up">✅ ${tg} target</span><span class="down">🚫 ${sl} stop</span></div>
-      ${shown.map((r,i)=>`<div class="pkr o-${pkOutcome(r)}"><div class="pkr-h"><span class="pkr-n">${i+1}</span><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h,r.hp)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best,r.hp,r.post))}</div></div>`).join('')}</section>`}).join('')||'<div class="empty">Nothing in this view.</div>'}
+      ${shown.map((r,i)=>`<div class="pkr o-${pkOutcome(r)}"><div class="pkr-h"><span class="pkr-n">${i+1}</span><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h,r.hp)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best,r.hp,r.post))}</div></div>`).join('')}</section>`}).join('')+pager||'<div class="empty">Nothing in this view.</div>'}
 function pkLogRefresh(){const b=document.getElementById('jvPickLog');if(b){const h=pkLogHTML();b._h=h;b.innerHTML=h}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklgn],[data-pklgp]');if(!b)return;const pg=App.pkLogPg||(App.pkLogPg={n:20,p:0});
+  if(b.dataset.pklgn!==undefined){pg.n=parseInt(b.dataset.pklgn,10)||0;pg.p=0}else pg.p+=parseInt(b.dataset.pklgp,10);pkLogRefresh()});
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('[data-pklf]'),r=e.target.closest&&e.target.closest('[data-pklreset]');
-  if(f){App.pkLogF=f.dataset.pklf;pkLogRefresh();return}
+  if(f){App.pkLogF=f.dataset.pklf;if(App.pkLogPg)App.pkLogPg.p=0;pkLogRefresh();return}
   if(r){if(App.pkLogArm&&Date.now()-App.pkLogArm<6000){App.pkLogArm=0;try{const ks=[],hid=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&/^pk[lf]-\d{4}-\d\d-\d\d$/.test(k))ks.push(k)}
     try{pkHidAdd(Object.keys(pkLiveStore()))}catch(y){}try{pkfLoad().forEach(x=>hid.push(x.sym+'|'+x.dir));(App.picks.picks||[]).forEach(q=>{const d=pkfDetect(q);if(d)hid.push(d.sym+'|'+d.dir)});localStorage.setItem('pkx-'+pkfKey().slice(4),JSON.stringify(hid))}catch(y){}   /* remember what was cleared so the same picks are not tracked again today */
     ks.forEach(k=>localStorage.removeItem(k));for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&/^pkoff-\d{4}-\d\d-\d\d$/.test(k)&&k!==pkOffKey())localStorage.removeItem(k)}}catch(x){}App.pkl=null;App.pkf=null;pkLogRefresh();toast('Picks log cleared - new picks are tracked from now')}
