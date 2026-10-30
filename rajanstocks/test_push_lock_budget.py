@@ -12,22 +12,22 @@ def _world(monkeypatch, subs=1):
 
 def test_lock_alerts_are_silent_by_default_and_everything_stops_at_five_a_day(monkeypatch):
     st, sent = _world(monkeypatch)
-    for i in range(7):
+    for i in range(ps.MAX_TRADE_PER_DAY + 2):
         ps.notify_all(f"auto|{i}", f"PAPER ENTRY {i}", "b", kind="trade")
     assert len([t for t in sent if t.startswith("PAPER")]) == ps.MAX_TRADE_PER_DAY            # entries stop at 5 a day
     assert ps.notify_all("auto-lock|A-1|breakeven", "PROFIT LOCKED A-1", "b", kind="lock") == 0     # stop-moved alerts stay in the app (user 29 Oct)
-    assert not any("LOCKED" in t for t in sent) and len(sent) == 5
+    assert not any("LOCKED" in t for t in sent) and len(sent) == ps.MAX_TRADE_PER_DAY
 
 
 def test_total_pushes_per_phone_never_pass_five_across_ideas_trades_and_locks(monkeypatch):
     st, sent = _world(monkeypatch)
     monkeypatch.setattr(ps, "MAX_LOCK_PER_DAY", 20)
-    for i in range(4):
+    for i in range(ps.MAX_TOTAL_PER_DAY - 1):
         ps.notify_all(f"auto|{i}", f"ENTRY {i}", "b", kind="trade")
     for i in range(6):
         ps.notify_all(f"auto-lock|{i}", f"LOCK {i}", "b", kind="lock")
     ps.notify_all("idea|1", "IDEA", "b", kind="idea")
-    assert len(sent) == ps.MAX_TOTAL_PER_DAY == 5
+    assert len(sent) == ps.MAX_TOTAL_PER_DAY == 10
 
 
 def test_the_reason_a_push_failed_is_recorded(monkeypatch):

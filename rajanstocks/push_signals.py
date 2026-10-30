@@ -33,8 +33,8 @@ router = APIRouter()
 
 MAX_PER_DAY = int(os.environ.get("PUSH_MAX_PER_DAY", "2"))     # idea pushes; the rest of the 5-a-day total is kept for the auto trader's entries
 MAX_LOCK_PER_DAY = int(os.environ.get("PUSH_MAX_LOCK_PER_DAY", "0"))    # "stop moved / profit locked" phone alerts: OFF by default (user 29 Oct: a push for every lock is irritating) - they stay in the app
-MAX_TOTAL_PER_DAY = int(os.environ.get("PUSH_MAX_TOTAL_PER_DAY", "5"))   # HARD limit: phone pushes per device per day, ALL kinds together (ideas + trades + locks)
-MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "5"))   # user: at most 5 phone pushes a day (the auto trader's first 5 trades); after that it trades silently
+MAX_TOTAL_PER_DAY = int(os.environ.get("PUSH_MAX_TOTAL_PER_DAY", "10"))   # HARD limit (30 Oct: 10, was 5, for testing): phone pushes per device per day, ALL kinds together (ideas + trades + locks)
+MAX_TRADE_PER_DAY = int(os.environ.get("PUSH_MAX_TRADE_PER_DAY", "10"))   # user: at most 5 phone pushes a day (the auto trader's first 5 trades); after that it trades silently
 CYCLE_SECONDS = 300
 STATE_KEY = "rajanone:push:v1"
 STATE_FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__file__), "push_state.json")
