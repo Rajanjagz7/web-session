@@ -293,3 +293,20 @@ def test_on_an_expiry_day_two_indices_may_take_the_same_side(world, monkeypatch)
     at.run_cycle()
     got = sorted(t["sym"] for t in saved(fs)["trades"] if t["status"] == "OPEN")
     assert got == ["NIFTY", "SENSEX"]                               # the two best calls; the third would be a third copy of the same view
+
+
+def test_a_stock_is_not_bought_again_on_the_side_it_already_holds(world, monkeypatch):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=1, indexMaxPerDay=0, minAgreeStock=1)
+    d = saved(fs)
+    d["trades"] = [{"id": "A-1", "sym": "AAA", "date": NOW.date().isoformat(), "status": "OPEN", "kind": "stock", "opt": "CE", "key": "K-OLD", "side": "BUY", "entry": 100.0, "last": 100.0, "lot": 100, "lots": 1}]
+    fs.d[at.KEY] = json.dumps(d)
+    at._RC.clear()
+    monkeypatch.setattr(at, "manage", lambda *a, **k: None)           # the held trade is only a marker here
+    monkeypatch.setattr(at, "_screen_score", lambda: {"AAA": {"strength": 80}, "BBB": {"strength": 80}})
+    import morning_picks
+    monkeypatch.setattr(morning_picks, "good_rr", lambda *a, **k: True)
+    box["cands"] = [dict(cand("AAA", "stock"), agree=2), dict(cand("BBB", "stock"), agree=2)]
+    at.run_cycle()
+    opened = sorted(t["sym"] for t in saved(fs)["trades"] if t["status"] == "OPEN" and t["id"] != "A-1")
+    assert opened == ["BBB"]                                         # AAA already holds a call: the trade goes to another stock

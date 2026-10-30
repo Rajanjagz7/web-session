@@ -486,6 +486,7 @@ def _index_backing(c, side):
 
 
 REENTRY_GAP_MIN = 0       # minutes after a trade closes before the same symbol can be entered again (user, 29 Oct: no restriction - a fresh signal re-enters at once)
+STOCK_ONE_OPEN_PER_SIDE = True   # a stock option is not bought again on the side it already holds (user, 30 Oct: ~200 stocks, spread the trades)
 INDEX_ONE_OPEN_PER_SIDE = True   # one index trade per side (CE / PE) at a time across ALL indices (they move together); any number of trades a day, an opposite-side index (divergence) is still taken
 BLOCK_SAME_CONTRACT = True    # an option contract (same strike / expiry / side) already traded today or still open is refused; any other strike of the same index or stock may be entered (user, 30 Oct)
 
@@ -1387,6 +1388,10 @@ def open_trade(st, c, today):
         open_same = [t for t in st["trades"] if t.get("status") == "OPEN" and t.get("sym") in INDEX_SYMS and t.get("opt") == want and not t.get("pairOf") and t.get("pos") != "short"]
         if any(t.get("sym") == c["sym"] for t in open_same) or len(open_same) >= index_per_side(today):
             raise RuntimeError(f"skipped: an index {want} trade is still open - indices move together, so one per side at a time ({index_per_side(today)} on an expiry day; the other side, or a stock, is still open to trade)")
+    if STOCK_ONE_OPEN_PER_SIDE and c["sym"] not in INDEX_SYMS and c.get("pos") != "short" and c.get("key") != "rzt-hedge":
+        want_s = "CE" if c["side"] == "BUY" else "PE"
+        if any(t.get("status") == "OPEN" and t.get("sym") == c["sym"] and t.get("opt") == want_s and not t.get("pairOf") and t.get("pos") != "short" for t in st["trades"]):
+            raise RuntimeError(f"skipped: {c['sym']} {want_s} is already open - one trade per stock per side, there are ~200 other stocks")
     if BLOCK_SAME_CONTRACT and any(t.get("key") == ct["key"] and (t.get("status") == "OPEN" or t.get("date") == today or (t.get("closedAt") or "") >= today) for t in st["trades"]):
         raise RuntimeError("skipped: this option contract was already traded today (a new entry has to be in another option)")
     ask_, bid_ = float(ct.get("ask") or 0), float(ct.get("bid") or 0)
@@ -2091,6 +2096,7 @@ def _run_cycle(now, force, dry):
                         done_idx[t["sym"]] = done_idx.get(t["sym"], 0) + 1
                 dead = {(t["sym"], t.get("opt")) for t in st["trades"]       # user 30 Oct: (switched off, user 30 Oct: after a stop hit a fresh entry in another strike is taken; the 3-a-day limit and the same-contract rule still apply)
                         if t.get("date") == today and t.get("status") == "CLOSED" and False and not t.get("pairOf") and t.get("pos") != "short"}
+                open_stock_side = {(t.get("sym"), t.get("opt")) for t in st["trades"] if t.get("status") == "OPEN" and t.get("sym") not in INDEX_SYMS and not t.get("pairOf") and t.get("pos") != "short"}
                 keep_i, few_i, cap_i = [], 0, 0
                 for c in entries:
                     if c.get("key") == "rzt-hedge" or c.get("pos") == "short":
@@ -2102,6 +2108,9 @@ def _run_cycle(now, force, dry):
                             _idx_note(st, c["sym"], "no entry - the earlier trade on this side hit its stop today")
                         continue
                     if c.get("kind") != "index":                  # stock options: the same daily limit per stock, no indicator minimum here (the stock rule above has its own)
+                        if STOCK_ONE_OPEN_PER_SIDE and (c["sym"], "CE" if c["side"] == "BUY" else "PE") in open_stock_side:
+                            cap_i += 1                                # user 30 Oct: ~200 stocks to choose from - no second trade in a stock on the side it already holds
+                            continue
                         if max_i > 0 and done_idx.get(c["sym"], 0) >= max_i:
                             cap_i += 1
                             continue
