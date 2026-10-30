@@ -241,3 +241,16 @@ def test_no_more_entries_on_a_side_after_its_stop_hit(world):
     box["cands"] = [cand("NIFTY", side="SELL")]
     at.run_cycle()
     assert [t["opt"] for t in saved(fs)["trades"] if t["status"] == "OPEN"] == ["PE"]     # the put side is still open to trade
+
+
+def test_a_reversed_exit_does_not_block_a_fresh_entry_on_either_side(world):
+    box, fs = world
+    _set_cfg(fs, indexMinAgree=1, indexMaxPerDay=3)
+    d = saved(fs)
+    d["trades"] = [{"id": "A-1", "sym": "NIFTY", "date": NOW.date().isoformat(), "status": "CLOSED", "kind": "index", "opt": "CE", "key": "K1", "exitReason": "REVERSE",
+                    "closedAt": NOW.date().isoformat() + "T09:20:00+05:30"}]
+    fs.d[at.KEY] = json.dumps(d)
+    at._RC.clear()
+    box["cands"] = [cand("NIFTY", side="BUY")]
+    at.run_cycle()
+    assert [t["opt"] for t in saved(fs)["trades"] if t["status"] == "OPEN"] == ["CE"]     # a new call entry after the reversal is taken
