@@ -42,7 +42,8 @@ FILE = os.path.join(os.environ.get("BHAV_CACHE_WRITE_DIR") or os.path.dirname(__
 HZ = ("intraday", "swing", "positional")
 CFG = {"capital": 500000.0, "riskPct": 0.5, "maxValuePct": 10.0, "marginPct": 20.0, "newPerDay": {"intraday": 3, "swing": 3, "positional": 3},
        "maxOpen": {"intraday": 6, "swing": 10, "positional": 10}, "maxSessions": {"swing": 15, "positional": 40},
-       "cashOnly": False, "profitLock": False, "windowStart": "09:20", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1}
+       "cashOnly": False, "profitLock": False, "windowStart": "09:20", "lastEntry": "14:30", "lastIntraday": "13:30", "squareOff": "15:15", "costPct": 0.1,
+       "ipoOn": True, "ipoPerDay": 3, "ipoFrom": "10:05", "ipoStopPct": 2.0, "ipoOpenTol": 0.3}
 _lock = threading.Lock()
 
 
@@ -368,6 +369,75 @@ def enter(st, now):
     return entered
 
 
+def ipo_listed_today(today):
+    """Mainboard (EQ) IPOs that list today (user, 30 Oct). SME listings are left out. Cached 5 minutes; [] when NSE does not answer."""
+    import ipo_funds
+    try:
+        rows = ipo_funds._cached("ipo:listed-today", 300, lambda: ipo_funds.fetch_nse_past(days=3))
+    except Exception as e:
+        print(f"[stockbot] ipo list failed: {e}")
+        return []
+    return [r for r in rows or [] if r.get("series") == "EQ" and r.get("listing_date") == today and r.get("symbol")]
+
+
+def enter_ipo(st, now):
+    """Newly listed IPOs, listing day only (user, 30 Oct): Open = Low (price held above the open) -> BUY, Open = High (price held below the open) -> SELL,
+    same rule as the option trades. Intraday shares with a stop CFG['ipoStopPct'] from the entry, T1 1.5R / T2 2.5R, squared off at 15:15 like other intraday trades.
+    One trade per IPO, at most CFG['ipoPerDay'] a day. Independent of the 'no new share trades' switch."""
+    if not CFG.get("ipoOn", True):
+        return []
+    today = now.date().isoformat()
+    m = _mins(now)
+    if not (_hm(CFG["ipoFrom"]) <= m <= _hm(CFG["lastIntraday"])):
+        return []
+    done = {t["sym"] for t in st["trades"] if t.get("ipo") and t["date"] == today}
+    room = CFG["ipoPerDay"] - len(done)
+    if room <= 0:
+        return []
+    cl_ = st.get("cleared")
+    if isinstance(cl_, dict) and cl_.get("date") == today:
+        done |= set(cl_.get("syms") or [])
+    cands = [r for r in ipo_listed_today(today) if r["symbol"] not in done]
+    if not cands:
+        return []
+    q = _quotes([r["symbol"] for r in cands])
+    cash, _, _ = _cash(st)
+    risk_amt = CFG["capital"] * CFG["riskPct"] / 100
+    max_val = CFG["capital"] * CFG["maxValuePct"] / 100
+    tol = CFG["ipoOpenTol"] / 100
+    entered = []
+    for r in cands:
+        if room <= 0:
+            break
+        x = q.get(r["symbol"]) or {}
+        px, op, hi, lo = (float(x.get(k) or 0) for k in ("last", "open", "high", "low"))
+        if min(px, op, hi, lo) <= 0:
+            continue
+        if abs(op - lo) / op <= tol and px > op:
+            side, why = "BUY", "IPO listing day · Open = Low"
+        elif abs(hi - op) / op <= tol and px < op:
+            side, why = "SELL", "IPO listing day · Open = High"
+        else:
+            continue
+        d = 1 if side == "BUY" else -1
+        risk_u = px * CFG["ipoStopPct"] / 100
+        per_unit = px * CFG["marginPct"] / 100                             # intraday: margin only
+        qty = int(min(risk_amt / risk_u, max_val / px, max(0.0, cash) / per_unit))
+        if qty < 1:
+            continue
+        st["seq"] = st.get("seq", 0) + 1
+        t = {"id": f"S-{today.replace('-', '')}-{st['seq']}", "hz": "intraday", "sym": r["symbol"], "name": r.get("name") or r["symbol"], "side": side, "ipo": True,
+             "date": today, "openedAt": now.isoformat(), "entry": round(px, 2), "qty": qty, "stop": round(px - d * risk_u, 2), "stop0": round(px - d * risk_u, 2),
+             "t1": round(px + d * 1.5 * risk_u, 2), "t2": round(px + d * 2.5 * risk_u, 2), "risk": round(risk_u * qty, 2), "why": why, "hold": "intraday",
+             "status": "OPEN", "last": round(px, 2), "unrealised": 0.0}
+        st["trades"].append(t)
+        cash -= per_unit * qty
+        room -= 1
+        entered.append(t["id"])
+        st["log"].append({"at": now.isoformat(), "msg": f"ENTRY IPO {side} {qty} {r['symbol']} @ {px:.2f} · SL {t['stop']} · T1 {t['t1']} · T2 {t['t2']}"})
+    return entered
+
+
 def run_cycle(force=False):
     import nse_calendar
     now = _now()
@@ -386,6 +456,10 @@ def run_cycle(force=False):
             except Exception:
                 on = True
             ent = enter(st, now) if (on or force) else []
+            try:
+                ent = ent + enter_ipo(st, now)
+            except Exception as e:
+                print(f"[stockbot] ipo entry failed: {e}")
             st["lastRun"] = now.isoformat()
             if _save(st) is not True:
                 return {"ran": True, "saved": False, "reason": "the book changed while this cycle ran - the next cycle redoes it"}
