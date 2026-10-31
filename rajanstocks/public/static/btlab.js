@@ -312,7 +312,7 @@
   /* ---------------- state + persistence ---------------- */
   const D = load(LSUI) || {};
   const S = { el: null, list: load(LS) || [], edit: null, run: Object.assign({ years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }, D),
-    res: null, busy: false, prog: '', msg: '', pg: {}, flt: {}, tab: 'idx', sig: null, openId: null };
+    res: null, resBy: {}, err: '', busy: false, prog: '', msg: '', pg: {}, flt: {}, tab: 'idx', sig: null, openId: null };
   const persist = () => { save(LS, S.list); save(LSUI, { years: S.run.years, markets: S.run.markets, capital: S.run.capital, riskPct: S.run.riskPct, maxOpen: S.run.maxOpen, extra: S.run.extra, sid: S.run.sid }); };
 
   /* ---------------- daily PAPER trading on the server (never places an order) ---------------- */
@@ -322,12 +322,15 @@
 
   /* ---------------- run ---------------- */
   async function runBacktest() {
+    try { await runBacktest_(); } catch (e) { S.busy = false; S.prog = ''; S.res = null; S.err = 'The test could not finish (' + String(e && e.message || e).slice(0, 80) + '). Check your internet and press Test again.'; paint(); }
+  }
+  async function runBacktest_() {
     const sp = specOf(S.run.sid); if (!sp) { S.msg = 'Pick a strategy first.'; paint(); return; }
     const mk = S.run.markets; if (!mk.idx && !mk.sopt && !mk.cash) { S.msg = 'Tick at least one market.'; paint(); return; }
     const extra = String(S.run.extra || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
     const idxSyms = mk.idx ? INDEX : [], stkSyms = (mk.sopt || mk.cash) ? STOCKS.concat(extra.filter(x => !STOCKS.includes(x) && !INDEX.includes(x))) : [];
     const all = idxSyms.concat(stkSyms), t0 = performance.now(), failed = [];
-    S.busy = true; S.msg = ''; S.res = null; paint();
+    S.busy = true; S.msg = ''; S.err = ''; S.res = null; paint();
     let done = 0; const queue = all.slice();
     const worker = async () => { while (queue.length) { const s = queue.shift(); try { await fetchBars(s); } catch (e) { failed.push(s); } done++; S.prog = `Loading price history… ${done} / ${all.length}`; paintProg(); } };
     await Promise.all([worker(), worker(), worker(), worker()]);
@@ -342,7 +345,7 @@
     Object.keys(T).forEach(k => { T[k] = limitOpen(T[k], S.run.maxOpen); });
     S.res = { raw, maxOpen: S.run.maxOpen, sid: sp.id, name: sp.name, years: S.run.years, cutoff, lastDate, span, failed, secs: (performance.now() - t0) / 1000, T, cap: S.run.capital, riskPct: S.run.riskPct,
       st: Object.fromEntries(Object.keys(T).map(k => [k, stats(T[k], S.run.capital, S.run.riskPct)])) };
-    S.pg = {}; S.flt = {}; S.tab = mk.idx ? 'idx' : mk.sopt ? 'sopt' : 'cash'; S.busy = false; S.prog = ''; persist(); paint();
+    S.resBy[sp.id] = S.res; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = mk.idx ? 'idx' : mk.sopt ? 'sopt' : 'cash'; S.busy = false; S.prog = ''; if (!all.some(x => BARS[x])) { S.res = null; delete S.resBy[sp.id]; S.err = 'No price history could be loaded (' + failed.slice(0, 3).join(', ') + '). Check your internet and press Test again.'; } persist(); paint();
   }
 
   async function checkSignals() {
@@ -434,6 +437,7 @@
 .up{color:var(--up,#22c55e)}.down{color:var(--down,#ef4444)}.btl-pg{display:flex;gap:8px;align-items:center;justify-content:center;margin:8px 0;flex-wrap:wrap}
 .btl-sig{width:100%;border-collapse:collapse;font-size:13px}.btl-sig td,.btl-sig th{padding:8px;border-bottom:1px solid var(--line);text-align:left}
 .btl-prow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}.btl-prow span{color:var(--text-2)}.btl-warn{margin-top:8px;color:#f59e0b;font-size:13px}
+.btl-lk{background:none;border:0;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit;padding:0}.btl-fl{display:block;margin:6px 0 8px}.btl-yr tr.cur td{background:rgba(99,102,241,.12)}
 .btl-skel{height:70px;border-radius:14px;background:linear-gradient(90deg,var(--panel-2) 25%,var(--panel) 50%,var(--panel-2) 75%);background-size:200% 100%;animation:btlsk 1.2s linear infinite;margin:8px 0}@keyframes btlsk{to{background-position:-200% 0}}
 .btl pre{white-space:pre-wrap;font-size:12px;margin:6px 0;padding:8px;border-radius:10px;background:var(--panel-2)}.btl code{font-size:11.5px;background:var(--panel-2);padding:1px 5px;border-radius:5px}
 @media (max-width:720px){.btl-cards{grid-template-columns:1fr}.btl-top .btl-row{width:100%}.btl-top .btl-b{flex:1 1 0}.btl-sec{padding:14px}.btl-verdict .vb b{font-size:27px}}`;
@@ -488,8 +492,8 @@
     const pager = mine.length > per || mine.length > 5 ? `<div class="btl-pg"><button type="button" class="btl-b sm" data-lpg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Prev</button><span class="muted">${pgn * per + 1}–${Math.min(mine.length, pgn * per + per)} of ${mine.length}</span><button type="button" class="btl-b sm" data-lpg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Next ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-lper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>` : '';
     const card = it => {
       const on = sel === it.id, sp = it.sp;
-      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill ${sp.follow ? 'on' : 'off'}">${sp.follow ? 'STARTED' : 'STOPPED'}</span>${sp.paper ? '<span class="btl-pill on">PAPER DAILY</span>' : ''}` : '<span class="btl-pill off">READY-MADE</span>'}</b><span>${esc(it.desc)}</span></button>
-        ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.follow ? 'stop' : 'go'}" data-toggle="${esc(it.id)}">${sp.follow ? '■ Stop' : '▶ Start'}</button><button type="button" class="btl-b sm ${sp.paper ? 'stop' : 'go'}" data-paper="${esc(it.id)}">${sp.paper ? '■ Stop paper trading' : '📅 Paper-trade daily'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
+      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill off">MINE</span>${sp.paper ? '<span class="btl-pill on">PAPER DAILY</span>' : ''}` : '<span class="btl-pill off">READY-MADE</span>'}</b><span>${esc(it.desc)}</span></button>
+        ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.paper ? 'stop' : 'go'}" data-paper="${esc(it.id)}">${sp.paper ? '■ Stop paper trading' : '📅 Paper-trade daily'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
     };
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose or build your strategy</div><div class="btl-cards">${shown.map(card).join('')}</div>${pager}
       <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button></div>${paperHTML()}</div>`;
@@ -510,7 +514,7 @@
   function resultsHTML() {
     const R = S.res; if (!R) return '';
     const tabs = Object.keys(MARKETS).filter(k => S.run.markets[k]), tab = R.st[S.tab] ? S.tab : tabs[0], st = R.st[tab], spn = tab === 'idx' ? R.span.idx : R.span.stk;
-    const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="btl-row" style="margin:-4px 0 12px"><button type="button" class="btl-b sm" data-another>↺ Reset and test another strategy</button></div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
+    const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
     if (!st || !st.n) return head + `<div class="btl-note warn">No trades in this market for this period. The rules never fired, or only while a trade was already open. Try another strategy or a longer period.</div></div>`;
     const end = R.cap + st.net, ok = st.net >= 0;
     const note = `Tested from ${R.cutoff === '0000-00-00' ? (spn ? spn.first : st.first) : R.cutoff} to ${R.lastDate}${R.years === 'max' ? ' (as far back as the data goes)' : ''}. Each trade risked ${inr(st.per)} (${R.riskPct}% of ${inr(R.cap)})${R.maxOpen > 0 ? ', up to ' + R.maxOpen + ' open at once' : ''}.`;
@@ -522,16 +526,27 @@
     const T = (v, l) => `<div class="btl-t"><b>${v}</b><small>${l}</small></div>`;
     const tiles = `<div class="btl-tiles">${T(isFinite(st.pf) ? '₹' + st.pf.toFixed(2) : '∞', 'won for every ₹1 lost')}${T('+' + st.avgWin.toFixed(2) + 'R / ' + st.avgLoss.toFixed(2) + 'R', 'average win / average loss (R = the amount risked)')}${T((st.exp >= 0 ? '+' : '') + st.exp.toFixed(2) + 'R', 'average result per trade')}${T(st.peakOpen, 'most trades open at the same time')}${T(st.trailPct.toFixed(0) + '% / ' + st.timePct.toFixed(0) + '%', 'ended by the trailing stop / by time or an exit rule')}${st.medPrem != null ? T(st.medPrem.toFixed(0) + '%', 'typical stop-loss as a share of the option price (estimate)') : ''}</div>`;
     const yrs = Object.keys(st.yr).sort(), yt = `<table class="btl-yr"><thead><tr><th>Year</th><th>Trades</th><th>Win %</th><th>Net</th></tr></thead><tbody>${yrs.map(y => { const o = st.yr[y]; return `<tr><td>${y}</td><td>${o.n}</td><td>${(100 * o.w / o.n).toFixed(0)}%</td><td class="${o.net >= 0 ? 'up' : 'down'}">${sinr(o.net)}</td></tr>`; }).join('')}</tbody></table>`;
-    const F = S.flt[tab] || 'ALL', pass = t => F === 'ALL' || (F === 'W' && t.R > 0) || (F === 'L' && t.R <= 0) || (F === 'SL' && t.why === 'SL') || (F === 'T' && t.why === 'T');
-    const list = st.sorted.filter(pass).reverse(), per = 10, pages = Math.max(1, Math.ceil(list.length / per)), pgn = Math.min(S.pg[tab] || 0, pages - 1), view = list.slice(pgn * per, pgn * per + per);
+    const F = S.flt[tab] || 'ALL', SYM = (S.sym || (S.sym = {}))[tab] || 'ALL', syms = [...new Set(st.sorted.map(t => t.sym))].sort(), pass = t => (SYM === 'ALL' || t.sym === SYM) && (F === 'ALL' || (F === 'W' && t.R > 0) || (F === 'L' && t.R <= 0) || (F === 'SL' && t.why === 'SL') || (F === 'T' && t.why === 'T'));
+    const list = st.sorted.filter(pass).reverse(), per = [5, 10, 25, 50].includes(S.rper) ? S.rper : 10, pages = Math.max(1, Math.ceil(list.length / per)), pgn = Math.min(S.pg[tab] || 0, pages - 1), view = list.slice(pgn * per, pgn * per + per);
     const WHY = { SL: 'Stop-loss hit', T: 'Target hit', TSL: 'Trailing stop', TIME: 'Time limit', EXP: 'Out before expiry', RULE: 'Exit rule' };
     const fchip = (k, l) => `<button type="button" data-flt="${k}" class="${F === k ? 'on' : ''}">${l}</button>`;
     const rows = view.map(t => `<div class="btl-tr ${t.R > 0 ? 'w' : 'l'}"><div class="a">${esc(t.sym)} · ${t.side === 'long' ? (tab === 'cash' ? 'Bought' : 'Call') : (tab === 'cash' ? 'Short' : 'Put')} · ${esc(t.entryDate)} → ${esc(t.exitDate)}</div><div class="b ${t.R > 0 ? 'up' : 'down'}">${sinr(t.R * st.per)}</div><div class="c">${f2(t.entry)} → ${f2(t.exit)} · ${WHY[t.why] || t.why} · held ${t.hold} day${t.hold === 1 ? '' : 's'}</div></div>`).join('');
-    const detail = `<details class="btl-more"><summary>Show details</summary><div>${tiles}<div style="margin:10px 0 4px;font-weight:700">Year by year</div><div style="overflow-x:auto">${yt}</div>
-      <div style="margin:14px 0 6px;font-weight:700">Every trade</div><div class="btl-seg" style="margin-bottom:8px">${fchip('ALL', 'All ' + st.n)}${fchip('W', 'Wins ' + st.wins)}${fchip('L', 'Losses ' + st.losses)}${fchip('SL', 'Stop-loss')}${fchip('T', 'Target')}</div>${rows || '<div class="muted">No trades match.</div>'}
-      <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div></div></details>`;
-    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p><button type="button" class="btl-b pri big" data-another style="margin-top:12px">↺ Reset and test another strategy</button>`;
-    return head + verdict + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + detail + caveat + '</div>';
+    const trades = `<div class="btl-sub">Every trade</div><div class="btl-seg" style="margin-bottom:8px">${fchip('ALL', 'All ' + st.n)}${fchip('W', 'Wins ' + st.wins)}${fchip('L', 'Losses ' + st.losses)}${fchip('SL', 'Stop-loss')}${fchip('T', 'Target')}</div>
+      <label class="btl-fl">Share / index<select data-symf><option value="ALL">All (${syms.length})</option>${syms.map(x => `<option value="${esc(x)}" ${x === SYM ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>${rows || '<div class="muted" style="margin-top:8px">No trades match.</div>'}
+      <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-rper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div>`;
+    const detail = `<details class="btl-more"><summary>More numbers</summary><div>${tiles}<div style="margin:10px 0 4px;font-weight:700">Year by year</div><div style="overflow-x:auto">${yt}</div></div></details>`;
+    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
+    return head + verdict + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + trades + detail + compareHTML() + caveat + '</div>';
+  }
+  function compareHTML() {
+    const ids = Object.keys(S.resBy).filter(id => S.resBy[id]); if (ids.length < 2) return '';
+    const row = id => { const R = S.resBy[id], ks = Object.keys(R.st).filter(k => R.st[k] && R.st[k].n), n = ks.reduce((p, k) => p + R.st[k].n, 0), net = ks.reduce((p, k) => p + R.st[k].net, 0), w = ks.reduce((p, k) => p + R.st[k].wins, 0);
+      return `<tr class="${id === S.run.sid ? 'cur' : ''}"><td><button type="button" class="btl-lk" data-pick="${esc(id)}">${esc(R.name)}</button></td><td>${n}</td><td>${n ? Math.round(100 * w / n) : 0}%</td><td class="${net >= 0 ? 'up' : 'down'}">${sinr(net)}</td></tr>`; };
+    return `<div class="btl-sub">All strategies you tested</div><div style="overflow-x:auto"><table class="btl-yr"><thead><tr><th>Strategy</th><th>Trades</th><th>Win %</th><th>Net (all markets)</th></tr></thead><tbody>${ids.map(row).join('')}</tbody></table></div>`;
+  }
+  function notTestedHTML() {
+    const sp = specOf(S.run.sid);
+    return `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>3</i>Result</div>${S.err ? `<div class="btl-note warn">${esc(S.err)}</div>` : `<div class="btl-verdict zero"><div class="vt">${sp ? esc(sp.name) : 'No strategy chosen'}: not tested yet</div><div class="vs">${sp ? 'Press “▶ Test this strategy” above. The result will appear here, only for this strategy.' : 'Choose a strategy in step 1 first.'}</div></div>`}</div>`;
   }
   function zeroHTML() {
     const cap = S.run.capital, T = (v, l) => `<div><b>${v}</b><small>${l}</small></div>`;
@@ -567,15 +582,17 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
       <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">All rule types (for JSON files)</summary><ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.6">${rules}</ul><p class="muted" style="font-size:12px;margin:6px 0 0">Fields: <code>name</code>, <code>side</code> (long / short / both), <code>long</code>, <code>short</code>, <code>exitIf</code>, <code>stop</code> {type: atr|pct, k, pct}, <code>target</code> {on, r}, <code>trail</code> {on, start, dist}, <code>maxHold</code>.</p></details>`;
   }
   function paintProg() { const p = S.el && S.el.querySelector('#btlProg'); if (p) p.textContent = S.prog; }
+  function bannerHTML() {
+    const ok = /^(Imported|Saved|Removed|Everything|Reset|".*(started|stopped|paper))/.test(S.msg || '');
+    return `<div class="btl-note">🛡️ Test only. Nothing here touches your live auto trader or your journal.</div>${S.msg ? `<div class="btl-note ${ok ? '' : 'warn'}" style="max-height:220px;overflow:auto">${esc(S.msg)} <button type="button" class="btl-lk" data-dismiss>Close</button></div>` : ''}`;
+  }
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.11</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.12</span></div></div></div>
       <div class="btl-row btl-bar" style="margin:0 0 12px"><button type="button" class="btl-b pri" data-new>+ Add my own strategy</button><button type="button" class="btl-b" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b" data-resetall>↺ Reset strategy</button></div>
-      <div class="btl-note">🛡️ Test only. Nothing here touches your live auto trader or your journal.${S.msg ? '<br>' + esc(S.msg) : ''}</div>
-      ${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : (S.res ? resultsHTML() : zeroHTML())}
-      <details class="btl-more" data-k="sig"><summary>Started strategies: tomorrow's signals</summary><div>${sigHTML()}</div></details>
-      <details class="btl-more" data-k="imp"><summary>Upload or paste a strategy (.json or .md)</summary><div>${importHTML()}</div></details></div>`;
+      ${bannerHTML()}
+      ${chooseHTML()}${runHTML()}${S.busy ? '' : (S.res ? resultsHTML() : notTestedHTML())}</div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
     window.scrollTo(0, keep);
   }
@@ -588,16 +605,17 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function startEdit(spec) { S.edit = spec; S.msg = ''; paint(); const el = S.el.querySelector('#btlBuilder'); el && el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   function onClick(ev) {
     const b = ev.target.closest('button'); if (!b || !S.el.contains(b)) return; const e = S.edit, d = b.dataset;
+    if (b.hasAttribute('data-dismiss')) { S.msg = ''; paint(); return; }
     if (b.hasAttribute('data-upload')) { const f = S.el.querySelector('[data-file]'); f && f.click(); return; }
     if (b.hasAttribute('data-example')) { const ta = S.el.querySelector('[data-paste]'); if (ta) ta.value = JSON.stringify(EXAMPLE, null, 2); return; }
     if (b.hasAttribute('data-import-paste')) { const ta = S.el.querySelector('[data-paste]'); S.msg = importText(ta ? ta.value : '') || 'Nothing to import.'; paint(); return; }
     if (b.hasAttribute('data-lpg')) { S.lpg = Math.max(0, (S.lpg || 0) + (+b.getAttribute('data-lpg'))); paint(); return; }
-    if (d.pick) { S.cleared = false; S.run.sid = d.pick; persist(); paint(); return; }
+    if (d.pick) { S.cleared = false; S.run.sid = d.pick; S.res = S.resBy[d.pick] || null; S.err = ''; S.pg = {}; S.flt = {}; S.sym = {}; persist(); paint(); return; }
     if (d.custom) { const t = specOf(d.custom); if (t) { const c = clone(t); c.id = uid(); c.name = t.name + ' (my copy)'; c.follow = false; startEdit(c); } return; }
     if (d.edit) { const sp = S.list.find(x => x.id === d.edit); if (sp) startEdit(clone(sp)); return; }
     if (d.paper) { const sp = S.list.find(x => x.id === d.paper); if (sp) { sp.paper = !sp.paper; S.msg = sp.paper ? '"' + sp.name + '" will be paper-traded every trading day (no real orders). Results show below once it has signals.' : '"' + sp.name + '" paper trading stopped.'; persist(); paint(); syncPaper(); } return; }
     if (d.toggle) { const sp = S.list.find(x => x.id === d.toggle); if (sp) { sp.follow = !sp.follow; S.msg = sp.follow ? '"' + sp.name + '" started: it is included in the signal check.' : '"' + sp.name + '" stopped.'; persist(); paint(); } return; }
-    if (d.del) { const sp = S.list.find(x => x.id === d.del); if (sp && confirm('Remove "' + sp.name + '"? This cannot be undone.')) { S.list = S.list.filter(x => x.id !== sp.id); if (S.run.sid === sp.id) S.run.sid = null; if (S.res && S.res.sid === sp.id) S.res = null; persist(); S.msg = 'Removed.'; paint(); if (sp.paper) syncPaper(); } return; }
+    if (d.del) { const sp = S.list.find(x => x.id === d.del); if (sp && confirm('Remove "' + sp.name + '"? This cannot be undone.')) { S.list = S.list.filter(x => x.id !== sp.id); if (S.run.sid === sp.id) S.run.sid = null; delete S.resBy[sp.id]; if (S.res && S.res.sid === sp.id) S.res = null; persist(); S.msg = 'Removed.'; paint(); if (sp.paper) syncPaper(); } return; }
     if (d.export) { const sp = S.list.find(x => x.id === d.export); if (!sp) return; const out = clone(sp); delete out.id; delete out.created; delete out.follow; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })); a.download = 'strategy_' + sp.name.replace(/\W+/g, '_') + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); return; }
     if (b.hasAttribute('data-new')) { startEdit(blank()); return; }
     if (b.hasAttribute('data-cancel')) { S.edit = null; paint(); return; }
@@ -610,15 +628,15 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
       e.maxHold = Math.min(120, Math.max(1, Math.round(+e.maxHold) || 10)); e.stop.k = Math.min(10, Math.max(0.25, +e.stop.k || 1.5)); e.stop.pct = Math.min(30, Math.max(0.25, +e.stop.pct || 2));
       e.target.r = Math.min(20, Math.max(0.5, +e.target.r || 2)); e.trail.start = Math.min(10, Math.max(0.5, +e.trail.start || 1)); e.trail.dist = Math.min(10, Math.max(0.25, +e.trail.dist || 1.5));
       const i = S.list.findIndex(x => x.id === e.id); if (i >= 0) S.list[i] = clone(e); else S.list.push(clone(e));
-      S.run.sid = e.id; S.edit = null; S.msg = 'Saved "' + e.name + '". It stays on this device for your next visit.'; persist(); paint(); if (e.paper) syncPaper(); return;
+      delete S.resBy[e.id]; S.res = null; S.err = ''; S.run.sid = e.id; S.edit = null; S.msg = 'Saved "' + e.name + '". It stays on this device for your next visit.'; persist(); paint(); if (e.paper) syncPaper(); return;
     }
     if (b.hasAttribute('data-radd') && e) { listFor(e, d.radd).push(newRule('ma_rel')); syncSell(e); paint(); return; }
     if (b.hasAttribute('data-rdel') && e) { const r = b.closest('[data-rs]'); listFor(e, r.dataset.rs).splice(+r.dataset.ri, 1); syncSell(e); paint(); return; }
     if (d.cdel && e) { listFor(e, d.cdel).splice(+d.ci, 1); syncSell(e); paint(); return; }
     if (d.yrs) { S.run.years = d.yrs === 'max' ? 'max' : +d.yrs; persist(); paint(); return; }
     if (b.hasAttribute('data-run-go')) { runBacktest(); return; }
-    if (b.hasAttribute('data-another')) { S.res = null; S.edit = null; S.pg = {}; S.flt = {}; S.run.sid = null; S.cleared = true; S.msg = 'Cleared. Choose another strategy below, then press Test.'; persist(); paint(); const h = S.el.querySelector('.btl-sec'); h && h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-    if (b.hasAttribute('data-resetall')) { S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.tab = 'idx'; S.msg = 'Reset to zero: no strategy selected and no result. Your saved strategies are kept. Pick another one and press Test.'; persist(); paint(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (b.hasAttribute('data-another')) { S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.pg = {}; S.flt = {}; S.run.sid = null; S.cleared = true; S.msg = 'Cleared. Choose another strategy below, then press Test.'; persist(); paint(); const h = S.el.querySelector('.btl-sec'); h && h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (b.hasAttribute('data-resetall')) { S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = 'idx'; S.msg = 'Reset to zero: no strategy selected and no result. Your saved strategies are kept. Pick another one and press Test.'; persist(); paint(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if (d.tab) { S.tab = d.tab; paint(); return; }
     if (d.flt) { S.flt[S.tab] = d.flt; S.pg[S.tab] = 0; paint(); return; }
     if (d.pg) { S.pg[S.tab] = Math.max(0, (S.pg[S.tab] || 0) + +d.pg); paint(); return; }
@@ -632,7 +650,9 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function onChange(ev) {
     const t = ev.target, e = S.edit;
     if (t.matches('[data-file]')) { const f = t.files && t.files[0]; if (!f) return; if (f.size > 300000) { S.msg = 'That file is too large for a strategy (max 300 KB).'; paint(); return; }
-      f.text().then(txt => { S.msg = importText(txt); t.value = ''; paint(); const go = S.el.querySelector('[data-run-go]'); if (go && !go.disabled && /^Imported/.test(S.msg)) go.scrollIntoView({ behavior: 'smooth', block: 'center' }); else window.scrollTo({ top: S.el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' }); }).catch(() => { S.msg = 'Could not read that file.'; paint(); }); return; }
+      f.text().then(txt => { S.msg = importText(txt); S.lpg = 0; S.res = S.resBy[S.run.sid] || null; S.err = ''; t.value = ''; paint(); const go = S.el.querySelector('[data-run-go]'); if (go && !go.disabled && /^Imported/.test(S.msg)) go.scrollIntoView({ behavior: 'smooth', block: 'center' }); else window.scrollTo({ top: S.el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' }); }).catch(() => { S.msg = 'Could not read that file.'; paint(); }); return; }
+    if (t.matches('[data-symf]')) { S.sym[S.tab] = t.value; S.pg[S.tab] = 0; paint(); return; }
+    if (t.matches('[data-rper]')) { S.rper = +t.value; S.pg[S.tab] = 0; paint(); return; }
     if (t.matches('[data-lper]')) { S.lper = +t.value; S.lpg = 0; paint(); return; }
     if (t.matches('[data-tpl]') && e) { const tp = TEMPLATES[t.value]; if (tp) { S.edit = Object.assign(clone(tp), { id: e.id, follow: e.follow, created: e.created }); paint(); } return; }
     if (t.matches('[data-cadd]') && e) { const o = SIMPLE[+t.value]; if (o) { listFor(e, t.dataset.cadd).push(o.mk()); syncSell(e); paint(); } return; }
@@ -652,5 +672,5 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (!S.run.sid && !S.cleared) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
     paint(); if (S.list.some(x => x.paper)) loadPaper();
   }
-  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); syncPaper(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
+  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); syncPaper(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
 })();
