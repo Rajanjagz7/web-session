@@ -6,7 +6,7 @@ a saved file is only ever data - rule types and every number are whitelisted and
 """
 import math
 
-MAX_STRATEGIES = 20
+MAX_STRATEGIES = 500          # effectively no limit: each one is a few rules; the daily check loads every symbol once and reuses it
 SIDES = ("long", "short", "both")
 
 # rule type -> [(param, choices | (min, max), default)]
@@ -292,11 +292,12 @@ def all_of(rules, X, i):
     return bool(rules) and all(test(c, X, i) for c in rules)
 
 
-def signal(spec, bars):
+def signal(spec, bars, X=None):
     """The strategy's view on the LAST bar of `bars`: None, or {"side": "BUY"|"SELL", "close": px, "risk": stop distance}."""
     if len(bars) < 60:
         return None
-    X, i = Ctx(bars), len(bars) - 1
+    X = X or Ctx(bars)                      # pass one Ctx per symbol to run many strategies on it without recomputing the indicators
+    i = len(bars) - 1
     long_ = spec["side"] != "short" and all_of(spec["long"], X, i)
     short_ = spec["side"] != "long" and all_of(spec["short"], X, i)
     if long_ == short_:

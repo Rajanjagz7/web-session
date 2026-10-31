@@ -911,7 +911,7 @@ def _timecycle_cands(now):
 
 
 SHADOW_KEYS = {"morning-pick", EAGLE, "gann-angle", "timecycle"}          # tested on paper only while classicOnly is on
-SHADOW_MAX = 800
+SHADOW_MAX = 3000
 
 
 def shadow_record(st, cands, now):
@@ -981,10 +981,11 @@ def custom_record(st, now):
     with ThreadPoolExecutor(max_workers=6) as ex:
         data = dict(ex.map(load, syms, timeout=60))
     cands, names = [], {}
+    ctx = {sym: cs.Ctx(bars) for sym, bars in data.items() if len(bars) >= 60}
     for sp in specs:
         names["my:" + sp["id"]] = sp["name"]
         for sym, bars in data.items():
-            sg = cs.signal(sp, bars)
+            sg = cs.signal(sp, bars, ctx.get(sym))
             if sg:
                 d = 1 if sg["side"] == "BUY" else -1
                 cands.append({"key": "my:" + sp["id"], "sym": sym, "side": sg["side"], "indStop": sg["close"] - d * sg["risk"]})
