@@ -12,6 +12,7 @@ SIDES = ("long", "short", "both")
 # rule type -> [(param, choices | (min, max), default)]
 RULES = {
     "ma_rel": [("type", ("sma", "ema"), "sma"), ("n", (2, 400), 50), ("rel", ("above", "below"), "above")],
+    "ma_vs": [("type", ("sma", "ema"), "ema"), ("fast", (1, 200), 8), ("slow", (2, 400), 33), ("rel", ("above", "below"), "above")],
     "ma_cross": [("type", ("sma", "ema"), "ema"), ("fast", (1, 200), 9), ("slow", (2, 400), 21), ("dir", ("up", "down"), "up")],
     "rsi": [("n", (2, 50), 14), ("op", ("<", ">"), "<"), ("v", (1, 99), 30)],
     "breakout": [("n", (1, 250), 20), ("dir", ("high", "low"), "high")],
@@ -42,7 +43,7 @@ def clean_rule(c):
     for k, rng, d in RULES[c["t"]]:
         v = c.get(k)
         r[k] = (str(v) if str(v) in rng else d) if isinstance(rng[0], str) else _num(v, rng[0], rng[1], d)
-    if r["t"] in ("ma_cross", "macd") and r["slow"] <= r["fast"]:
+    if r["t"] in ("ma_cross", "macd", "ma_vs") and r["slow"] <= r["fast"]:
         r["slow"] = r["fast"] + 1
     return r
 
@@ -207,6 +208,9 @@ def test(c, X, i):
     if t == "ma_rel":
         m = X.ma(c["type"], int(c["n"]))[i]
         return _ok(m) and (C[i] > m if c["rel"] == "above" else C[i] < m)
+    if t == "ma_vs":
+        a, b = X.ma(c["type"], int(c["fast"]))[i], X.ma(c["type"], int(c["slow"]))[i]
+        return _ok(a, b) and (a > b if c["rel"] == "above" else a < b)
     if t == "ma_cross":
         a, b = X.ma(c["type"], int(c["fast"])), X.ma(c["type"], int(c["slow"]))
         if i < 1 or not _ok(a[i], b[i], a[i - 1], b[i - 1]):

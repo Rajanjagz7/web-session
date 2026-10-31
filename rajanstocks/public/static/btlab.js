@@ -20,6 +20,7 @@
   /* ---------------- rules ---------------- */
   const RULES = {
     ma_rel: { label: 'Price vs moving average', p: [{ k: 'type', s: ['sma', 'ema'], d: 'sma' }, { k: 'n', d: 50, min: 2, max: 400 }, { k: 'rel', s: ['above', 'below'], d: 'above' }], txt: c => `close ${c.rel} ${c.type.toUpperCase()}(${c.n})` },
+    ma_vs: { label: 'One average above another', p: [{ k: 'type', s: ['ema', 'sma'], d: 'ema' }, { k: 'fast', d: 8, min: 1, max: 200 }, { k: 'slow', d: 33, min: 2, max: 400 }, { k: 'rel', s: ['above', 'below'], d: 'above' }], txt: c => `${c.type.toUpperCase()}(${c.fast}) is ${c.rel} ${c.type.toUpperCase()}(${c.slow})` },
     ma_cross: { label: 'Moving average cross', p: [{ k: 'type', s: ['ema', 'sma'], d: 'ema' }, { k: 'fast', d: 9, min: 1, max: 200 }, { k: 'slow', d: 21, min: 3, max: 400 }, { k: 'dir', s: ['up', 'down'], d: 'up' }], txt: c => `${c.type.toUpperCase()}(${c.fast}) crosses ${c.dir === 'up' ? 'above' : 'below'} ${c.type.toUpperCase()}(${c.slow})` },
     rsi: { label: 'RSI level', p: [{ k: 'n', d: 14, min: 2, max: 50 }, { k: 'op', s: ['<', '>'], d: '<' }, { k: 'v', d: 30, min: 1, max: 99 }], txt: c => `RSI(${c.n}) ${c.op} ${c.v}` },
     breakout: { label: 'N-day breakout', p: [{ k: 'n', d: 20, min: 1, max: 250 }, { k: 'dir', s: ['high', 'low'], d: 'high' }], txt: c => `close beyond the ${c.n}-day ${c.dir}` },
@@ -42,6 +43,12 @@
     ibs: { desc: 'Buys shares that closed near the bottom of the day and sells when they recover.', name: 'Bounce from weak closes (IBS)', side: 'long', long: [R_('ibs', { op: '<', v: 0.1 })], short: [], exitIf: [R_('ibs', { op: '>', v: 0.9 })], stop: { type: 'atr', k: 2.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 6 },
     supertrend: { desc: 'From a video, daily version: buys when Supertrend turns green above the 200-day average, exits when it turns red.', name: 'Supertrend + 200-day average', side: 'long', long: [R_('supertrend', { n: 10, mult: 3, dir: 'up' }), R_('ma_rel', { type: 'ema', n: 200, rel: 'above' })], short: [], exitIf: [R_('supertrend', { n: 10, mult: 3, dir: 'down' })], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 60 },
     must: { desc: 'From a video, daily version: buys when the price climbs back above the 10-day average while Supertrend is green.', name: 'Supertrend pullback (MUST)', side: 'long', long: [R_('supertrend', { n: 10, mult: 3, dir: 'is up' }), R_('ma_cross', { type: 'sma', fast: 1, slow: 10, dir: 'up' })], short: [], exitIf: [R_('ma_rel', { type: 'sma', n: 10, rel: 'below' })], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 30 },
+    neeraj: { list: true, desc: 'From your list: buys a 20-day breakout while price is above the 200-day average (sells the mirror). Daily candles only.', name: '20-candle swing (Neeraj Joshi, daily version)', side: 'both', long: [R_('breakout', {n: 20, dir: 'high'}), R_('ma_rel', {type: 'sma', n: 200, rel: 'above'})], short: [R_('breakout', {n: 20, dir: 'low'}), R_('ma_rel', {type: 'sma', n: 200, rel: 'below'})], exitIf: [], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 30 },
+    geek: { list: true, desc: 'From your list: a 20-day high is broken on big volume; exits when the 8-day average falls below the 14-day.', name: 'Momentum breakout (Trading Geek, daily version)', side: 'long', long: [R_('breakout', {n: 20, dir: 'high'}), R_('volume', {n: 20, mult: 1.5}), R_('candle', {dir: 'green'})], short: [], exitIf: [R_('ma_cross', {type: 'ema', fast: 8, slow: 14, dir: 'down'})], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 30 },
+    sanjay: { list: true, desc: 'From your list: buys when RSI(14) is above 60 and sells when it is below 40; exits when the close falls under the 14-day average.', name: 'RSI strength (Sanjay Kathuria, daily version)', side: 'both', long: [R_('rsi', {n: 14, op: '>', v: 60})], short: [R_('rsi', {n: 14, op: '<', v: 40})], exitIf: [R_('ma_rel', {type: 'sma', n: 14, rel: 'below'})], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 20 },
+    mamba: { list: true, desc: 'From your list: buys when the 8-day average crosses above the 50-day with price above it; exits when price closes under the 50-day.', name: 'SMA 8/50 breakout (MambaFX, daily version)', side: 'long', long: [R_('ma_cross', {type: 'sma', fast: 8, slow: 50, dir: 'up'}), R_('ma_rel', {type: 'sma', n: 50, rel: 'above'})], short: [], exitIf: [R_('ma_rel', {type: 'sma', n: 50, rel: 'below'})], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 30 },
+    ema833: { list: true, desc: 'From your list: EMA(8) is above EMA(33) and price closes back above EMA(8) after a dip; exits when EMA(8) falls under EMA(33).', name: '833 EMA pullback (Wizard Trader, daily version)', side: 'long', long: [R_('ma_vs', {type: 'ema', fast: 8, slow: 33, rel: 'above'}), R_('ma_cross', { type: 'ema', fast: 1, slow: 8, dir: 'up' }), R_('ma_rel', {type: 'ema', n: 33, rel: 'above'})], short: [], exitIf: [R_('ma_vs', {type: 'ema', fast: 8, slow: 33, rel: 'below'})], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 30 },
+    stema: { list: true, desc: 'From your list: Supertrend turns green while price is above the 200-day average; exits when it turns red.', name: 'Supertrend + EMA 200 (Trading Lab, daily version)', side: 'long', long: [R_('supertrend', {n: 10, mult: 3, dir: 'up'}), R_('ma_rel', {type: 'ema', n: 200, rel: 'above'})], short: [], exitIf: [R_('supertrend', {n: 10, mult: 3, dir: 'down'})], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 40 },
     gapdown: { desc: 'Buys a stock that gapped down but turned around and closed green.', name: 'Gap-down bounce', side: 'long', long: [R_('gap', { dir: 'down', pct: 1 }), R_('candle', { dir: 'green' })], short: [], exitIf: [], stop: { type: 'atr', k: 1, pct: 2 }, target: { on: true, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 5 }
   };
   const blank = () => ({ id: uid(), name: 'My strategy', side: 'long', long: [newRule('ma_rel')], short: [], exitIf: [], stop: { type: 'atr', k: 1.5, pct: 2 }, target: { on: true, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 10, follow: true, created: Date.now() });
@@ -126,12 +133,14 @@
       let j; try { j = JSON.parse(trimmed); } catch (err) { return 'That is not valid JSON (' + String(err.message).slice(0, 60) + ').'; }
       items = Array.isArray(j) ? j : Array.isArray(j && j.strategies) ? j.strategies : [j];
       const cat = items.filter(o => o && typeof o === 'object' && typeof o.rules === 'string' && !o.long && !o.short);     // a catalogue with the rules written as sentences
-      if (cat.length) notes.push(cat.length + ' entr' + (cat.length > 1 ? 'ies are' : 'y is') + ' written as plain sentences: the lab reads only lines it understands, and only for daily candles. Entries for minute / hourly charts or ideas like order blocks, fair value gaps or liquidity sweeps cannot be tested here and are skipped.');
+      if (cat.length) notes.push(cat.length + ' entr' + (cat.length > 1 ? 'ies are' : 'y is') + ' written as plain sentences: the lab reads only lines it understands, and only for daily candles. Entries for minute / hourly charts or ideas like order blocks, fair value gaps or liquidity sweeps cannot be tested here and are skipped. Daily versions of some of them (Neeraj Joshi, Trading Geek, Sanjay Kathuria, MambaFX, 833 EMA, Supertrend + EMA 200, MUST) are already under "More ready-made".');
       items = items.map(o => {
         if (!(o && typeof o === 'object' && typeof o.rules === 'string' && !o.long && !o.short)) return o;
-        if (INTRADAY.test(String(o.tf || ''))) { bad.push('"' + String(o.name || o.id).slice(0, 40) + '": needs ' + o.tf + ' data (the lab tests daily candles)'); return null; }
-        const fake = '# ' + (o.name || o.id) + '\nBuy when:\n' + String(o.rules).split(/[.;]\s+/).map(x => '- ' + x).join('\n'), r = parseMd(fake).out[0];
-        if (!r || !r.long.length) { bad.push('"' + String(o.name || o.id).slice(0, 40) + '": the rules are not something the lab can express (' + (o.rules.length > 60 ? o.rules.slice(0, 57) + '…' : o.rules) + ')'); return null; }
+        const nm = String(o.name || o.title || o.id || 'Imported strategy'), tf = String(o.tf || o.timeframe || '');
+        if (/forex|crypto/i.test(String(o.market || ''))) { bad.push('"' + nm.slice(0, 40) + '": ' + o.market + ' is not in the lab data'); return null; }
+        if (INTRADAY.test(tf) || /\b\d+\s?m\b|\bh\b|hour|renko/i.test(tf) || /not stated/i.test(tf)) { bad.push('"' + nm.slice(0, 40) + '": ' + (/not stated/i.test(tf) ? 'the chart timeframe is not stated' : 'needs ' + tf + ' candles') + ' (the lab tests daily candles)'); return null; }
+        const fake = '# ' + nm + '\nBuy when:\n' + String(o.rules).split(/[.;]\s+/).map(x => '- ' + x).join('\n'), r = parseMd(fake).out[0];
+        if (!r || !r.long.length) { bad.push('"' + nm.slice(0, 40) + '": the rules are not something the lab can express (' + (o.rules.length > 60 ? o.rules.slice(0, 57) + '…' : o.rules) + ')'); return null; }
         return r;
       }).filter(Boolean);
     } else {                                                                              // Markdown / text
@@ -215,6 +224,7 @@
       atr: k => get('atr' + k, () => { const tr = B.c.map((c, i) => i === 0 ? B.h[0] - B.l[0] : Math.max(B.h[i] - B.l[i], Math.abs(B.h[i] - B.c[i - 1]), Math.abs(B.l[i] - B.c[i - 1]))); return rma(tr, k); }),
       hh: k => get('hh' + k, () => { const o = new Array(n).fill(NaN); for (let i = k; i < n; i++) { let m = -Infinity; for (let j = i - k; j < i; j++) m = Math.max(m, B.h[j]); o[i] = m; } return o; }),
       ll: k => get('ll' + k, () => { const o = new Array(n).fill(NaN); for (let i = k; i < n; i++) { let m = Infinity; for (let j = i - k; j < i; j++) m = Math.min(m, B.l[j]); o[i] = m; } return o; }),
+      hv: k => get('hv' + k, () => { const o = new Array(n).fill(NaN), r = B.c.map((c, i) => i ? Math.log(c / B.c[i - 1]) : 0); for (let i = k; i < n; i++) { let m = 0, q = 0; for (let j = i - k + 1; j <= i; j++) m += r[j]; m /= k; for (let j = i - k + 1; j <= i; j++) q += (r[j] - m) * (r[j] - m); o[i] = Math.sqrt(q / (k - 1)) * Math.sqrt(252); } return o; }),
       vavg: k => get('v' + k, () => { const o = new Array(n).fill(NaN); let s = 0; for (let i = 0; i < n; i++) { s += B.v[i]; if (i >= k) s -= B.v[i - k]; if (i >= k) o[i] = s / k; } return o; })
     };
   }
@@ -223,6 +233,7 @@
     switch (c.t) {
       case 'ma_rel': { const m = X.ma(c.type, c.n)[i]; return m === m && (c.rel === 'above' ? B.c[i] > m : B.c[i] < m); }
       case 'ma_cross': { const a = X.ma(c.type, c.fast), b = X.ma(c.type, c.slow); if (i < 1 || !(a[i] === a[i]) || !(b[i] === b[i]) || !(a[i - 1] === a[i - 1]) || !(b[i - 1] === b[i - 1])) return false; return c.dir === 'up' ? (a[i - 1] <= b[i - 1] && a[i] > b[i]) : (a[i - 1] >= b[i - 1] && a[i] < b[i]); }
+      case 'ma_vs': { const a = X.ma(c.type, c.fast)[i], b = X.ma(c.type, c.slow)[i]; return a === a && b === b && (c.rel === 'above' ? a > b : a < b); }
       case 'rsi': { const r = X.rsi(c.n)[i]; return r === r && (c.op === '<' ? r < c.v : r > c.v); }
       case 'breakout': { if (c.dir === 'high') { const h = X.hh(c.n)[i]; return h === h && B.c[i] > h; } const l = X.ll(c.n)[i]; return l === l && B.c[i] < l; }
       case 'gap': { if (i < 1) return false; const g = (B.o[i] - B.c[i - 1]) / B.c[i - 1] * 100; return c.dir === 'up' ? g >= c.pct : g <= -c.pct; }
@@ -242,6 +253,11 @@
   const allOf = (rules, X, i) => rules.length > 0 && rules.every(c => test(c, X, i));
 
   /* ---------------- option model (same as backtest.py) ---------------- */
+  /* option price by the Black-Scholes formula (no real history of option prices exists for most days): at-the-money strike, volatility = the chart's own 20-day volatility +10% (implied is usually a little higher),
+     repriced on the exit day with the real days left, so time decay, the move itself and its curvature (gamma) are all in the price */
+  const NCDF = x => { const t = 1 / (1 + 0.2316419 * Math.abs(x)), p = 0.3989423 * Math.exp(-x * x / 2) * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return x > 0 ? 1 - p : p; };
+  function bs(S, K, T, sig, call) { const r = 0.065; if (!(T > 1e-6)) return Math.max(0, call ? S - K : K - S); const v = sig * Math.sqrt(T), d1 = (Math.log(S / K) + (r + sig * sig / 2) * T) / v, d2 = d1 - v; return call ? S * NCDF(d1) - K * Math.exp(-r * T) * NCDF(d2) : K * Math.exp(-r * T) * NCDF(-d2) - S * NCDF(-d1); }
+  const ivOf = (X, i, kind) => { const h = X.hv(20)[i]; return Math.min(0.9, Math.max(kind === 'index' ? 0.12 : 0.2, (h === h ? h : 0.2) * 1.1)); };
   const estPrem = (atr, kind, days) => 0.32 * atr * Math.sqrt(Math.max(0, days == null ? (kind === 'index' ? 5 : 15) : days) * 5 / 7);
   const thetaR = (atr, kind, risk, dFrom, dTo) => (estPrem(atr, kind, dFrom) - estPrem(atr, kind, dTo)) / DELTA / risk;
   function lastWd(y, m, w) { const d = new Date(Date.UTC(y, m + 1, 0)); while (d.getUTCDay() !== w) d.setUTCDate(d.getUTCDate() - 1); return Math.floor(d / 864e5); }
@@ -265,13 +281,13 @@
     if (!(risk > 0) || !(entry > 0)) return null;
     if (opt && kind === 'stock') { const tv = X.vavg(20)[i] * B.c[i]; if (!(tv >= MIN_TURNOVER)) return null; }
     const exp = opt ? expiryDay(B.d[i + 1], kind, sym) : 0, dte = (j, fr) => exp - dnum(B.d[j]) + fr, dEntry = opt ? dte(i + 1, 0.26) : 0;
-    const prem0 = opt ? estPrem(a, kind, dEntry) : 0, maxLossR = opt ? prem0 / (DELTA * risk) : Infinity;
+    const call = d > 0, sig = opt ? ivOf(X, i, kind) : 0, prem0 = opt ? bs(entry, entry, dEntry / 365, sig, call) : 0, maxLossR = opt ? prem0 / (DELTA * risk) : Infinity;
     const costR = opt ? OPT_FRAC[kind] * prem0 / (DELTA * risk) : (sp.costPct == null ? 0.1 : sp.costPct) / 100 * entry / risk;
     let stop = entry - d * risk, best = entry, trailed = false;
     const tgt = sp.target.on ? entry + d * sp.target.r * risk : null, last = Math.min(n - 1, i + sp.maxHold);
     const fin = (px, j, why, when) => {
       let r = d * (px - entry) / risk - costR;
-      if (opt) { r -= thetaR(a, kind, risk, dEntry, dte(j, { open: 0.26, mid: 0.13, close: 0 }[when || 'mid'])); r = Math.max(r, -maxLossR); }
+      if (opt) { const p1 = bs(px, entry, Math.max(0, dte(j, { open: 0.26, mid: 0.13, close: 0 }[when || 'mid'])) / 365, sig, call); r = (p1 - prem0) / (DELTA * risk) - costR; r = Math.max(r, -maxLossR); }
       return { i, j, side, entry, exit: px, R: r, why, entryDate: B.d[i + 1], exitDate: B.d[j], hold: j - i, riskPct: risk / entry * 100, premPct: opt && prem0 > 0 ? 100 * DELTA * risk / prem0 : null };
     };
     for (let j = i + 1; j <= last; j++) {
@@ -336,7 +352,7 @@
 
   /* ---------------- state + persistence ---------------- */
   const D = load(LSUI) || {};
-  const S = { el: null, list: load(LS) || [], edit: null, run: Object.assign({ universe: 'all', years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }, D),
+  const S = { el: null, list: load(LS) || [], edit: null, run: Object.assign({ universe: 'all', years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }, D, { universe: 'all' }),
     res: null, resBy: {}, err: '', busy: false, prog: '', msg: '', pg: {}, flt: {}, tab: 'idx', sig: null, openId: null };
   const persist = () => { save(LS, S.list); save(LSUI, { universe: S.run.universe, years: S.run.years, markets: S.run.markets, capital: S.run.capital, riskPct: S.run.riskPct, maxOpen: S.run.maxOpen, extra: S.run.extra, sid: S.run.sid }); };
 
@@ -519,7 +535,7 @@
   function chooseHTML() {
     const sel = S.run.sid;
     if (S.edit) return `<div class="btl-sec" id="btlBuilder"><div class="btl-st"><i>1</i>Your strategy</div>${builderHTML()}</div>`;
-    const mine = S.list.map(sp => ({ id: sp.id, title: sp.name, desc: short(sp), sp })), ready = Object.keys(TEMPLATES).slice(0, 2).map(k => ({ id: 'tpl:' + k, title: TEMPLATES[k].name, desc: TEMPLATES[k].desc || short(TEMPLATES[k]), sp: null }));
+    const mine = S.list.map(sp => ({ id: sp.id, title: sp.name, desc: short(sp), sp })), nReady = Object.keys(TEMPLATES).length, ready = Object.keys(TEMPLATES).filter(k => S.moreReady || !TEMPLATES[k].list).slice(0, S.moreReady ? 99 : 2).map(k => ({ id: 'tpl:' + k, title: TEMPLATES[k].name, desc: TEMPLATES[k].desc || short(TEMPLATES[k]), sp: null }));
     mine.sort((x, y) => (y.id === sel) - (x.id === sel));              // the selected strategy is always first
     const per = [5, 10, 25, 50].includes(S.lper) ? S.lper : 5, pages = Math.max(1, Math.ceil(mine.length / per)), pgn = Math.min(S.lpg || 0, pages - 1);
     const shown = mine.slice(pgn * per, pgn * per + per).concat(sel && sel.startsWith('tpl:') && !ready.some(r => r.id === sel) ? [] : [], ready);
@@ -530,13 +546,13 @@
         ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.paper ? 'stop' : 'go'}" data-paper="${esc(it.id)}">${sp.paper ? '■ Stop paper trading' : '📅 Paper-trade daily'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
     };
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose or build your strategy</div><div class="btl-cards">${shown.map(card).join('')}</div>${pager}
-      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button><button type="button" class="btl-b sm" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b sm" data-resetall>↺ Reset</button></div>${paperHTML()}</div>`;
+      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button><button type="button" class="btl-b sm" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b sm" data-resetall>↺ Reset</button><button type="button" class="btl-b sm" data-moreready>${S.moreReady ? 'Fewer ready-made' : 'More ready-made (' + (nReady - 2) + ')'}</button></div>${paperHTML()}</div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
     return `<div class="btl-sec"><div class="btl-st"><i>2</i>How far back, and where?</div>
       <div class="btl-sub" style="margin-top:0">How far back</div><div class="btl-seg">${[4, 8, 'max'].map(y => `<button type="button" data-yrs="${y}" class="${r.years === y ? 'on' : ''}">${y === 'max' ? 'As far back as possible' : y + ' years'}</button>`).join('')}</div>
-      <div class="btl-sub">Which shares</div><div class="btl-seg">${[['all', 'All F&O stocks (about 220)'], ['top20', 'Top 20 only (quick)']].map(o => `<button type="button" data-uni="${o[0]}" class="${(r.universe || 'all') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div><div class="btl-sub">Which markets</div><div class="btl-chk">${Object.keys(MARKETS).map(k => `<label><input type="checkbox" data-mk="${k}" ${r.markets[k] ? 'checked' : ''}>${k === 'cash' ? 'Shares' : MARKETS[k]}</label>`).join('')}</div>
+      <div class="btl-sub">Which shares</div><div class="muted" style="font-size:13px;margin-bottom:4px">Every F&O stock (about 220). Their price history loads quietly in the background, so the test starts at once.</div><div class="btl-sub">Which markets</div><div class="btl-chk">${Object.keys(MARKETS).map(k => `<label><input type="checkbox" data-mk="${k}" ${r.markets[k] ? 'checked' : ''}>${k === 'cash' ? 'Shares' : MARKETS[k]}</label>`).join('')}</div>
       <details class="btl-more" data-k="acct"><summary>Account settings</summary><div><div class="btl-g2"><label>Account size (₹)<input data-run="capital" type="number" inputmode="numeric" min="10000" step="10000" value="${esc(r.capital)}"></label><label>Risk per trade (% of account)<input data-run="riskPct" type="number" inputmode="decimal" min="0.1" max="10" step="0.1" value="${esc(r.riskPct)}"></label><label>Most trades open at once<input data-run="maxOpen" type="number" inputmode="numeric" min="0" max="50" step="1" value="${esc(r.maxOpen)}"></label></div>
         <label style="margin-top:10px">Extra share symbols (optional, e.g. WIPRO, DLF)<input data-run="extra" placeholder="WIPRO, DLF" value="${esc(r.extra)}"></label></div></details></div>
       <div class="btl-sec"><div class="btl-st"><i>3</i>Test it</div>
@@ -569,7 +585,7 @@
       <label class="btl-fl">Share / index<select data-symf><option value="ALL">All (${syms.length})</option>${syms.map(x => `<option value="${esc(x)}" ${x === SYM ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="btl-trl">${rows || '<div class="muted" style="margin-top:8px">No trades match.</div>'}</div>
       <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-rper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div>`;
     const detail = `<details class="btl-more" data-k="more"><summary>More numbers</summary><div>${tiles}<div style="margin:10px 0 4px;font-weight:700">Year by year</div><div style="overflow-x:auto">${yt}</div></div></details>`;
-    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, charges and slippage on the premium (STT 0.15%, about 0.5% slippage for index options and 1.5% for stock options), out a day before expiry. Index options use weekly expiries from Feb 2019 (only Nifty and Sensex keep weeklies after Nov 2024); stock options need at least ₹5 crore traded a day.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}The stock list is today's F&O list (stocks that left it earlier are missing), so results can look a little better than real life. Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
+    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED with the Black-Scholes formula (no real option price history is used): at-the-money strike, volatility from the last 20 days of the chart (+10%), repriced on the exit day with the real days left to expiry, charges and slippage on the premium (STT 0.15%, about 0.5% slippage for index options and 1.5% for stock options), out a day before expiry. Index options use weekly expiries from Feb 2019 (only Nifty and Sensex keep weeklies after Nov 2024); stock options need at least ₹5 crore traded a day.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}The stock list is today's F&O list (stocks that left it earlier are missing), so results can look a little better than real life. Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
     return head + verdict + reliabilityHTML(st, R) + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + trades + detail + compareHTML() + caveat + '</div>';
   }
   function reliabilityHTML(st, R) {
@@ -635,7 +651,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.18</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.21</span></div></div></div>
       ${bannerHTML()}
       <div class="btl-grid"><div class="btl-left">${chooseHTML()}${runHTML()}</div><div class="btl-right">${S.busy ? busyHTML() : (S.res ? resultsHTML() : notTestedHTML())}</div></div></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
@@ -650,6 +666,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function startEdit(spec) { S.edit = spec; S.msg = ''; paint(); const el = S.el.querySelector('#btlBuilder'); el && el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   function onClick(ev) {
     const b = ev.target.closest('button'); if (!b || !S.el.contains(b)) return; const e = S.edit, d = b.dataset;
+    if (b.hasAttribute('data-moreready')) { S.moreReady = !S.moreReady; paint(); return; }
     if (b.hasAttribute('data-dismiss')) { S.msg = ''; paint(); return; }
     if (b.hasAttribute('data-upload')) { const f = S.el.querySelector('[data-file]'); f && f.click(); return; }
     if (b.hasAttribute('data-example')) { const ta = S.el.querySelector('[data-paste]'); if (ta) ta.value = JSON.stringify(EXAMPLE, null, 2); return; }
