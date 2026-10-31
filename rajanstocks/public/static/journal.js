@@ -585,7 +585,7 @@ function paperList() {
     const host = document.getElementById('v-journal');
     if (!host || !host.offsetParent || document.querySelector('.modal-bg') || document.hidden) return;
     if (ui.tab === 'btlab') return;                           // the lab keeps its own state and repaints itself: a live refresh must not rebuild it
-    if (ui.tab === 'picklog') { const b = document.getElementById('jvPickLog'), h = window.pkLogHTML ? window.pkLogHTML() : ''; if (b && b._h !== h) { b._h = h; b.innerHTML = h; } return; }
+    if (ui.tab === 'picklog') { const b = document.getElementById('jvPickLog'), h = window.pkLogHTML ? window.pkLogHTML() : ''; if (b && b._h !== h) { const op = [...b.querySelectorAll('details')].map(d => d.open); b._h = h; b.innerHTML = h; b.querySelectorAll('details').forEach((d, i) => { if (op[i]) d.open = true }); } return; }
     if (ui.tab === 'positions' || ui.tab === 'positionsold') { liveCap(); if (!livePositions()) render(); return; }
     if (ui.tab === 'algo' || ui.tab === 'stocks') { liveCap(); return; }
     if (ui.tab !== 'portfolio') return;
