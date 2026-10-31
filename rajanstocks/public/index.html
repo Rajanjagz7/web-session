@@ -746,8 +746,166 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pkl-steps li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);font-size:13px;color:var(--text-2)}
 .pkl-steps li b{color:var(--text)}
 .pkl-steps i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2))}.pkl-f button{padding:7px 10px;border-radius:9px;font-size:12px;font-weight:600}.pkl-f button i{font-style:normal;opacity:.7;margin-left:2px}.pkl-f button.on{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff}.pkl-reset{padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;background:transparent;color:var(--down);border:1px solid var(--down)}.pkl-reset.arm{background:var(--down);color:#fff}.pkr{border-left:3px solid transparent}.pkr.o-win{border-left-color:var(--up)}.pkr.o-loss{border-left-color:var(--down)}.pkr.o-mixed{border-left-color:var(--gold)}.pkr-n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:11px;background:var(--panel);color:var(--text-2);font-size:11px;font-weight:800}
+
+/* Picks log redesign (31 Oct): glass stat tiles, pill filters, outcome-coloured cards with a stop / entry / target track */
+#jvPickLog .pkl-stats{gap:10px;margin:12px 0 14px}
+#jvPickLog .pkl-tile{position:relative;padding:14px 8px 12px;border-radius:16px;background:linear-gradient(155deg,rgba(99,102,241,.20),rgba(6,182,212,.08) 60%,transparent);border:1px solid rgba(99,102,241,.28);box-shadow:0 6px 18px rgba(0,0,0,.18);overflow:hidden;transition:transform .15s}
+#jvPickLog .pkl-tile:hover{transform:translateY(-2px)}
+#jvPickLog .pkl-tile.up{background:linear-gradient(155deg,rgba(34,197,94,.22),rgba(34,197,94,.04) 70%);border-color:rgba(34,197,94,.35)}
+#jvPickLog .pkl-tile.down{background:linear-gradient(155deg,rgba(239,68,68,.22),rgba(239,68,68,.04) 70%);border-color:rgba(239,68,68,.35)}
+#jvPickLog .pkl-tile.gold{background:linear-gradient(155deg,rgba(245,158,11,.24),rgba(245,158,11,.04) 70%);border-color:rgba(245,158,11,.38)}
+#jvPickLog .pkl-ti{position:absolute;top:8px;right:10px;font-style:normal;font-size:15px;opacity:.85}
+#jvPickLog .pkl-tile b{font-size:26px;font-weight:800;letter-spacing:-.02em;text-align:left;padding-left:4px}
+#jvPickLog .pkl-tile small{display:block;text-align:left;padding-left:4px;margin-top:3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3)}
+#jvPickLog .pkl-bar2{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin:8px 4px 0;overflow:hidden}
+#jvPickLog .pkl-bar2 u{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#f59e0b,#22c55e)}
+#jvPickLog .pkl-bar{margin:4px 0 10px;gap:10px}
+#jvPickLog .pkl-f.seg{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+#jvPickLog .pkl-f button{border-radius:999px;padding:6px 14px;font-weight:600;font-size:12.5px;border:0;background:transparent;color:var(--text-2)}
+#jvPickLog .pkl-f button i{font-style:normal;opacity:.7;margin-left:4px;font-size:11px}
+#jvPickLog .pkl-f button.on{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:0 4px 12px rgba(99,102,241,.4)}
+#jvPickLog .pkl-reset{border-radius:999px;padding:7px 14px;background:transparent;border:1px solid rgba(239,68,68,.45);color:var(--down);font-weight:700}
+#jvPickLog .pkl-reset:hover,#jvPickLog .pkl-reset.arm{background:var(--down);color:#fff}
+#jvPickLog .pkg{margin:18px 0 6px}
+#jvPickLog .pkg-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+#jvPickLog .pkg h4{margin:0;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+#jvPickLog .pkg h4 em{font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));padding:3px 9px;border-radius:999px}
+#jvPickLog .pkg-sum{display:flex;gap:6px;flex-wrap:wrap;margin:0}
+#jvPickLog .pkg-sum span{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--text-2)}
+#jvPickLog .pkg-sum span.up{color:var(--up);background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3)}
+#jvPickLog .pkg-sum span.down{color:var(--down);background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3)}
+#jvPickLog .pkr{position:relative;margin:0 0 10px;padding:14px 16px 12px;border-radius:16px;border:1px solid var(--line);border-left-width:4px;background:linear-gradient(180deg,var(--panel-2),var(--panel));box-shadow:0 4px 14px rgba(0,0,0,.14);transition:transform .15s,box-shadow .15s}
+#jvPickLog .pkr:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.28)}
+#jvPickLog .pkr.o-win{border-left-color:var(--up);background:linear-gradient(100deg,rgba(34,197,94,.10),transparent 45%),linear-gradient(180deg,var(--panel-2),var(--panel))}
+#jvPickLog .pkr.o-loss{border-left-color:var(--down);background:linear-gradient(100deg,rgba(239,68,68,.10),transparent 45%),linear-gradient(180deg,var(--panel-2),var(--panel))}
+#jvPickLog .pkr.o-mixed{border-left-color:var(--gold);background:linear-gradient(100deg,rgba(245,158,11,.10),transparent 45%),linear-gradient(180deg,var(--panel-2),var(--panel))}
+#jvPickLog .pkr.o-open{border-left-color:var(--text-3)}
+#jvPickLog .pkr-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#jvPickLog .pkr-n{min-width:26px;height:26px;border-radius:9px;background:var(--panel);border:1px solid var(--line);font-size:11.5px}
+#jvPickLog .pkr-id{display:flex;flex-direction:column;line-height:1.15;margin-right:auto}
+#jvPickLog .pkr-id b{font-size:17px;font-weight:800;letter-spacing:-.01em}
+#jvPickLog .pkr-id small{font-size:11.5px;color:var(--text-3)}
+#jvPickLog .pkr-side{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;letter-spacing:.02em}
+#jvPickLog .pkr-side.up{color:var(--up);background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.35)}
+#jvPickLog .pkr-side.down{color:var(--down);background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.35)}
+#jvPickLog .pkr-kind{font-size:11px;font-weight:600;color:var(--text-3);padding:4px 9px;border-radius:999px;border:1px dashed var(--line)}
+#jvPickLog .pkr-out{font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px;white-space:nowrap}
+#jvPickLog .pkr-out.win{color:#052e16;background:linear-gradient(135deg,#4ade80,#22c55e)}
+#jvPickLog .pkr-out.loss{color:#fff;background:linear-gradient(135deg,#f87171,#ef4444)}
+#jvPickLog .pkr-out.mixed{color:#2b1a00;background:linear-gradient(135deg,#fcd34d,#f59e0b)}
+#jvPickLog .pkr-out.open{color:var(--text-2);background:var(--panel);border:1px solid var(--line)}
+#jvPickLog .pkr-trk{padding:22px 14px 26px}
+#jvPickLog .pkr-rail{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,rgba(239,68,68,.35),rgba(255,255,255,.12) 40%,rgba(34,197,94,.35))}
+#jvPickLog .pkr-fill{position:absolute;top:-1px;height:8px;border-radius:4px}
+#jvPickLog .pkr-fill.fav{background:linear-gradient(90deg,rgba(34,197,94,.55),#22c55e);box-shadow:0 0 10px rgba(34,197,94,.55)}
+#jvPickLog .pkr-fill.adv{background:linear-gradient(90deg,#ef4444,rgba(239,68,68,.55));box-shadow:0 0 10px rgba(239,68,68,.5)}
+#jvPickLog .pkr-pt{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--panel);border:2px solid var(--text-3);display:block}
+#jvPickLog .pkr-pt b{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:var(--text-3);letter-spacing:.04em}
+#jvPickLog .pkr-pt small{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:var(--text-3);font-variant-numeric:tabular-nums}
+#jvPickLog .pkr-pt.sl{border-color:var(--down)}
+#jvPickLog .pkr-pt.sl b{color:var(--down)}
+#jvPickLog .pkr-pt.in{border-color:#fff;background:#fff}
+#jvPickLog .pkr-pt.in b{color:var(--text)}
+#jvPickLog .pkr-pt.tg{border-color:var(--up)}
+#jvPickLog .pkr-pt.tg b{color:var(--up)}
+#jvPickLog .pkr-pt.hit{background:var(--up);box-shadow:0 0 0 4px rgba(34,197,94,.25)}
+#jvPickLog .pkr-pt.sl.hit{background:var(--down);box-shadow:0 0 0 4px rgba(239,68,68,.25)}
+#jvPickLog .pkc-row{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 6px}
+#jvPickLog .pkc{border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--panel)}
+#jvPickLog .pkc.tg{color:var(--up);border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.12)}
+#jvPickLog .pkc.sl{color:var(--down);border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.12)}
+#jvPickLog .pkc.off{color:var(--text-3)}
+#jvPickLog .pkr-s{font-size:12.5px;color:var(--text-2);padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+@media (max-width:720px){#jvPickLog .pkl-stats{grid-template-columns:repeat(2,1fr)}#jvPickLog .pkr-top{gap:6px}#jvPickLog .pkr-kind{display:none}#jvPickLog .pkr-id b{font-size:15px}}
+
+/* Picks log: after-the-stop panel + mobile layout (31 Oct) */
+#jvPickLog .pkr-aft{margin-top:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.035)}
+#jvPickLog .pkr-aft.rec{border-color:rgba(34,197,94,.45);background:linear-gradient(100deg,rgba(34,197,94,.14),transparent 70%)}
+#jvPickLog .pkr-aft.bnc{border-color:rgba(245,158,11,.45);background:linear-gradient(100deg,rgba(245,158,11,.14),transparent 70%)}
+#jvPickLog .pkr-aft.fall{border-color:rgba(239,68,68,.45);background:linear-gradient(100deg,rgba(239,68,68,.14),transparent 70%)}
+#jvPickLog .pka-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:12.5px}
+#jvPickLog .pka-h i{font-style:normal;font-size:16px}
+#jvPickLog .pka-h b{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}
+#jvPickLog .pka-h span{font-weight:700;color:var(--text)}
+#jvPickLog .pka-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#jvPickLog .pka-f{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;background:var(--panel);border:1px solid var(--line);min-width:0}
+#jvPickLog .pka-f small{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3)}
+#jvPickLog .pka-f b{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#jvPickLog .pka-f.up b{color:var(--up)}
+#jvPickLog .pka-f.down b{color:var(--down)}
+@media (max-width:900px){
+  #jvPickLog .pka-g{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  #jvPickLog .pkl-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #jvPickLog .pkl-tile:last-child{grid-column:1/-1}
+  #jvPickLog .pkl-tile b{font-size:22px}
+  #jvPickLog .pkl-bar{flex-direction:column;align-items:stretch;gap:8px}
+  #jvPickLog .pkl-f.seg{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-radius:14px}
+  #jvPickLog .pkl-f.seg::-webkit-scrollbar{display:none}
+  #jvPickLog .pkl-f button{flex:none;min-height:40px;padding:6px 16px}
+  #jvPickLog .pkl-reset{min-height:42px;width:100%}
+  #jvPickLog .pkfs-pg{flex-direction:column;align-items:stretch;gap:8px}
+  #jvPickLog .pkfs-pg button{min-height:40px;min-width:40px}
+  #jvPickLog .pkg-h{flex-direction:column;align-items:flex-start;gap:8px}
+  #jvPickLog .pkr{padding:12px 12px 10px;border-radius:14px}
+  #jvPickLog .pkr-top{display:grid;grid-template-columns:auto 1fr;gap:8px 10px}
+  #jvPickLog .pkr-id{margin-right:0}
+  #jvPickLog .pkr-top .pkr-n{justify-self:start;width:26px;padding:0}
+  #jvPickLog .pkr-side,#jvPickLog .pkr-out{justify-self:start}
+  #jvPickLog .pkr-top .pkr-side{grid-column:1/2}
+  #jvPickLog .pkr-top .pkr-out{grid-column:2/3;justify-self:end}
+  #jvPickLog .pkr-kind{display:none}
+  #jvPickLog .pkr-trk{padding:20px 10px 24px}
+  #jvPickLog .pkr-pt b{font-size:9px}
+  #jvPickLog .pkr-pt small{font-size:9px}
+  #jvPickLog .pkc{padding:4px 9px;font-size:11.5px}
+  #jvPickLog .pkr-s{font-size:12px}
+  #jvPickLog .pkl-empty{padding:18px 12px}
+}
+@media (max-width:420px){
+  #jvPickLog .pka-g{grid-template-columns:1fr}
+  #jvPickLog .pkr-pt small{display:none}
+  #jvPickLog .pkr-trk{padding:20px 8px 14px}
+  #jvPickLog .pkr-id b{font-size:15px}
+}
+
+/* Picks log: live / backtest switch + backtest view (31 Oct) */
+#jvPickLog .pkl-mode{display:inline-flex;gap:4px;padding:4px;margin:2px 0 10px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line)}
+#jvPickLog .pkl-mode button{border:0;background:transparent;color:var(--text-2);font-weight:700;font-size:13px;padding:9px 18px;border-radius:999px;min-height:40px}
+#jvPickLog .pkl-mode button.on{background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.45)}
+#jvPickLog .pkl-sub{display:block;font-style:normal;font-size:10.5px;color:var(--text-3);padding-left:4px;margin-top:4px}
+#jvPickLog .pkbt-note{margin:0 0 12px;padding:10px 14px;border-radius:12px;font-size:12.5px;color:var(--text-2);background:linear-gradient(100deg,rgba(99,102,241,.14),transparent 80%);border:1px solid rgba(99,102,241,.3)}
+#jvPickLog .pkbt-note b.up{color:var(--up)}#jvPickLog .pkbt-note b.down{color:var(--down)}
+#jvPickLog .pkbt-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#jvPickLog .pkbt-bar select{min-height:38px;border-radius:999px;padding:0 14px}
+#jvPickLog .pkbt-tbl{margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);overflow:hidden}
+#jvPickLog .pkbt-tbl summary{cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;list-style:none}
+#jvPickLog .pkbt-tbl summary::-webkit-details-marker{display:none}
+#jvPickLog .pkbt-tbl summary::before{content:'▸';margin-right:8px;color:var(--brand)}
+#jvPickLog .pkbt-tbl[open] summary::before{content:'▾'}
+#jvPickLog .pkbt-tbl .tbl-wrap{padding:0 8px 6px;overflow-x:auto}
+#jvPickLog .pkbt-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
+#jvPickLog .pkbt-t th{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+#jvPickLog .pkbt-t td{padding:9px 10px;border-bottom:1px solid var(--line)}
+#jvPickLog .pkbt-t .num{text-align:right;font-variant-numeric:tabular-nums}
+#jvPickLog .pkbt-v{font-size:10.5px;font-weight:800;letter-spacing:.05em;padding:3px 9px;border-radius:999px;text-transform:uppercase}
+#jvPickLog .pkbt-v.up{color:#052e16;background:#4ade80}#jvPickLog .pkbt-v.gold{color:#2b1a00;background:#fcd34d}#jvPickLog .pkbt-v.down{color:#fff;background:#ef4444}
+#jvPickLog .pkl-skel{display:grid;gap:10px;padding:10px 0}
+#jvPickLog .pkl-skel i{display:block;height:74px;border-radius:16px;background:linear-gradient(90deg,var(--panel-2) 25%,var(--panel) 50%,var(--panel-2) 75%);background-size:200% 100%;animation:pkskel 1.2s linear infinite}
+@keyframes pkskel{to{background-position:-200% 0}}
+@media (max-width:720px){
+  #jvPickLog .pkl-mode{display:flex;width:100%}#jvPickLog .pkl-mode button{flex:1;padding:9px 6px;font-size:12.5px}
+  #jvPickLog .pkbt-bar{flex-direction:column;align-items:stretch}#jvPickLog .pkbt-bar select{width:100%}
+  #jvPickLog .pkbt-tbl summary{font-size:12.5px}
+}
+
+.pk-gate{margin:8px 0 0;padding:6px 10px;border-radius:10px;font-size:11.5px;line-height:1.35}
+.pk-gate.skip{color:#fff;background:linear-gradient(135deg,#f87171,#ef4444)}
+.pk-gate.ok{color:var(--up);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+.pk-gate.idle{color:var(--text-3);border:1px dashed var(--line)}
 </style>
-<script id="scrJV" src="/static/journal.js?v=ea0cf894"></script>
+<script id="scrJV" src="/static/journal.js?v=a22f0f35"></script>
 <script src="/static/simmode.js?v=b6a81221"></script>
 <script src="/static/ipo.js?v=80226359"></script>
 <script src="/static/godseye.js?v=f79e1d58"></script>
@@ -1657,7 +1815,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=3cccfb82',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=9ec59b7f',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -3315,9 +3473,11 @@ function pkResetAt(){try{return +localStorage.getItem('pkrs-'+new Date(Date.now(
 function pkLogOff(){try{if(localStorage.getItem(pkOffKey())==='1'){localStorage.removeItem(pkOffKey());localStorage.removeItem('pkk-'+new Date(Date.now()+330*60000).toISOString().slice(0,10));_pkHid=null}}catch(e){}return false}   /* 30 Oct: Reset no longer switches the log off for the day (it showed empty all day); it clears what is there and new picks track again */
 function pkHidAdd(keys){const s=pkHidKeys();keys.forEach(x=>s.add(x));try{localStorage.setItem(_pkHid.k,JSON.stringify([...s]))}catch(e){}}
 const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
+const pkDm=t=>t>1?new Date(t).toLocaleDateString('en-IN',{day:'numeric',month:'short',timeZone:'UTC'}):'';
 /* SL 🚫 / T1 ✅ marks: a hit shows the mark (and the time if known), a level not reached yet shows its price */
-function pkChipsHTML(m,h,hp){hp=hp||{};const f=v=>fmtP(v,m.dp==null?2:m.dp),c=(k,lvl,ts,isSl,key)=>ts?`<span class="pkc ${isSl?'sl':'tg'}">${k} ${isSl?'🚫':'✅'}${pkTm(ts)?' <i>'+pkTm(ts)+'</i>':''} <i>@ ${f(hp[key]!=null?hp[key]:lvl)}</i></span>`:`<span class="pkc off">${k} <i>${f(lvl)}</i></span>`;
-  return c('SL',m.sl,h.sl,true,'sl')+(m.t||[]).map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false,'t'+(i+1))).join('')}
+function pkChipsHTML(m,h,hp,cap){hp=hp||{};const tmf=m.dm?pkDm:pkTm,f=v=>fmtP(v,m.dp==null?2:m.dp),c=(k,lvl,ts,isSl,key)=>ts?`<span class="pkc ${isSl?'sl':'tg'}">${k} ${isSl?'🚫':'✅'}${tmf(ts)?' <i>'+tmf(ts)+'</i>':''} <i>@ ${f(hp[key]!=null?hp[key]:lvl)}</i></span>`:`<span class="pkc off">${k} <i>${f(lvl)}</i></span>`;
+  const TT=m.t||[],show=cap&&TT.length>cap?TT.slice(0,cap):TT;
+  return c('SL',m.sl,h.sl,true,'sl')+show.map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false,'t'+(i+1))).join('')+(show.length<TT.length?`<span class="pkc off">+${TT.length-show.length} more · T${show.length+1}${TT.length>show.length+1?'–T'+TT.length:''}</span>`:'')}
 /* what happened, in order: "SL 🚫 → T1 ✅" and a one-line story */
 function pkStory(m,h,best,hp,post){hp=hp||{};const ev=[];if(h.sl)ev.push(['SL',h.sl]);(m.t||[]).forEach((v,i)=>{if(h['t'+(i+1)])ev.push(['T'+(i+1),h['t'+(i+1)]])});
   if(!ev.length){const T1=(m.t||[])[0],L=m.d==='L',pr=best!=null&&T1&&m.e?((L?best-m.e:m.e-best)/Math.abs(T1-m.e))*100:0;
@@ -3330,9 +3490,17 @@ function pkStory(m,h,best,hp,post){hp=hp||{};const ev=[];if(h.sl)ev.push(['SL',h
       ext=post!=null?post:best;
     s+=` · stop hit at ${fp(slAt)}`;
     if(later.length)s+=` · it tried again after the stop and reached T${later[later.length-1][0]}`;
-    else if(ext!=null&&T1){const pr=Math.max(0,Math.round(((L?ext-slAt:slAt-ext)/Math.abs(T1-slAt))*100));s+=` · after the stop it ${post!=null?'went':'peaked'} to ${fp(ext)} (${pr}% of the way to T1), target not reached`}}
+    else if(ext!=null&&T1&&!(m.dm&&post==null)){const pr=Math.max(0,Math.round(((L?ext-slAt:slAt-ext)/Math.abs(T1-slAt))*100));s+=` · after the stop it ${post!=null?'went':'peaked'} to ${fp(ext)} (${pr}% of the way to T1), target not reached`}}
   return s+(known?'':' (order unknown)')}
-function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).filter(v=>v>0);if(!px||!(o.stop>0)||!T.length)return null;
+/* targets T1..T7: the card's own T1 / T2, then the auto trader's ladder beyond them (3R, 4R, 5R, 6R, 10R of the pick's own risk) - every one is followed and logged */
+const PK_EXT=[3,4,5,6,10];
+function pkLadder(o){const T=(o.ts||[]).filter(v=>v>0);if(!T.length||!(o.entry>0)||!(o.stop>0))return T;
+  const d=o.dir==='L'?1:-1,R=Math.abs(o.entry-o.stop),dp=o.dp==null?2:o.dp,r2=v=>+v.toFixed(dp),beyond=v=>d>0?v>T[T.length-1]:v<T[T.length-1];
+  if(d>0?o.stop>=T[0]:o.stop<=T[0])return T;               /* levels pointing the wrong way: not a trade, left as it is */
+  if(T.length===1&&beyond(r2(o.entry+d*2*R)))T.push(r2(o.entry+d*2*R));
+  PK_EXT.forEach(m=>{const v=r2(o.entry+d*m*R);if(beyond(v))T.push(v)});
+  return T.slice(0,7)}
+function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=pkLadder(o);if(!px||!(o.stop>0)||!T.length)return null;
   if(o.dir==='L'?o.stop>=T[0]:o.stop<=T[0])return null;      /* levels that point the other way (a NO SIGNAL card with a bearish stop/targets) are not a trade: no SL/T marks */
   const L=o.dir==='L',hidK=pkLogOff()||pkHidKeys().has(o.key),st=hidK?_pkTmp:pkLiveStore(),rec=st[o.key]||(st[o.key]={}),now=Date.now(),was=JSON.stringify(rec),h=rec.h||(rec.h={});
   const beyond=(v,lvl,stopSide)=>L?(stopSide?v<=lvl:v>=lvl):(stopSide?v>=lvl:v<=lvl),mark=(k,t,pp)=>{if(!h[k]){h[k]=t;(rec.hp||(rec.hp={}))[k]=pp!=null?pp:px}};
@@ -3341,7 +3509,7 @@ function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).f
   if(o.morning&&!_rs&&s.hi>0&&s.lo>0){const lo=s.lo,hi=s.hi;      /* a list built at the open: the day's range since then is the pick's own range */
     if(L?lo<=o.stop:hi>=o.stop)mark('sl',1,o.stop);T.forEach((v,i)=>{if(L?hi>=v:lo<=v)mark('t'+(i+1),1,v)})}
   const ext=o.morning&&!_rs&&s.hi>0&&s.lo>0?(L?s.hi:s.lo):px;rec.best=rec.best==null?ext:(L?Math.max(rec.best,ext,px):Math.min(rec.best,ext,px));
-  if(h.sl>1)rec.post=rec.post==null?px:(L?Math.max(rec.post,px):Math.min(rec.post,px));   /* the furthest the price went in the pick's favour since the stop was hit */
+  if(h.sl>1){rec.post=rec.post==null?px:(L?Math.max(rec.post,px):Math.min(rec.post,px));rec.pa=rec.pa==null?px:(L?Math.min(rec.pa,px):Math.max(rec.pa,px))}   /* post = best price in the pick's favour since the stop, pa = the worst against it (did it keep going down after the stop?) */   /* the furthest the price went in the pick's favour since the stop was hit */
   if(!rec.m||!Object.keys(h).length)rec.m={s:o.sym,l:o.label||o.sym,d:o.dir,k:o.kind||'stock',e:o.entry,sl:o.stop,t:T,at:(rec.m&&rec.m.at)||now,dp:o.dp==null?2:o.dp};
   if(!hidK&&JSON.stringify(rec)!==was)pkLiveSave();
   const f=v=>fmtP(v,o.dp==null?2:o.dp),pc=(a,b)=>((a-b)/b*100),nT=T.length;
@@ -3354,7 +3522,7 @@ function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=(o.ts||[]).f
     if(!L&&px>=lo+rg*0.5&&px>o.entry)rev=`Reversal watch: bounced ${pc(px,lo).toFixed(2)}% off the day low ${f(lo)} — this bearish pick is losing grip, buyers may be taking over`;
     if(L&&px<=hi-rg*0.5&&px<o.entry)rev=`Reversal watch: fell ${Math.abs(pc(px,hi)).toFixed(2)}% from the day high ${f(hi)} — this bullish pick is losing grip, sellers may be taking over`}
   else if(h.sl&&!doneT)rev=L?'The market went against this long idea.':'The market went against this short idea.';
-  return{chips:pkChipsHTML(rec.m,h,rec.hp),hint,rev,story:pkStory(rec.m,h,rec.best,rec.hp,rec.post)}}
+  return{chips:pkChipsHTML(rec.m,h,rec.hp,Math.max(2,doneT+2)),hint,rev,story:pkStory(rec.m,h,rec.best,rec.hp,rec.post)}}
 function pkLiveHTML(o){const r=pkLiveEval(o);if(!r)return'';
   return`<div class="pkc-row">${r.chips}</div><div class="pkl-t">${esc(r.hint)}</div>${r.rev?`<div class="pkl-r">${esc(r.rev)}</div>`:''}`}
 function pkMorning(){const a=App.picks&&App.picks.asOf;if(!a)return false;const d=new Date(new Date(a).getTime()+330*60000),m=d.getUTCHours()*60+d.getUTCMinutes();return m>=555&&m<=565}   /* list built in the first minutes of the session */
@@ -3424,33 +3592,104 @@ function pkLiveTick(){if(typeof App==='undefined'||document.hidden)return;const 
     const h=pkLiveHTML(o);if(e._h!==h){e._h=h;e.innerHTML=h;e.classList.toggle('empty',!h)}});App.pkSyms=[...syms].slice(0,40)}
 /* Picks log: everything the pick cards tracked, kept per day on this device (last 14 days) - shown in Journal > Picks log */
 function pkLogDays(){const out=[];try{for(let i=0;i<localStorage.length;i++){const n=localStorage.key(i);if(n&&/^pkl-\d{4}-\d\d-\d\d$/.test(n)){let d={};try{d=JSON.parse(localStorage.getItem(n))||{}}catch(e){}
-  const rows=Object.entries(d).filter(([k,v])=>v&&v.m).map(([k,v])=>({k,m:v.m,h:v.h||{},best:v.best,hp:v.hp,post:v.post}));out.push({date:n.slice(4),rows})}}}catch(e){}
+  const rows=Object.entries(d).filter(([k,v])=>v&&v.m).map(([k,v])=>({k,m:v.m,h:v.h||{},best:v.best,hp:v.hp,post:v.post,pa:v.pa}));out.push({date:n.slice(4),rows})}}}catch(e){}
   return out.sort((a,b)=>a.date<b.date?1:-1)}
 function pkOutcome(r){const t=Object.keys(r.h).some(k=>k!=='sl'),l=!!r.h.sl;return t&&!l?'win':l&&!t?'loss':t&&l?'mixed':'open'}
 function pkLogOK(r){const T=(r.m.t||[])[0];if(!(r.m.sl>0)||!(T>0))return true;return r.m.d==='L'?r.m.sl<T:r.m.sl>T}   /* a card whose stop and targets point the wrong way was never a trade */
-function pkLogHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLogOK)})).filter(d=>d.rows.length);
+/* Picks log card pieces: a level track (stop -> entry -> targets, risk always on the left, reward on the right, filled up to the best price reached) and the outcome badge */
+function pkTrackHTML(m,h,best,cap){const T=(m.t||[]).filter(v=>v>0).slice(0,cap||99);if(!(m.sl>0)||!(m.e>0)||!T.length)return'';
+  const L=m.d==='L',pts=[['SL',m.sl,'sl'],['IN',m.e,'in']].concat(T.map((v,i)=>['T'+(i+1),v,'t'+(i+1)]));
+  const vals=pts.map(p=>p[1]),lo=Math.min(...vals),hi=Math.max(...vals),span=(hi-lo)||1,fp=v=>fmtP(v,m.dp==null?2:m.dp);
+  const pos=v=>{const x=(v-lo)/span*100;return Math.max(3,Math.min(97,L?x:100-x))};
+  const ex=pos(m.e),bx=best!=null?pos(best):ex,fav=bx>=ex;
+  return`<div class="pkr-trk"><div class="pkr-rail"><i class="pkr-fill ${fav?'fav':'adv'}" style="left:${Math.min(ex,bx)}%;width:${Math.abs(bx-ex)}%"></i>${pts.map(([k,v,hk])=>`<span class="pkr-pt ${hk==='sl'?'sl':hk==='in'?'in':'tg'}${hk!=='in'&&h[hk]?' hit':''}" style="left:${pos(v)}%" title="${k} ${fp(v)}"><b>${k}</b><small>${fp(v)}</small></span>`).join('')}</div></div>`}
+/* After the stop: did it try again and reach a target, bounce, or keep going against the trade? (the old logic's question, with numbers) */
+function pkAfterHTML(r){const m=r.m,h=r.h;if(!h.sl)return'';const L=m.d==='L',hp=r.hp||{},slAt=hp.sl!=null?hp.sl:m.sl,fp=v=>fmtP(v,m.dp==null?2:m.dp),T=(m.t||[]).filter(v=>v>0),t1=T[0];
+  const risk=Math.abs(m.e-m.sl)||1,later=T.map((v,i)=>[i+1,h['t'+(i+1)]]).filter(x=>x[1]&&h.sl>1&&x[1]>h.sl),s=SYM(m.s),now=m.dm?(r.cl!=null?r.cl:null):(s&&s.last>0?s.last:null);
+  const fav=r.post!=null?Math.max(0,L?r.post-slAt:slAt-r.post):null,adv=r.pa!=null?Math.max(0,L?slAt-r.pa:r.pa-slAt):null,pct=fav!=null&&t1?Math.round(fav/Math.abs(t1-slAt)*100):null;
+  const ref=m.dm?(r.cl!=null?r.cl:null):now,back=ref!=null&&(L?ref>m.e:ref<m.e),worse=ref!=null&&(L?ref<slAt:ref>slAt);   /* ref = the close N sessions later (backtest) or the live price */
+  let v,cls,ic;
+  if(later.length){v=`Tried again - it reached T${later[later.length-1][0]} after the stop`;cls='rec';ic='🔁'}
+  else if(back){v=`Came back - ${m.dm?'closed':'now'} back past the entry after the stop`;cls='rec';ic='↩'}
+  else if(pct!=null&&pct>=60){v=`Bounced back ${Math.min(99,pct)}% of the way to T1 - target not reached`;cls='bnc';ic='↗'}
+  else if(adv!=null&&adv>=0.5*risk&&(worse||fav==null||fav<0.5*risk)){v=`Kept going against the trade - ${fp(adv)} further after the stop`;cls='fall';ic='↘'}
+  else if(adv!=null&&fav!=null&&adv>=0.5*risk&&fav>=0.5*risk){v=`Swung both ways around the stop (+${fp(fav)} / -${fp(adv)}) and did not settle past the entry`;cls='bnc';ic='↕'}
+  else if(fav==null&&adv==null){v='Not enough later data to say what happened after the stop';cls='flat';ic='…'}
+  else{v='Stayed near the stop - no real move either way';cls='flat';ic='➖'}
+  const f=(k,x,c)=>`<span class="pka-f ${c||''}"><small>${k}</small><b>${x}</b></span>`,away=now!=null?(L?now-slAt:slAt-now):null;
+  return`<div class="pkr-aft ${cls}"><div class="pka-h"><i>${ic}</i><b>After the stop</b><span>${esc(v)}</span></div><div class="pka-g">
+    ${f('Stop hit at',fp(slAt),'')}${f('Best after stop',fav==null?'n/a':'+'+fp(fav)+(pct!=null?' · '+Math.min(999,pct)+'% to T1':''),'up')}${f('Worst after stop',adv==null?'n/a':'-'+fp(adv),'down')}${f(m.dm?'Close after '+(r.ad||5)+' sessions':'Now',now==null?'n/a':fp(now)+(away==null?'':(away>=0?' (+':' (')+fp(away)+' vs stop)'),away==null?'':away>=0?'up':'down')}</div></div>`}
+function pkRowHTML(r,i,KIND){const o=pkOutcome(r),m=r.m,L=m.d==='L',tk=Object.keys(r.h).filter(k=>k!=='sl').map(k=>+k.slice(1)),top=tk.length?Math.max(...tk):0;
+  const badge={win:`✅ Target T${top}${(m.t||[]).length>2?' of '+(m.t||[]).length:''} hit`,loss:'🚫 Stopped out',mixed:`⚖ T${top}, then stop`,open:m.dm?'⌛ No level hit in 10 sessions':'◔ Running'}[o],sym=m.s||'',sub=String(m.l||'').replace(sym,'').trim();
+  return`<div class="pkr o-${o}"><div class="pkr-top"><span class="pkr-n">${i+1}</span><div class="pkr-id"><b>${esc(sym||m.l)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>
+    <span class="pkr-side ${L?'up':'down'}">${L?'▲ Long · Call':'▼ Short · Put'}</span><span class="pkr-kind">${esc(KIND[m.k]||m.k)}</span><span class="pkr-out ${o}">${badge}</span></div>
+    ${pkTrackHTML(m,r.h,r.best,Math.max(2,top+2))}<div class="pkc-row">${pkChipsHTML(m,r.h,r.hp,Math.max(2,top+2))}</div><div class="pkr-s">${esc(pkStory(m,r.h,r.best,r.hp,r.post))}</div>${pkAfterHTML(r)}</div>`}
+function pkLogLiveHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLogOK)})).filter(d=>d.rows.length);
   if(!days.length)return`<div class="pkl-empty"><div class="pkl-eh"><span class="pkl-ei">📒</span><b>Nothing tracked yet</b><small>No Reset button here - there is nothing to clear. It appears as soon as the first pick is tracked.</small></div>
    <div class="pkl-stats pkl-ghost"><div class="pkl-tile"><b>0</b><small>Tracked</small></div><div class="pkl-tile up"><b>0</b><small>Target hit</small></div><div class="pkl-tile down"><b>0</b><small>Stopped out</small></div><div class="pkl-tile"><b>0</b><small>No result yet</small></div><div class="pkl-tile gold"><b>–</b><small>Hit rate</small></div></div>
    <ol class="pkl-steps"><li><i>1</i><span><b>Open Today's Picks</b> while the market is open</span></li><li><i>2</i><span><b>Every pick card</b> on screen is followed against its stop and targets</span></li><li><i>3</i><span><b>The result is kept here</b> for 14 days, with the time each level was hit</span></li></ol></div>`;
   const KIND={index:'Index option',call:'Index call',stock:'Stock / stock option',fresh:'Fresh buy'},F=App.pkLogF||'ALL',armed=App.pkLogArm&&Date.now()-App.pkLogArm<6000;
   const all=days.flatMap(d=>d.rows),n={win:0,loss:0,mixed:0,open:0};all.forEach(r=>n[pkOutcome(r)]++);
   const done=n.win+n.loss,rate=done?Math.round(n.win/done*100):null;
-  const tile=(v,l,c)=>`<div class="pkl-tile ${c||''}"><b>${v}</b><small>${l}</small></div>`;
+  const tile=(v,l,c,ic)=>`<div class="pkl-tile ${c||''}"><i class="pkl-ti">${ic||''}</i><b>${v}</b><small>${l}</small>${l==='Hit rate'&&rate!=null?`<span class="pkl-bar2"><u style="width:${rate}%"></u></span>`:''}</div>`;
   const chip=(k,l,c)=>`<button type="button" class="${F===k?'on':''}" data-pklf="${k}">${l} <i>${c}</i></button>`;
-  const head=`<div class="pkl-stats">${tile(all.length,'Tracked')}${tile(n.win,'Target hit','up')}${tile(n.loss,'Stopped out','down')}${tile(n.open+n.mixed,'No result yet')}${tile(rate==null?'–':rate+'%','Hit rate','gold')}</div>
+  const head=`<div class="pkl-stats">${tile(all.length,'Tracked','','📊')}${tile(n.win,'Target hit','up','🎯')}${tile(n.loss,'Stopped out','down','🛑')}${tile(n.open+n.mixed,'No result yet','','⏳')}${tile(rate==null?'–':rate+'%','Hit rate','gold','🏆')}</div>
    <div class="pkl-bar"><div class="seg pkl-f">${chip('ALL','All',all.length)}${chip('WIN','Targets',n.win)}${chip('LOSS','Stops',n.loss)}${chip('OPEN','Open',n.open+n.mixed)}</div><button type="button" class="pkl-reset ${armed?'arm':''}" data-pklreset="1">${armed?'Tap again to confirm':'↺ Reset log'}</button></div>`;
   const keep=r=>{const o=pkOutcome(r);return F==='ALL'||(F==='WIN'&&o==='win')||(F==='LOSS'&&o==='loss')||(F==='OPEN'&&(o==='open'||o==='mixed'))};
-  const pg=App.pkLogPg||(App.pkLogPg={n:20,p:0}),totalShown=days.reduce((a,d)=>a+d.rows.filter(keep).length,0),n_=pg.n||totalShown||1,pages=Math.max(1,Math.ceil(totalShown/n_));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
+  const pg=App.pkLogPg||(App.pkLogPg={n:10,p:0}),totalShown=days.reduce((a,d)=>a+d.rows.filter(keep).length,0),n_=pg.n||totalShown||1,pages=Math.max(1,Math.ceil(totalShown/n_));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const lo_=pg.p*n_,hi_=lo_+n_;let gi=0;
   const pager=totalShown>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,0].map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pklgn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pklgp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo_+1}–${Math.min(totalShown,hi_)} of ${totalShown}</small><button data-pklgp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
   return head+pager+days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
     const shown_all=rows.filter(keep),shown=shown_all.filter(()=>{const k=gi++;return k>=lo_&&k<hi_});if(!shown_all.length||!shown.length)return'';
     const tg=rows.filter(r=>pkOutcome(r)==='win').length,sl=rows.filter(r=>pkOutcome(r)==='loss').length;
     const x=new Date(d.date+'T12:00:00Z'),lab=x.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',timeZone:'UTC'});
-    return`<section class="pkg"><h4>${di===0?'Today · ':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks</span><span class="up">✅ ${tg} target</span><span class="down">🚫 ${sl} stop</span></div>
-      ${shown.map((r,i)=>`<div class="pkr o-${pkOutcome(r)}"><div class="pkr-h"><span class="pkr-n">${i+1}</span><b>${esc(r.m.l||r.m.s)}</b><span class="pkr-tag">${esc(KIND[r.m.k]||r.m.k)}</span><span class="pkr-tag">${r.m.d==='L'?'Long / Call':'Short / Put'}</span></div><div class="pkc-row">${pkChipsHTML(r.m,r.h,r.hp)}</div><div class="pkr-s">${esc(pkStory(r.m,r.h,r.best,r.hp,r.post))}</div></div>`).join('')}</section>`}).join('')+pager||'<div class="empty">Nothing in this view.</div>'}
+    return`<section class="pkg"><div class="pkg-h"><h4>${di===0?'<em>Today</em>':''}${esc(lab)}</h4><div class="pkg-sum"><span>${rows.length} picks</span><span class="up">✅ ${tg} target</span><span class="down">🚫 ${sl} stop</span></div></div>
+      ${shown.map((r,i)=>pkRowHTML(r,i,KIND)).join('')}</section>`}).join('')+pager||'<div class="empty">Nothing in this view.</div>'}
+/* Picks log > Backtest: 4 years of daily candles, every active indicator's signals followed to the stop and T1..T7 (public/static/backtest_4y.json, made by cash_lab.py) */
+function pkModeBar(mode){return`<div class="pkl-mode" role="group" aria-label="Picks log view"><button type="button" data-pklmode="live" class="${mode==='live'?'on':''}">📡 Live tracker</button><button type="button" data-pklmode="bt" class="${mode==='bt'?'on':''}">🧪 Backtest · 4 years</button></div>`}
+function pkLogHTML(){const m=App.pkLogMode==='bt'?'bt':'live';return pkModeBar(m)+(m==='bt'?pkBtHTML():pkLogLiveHTML())}
+function pkBtLoad(){const b=App.pkBt||(App.pkBt={d:null,busy:false,err:null});if(b.d||b.busy)return;b.busy=true;b.err=null;
+  fetch('/static/backtest_4y.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(d=>{b.d=d;b.busy=false;pkLogRefresh()}).catch(e=>{b.err=String(e&&e.message||e);b.busy=false;pkLogRefresh()})}
+const pkUtc=d=>Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10),12);
+function pkBtRow(t,D){const L=t.side==='BUY',h={},hp={};if(t.h.sl){h.sl=pkUtc(t.h.sl);hp.sl=t.sl}
+  for(let n=1;n<=7;n++)if(t.h['t'+n]){h['t'+n]=pkUtc(t.h['t'+n]);hp['t'+n]=t.t[n-1]}
+  return{ind:t.key,yr:t.ent.slice(0,4),mo:t.ent.slice(0,7),m:{s:t.s,l:t.s+' · '+(D.names[t.key]||t.key),d:L?'L':'S',k:t.kind==='index'?'index':'stock',e:t.e,sl:t.sl,t:t.t,dp:t.dp,at:pkUtc(t.ent),dm:1,r2:t.r2,rt:t.rt},h,best:t.b,hp,post:t.po,pa:t.pa,cl:t.cl,ad:t.ad}}
+function pkBtPF(a){const w=a.filter(x=>x>0).reduce((p,c)=>p+c,0),l=-a.filter(x=>x<0).reduce((p,c)=>p+c,0);return l>0?(w/l).toFixed(2):(w>0?'∞':'–')}
+function pkBtHTML(){pkBtLoad();const B=App.pkBt;
+  if(B.err)return`<div class="empty">The backtest data could not be loaded (${esc(B.err)}). <button class="btn-xs" data-pklmode="bt" data-retry="1">Retry</button></div>`;
+  if(!B.d)return`<div class="pkl-skel"><i></i><i></i><i></i><p class="muted">Loading the 4-year backtest…</p></div>`;
+  const D=B.d,F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),KIND={index:'Index option',stock:'Stock / stock option'};
+  if(!B.rows)B.rows=D.trades.map(t=>pkBtRow(t,D)).sort((a,b)=>a.m.at<b.m.at?1:a.m.at>b.m.at?-1:0);
+  const keep=r=>(F.ind==='ALL'||r.ind===F.ind)&&(F.kind==='ALL'||r.m.k===F.kind)&&(F.yr==='ALL'||r.yr===F.yr)&&(F.out==='ALL'||(F.out==='WIN'&&pkOutcome(r)==='win')||(F.out==='LOSS'&&pkOutcome(r)==='loss')||(F.out==='MIXED'&&pkOutcome(r)==='mixed')||(F.out==='NONE'&&pkOutcome(r)==='open'));
+  const base=B.rows.filter(r=>(F.ind==='ALL'||r.ind===F.ind)&&(F.kind==='ALL'||r.m.k===F.kind)&&(F.yr==='ALL'||r.yr===F.yr)),all=B.rows.filter(keep),n=base.length||1;
+  const c={win:0,loss:0,mixed:0,open:0};base.forEach(r=>c[pkOutcome(r)]++);
+  const t1=base.filter(r=>r.h.t1).length,big=base.filter(r=>r.h.t3).length,st=base.filter(r=>r.h.sl&&r.cl!=null),back=st.filter(r=>(r.m.d==='L'?r.cl>r.m.e:r.cl<r.m.e)).length,beyond=st.filter(r=>(r.m.d==='L'?r.cl<r.m.sl:r.cl>r.m.sl)).length;
+  const r2=base.map(r=>r.m.r2).filter(x=>x!=null),sumR=r2.reduce((p,x)=>p+x,0);
+  const tile=(v,l,cl,ic,sub)=>`<div class="pkl-tile ${cl||''}"><i class="pkl-ti">${ic}</i><b>${v}</b><small>${l}</small>${sub?`<em class="pkl-sub">${sub}</em>`:''}</div>`;
+  const pct=x=>Math.round(100*x/n)+'%';
+  const head=`<div class="pkl-stats">${tile(base.length,'Trades followed','','📊',D.from+' → '+D.to)}${tile(pct(t1),'Reached T1','up','🎯',t1+' of '+base.length)}${tile(pct(c.loss+c.mixed),'Stop hit','down','🛑',(c.loss+c.mixed)+' trades')}${tile(pct(big),'Reached T3 or more','gold','🏆',big+' trades')}${tile(pkBtPF(r2),'Profit factor (2R exit)',sumR>=0?'up':'down','📉',(sumR>=0?'+':'')+sumR.toFixed(0)+'R net of cost')}</div>`;
+  const aft=st.length?`<div class="pkbt-note">🔎 After a stop (next 5 sessions, ${st.length} trades): <b class="up">${Math.round(100*back/st.length)}%</b> closed back past the entry · <b class="down">${Math.round(100*beyond/st.length)}%</b> were still beyond the stop. Prices touch T1 and the stop in both directions, so a tight stop is mostly noise, but most stopped trades did not come back.</div>`:'';
+  const inds=[...new Set(D.trades.map(t=>t.key))],yrs=[...new Set(D.trades.map(t=>t.ent.slice(0,4)))].sort().reverse();
+  const chip=(k,v,l,cnt)=>`<button type="button" class="${F[k]===v?'on':''}" data-pkbt="${k}|${v}">${l}${cnt!=null?` <i>${cnt}</i>`:''}</button>`;
+  const bar=`<div class="pkl-bar pkbt-bar"><div class="seg pkl-f">${chip('out','ALL','All',base.length)}${chip('out','WIN','Targets',c.win)}${chip('out','LOSS','Stops',c.loss)}${chip('out','MIXED','Target then stop',c.mixed)}${chip('out','NONE','No level',c.open)}</div>
+    <div class="seg pkl-f">${chip('kind','ALL','All markets')}${chip('kind','index','Index')}${chip('kind','stock','Stock')}</div>
+    <select class="inp" data-pkbtsel="ind" aria-label="Indicator"><option value="ALL">All indicators</option>${inds.map(k=>`<option value="${esc(k)}" ${F.ind===k?'selected':''}>${esc(D.names[k]||k)}</option>`).join('')}</select>
+    <select class="inp" data-pkbtsel="yr" aria-label="Year"><option value="ALL">All years</option>${yrs.map(y=>`<option value="${y}" ${F.yr===y?'selected':''}>${y}</option>`).join('')}</select></div>`;
+  const tbl=`<details class="pkbt-tbl"><summary>Per indicator: best stop and exit, judged on the last 30 % and against a coin flip</summary><div class="tbl-wrap"><table class="pkbt-t"><thead><tr><th>Indicator</th><th>Stop · exit</th><th class="num">Trades</th><th class="num">PF</th><th class="num">Last 30 % PF</th><th class="num">Coin flip PF</th><th>Verdict</th></tr></thead><tbody>${(D.summary||[]).map(r=>`<tr><td><b>${esc(r.indicator)}</b></td><td>${r.stop_ATR} ATR · ${esc(r.exit)}</td><td class="num">${r.n}</td><td class="num">${r.pf}</td><td class="num">${r.oosPF} <small>(${r.oosN})</small></td><td class="num">${r.randomPF}</td><td><span class="pkbt-v ${r.verdict==='EDGE'?'up':r.verdict==='maybe'?'gold':'down'}">${esc(r.verdict)}</span></td></tr>`).join('')}</tbody></table></div><p class="muted" style="font-size:11.5px;margin:6px 2px 0">Cash / futures model (no option decay), 0.1 % cost, stop = k × ATR(14), entry at the next open, 10 sessions at most. The first 70 % of an indicator's trades choose its stop and exit, the last 30 % judge it. EDGE needs a last-30 % PF of 1.2 or more and a clear lead over the coin flip.</p></details>`;
+  const pg=App.pkBtPg||(App.pkBtPg={n:10,p:0}),total=all.length,per=pg.n||total||1,pages=Math.max(1,Math.ceil(total/per));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
+  const lo=pg.p*per,view=all.slice(lo,lo+per);
+  const pager=total>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,0].map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pkbtn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pkbtp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo+1}–${Math.min(total,lo+per)} of ${total}</small><button data-pkbtp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
+  let lastMo='',body='';view.forEach((r,i)=>{if(r.mo!==lastMo){lastMo=r.mo;const x=new Date(r.mo+'-15T12:00:00Z'),mrows=all.filter(q=>q.mo===r.mo),w=mrows.filter(q=>pkOutcome(q)==='win').length,l=mrows.filter(q=>q.h.sl).length;
+      body+=`<div class="pkg-h"><h4>${esc(x.toLocaleDateString('en-IN',{month:'long',year:'numeric',timeZone:'UTC'}))}</h4><div class="pkg-sum"><span>${mrows.length} trades</span><span class="up">✅ ${w} target</span><span class="down">🚫 ${l} stop</span></div></div>`}
+    body+=pkRowHTML(r,lo+i,KIND)});
+  return head+aft+tbl+bar+pager+(view.length?`<section class="pkg">${body}</section>`:'<div class="empty">Nothing matches these filters.</div>')+pager}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp]');if(!b)return;
+  if(b.dataset.pklmode){App.pkLogMode=b.dataset.pklmode==='bt'?'bt':'live';if(b.dataset.retry&&App.pkBt)App.pkBt.err=null;pkLogRefresh();return}
+  const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),pg=App.pkBtPg||(App.pkBtPg={n:10,p:0});
+  if(b.dataset.pkbt){const[k,v]=b.dataset.pkbt.split('|');F[k]=v;pg.p=0}else if(b.dataset.pkbtn!==undefined){pg.n=parseInt(b.dataset.pkbtn,10)||0;pg.p=0}else pg.p+=parseInt(b.dataset.pkbtp,10);pkLogRefresh()});
+document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('[data-pkbtsel]');if(!s)return;const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'});F[s.dataset.pkbtsel]=s.value;(App.pkBtPg||(App.pkBtPg={n:10,p:0})).p=0;pkLogRefresh()});
 function pkLogRefresh(){const b=document.getElementById('jvPickLog');if(b){const h=pkLogHTML();b._h=h;b.innerHTML=h}}
-document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklgn],[data-pklgp]');if(!b)return;const pg=App.pkLogPg||(App.pkLogPg={n:20,p:0});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklgn],[data-pklgp]');if(!b)return;const pg=App.pkLogPg||(App.pkLogPg={n:10,p:0});
   if(b.dataset.pklgn!==undefined){pg.n=parseInt(b.dataset.pklgn,10)||0;pg.p=0}else pg.p+=parseInt(b.dataset.pklgp,10);pkLogRefresh()});
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('[data-pklf]'),r=e.target.closest&&e.target.closest('[data-pklreset]');
   if(f){App.pkLogF=f.dataset.pklf;if(App.pkLogPg)App.pkLogPg.p=0;pkLogRefresh();return}
@@ -3473,7 +3712,17 @@ setInterval(()=>{try{if(pkfScan())pkFreshTick();pkLiveTick();pkFreshTick()}catch
 /* an index's side for the Buy / Sell filters: a clear signal, or - when it is only WATCH - the way its three horizons lean (intraday counts double) */
 function pkIdxCall(p){const c=(App.calls&&App.calls.calls)?App.calls.calls.find(x=>x.instrument===p.s):null;return c&&/CALL|PUT/.test(c.signal||'')?c:null}   /* the live call screen's index call, only when it is a real call */
 function pkIdxSide(p){const lc=pkIdxCall(p);if(lc)return /PUT/.test(lc.signal)?'SELL':'BUY';if(p.signal==='BUY'||p.signal==='SELL')return p.signal;const v=x=>x==='Bullish'?1:x==='Bearish'?-1:0,n=2*v(p.intraday)+v(p.swing)+v(p.positional);return n>0?'BUY':n<0?'SELL':''}
-function pickCard(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
+/* Entry gate on the pick cards: the same rule the auto trader uses (auto_trader.entry_gate) - a trade whose open gaps more than 0.3 ATR against it is skipped
+   (4 years, 4,974 trades: the stop came first in 64% of those vs 53% of the rest). Shown while the market is live; before the open it only says when it is checked. */
+function pkGateOf(p){if(p.kind!=='index'&&p.universe==='cash')return null;const side=p.kind==='index'?pkIdxSide(p):p.signal;if(side!=='BUY'&&side!=='SELL')return null;
+  const d=side==='BUY'?1:-1,atr=+p.atr,s=SYM(p.s)||{},prev=s.prev>0?s.prev:+p.prev,open=s.open>0?s.open:+p.open;
+  if(!(atr>0)||!(prev>0)||!(open>0))return{skip:false,why:[],side};
+  const gap=d*(open-prev)/atr,why=[];if(gap<-0.3)why.push(`the open gapped ${Math.abs(gap).toFixed(2)} ATR against this ${side==='BUY'?'buy / call':'sell / put'}`);
+  return{skip:why.length>0,why,gap,side}}
+function pickCard(p){const h=pickCardBase(p);let g=null;try{g=pkGateOf(p)}catch(e){}if(!g||!/<\/article>\s*$/.test(h))return h;
+  const b=MKT.open?(g.skip?`<div class="pk-gate skip">🚦 <b>Entry gate: would skip</b> · ${esc(g.why.join('; '))}</div>`:`<div class="pk-gate ok">🚦 Entry gate: passes (no gap against the trade)</div>`):`<div class="pk-gate idle">🚦 Entry gate: checked at the open · skips a trade whose open gaps 0.3 ATR against it</div>`;
+  return h.replace(/<\/article>\s*$/,b+'</article>')}
+function pickCardBase(p){const s=SYM(p.s)||{};const isIdx=p.kind==='index';
   const hz=(k,v)=>`<span class="hz ${v==='Bullish'?'bu':v==='Bearish'?'be':''}"><i>${k}</i>${v}</span>`;
   const c=(App.calls&&App.calls.calls)?App.calls.calls.find(x=>x.instrument===p.s):null;
   
@@ -4930,7 +5179,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=ea0cf894';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=a22f0f35';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;

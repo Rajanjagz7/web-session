@@ -182,7 +182,7 @@ const TABS = [['portfolio', 'Portfolio'], ['positions', 'Positions'], ['position
           });
           if (ch || first) localStorage.setItem(KS, JSON.stringify(seenL));
         } catch (e) { }
-        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly), stockTrader: !(a.cfg && a.cfg.stockTrader === false) } };
+        AUTO.srv = { enabled: !!(a.cfg && a.cfg.enabled), marketOpen: !!a.marketOpen, todayCount: a.todayCount || 0, dayPnl: a.dayPnl || null, sleeves: a.sleeves || [], cfg: { buyOnly: !!(a.cfg && a.cfg.buyOnly), stockOnly: !!(a.cfg && a.cfg.stockOnly), stockTrader: !(a.cfg && a.cfg.stockTrader === false), entryGate: (a.cfg && a.cfg.entryGate) || 'shadow' } };
         AUTO.err = false;
         AUTO.ts = Date.now();
       } else {
@@ -1445,6 +1445,7 @@ function paperList() {
         <button class="btn" data-jv="autogann">${c.gannOn === false ? 'Gann angle: OFF (click to start)' : 'Gann angle: ON (click to stop)'}</button>
         <button class="btn" data-jv="autoeagle">${c.eagleOn ? 'Eagle Trades: ON (click to stop)' : 'Eagle Trades: OFF (click to start)'}</button>
         <button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Rs 5 L of its own, next to the Rs 10 L option-buying book.">${c.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>
+        ${gateBtn(c.entryGate)}
         <button class="btn" data-jv="autopair">${c.pairSell === false ? 'Option SELL leg: OFF (buy-only) - switch on' : 'Option SELL leg: ON (buy + paired sell) - switch to buy-only'}</button>
         <button class="btn" data-jv="autolock">${c.lockMode === 'new' ? 'Profit lock: NEW (lock 2.5k, trail 3.5k+) - switch to old' : 'Profit lock: OLD (lock 1.5k, trail 2k+) - switch to new'}</button>
         <button class="btn" data-jv="autorefresh">Refresh</button></div></div></div>
@@ -1608,6 +1609,9 @@ function paperList() {
     else if (a === 'autoclassic') { const on = (SV.auto && SV.auto.cfg.classicOnly) === false; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ classicOnly: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autogann') { const on = (SV.auto && SV.auto.cfg.gannOn) === false; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ gannOn: on }) }).then(() => loadSrv('auto')); }
     else if (a === 'autoeagle') { const on = !(SV.auto && SV.auto.cfg.eagleOn); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eagleOn: on }) }).then(() => loadSrv('auto')); }
+    else if (a === 'autogate') { const cur = (SV.auto && SV.auto.cfg && SV.auto.cfg.entryGate) || (AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.entryGate) || 'shadow', nxt = GATE_NEXT[cur] || 'shadow';
+      if (nxt === 'on' && !confirm('Switch the entry gate ON? New trades whose open gaps more than 0.3 ATR against them will be skipped (they are only recorded in shadow mode).')) return;
+      fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entryGate: nxt }) }).then(() => syncAuto(true)).then(() => { if (SV.auto) loadSrv('auto'); render(); }); }
     else if (a === 'autostock') { const cur = SV.auto && SV.auto.cfg ? SV.auto.cfg.stockTrader : (AUTO.srv && AUTO.srv.cfg ? AUTO.srv.cfg.stockTrader : false), on = (cur === false); fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stockTrader: on }) }).then(() => syncAuto(true)).then(() => { if (SV.auto) loadSrv('auto'); render(); }); }
     else if (a === 'autopair') { const m = !(SV.auto && SV.auto.cfg.pairSell === false) ? false : true; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairSell: m }) }).then(() => loadSrv('auto')); }
     else if (a === 'autolock') { const m = (SV.auto && SV.auto.cfg.lockMode === 'new') ? 'old' : 'new'; fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lockMode: m }) }).then(() => loadSrv('auto')); }
@@ -1923,7 +1927,7 @@ function paperList() {
        const pnlClass = pnl > 0 ? 'up' : pnl < 0 ? 'down' : '';
        const exitBtn = status !== 'Closed' ? `<button class="btn jv-exit" data-jv="${t.auto ? 'autoexit' : t.paper ? 'paperexit' : 'mktexit'}" data-id="${E(t.id)}" title="Exit at the live price">Exit</button>` : `<span class="muted">${E(t.exitType || 'Closed')}</span>`;
        return `<tr data-pid="${E(t.id)}"${t.auto ? ' class="auto-row"' : ''}>
-         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}${chartBtn(t)}<small>${E(t.setup || '')}</small></span></td>
+         <td><span class="jv-sym"><b>${E(t.symbol || t.instrument)}</b>${eagleTag(t)}${chartBtn(t)}<small>${E(t.setup || '')}</small>${gateTag(t)}</span></td>
          <td><span class="jv-side ${t.dir === 'Long' ? 'l' : 's'}">${t.dir === 'Long' ? 'BUY' : 'SELL'}</span></td>
          <td class="num" title="Quantity taken">${qtyTxt(t)}</td>
          <td class="num" title="Taken ${entryTime(t) ? entryTime(t) : ''}">${px(t.entry)}${entryTime(t) ? ` <small class="muted">${entryTime(t)}</small>` : ''}</td>
@@ -2167,6 +2171,29 @@ function paperList() {
        <div class="jv-books">${ob}${os}${st}${sets}${tot}</div></div>`;
    }
 
+   /* Entry gate (31 Oct): skip a trade when the open gapped more than 0.3 ATR against it. Default SHADOW: every trade is still taken and carries the verdict, so the two groups can be compared. */
+   const GATE_NEXT = { shadow: 'on', on: 'off', off: 'shadow' };
+   const GATE_LABEL = { shadow: 'SHADOW (records only)', on: 'ON (blocks gapped trades)', off: 'OFF' };
+   function gateBtn(mode) {
+     const m = GATE_LABEL[mode] ? mode : 'shadow';
+     return `<button class="btn" data-jv="autogate" title="Entry gate: skip a trade when the open gaps more than 0.3 ATR against it (4 years: 64% of those hit the stop first vs 53% of the rest). Shadow = take every trade but record what the gate would have done. Tap to switch to ${GATE_NEXT[m].toUpperCase()}.">Entry gate: ${GATE_LABEL[m]} - tap for ${GATE_NEXT[m].toUpperCase()}</button>`;
+   }
+   function gateTag(t) {
+     const g = t.raw && t.raw.gate; if (!g) return '';
+     return g.skip ? `<span class="jv-gate skip" title="${E((g.why || []).join('; '))}">🚦 gate: would skip</span>` : `<span class="jv-gate ok" title="Passed the entry gate (the open did not gap against the trade)">🚦 gate ok</span>`;
+   }
+   function gateCard() {
+     const mode = (AUTO.srv && AUTO.srv.cfg && AUTO.srv.cfg.entryGate) || 'shadow';
+     const withG = AUTO.list.filter(t => t.raw && t.raw.gate), closed = withG.filter(t => statusOf(t) === 'Closed');
+     const grp = f => { const a = closed.filter(f), nets = a.map(t => +(t.raw.net) || 0), w = nets.filter(x => x > 0).reduce((p, c) => p + c, 0), l = -nets.filter(x => x < 0).reduce((p, c) => p + c, 0);
+       return { n: a.length, win: a.length ? Math.round(100 * nets.filter(x => x > 0).length / a.length) : null, net: nets.reduce((p, c) => p + c, 0), per: a.length ? nets.reduce((p, c) => p + c, 0) / a.length : 0, pf: l > 0 ? (w / l).toFixed(2) : (w > 0 ? '∞' : '–') }; };
+     const sk = grp(t => t.raw.gate.skip), ok = grp(t => !t.raw.gate.skip), openSk = withG.filter(t => statusOf(t) !== 'Closed' && t.raw.gate.skip).length;
+     const row = (name, g) => `<tr><td><b>${name}</b></td><td class="num">${g.n}</td><td class="num">${g.win == null ? '–' : g.win + '%'}</td><td class="num ${cc(g.net)}">${sinr(g.net)}</td><td class="num ${cc(g.per)}">${g.n ? sinr(g.per) : '–'}</td><td class="num">${g.pf}</td></tr>`;
+     const verdict = sk.n >= 10 && ok.n >= 10 ? (sk.per < ok.per ? `<p class="jv-gate-v good">Trades the gate would have skipped lost ${inr(Math.abs(sk.per - ok.per), 0)} more per trade than the rest so far: the gate is helping.</p>` : `<p class="jv-gate-v bad">Trades the gate would have skipped did NOT do worse than the rest so far: the gate is not helping yet.</p>`) : `<p class="muted" style="font-size:12px;padding:2px 14px 0">Needs about 10 closed trades in each group before it says anything (${sk.n} would-skip, ${ok.n} pass so far).</p>`;
+     return `<div class="card" id="jvGateCard"><div class="card-h"><h3>🚦 Entry gate test</h3><span class="muted" style="font-size:12px">mode: ${GATE_LABEL[mode] || mode} · ${withG.length} trades carry a verdict${openSk ? ` · ${openSk} open would-skip` : ''}</span></div>
+       ${withG.length ? `<div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Group</th><th class="num">Closed</th><th class="num">Win %</th><th class="num">Net P&amp;L</th><th class="num">Per trade</th><th class="num">PF</th></tr></thead><tbody>${row('Gate would SKIP (open gapped against)', sk)}${row('Gate PASSES', ok)}</tbody></table></div>${verdict}` : '<div class="empty">No trade carries a gate verdict yet. Every new auto trade is tagged from the next cycle.</div>'}
+       <p class="muted" style="font-size:11.5px;padding:2px 14px 10px">Rule: skip when the open gaps more than 0.3 ATR beyond yesterday's close against the trade. 4-year test (4,974 trades): stop first 64% vs 53%, profit factor 0.67 vs 1.0, and it held on the last 30% of the data. ATR %, room to the 20-day extreme and index / stock are also recorded on every trade for later tests.</p></div>`;
+   }
    function viewAlgo() {
      const auto = AUTO.list;
      const openAuto = auto.filter(t => entered(t) && statusOf(t) !== 'Closed');
@@ -2209,6 +2236,7 @@ function paperList() {
          <div class="jv-actions">
            ${srv ? `<button class="btn ${srv.enabled ? '' : 'pri'}" data-jv="autotoggle">${srv.enabled ? 'Pause auto trader' : 'Resume auto trader'}</button>` : ''}
            ${srv && srv.cfg ? `<button class="btn" data-jv="autostock" title="The separate share (equity) paper trader and its Stock trader tab. Rs 5 L of its own, next to the Rs 10 L option-buying book.">${srv.cfg.stockTrader === false ? 'Stock trader (shares): OFF - switch on' : 'Stock trader (shares): ON - switch off'}</button>` : ''}
+           ${srv && srv.cfg ? gateBtn(srv.cfg.entryGate) : ''}
            <button class="btn" data-jv="autorefresh">Refresh</button>
          </div>
        </div>
@@ -2221,6 +2249,7 @@ function paperList() {
          <p class="muted" style="font-size:11.5px;padding:2px 14px 10px">Each sleeve sizes and tracks its own trades; a full sleeve skips new entries instead of borrowing from another.</p></div>` : ''}
 
      </div>
+     ${gateCard()}
      <div class="card"><div class="card-h"><h3>🚪 Auto trade exits</h3><span class="muted" style="font-size:12px">exit breakdown · ${closedAutoAll.length} closed</span></div>
        <div class="jv-exitf">${EXF.map(([v, l]) => `<button type="button" class="${exitFilter === v ? 'on' : ''}" data-jv="exitf" data-k="${v}" title="Show only ${E(l)} exits">${E(l)}</button>`).join('')}</div>
        <div class="tbl-wrap"><table class="jv-t"><thead><tr><th>Exit</th><th class="num">Trades</th><th class="num">Net P&L</th><th class="num">Win %</th></tr></thead><tbody>${exitRows || '<tr><td colspan="4" class="muted">No closed auto trades yet.</td></tr>'}</tbody></table></div>
@@ -2353,6 +2382,9 @@ function paperList() {
   /* ---- compact journal ---- */
   .jv svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
   .jv-head{display:flex;align-items:center;gap:10px;margin:2px 0 6px}.jv-head h1{font-size:20px;margin:0}
+  .jv-gate{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;letter-spacing:.03em;padding:2px 7px;border-radius:999px;vertical-align:middle;white-space:nowrap}
+  .jv-gate.skip{color:#fff;background:#ef4444}.jv-gate.ok{color:var(--text-3);border:1px solid var(--line)}
+  .jv-gate-v{margin:8px 14px 0;padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:600}.jv-gate-v.good{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35)}.jv-gate-v.bad{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4)}
   .jv-paper{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:6px;color:var(--warn,#c9922c);background:color-mix(in srgb,var(--warn,#c9922c) 14%,transparent);cursor:help}
   .jv-tabs{gap:0;margin:0 0 10px;border-bottom:1px solid var(--line)}
   .jv-tabs button{border:0;border-radius:0;background:none;padding:8px 12px;font-size:13px;font-weight:600;color:var(--text-3,#8a93a6);border-bottom:2px solid transparent;margin-bottom:-1px}

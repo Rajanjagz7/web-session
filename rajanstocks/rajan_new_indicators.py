@@ -515,6 +515,9 @@ def _rsi_wilder(closes, n=2):
     return out
 
 
+RSI2_SHORTS = False        # 31 Oct: mirrored short side (close < SMA200, RSI(2) > 100 - RSI2_ENTRY, close > SMA5; stop 2.5 ATR above; exit on a close back below SMA5). OFF = the published long-only rule.
+
+
 def rajan_rsi2_pullback_scan(symbol, lookback_days=450):
     """Buy a sharp 2-day dip inside a long-term uptrend (UNPROVEN here; published backtests are on US indices).
     Entry (completed bar): close > SMA200, RSI(2) < 10, close < SMA5. Initial stop 2.5 ATR(14) below the close.
@@ -534,13 +537,20 @@ def rajan_rsi2_pullback_scan(symbol, lookback_days=450):
                 and closes[i] > sma200[i] and rsi2[i] < RSI2_ENTRY and closes[i] < sma5[i])
 
     def raw_short(i):
-        return False                                          # long-only
+        return (RSI2_SHORTS and sma200[i] is not None and sma5[i] is not None and rsi2[i] is not None and atr14[i] is not None
+                and closes[i] < sma200[i] and rsi2[i] > 100 - RSI2_ENTRY and closes[i] > sma5[i])      # long-only unless RSI2_SHORTS
 
     def init_sl(i, side):
-        return closes[i] - RSI2_STOP_ATR * atr14[i] if atr14[i] is not None else None
+        if atr14[i] is None:
+            return None
+        return closes[i] - RSI2_STOP_ATR * atr14[i] if side == "LONG" else closes[i] + RSI2_STOP_ATR * atr14[i]
 
     def trail_fn(i, side, stop):
-        return closes[i] if sma5[i] is not None and closes[i] > sma5[i] else None      # bounce confirmed: exit at this close
+        if sma5[i] is None:
+            return None
+        if side == "SHORT":
+            return closes[i] if closes[i] < sma5[i] else None          # the rebound has faded: exit at this close
+        return closes[i] if closes[i] > sma5[i] else None      # bounce confirmed: exit at this close
 
     rows_core, pos = _walk(bars, raw_long, raw_short, init_sl, trail_fn)
     rows = [{**rows_core[i], "sma200": sma200[i], "sma5": sma5[i], "rsi2": rsi2[i]} for i in range(n)]
@@ -550,6 +560,7 @@ def rajan_rsi2_pullback_scan(symbol, lookback_days=450):
 
 # ───────────────────────── Rajan IBS Reversion (Internal Bar Strength) ─────────────────────────
 IBS_ENTRY, IBS_EXIT, IBS_STOP_ATR = 0.10, 0.90, 2.5
+IBS_SHORTS = False         # 31 Oct: mirrored short side (a day that closed in the top 10 % of its range; exit when a day closes in the bottom 10 %). OFF = the published long-only rule.
 
 
 def _ibs(b):
@@ -573,12 +584,16 @@ def rajan_ibs_reversion_scan(symbol, lookback_days=450):
         return atr14[i] is not None and ibs[i] < IBS_ENTRY
 
     def raw_short(i):
-        return False
+        return IBS_SHORTS and atr14[i] is not None and ibs[i] > 1 - IBS_ENTRY
 
     def init_sl(i, side):
-        return closes[i] - IBS_STOP_ATR * atr14[i] if atr14[i] is not None else None
+        if atr14[i] is None:
+            return None
+        return closes[i] - IBS_STOP_ATR * atr14[i] if side == "LONG" else closes[i] + IBS_STOP_ATR * atr14[i]
 
     def trail_fn(i, side, stop):
+        if side == "SHORT":
+            return closes[i] if ibs[i] < 1 - IBS_EXIT else None
         return closes[i] if ibs[i] > IBS_EXIT else None
 
     rows_core, pos = _walk(bars, raw_long, raw_short, init_sl, trail_fn)

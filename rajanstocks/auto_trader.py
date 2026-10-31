@@ -54,7 +54,7 @@ SL_V = 1                                 # one-time: premium stop 12.5% + risk p
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
-               "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1}
+               "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1, "entryGate": "shadow"}
 MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade needs at least 2 indicators pointing the same way ...
 INDEX_MIN_AGREE = 2                      # 30 Oct (user): an index option trade needs 2+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
 INDEX_BACK_STRENGTH = 50.0               # 30 Oct (user): an index's own strength counts as one agreeing indicator from 50% (was 75%)
@@ -69,6 +69,7 @@ CYCLE_BUDGET = 18.0 if os.environ.get("VERCEL") else 10 ** 9
 PERSIST_KEYS = ("shadow", "skipUntil", "dayGuardMode", "idxWhy", "carry", "cleared")      # book keys beyond trades / log / cfg that must survive from one cycle to the next
 CARRY_FOR = 540          # screen candidates not tried in their own cycle are offered again for 9 minutes (3 screens)
 FILL_EVERY = 180          # index / stock screens are re-read every 3 minutes (10 missed short-lived signals)
+GATE_GAP_ATR = 0.3                       # 31 Oct: entry gate - skip a trade when the open gaps more than this many ATR against it (4 years, 4,974 trades: the stop came first in 64 % of them vs 53 % otherwise, profit factor 0.67 vs 1.0, and it held on the last 30 %)
 MIN_INDEX_RR = 1.5        # index call / put screen: reward to target 1 must be >= 1.5x the stop distance
 SOFT_ZONE = 0.75                         # past 75% of the day P&L limit only high-conviction entries are taken
 INDEX_SYMS = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"]
@@ -1387,6 +1388,28 @@ def _replan(t):
     t.update(_premium_plan(t["entry"], t["riskU"]), plan="v2")
 
 
+def entry_gate(c, bars, atr, last_close, entry_u, cfg=None):
+    """The entry-quality gate. mode = cfg["entryGate"]: "off" (None is returned), "shadow" (default: the trade is taken and the verdict is stored on it, to compare
+    the trades the gate would have skipped with the others) or "on" (a trade that fails is not taken). One rule is enforced: the open must not gap against the
+    trade by more than GATE_GAP_ATR x ATR beyond yesterday's close. The other features (ATR % of price, room to the 20-day extreme, index or stock) are only
+    recorded, so a later test can show whether they matter. Returns {"mode", "skip", "why", "feat"}."""
+    try:                                                   # fail open: a problem in the gate's own bookkeeping must never stop (or change) a trade
+        mode = str((cfg or {}).get("entryGate", "shadow")).lower()
+        if mode == "off" or not atr or atr <= 0 or not last_close or last_close <= 0:
+            return None
+        d = 1 if c["side"] == "BUY" else -1
+        gap = d * (float(entry_u) - last_close) / atr
+        seg = bars[-20:]
+        wall = max(b["high"] for b in seg) if d > 0 else min(b["low"] for b in seg)
+        feat = {"gapATR": round(gap, 2), "atrPct": round(100 * atr / last_close, 2), "roomATR": round(d * (wall - last_close) / atr, 2), "index": c.get("sym") in INDEX_SYMS}
+        why = []
+        if gap < -GATE_GAP_ATR:
+            why.append(f"the open gapped {abs(gap):.2f} ATR against the trade (limit {GATE_GAP_ATR} ATR)")
+        return {"mode": mode if mode in ("shadow", "on") else "shadow", "skip": bool(why), "why": why, "feat": feat}
+    except Exception:
+        return None
+
+
 def open_trade(st, c, today):
     cfg = st["cfg"]
     import backtest
@@ -1418,6 +1441,9 @@ def open_trade(st, c, today):
             raise RuntimeError(why_)
     d = 1 if c["side"] == "BUY" else -1
     entry_u = ct["spot"] or last_close
+    gate = entry_gate(c, bars, atr, last_close, entry_u, cfg) if c.get("pos") != "short" and c.get("key") != "rzt-hedge" else None
+    if gate and gate["mode"] == "on" and gate["skip"]:
+        raise RuntimeError("skipped: entry gate - " + "; ".join(gate["why"]))
     variant = c.get("variant", "fixed")
     # signal-candle stop from the backtest's plan_risk() (capped at backtest.PREM_SL of the premium); the live cap below (premSlPct, same 12.5% by default) is applied on top
     risk_u = backtest.plan_risk(bars, atr, len(bars) - 1, c["side"], entry_u, ct["premium"], ind_stop=c.get("indStop"))
@@ -1475,6 +1501,7 @@ def open_trade(st, c, today):
         "source": c.get("source", f"{c.get('agree', 1)} indicator(s) agree" if c.get("strategies") else "strategy signal"), "status": "OPEN", "last": round(ct["premium"], 2),
         "plan": "v2", **_premium_plan(round(ct["premium"], 2), risk_u),
         "fset": filter_set(c),
+        **({"gate": gate} if gate else {}),
     }
     oel = None if old_rules else premium_oel(ct)
     if oel:                                                  # the bought option opened at its day low: its own point stop, when that is tighter than the normal one
@@ -2299,6 +2326,7 @@ class Cfg(BaseModel):
     buyOnly: bool | None = None
     stockOnly: bool | None = None
     stockTrader: bool | None = None
+    entryGate: str | None = None
     capital: float | None = None
     sleeves: dict | None = None
 
@@ -2614,6 +2642,10 @@ def config(c: Cfg):
             st["cfg"]["stockOnly"] = c.stockOnly
         if c.stockTrader is not None:                                   # false: the separate share paper trader opens nothing new (open trades are still managed)
             st["cfg"]["stockTrader"] = c.stockTrader
+        if c.entryGate is not None:                                     # off / shadow (default: only records what the gate would have done) / on (blocks the trades it rejects)
+            if c.entryGate not in ("off", "shadow", "on"):
+                raise HTTPException(400, "entryGate must be 'off', 'shadow' or 'on'")
+            st["cfg"]["entryGate"] = c.entryGate
         if c.capital is not None:
             if c.capital < 100000:
                 raise HTTPException(400, "capital must be at least 1,00,000")
