@@ -519,7 +519,7 @@ function paperList() {
   /* ---------- screens ---------- */
   const kpi = (l, v, sub, c, tip) => `<div class="jv-kpi" title="${E((tip ? tip + (sub ? ' — ' : '') : '') + (sub ? String(sub).replace(/<[^>]+>/g, '') : ''))}"><small>${l}</small><b class="${c || ''}">${v}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
   const cc = n => (n > 0 ? 'up' : n < 0 ? 'down' : '');
-  function banner() { return `<span class="jv-paper" role="note" title="Paper trading: simulated results, no broker orders are sent. Virtual capital ${inr(S.capital, 0)}.">PAPER · ${inr(S.capital, 0)}</span>`; }
+  function banner() { return `<span class="jv-paper" role="note" title="Paper trading: simulated results, no broker orders are sent. Virtual capital for option buying: ${inr(S.capital, 0)}. The share (stock trader) book has its own money, see Your money.">PAPER · ${inr(S.capital, 0)} options</span>`; }
 
   /* Live P&L: equity and P&L include open positions (marked to market), and the
      overview refreshes on its own while it is on screen. */
@@ -2133,7 +2133,7 @@ function paperList() {
      const day = today(), L = liveTotals(day), c = capUse(), ds = dayStats(day), oToday = ds.pnl + L.autoToday + L.unr;
      const sCap = d ? d.capital : 500000;
      // compact: name, equity (+change), then Open, Booked, In use, Free - two cards per row on phones
-     const v = (k, x, cl, fmt) => `<div><small>${k}</small><b class="${x == null ? '' : cl === 'pl' ? cc(x) : cl || ''}">${x == null ? '…' : fmt(x)}</b></div>`;
+     const v = (k, x, cl, fmt, none = '…') => `<div><small>${k}</small><b class="${x == null ? '' : cl === 'pl' ? cc(x) : cl || ''}">${x == null ? none : fmt(x)}</b></div>`;   // none: what to show when there is no value (… = still loading, – = nothing to count)
      const amt = x => inr(x, 0);
      const tile = (cls, title, eq, cap, open, booked, used, free) => `<div class="jv-book ${cls}"><b class="jv-bt">${title}</b>
        <div class="jv-beq"><span>${eq == null ? '…' : inr(eq, 0)}</span><em class="${eq == null ? '' : cc(eq - cap)}">${eq == null ? '' : sinr(eq - cap)}</em></div>
@@ -2153,7 +2153,7 @@ function paperList() {
          Rs = C.map(x => x.raw && x.raw.R).filter(x => x != null), avgR = Rs.length ? Rs.reduce((q, x) => q + x, 0) / Rs.length : null;
        return `<div class="jv-book"><b class="jv-bt">${nm}</b>
          <div class="jv-beq"><span class="${cc(booked + unr)}">${sinr(booked + unr)}</span><em>${L.length} trades</em></div>
-         <div class="jv-bl">${v('Running now', unr, 'pl', sinr)}${v('Locked in', booked, 'pl', sinr)}${v('Win rate', C.length ? w.length / C.length * 100 : null, '', x => x.toFixed(0) + '%')}${v('Avg R', avgR, avgR == null ? '' : cc(avgR), x => (x >= 0 ? '+' : '') + x.toFixed(2) + 'R')}</div>
+         <div class="jv-bl">${v('Running now', unr, 'pl', sinr)}${v('Locked in', booked, 'pl', sinr)}${v('Win rate', C.length ? w.length / C.length * 100 : null, '', x => x.toFixed(0) + '%', '–')}${v('Avg R', avgR, avgR == null ? '' : cc(avgR), x => (x >= 0 ? '+' : '') + x.toFixed(2) + 'R', '–')}</div>
          <div class="muted" style="font-size:11px;margin-top:2px">Profit factor ${ls > 0 ? (g / ls).toFixed(2) : (g > 0 ? '∞' : '–')} · ${C.length} closed</div></div>`;
      };
      const sets = setTile('OLD FILT') + setTile('NEW IND');

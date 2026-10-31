@@ -107,8 +107,9 @@ def adx(bars, n=14):
     a = _rma_skip(tr, n)
     p = _rma_skip(pdm, n)
     m = _rma_skip(mdm, n)
-    pdi = [None if (a[i] is None or p[i] is None) else 100 * p[i] / a[i] for i in range(n_b)]
-    mdi = [None if (a[i] is None or m[i] is None) else 100 * m[i] / a[i] for i in range(n_b)]
+    # a thinly traded option can print flat candles (true range 0 for the whole window): no direction then, not a crash (live: ADANIPORTS PE gave a 502)
+    pdi = [None if (a[i] is None or p[i] is None) else (100 * p[i] / a[i] if a[i] else 0.0) for i in range(n_b)]
+    mdi = [None if (a[i] is None or m[i] is None) else (100 * m[i] / a[i] if a[i] else 0.0) for i in range(n_b)]
     dx = [None if (pdi[i] is None or mdi[i] is None) else 100 * abs(pdi[i] - mdi[i]) / ((pdi[i] + mdi[i]) or 1) for i in range(n_b)]
     return _rma_skip(dx, n)
 
