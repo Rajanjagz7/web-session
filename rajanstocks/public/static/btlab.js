@@ -440,6 +440,13 @@
 .btl-lk{background:none;border:0;color:var(--brand);text-decoration:underline;cursor:pointer;font:inherit;padding:0}.btl-fl{display:block;margin:6px 0 8px}.btl-yr tr.cur td{background:rgba(99,102,241,.12)}
 .btl-skel{height:70px;border-radius:14px;background:linear-gradient(90deg,var(--panel-2) 25%,var(--panel) 50%,var(--panel-2) 75%);background-size:200% 100%;animation:btlsk 1.2s linear infinite;margin:8px 0}@keyframes btlsk{to{background-position:-200% 0}}
 .btl pre{white-space:pre-wrap;font-size:12px;margin:6px 0;padding:8px;border-radius:10px;background:var(--panel-2)}.btl code{font-size:11.5px;background:var(--panel-2);padding:1px 5px;border-radius:5px}
+.btl-top h3{font-size:24px}
+.btl-sec{box-shadow:0 8px 28px rgba(0,0,0,.18)}.btl-pick:hover{border-color:rgba(99,102,241,.6)}
+@media (min-width:1000px){.btl-grid{display:grid;grid-template-columns:minmax(340px,410px) minmax(0,1fr);gap:20px;align-items:start}
+.btl-left{position:sticky;top:72px;max-height:calc(100vh - 92px);overflow:auto;padding:2px 4px 2px 0;scrollbar-width:thin}.btl-left .btl-cards{grid-template-columns:1fr}
+.btl-right .btl-sec{padding:22px}.btl-right .btl-four{grid-template-columns:repeat(4,1fr)}.btl-right .btl-verdict{padding:26px}.btl-right .btl-verdict .vb b{font-size:44px}.btl-right .btl-verdict .vt{font-size:17px}
+.btl-right .btl-four b{font-size:26px}.btl-trl{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.btl-right .btl-tiles{grid-template-columns:repeat(3,1fr)}.btl-note{max-width:none}}
+@media (min-width:1500px){.btl-trl{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:720px){.btl-cards{grid-template-columns:1fr}.btl-top .btl-row{width:100%}.btl-top .btl-b{flex:1 1 0}.btl-sec{padding:14px}.btl-verdict .vb b{font-size:27px}}`;
     document.head.appendChild(st);
   }
@@ -532,7 +539,7 @@
     const fchip = (k, l) => `<button type="button" data-flt="${k}" class="${F === k ? 'on' : ''}">${l}</button>`;
     const rows = view.map(t => `<div class="btl-tr ${t.R > 0 ? 'w' : 'l'}"><div class="a">${esc(t.sym)} · ${t.side === 'long' ? (tab === 'cash' ? 'Bought' : 'Call') : (tab === 'cash' ? 'Short' : 'Put')} · ${esc(t.entryDate)} → ${esc(t.exitDate)}</div><div class="b ${t.R > 0 ? 'up' : 'down'}">${sinr(t.R * st.per)}</div><div class="c">${f2(t.entry)} → ${f2(t.exit)} · ${WHY[t.why] || t.why} · held ${t.hold} day${t.hold === 1 ? '' : 's'}</div></div>`).join('');
     const trades = `<div class="btl-sub">Every trade</div><div class="btl-seg" style="margin-bottom:8px">${fchip('ALL', 'All ' + st.n)}${fchip('W', 'Wins ' + st.wins)}${fchip('L', 'Losses ' + st.losses)}${fchip('SL', 'Stop-loss')}${fchip('T', 'Target')}</div>
-      <label class="btl-fl">Share / index<select data-symf><option value="ALL">All (${syms.length})</option>${syms.map(x => `<option value="${esc(x)}" ${x === SYM ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>${rows || '<div class="muted" style="margin-top:8px">No trades match.</div>'}
+      <label class="btl-fl">Share / index<select data-symf><option value="ALL">All (${syms.length})</option>${syms.map(x => `<option value="${esc(x)}" ${x === SYM ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="btl-trl">${rows || '<div class="muted" style="margin-top:8px">No trades match.</div>'}</div>
       <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-rper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div>`;
     const detail = `<details class="btl-more"><summary>More numbers</summary><div>${tiles}<div style="margin:10px 0 4px;font-weight:700">Year by year</div><div style="overflow-x:auto">${yt}</div></div></details>`;
     const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
@@ -544,6 +551,7 @@
       return `<tr class="${id === S.run.sid ? 'cur' : ''}"><td><button type="button" class="btl-lk" data-pick="${esc(id)}">${esc(R.name)}</button></td><td>${n}</td><td>${n ? Math.round(100 * w / n) : 0}%</td><td class="${net >= 0 ? 'up' : 'down'}">${sinr(net)}</td></tr>`; };
     return `<div class="btl-sub">All strategies you tested</div><div style="overflow-x:auto"><table class="btl-yr"><thead><tr><th>Strategy</th><th>Trades</th><th>Win %</th><th>Net (all markets)</th></tr></thead><tbody>${ids.map(row).join('')}</tbody></table></div>`;
   }
+  function busyHTML() { return `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>…</i>Testing</div><div class="muted">${esc(S.prog || 'Starting…')}</div><div class="btl-skel"></div><div class="btl-skel"></div></div>`; }
   function notTestedHTML() {
     const sp = specOf(S.run.sid);
     return `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>3</i>Result</div>${S.err ? `<div class="btl-note warn">${esc(S.err)}</div>` : `<div class="btl-verdict zero"><div class="vt">${sp ? esc(sp.name) : 'No strategy chosen'}: not tested yet</div><div class="vs">${sp ? 'Press “▶ Test this strategy” above. The result will appear here, only for this strategy.' : 'Choose a strategy in step 1 first.'}</div></div>`}</div>`;
@@ -589,9 +597,9 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.13</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.14</span></div></div></div>
       ${bannerHTML()}
-      ${chooseHTML()}${runHTML()}${S.busy ? '' : (S.res ? resultsHTML() : notTestedHTML())}</div>`;
+      <div class="btl-grid"><div class="btl-left">${chooseHTML()}${runHTML()}</div><div class="btl-right">${S.busy ? busyHTML() : (S.res ? resultsHTML() : notTestedHTML())}</div></div></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
     window.scrollTo(0, keep);
   }
