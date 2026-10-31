@@ -69,6 +69,24 @@ def clean_spec(o):
             "stop": {"type": "pct" if st.get("type") == "pct" else "atr", "k": _num(st.get("k"), 0.25, 10, 1.5), "pct": _num(st.get("pct"), 0.25, 30, 2)}}
 
 
+_TOP = {}
+
+
+def top_list():
+    """The strategies kept in the system (public/static/lab_top.json, at most 10): checked every trading day on PAPER only."""
+    if "v" not in _TOP:
+        import json
+        import os
+        try:
+            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public", "static", "lab_top.json")
+            d = json.load(open(p, encoding="utf-8"))
+            meta = {x["id"]: x for x in d.get("items", [])}
+            _TOP["v"] = [dict(s, tier=meta.get(s["id"], {}).get("tier", "")) for s in clean_all(d.get("items", []))[:10]]
+        except Exception:
+            _TOP["v"] = []
+    return _TOP["v"]
+
+
 def clean_all(items):
     out, seen = [], set()
     for o in (items if isinstance(items, list) else [])[:MAX_STRATEGIES]:

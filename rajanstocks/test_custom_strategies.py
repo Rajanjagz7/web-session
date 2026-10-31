@@ -42,7 +42,7 @@ def test_records_paper_signal_and_never_a_trade(monkeypatch):
     monkeypatch.setattr(at, "_live_spot", lambda s, fallback=0.0: 94.0)
     at._CUSTOM_DONE.clear()
     now = at._now().replace(hour=10, minute=0)
-    st = {"cfg": {"customStrategies": [cs.clean_spec(RSI)]}, "trades": [], "log": []}
+    st = {"cfg": {"customStrategies": [cs.clean_spec(RSI)], "topPaper": False}, "trades": [], "log": []}
     for b in bars():                                                      # make every symbol's last bar earlier than "today"
         pass
     monkeypatch.setattr(bar_source, "daily_bars", lambda s, d=0: [dict(b, date=(now.date() - dt.timedelta(days=len(bars(drop=True)) - i)).isoformat()) for i, b in enumerate(bars(drop=True))])
@@ -55,7 +55,7 @@ def test_records_paper_signal_and_never_a_trade(monkeypatch):
 
 
 def test_nothing_runs_when_none_are_switched_on():
-    st = {"cfg": {}, "trades": [], "log": []}
+    st = {"cfg": {"topPaper": False}, "trades": [], "log": []}          # the kept Top list can be switched off
     at.custom_record(st, at._now())
     assert "shadow" not in st
 
@@ -76,3 +76,23 @@ def test_your_indicators_match_the_originals():
     assert all(abs(a - v) < 1e-9 for a, v in zip(al, X.alma(34)) if a is not None)
     ha = heikin_ashi.to_heikin_ashi([dict(x, dt=x["date"]) for x in b])
     assert all(abs(a["haClose"] - v) < 1e-9 for a, v in zip(ha, X.ha()["hc"]))
+
+
+def test_top_strategies_are_kept_checked_and_reported(monkeypatch):
+    import bar_source
+    top = cs.top_list()
+    assert 1 <= len(top) <= 10 and all(x["id"].startswith("top-") for x in top)
+    now = at._now().replace(hour=10, minute=0)
+    monkeypatch.setattr(at, "_live_spot", lambda s, fallback=0.0: 94.0)
+    monkeypatch.setattr(bar_source, "daily_bars", lambda s, d=0: [dict(b, date=(now.date() - dt.timedelta(days=300 - i)).isoformat()) for i, b in enumerate(bars(300, drop=True))])
+    at._CUSTOM_DONE.clear()
+    st = {"cfg": {}, "trades": [], "log": []}
+    at.custom_record(st, now)                                   # no customStrategies set: only the kept Top list runs
+    assert st["trades"] == []                                   # paper only, never a real trade
+    st["shadow"] = [{"id": "a", "date": now.date().isoformat(), "key": "my:top-mine_rsi2", "sym": "NIFTY", "side": "BUY", "entry": 100, "stop": 98, "target": 103, "status": "CLOSED", "R": 1.5, "peakR": 1.6},
+                    {"id": "b", "date": now.date().isoformat(), "key": "my:top-mine_rsi2", "sym": "RELIANCE", "side": "BUY", "entry": 100, "stop": 98, "target": 103, "status": "CLOSED", "R": -1.0},
+                    {"id": "c", "date": now.date().isoformat(), "key": "my:top-mine_rsi2", "sym": "TCS", "side": "BUY", "entry": 100, "stop": 98, "target": 103, "status": "OPEN"}]
+    rep = at.top_report(st)
+    r = next(x for x in rep["strategies"] if x["id"] == "top-mine_rsi2")
+    assert r["index"]["n"] == 1 and r["index"]["winPct"] == 100 and r["stock"]["n"] == 2 and r["stock"]["open"] == 1 and r["stock"]["winPct"] == 0
+    assert rep["totals"]["stock"]["closed"] == 1 and r["today"] == 3

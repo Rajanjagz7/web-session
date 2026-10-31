@@ -1,0 +1,312 @@
+{
+ "updated": "2026-10-31",
+ "max": 10,
+ "how": "Ranked on all F&O stocks and the 5 indices over 8 years (first part vs last part, at least 60 trades). They are only paper-traded each trading day. No real orders are placed until you decide you are confident.",
+ "items": [
+  {
+   "id": "top-mine_rsi2",
+   "name": "RSI(2) Pullback, Connors",
+   "tier": "Proven",
+   "side": "long",
+   "long": [
+    {
+     "t": "ma_rel",
+     "type": "sma",
+     "n": 200,
+     "rel": "above"
+    },
+    {
+     "t": "rsi",
+     "n": 2,
+     "op": "<",
+     "v": 10
+    },
+    {
+     "t": "ma_rel",
+     "type": "sma",
+     "n": 5,
+     "rel": "below"
+    }
+   ],
+   "short": [],
+   "stop": {
+    "type": "atr",
+    "k": 2.5,
+    "pct": 2
+   },
+   "tpl": "mine_rsi2",
+   "ev": {
+    "net": [
+     22139,
+     81742,
+     71474
+    ],
+    "dd": [
+     10,
+     16,
+     21
+    ],
+    "why": "Made money in index options, stock options and shares, in the first and the last part of 8 years."
+   }
+  },
+  {
+   "id": "top-sanjay",
+   "name": "RSI strength (Sanjay Kathuria)",
+   "tier": "Promising, high drawdown",
+   "side": "both",
+   "long": [
+    {
+     "t": "rsi",
+     "n": 14,
+     "op": ">",
+     "v": 60
+    }
+   ],
+   "short": [
+    {
+     "t": "rsi",
+     "n": 14,
+     "op": "<",
+     "v": 40
+    }
+   ],
+   "stop": {
+    "type": "atr",
+    "k": 2,
+    "pct": 2
+   },
+   "tpl": "sanjay",
+   "ev": {
+    "net": [
+     -18695,
+     932043,
+     526753
+    ],
+    "dd": [
+     71,
+     47,
+     87
+    ],
+    "why": "Big gains in stock options and shares, but the account fell 47-87% along the way."
+   }
+  },
+  {
+   "id": "top-mine_ha",
+   "name": "HA Momentum",
+   "tier": "Promising",
+   "side": "both",
+   "long": [
+    {
+     "t": "ha_mom",
+     "dir": "up"
+    }
+   ],
+   "short": [
+    {
+     "t": "ha_mom",
+     "dir": "down"
+    }
+   ],
+   "stop": {
+    "type": "atr",
+    "k": 1.5,
+    "pct": 2
+   },
+   "tpl": "mine_ha",
+   "ev": {
+    "net": [
+     -2643,
+     -5488,
+     85750
+    ],
+    "dd": [
+     14,
+     58,
+     25
+    ],
+    "why": "Positive in shares in both parts; options about break-even."
+   }
+  },
+  {
+   "id": "top-ema833",
+   "name": "833 EMA pullback (Wizard Trader)",
+   "tier": "Promising",
+   "side": "long",
+   "long": [
+    {
+     "t": "ma_vs",
+     "type": "ema",
+     "fast": 8,
+     "slow": 33,
+     "rel": "above"
+    },
+    {
+     "t": "ma_cross",
+     "type": "ema",
+     "fast": 1,
+     "slow": 8,
+     "dir": "up"
+    },
+    {
+     "t": "ma_rel",
+     "type": "ema",
+     "n": 33,
+     "rel": "above"
+    }
+   ],
+   "short": [],
+   "stop": {
+    "type": "atr",
+    "k": 2,
+    "pct": 2
+   },
+   "tpl": "ema833",
+   "ev": {
+    "net": [
+     -40065,
+     83957,
+     74468
+    ],
+    "dd": [
+     47,
+     56,
+     24
+    ],
+    "why": "Made money in stock options and shares; weak lately."
+   }
+  },
+  {
+   "id": "top-stema",
+   "name": "Supertrend + EMA 200 (Trading Lab)",
+   "tier": "Watch",
+   "side": "long",
+   "long": [
+    {
+     "t": "supertrend",
+     "n": 10,
+     "mult": 3,
+     "dir": "up"
+    },
+    {
+     "t": "ma_rel",
+     "type": "ema",
+     "n": 200,
+     "rel": "above"
+    }
+   ],
+   "short": [],
+   "stop": {
+    "type": "atr",
+    "k": 2,
+    "pct": 2
+   },
+   "tpl": "stema",
+   "ev": {
+    "net": [
+     -6723,
+     44233,
+     172651
+    ],
+    "dd": [
+     22,
+     59,
+     22
+    ],
+    "why": "Positive net in stock options and shares, not consistent over time."
+   }
+  },
+  {
+   "id": "top-neeraj",
+   "name": "20-candle swing (Neeraj Joshi)",
+   "tier": "Watch",
+   "side": "both",
+   "long": [
+    {
+     "t": "breakout",
+     "n": 20,
+     "dir": "high"
+    },
+    {
+     "t": "ma_rel",
+     "type": "sma",
+     "n": 200,
+     "rel": "above"
+    }
+   ],
+   "short": [
+    {
+     "t": "breakout",
+     "n": 20,
+     "dir": "low"
+    },
+    {
+     "t": "ma_rel",
+     "type": "sma",
+     "n": 200,
+     "rel": "below"
+    }
+   ],
+   "stop": {
+    "type": "atr",
+    "k": 2,
+    "pct": 2
+   },
+   "tpl": "neeraj",
+   "ev": {
+    "net": [
+     -52574,
+     -1089,
+     33914
+    ],
+    "dd": [
+     65,
+     96,
+     64
+    ],
+    "why": "Only shares were positive."
+   }
+  },
+  {
+   "id": "top-geek",
+   "name": "Momentum breakout (Trading Geek)",
+   "tier": "Watch",
+   "side": "long",
+   "long": [
+    {
+     "t": "breakout",
+     "n": 20,
+     "dir": "high"
+    },
+    {
+     "t": "volume",
+     "n": 20,
+     "mult": 1.5
+    },
+    {
+     "t": "candle",
+     "dir": "green"
+    }
+   ],
+   "short": [],
+   "stop": {
+    "type": "atr",
+    "k": 2,
+    "pct": 2
+   },
+   "tpl": "geek",
+   "ev": {
+    "net": [
+     0,
+     -101822,
+     36590
+    ],
+    "dd": [
+     0,
+     113,
+     58
+    ],
+    "why": "Only shares were positive."
+   }
+  }
+ ]
+}

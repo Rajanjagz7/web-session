@@ -959,7 +959,11 @@ _CUSTOM_DONE = {}
 def custom_record(st, now):
     """The user's own strategies (Backtest lab -> 'Paper-trade daily'): once per day, after the open, each switched-on strategy is run on the daily
     candles that closed yesterday; its signals go to the PAPER log only (shadow_record, key 'my:<id>') - no order is ever placed from here."""
-    specs = (st.get("cfg") or {}).get("customStrategies") or []
+    import custom_strategies
+    specs = list((st.get("cfg") or {}).get("customStrategies") or [])
+    if (st.get("cfg") or {}).get("topPaper", True):                       # the kept Top strategies: paper only, no switch needed
+        have = {x["id"] for x in specs}
+        specs += [x for x in custom_strategies.top_list() if x["id"] not in have]
     if not specs or _mins(now) < 9 * 60 + 20:
         return
     today = now.date().isoformat()
@@ -995,6 +999,72 @@ def custom_record(st, now):
             x["name"] = names[x["key"]]
     st["log"].append({"at": now.isoformat(), "msg": f"own strategies (paper only): {len(specs)} checked on {len(data)} symbols, {len(cands)} signal(s)"})
     st["_dirty"] = True
+
+
+def top_report(st):
+    """Accuracy of the kept Top strategies from the paper log: per strategy, indices and stocks apart, plus today's new signals."""
+    import backtest as bt
+    import custom_strategies
+    top = {"my:" + x["id"]: x for x in custom_strategies.top_list()}
+    today = _now().date().isoformat()
+    idx = set(bt.INDEX_SYMS)
+    rows = {k: {"id": k[3:], "name": v["name"], "tier": v.get("tier", ""), "index": _acc(), "stock": _acc(), "today": 0} for k, v in top.items()}
+    first = None
+    for x in st.get("shadow", []):
+        r = rows.get(x.get("key"))
+        if not r:
+            continue
+        a = r["index" if x["sym"] in idx else "stock"]
+        _acc_add(a, x)
+        r["today"] += 1 if x["date"] == today else 0
+        first = x["date"] if first is None or x["date"] < first else first
+    tot = {"index": _acc(), "stock": _acc()}
+    for r in rows.values():
+        for kind in ("index", "stock"):
+            for f in ("n", "open", "wins", "sumR", "h15"):
+                tot[kind][f] += r[kind][f]
+            _acc_done(r[kind])
+    for kind in tot:
+        _acc_done(tot[kind])
+    days = len({x["date"] for x in st.get("shadow", []) if x.get("key") in top})
+    return {"asOf": _now().isoformat(), "since": first, "tradingDaysRecorded": days, "strategies": sorted(rows.values(), key=lambda r: (r["tier"] != "Proven", -(r["index"]["n"] + r["stock"]["n"]))), "totals": tot,
+            "note": "Paper trades only (entry = live price after 09:20, stop = the strategy's ATR stop, target 1.5R, or the 15:25 close). No real orders are placed."}
+
+
+def _acc():
+    return {"n": 0, "open": 0, "wins": 0, "sumR": 0.0, "h15": 0}
+
+
+def _acc_add(a, x):
+    a["n"] += 1
+    if x["status"] == "OPEN":
+        a["open"] += 1
+        return
+    r = x.get("R") or 0
+    a["sumR"] += r
+    a["wins"] += 1 if r > 0 else 0
+    a["h15"] += 1 if (x.get("peakR") or 0) >= 1.5 else 0
+
+
+def _acc_done(a):
+    c = a["n"] - a["open"]
+    a["closed"] = c
+    a["winPct"] = round(100 * a["wins"] / c) if c else None
+    a["avgR"] = round(a["sumR"] / c, 2) if c else None
+    a["sumR"] = round(a["sumR"], 2)
+
+
+def top_report_push(now):
+    """Once a day after the close: one phone notification with the Top strategies' paper numbers. Skips quietly on holidays and when nothing was recorded."""
+    import push_signals
+    rep = top_report(_load())
+    t, i, s = rep["totals"], rep["totals"]["index"], rep["totals"]["stock"]
+    if not (i["n"] or s["n"]):
+        return {"ran": False, "reason": "no top-strategy paper trades yet"}
+    f = lambda a: f"{a['n']} trades" + (f", {a['winPct']}% won, {a['avgR']:+}R avg" if a["closed"] else ", all still open")
+    body = f"Index: {f(i)}. Stocks: {f(s)}. Today {sum(r['today'] for r in rep['strategies'])} new signals. Paper only."
+    n = push_signals.notify_all("toprep|" + now.date().isoformat(), "Top strategies · daily paper accuracy", body, url="/#journal", kind="trade")
+    return {"ran": True, "pushed": n, "body": body}
 
 
 def shadow_resolve(st, now):
@@ -1939,6 +2009,11 @@ def run_cycle(force=False, dry=False):
     if not force and not dry:                       # closed market: no lock, no state read - zero Upstash commands
         import nse_calendar
         if not nse_calendar.session_open(now):
+            if nse_calendar.is_trading_day(now.date()) and 15 * 60 + 40 <= _mins(now) <= 16 * 60 + 20 and shared_cache.lock("top-report|" + now.date().isoformat(), 20 * 3600):
+                try:
+                    return top_report_push(now)
+                except Exception as e:
+                    return {"ran": False, "reason": f"top report failed: {str(e)[:80]}"}
             if nse_calendar.is_trading_day(now.date()) and 8 * 60 + 30 <= _mins(now) < 9 * 60 + 15:
                 return _prewarm_scan(now)               # before the open: read the indicators of every stock now, so 09:15 starts with all of them
             return {"ran": False, "reason": "market closed"}
@@ -2605,6 +2680,12 @@ def tighten_stop(tid: str, b: StopBody):
         st["log"].append({"at": _now().isoformat(), "msg": f"Stop moved to {t['stopU']} on {t['sym']} {t['strike']:.0f}{t['opt']} by user"})
         return {"ok": True, "stopU": t["stopU"]}
     return _mutate(apply)
+
+
+@router.get("/top-report")
+def api_top_report():
+    """Accuracy of the kept Top strategies (paper trades), indices and stocks apart. Read only."""
+    return top_report(_load())
 
 
 @router.get("/status")
