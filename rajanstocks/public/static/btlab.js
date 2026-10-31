@@ -417,7 +417,7 @@
 .btl-more{margin:12px 0 0;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:2px 14px}.btl-more>summary{cursor:pointer;font-weight:700;padding:12px 0;font-size:14.5px;list-style:none}.btl-more>summary::-webkit-details-marker{display:none}.btl-more>summary::before{content:'▸';margin-right:8px;color:var(--brand)}.btl-more[open]>summary::before{content:'▾'}.btl-more>div{padding:0 0 14px}
 .btl-chip{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin-bottom:6px;font-size:14px}.btl-chip span{flex:1;overflow-wrap:anywhere}.btl-chip button{flex:none;border:0;background:none;color:var(--down,#ef4444);font-size:18px;cursor:pointer;min-width:34px;min-height:34px}
 .btl-rule{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin-bottom:8px}.btl-rule label{flex:1 1 110px}
-.btl-verdict{padding:18px;border-radius:18px;margin:6px 0 12px;text-align:center;border:2px solid}.btl-verdict.ok{border-color:rgba(34,197,94,.55);background:linear-gradient(160deg,rgba(34,197,94,.18),transparent 75%)}.btl-verdict.bad{border-color:rgba(239,68,68,.55);background:linear-gradient(160deg,rgba(239,68,68,.18),transparent 75%)}
+.btl-verdict{padding:18px;border-radius:18px;margin:6px 0 12px;text-align:center;border:2px solid}.btl-verdict.ok{border-color:rgba(34,197,94,.55);background:linear-gradient(160deg,rgba(34,197,94,.18),transparent 75%)}.btl-verdict.zero{border-color:var(--line);background:var(--panel)}.btl-verdict.bad{border-color:rgba(239,68,68,.55);background:linear-gradient(160deg,rgba(239,68,68,.18),transparent 75%)}
 .btl-verdict .vt{font-size:15px;font-weight:800}.btl-verdict .vb{font-size:24px;margin:6px 0;overflow-wrap:anywhere}.btl-verdict .vb b{font-size:30px}.btl-verdict .vs{font-size:13.5px;color:var(--text-2)}
 .btl-four{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}.btl-four div{padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--panel)}.btl-four b{display:block;font-size:22px;line-height:1.1}.btl-four small{display:block;margin-top:3px;color:var(--text-3);line-height:1.3}
 .btl-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}.btl-t{padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--panel)}.btl-t b{display:block;font-size:18px;overflow-wrap:anywhere}.btl-t small{display:block;color:var(--text-3);margin-top:3px;line-height:1.3}
@@ -475,7 +475,7 @@
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose a strategy</div>
       ${S.list.length ? `<div class="btl-sub" style="margin-top:0">My strategies</div><div class="btl-cards">${S.list.map(sp => card(sp.id, sp.name, short(sp), sp)).join('')}</div>` : ''}
       <div class="btl-sub" ${S.list.length ? '' : 'style="margin-top:0"'}>Ready-made</div><div class="btl-cards">${Object.keys(TEMPLATES).map(k => card('tpl:' + k, TEMPLATES[k].name, TEMPLATES[k].desc || short(TEMPLATES[k]), null)).join('')}</div>
-      <div class="btl-row" style="margin-top:14px"><button type="button" class="btl-b pri" data-new>+ Make my own</button><button type="button" class="btl-b" data-upload>⬆ Upload a strategy file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden></div><div class="muted" style="font-size:12.5px;margin-top:8px">Have a strategy as a <b>.json</b> or <b>.md</b> file? Upload it, then press Test.</div></div>`;
+      <div class="muted" style="font-size:13px;margin-top:12px">Want your own? Press <b>+ Add my own strategy</b> or <b>⬆ Upload a file</b> (.json or .md) at the top.</div></div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
@@ -487,7 +487,6 @@
       <div class="btl-sec"><div class="btl-st"><i>3</i>Test it</div>
       ${sp ? `<div class="muted" style="font-size:13.5px;margin-bottom:10px"><b style="color:var(--text)">${esc(sp.name)}</b>: ${esc(short(sp))}</div>` : '<div class="muted" style="margin-bottom:10px">Choose a strategy in step 1.</div>'}
       <button type="button" class="btl-b pri big" data-run-go ${S.busy || !sp ? 'disabled' : ''}>${S.busy ? 'Testing…' : '▶ Test this strategy'}</button>
-      <div class="btl-row" style="margin-top:10px"><button type="button" class="btl-b sm" data-resetall ${S.busy ? 'disabled' : ''}>↺ Start over</button></div>
       <div id="btlProg" class="muted" style="margin-top:8px;font-size:13px">${esc(S.prog)}</div>${S.busy && S.prog ? '<div class="btl-skel"></div>' : ''}</div>`;
   }
 
@@ -516,6 +515,12 @@
       <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div></div></details>`;
     const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p><button type="button" class="btl-b pri big" data-another style="margin-top:12px">↺ Reset and test another strategy</button>`;
     return head + verdict + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + detail + caveat + '</div>';
+  }
+  function zeroHTML() {
+    const cap = S.run.capital, T = (v, l) => `<div><b>${v}</b><small>${l}</small></div>`;
+    return `<div class="btl-sec" id="btlResult" style="opacity:.75"><div class="btl-st"><i>0</i>Result</div>
+      <div class="btl-verdict zero"><div class="vt">No test yet</div><div class="vb">${inr(cap)} → <b>${inr(cap)}</b></div><div class="vs">0% in 0 years · pick a strategy above and press Test</div></div>
+      <div class="btl-four">${T('0%', 'of 0 trades made money')}${T('0%', 'hit the stop-loss')}${T('0%', 'hit the profit target')}${T('₹0', 'worst drop from a peak')}</div></div>`;
   }
   function sigHTML() {
     const fol = S.list.filter(x => x.follow);
@@ -548,9 +553,10 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes.</div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.6</span></div></div></div>
+      <div class="btl-row btl-bar" style="margin:0 0 12px"><button type="button" class="btl-b pri" data-new>+ Add my own strategy</button><button type="button" class="btl-b" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b" data-resetall>↺ Reset strategy</button></div>
       <div class="btl-note">🛡️ Test only. Nothing here touches your live auto trader or your journal.${S.msg ? '<br>' + esc(S.msg) : ''}</div>
-      ${builderHTML()}${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : resultsHTML()}
+      ${builderHTML()}${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : (S.res ? resultsHTML() : zeroHTML())}
       <details class="btl-more" data-k="sig"><summary>Started strategies: tomorrow's signals</summary><div>${sigHTML()}</div></details>
       <details class="btl-more" data-k="imp"><summary>Upload or paste a strategy (.json or .md)</summary><div>${importHTML()}</div></details></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
@@ -568,7 +574,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (b.hasAttribute('data-upload')) { const f = S.el.querySelector('[data-file]'); f && f.click(); return; }
     if (b.hasAttribute('data-example')) { const ta = S.el.querySelector('[data-paste]'); if (ta) ta.value = JSON.stringify(EXAMPLE, null, 2); return; }
     if (b.hasAttribute('data-import-paste')) { const ta = S.el.querySelector('[data-paste]'); S.msg = importText(ta ? ta.value : '') || 'Nothing to import.'; paint(); return; }
-    if (d.pick) { S.run.sid = d.pick; persist(); paint(); return; }
+    if (d.pick) { S.cleared = false; S.run.sid = d.pick; persist(); paint(); return; }
     if (d.custom) { const t = specOf(d.custom); if (t) { const c = clone(t); c.id = uid(); c.name = t.name + ' (my copy)'; c.follow = false; startEdit(c); } return; }
     if (d.edit) { const sp = S.list.find(x => x.id === d.edit); if (sp) startEdit(clone(sp)); return; }
     if (d.toggle) { const sp = S.list.find(x => x.id === d.toggle); if (sp) { sp.follow = !sp.follow; S.msg = sp.follow ? '"' + sp.name + '" started: it is included in the signal check.' : '"' + sp.name + '" stopped.'; persist(); paint(); } return; }
@@ -592,8 +598,8 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (d.cdel && e) { listFor(e, d.cdel).splice(+d.ci, 1); syncSell(e); paint(); return; }
     if (d.yrs) { S.run.years = d.yrs === 'max' ? 'max' : +d.yrs; persist(); paint(); return; }
     if (b.hasAttribute('data-run-go')) { runBacktest(); return; }
-    if (b.hasAttribute('data-another')) { S.res = null; S.edit = null; S.pg = {}; S.flt = {}; S.run.sid = null; S.msg = 'Cleared. Choose another strategy below, then press Test.'; persist(); paint(); const h = S.el.querySelector('.btl-sec'); h && h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-    if (b.hasAttribute('data-resetall')) { S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: S.run.sid }; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.msg = 'Started over: settings and results cleared. Your saved strategies are kept.'; persist(); paint(); return; }
+    if (b.hasAttribute('data-another')) { S.res = null; S.edit = null; S.pg = {}; S.flt = {}; S.run.sid = null; S.cleared = true; S.msg = 'Cleared. Choose another strategy below, then press Test.'; persist(); paint(); const h = S.el.querySelector('.btl-sec'); h && h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (b.hasAttribute('data-resetall')) { S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.tab = 'idx'; S.msg = 'Reset to zero: no strategy selected and no result. Your saved strategies are kept. Pick another one and press Test.'; persist(); paint(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if (d.tab) { S.tab = d.tab; paint(); return; }
     if (d.flt) { S.flt[S.tab] = d.flt; S.pg[S.tab] = 0; paint(); return; }
     if (d.pg) { S.pg[S.tab] = Math.max(0, (S.pg[S.tab] || 0) + +d.pg); paint(); return; }
@@ -622,8 +628,8 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   }
   function mount(el) {
     if (S.el !== el) { S.el = el; el.addEventListener('click', onClick); el.addEventListener('change', onChange); }
-    if (!S.run.sid) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
+    if (!S.run.sid && !S.cleared) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
     paint();
   }
-  window.BTLab = { mount, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
+  window.BTLab = { mount, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
 })();

@@ -939,9 +939,13 @@ button.pkr-pt{padding:0;font:inherit;cursor:pointer;-webkit-appearance:none;appe
 #jvPickLog button.pkr-pt::after{content:'';position:absolute;inset:-13px}
 button.pkr-pt:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .pk-lv>div{cursor:pointer;border-radius:10px;transition:background .15s}.pk-lv>div:hover{background:rgba(99,102,241,.14)}
+
+#jvPickLog .pkbt-topbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+#jvPickLog .pkbt-topbar button{flex:1 1 auto;min-height:46px;padding:10px 16px;border-radius:999px;font-weight:700;border:1px solid var(--line);background:var(--panel);cursor:pointer;color:var(--text)}
+#jvPickLog .pkbt-topbar button.pri{background:linear-gradient(135deg,var(--brand),var(--brand-2));border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.4)}
 </style>
 <script id="scrJV" src="/static/journal.js?v=e87335c2"></script>
-<script src="/static/btlab.js?v=0bfac9a7"></script>
+<script src="/static/btlab.js?v=b8a5775f"></script>
 <script src="/static/simmode.js?v=b6a81221"></script>
 <script src="/static/ipo.js?v=80226359"></script>
 <script src="/static/godseye.js?v=f79e1d58"></script>
@@ -1851,7 +1855,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=76f19f92',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=91127aa9',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -3736,7 +3740,7 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
   const bar=`<div class="pkl-bar pkbt-bar"><div class="seg pkl-f">${chip('out','ALL','All',base.length)}${chip('out','WIN','Targets',c.win)}${chip('out','LOSS','Stops',c.loss)}${chip('out','MIXED','Target then stop',c.mixed)}${chip('out','NONE','No level',c.open)}</div>
     <div class="seg pkl-f">${chip('kind','ALL','All markets')}${chip('kind','index','Index')}${chip('kind','stock','Stock')}</div>
     <select class="inp" data-pkbtsel="ind" aria-label="Indicator"><option value="ALL">All indicators</option>${inds.map(k=>`<option value="${esc(k)}" ${F.ind===k?'selected':''}>${esc(D.names[k]||k)}</option>`).join('')}</select>
-    <select class="inp" data-pkbtsel="yr" aria-label="Year"><option value="ALL">All years</option>${yrs.map(y=>`<option value="${y}" ${F.yr===y?'selected':''}>${y}</option>`).join('')}</select>${dirty?'<button type="button" class="pkl-reset" data-pkbtreset="1">↺ Reset filters</button>':''}</div>`;
+    <select class="inp" data-pkbtsel="yr" aria-label="Year"><option value="ALL">All years</option>${yrs.map(y=>`<option value="${y}" ${F.yr===y?'selected':''}>${y}</option>`).join('')}</select></div>`;
   const tbl=`<details class="pkbt-tbl"><summary>Per indicator: best stop and exit, judged on the last 30 % and against a coin flip</summary><div class="tbl-wrap"><table class="pkbt-t"><thead><tr><th>Indicator</th><th>Stop · exit</th><th class="num">Trades</th><th class="num">PF</th><th class="num">Last 30 % PF</th><th class="num">Coin flip PF</th><th>Verdict</th></tr></thead><tbody>${(D.summary||[]).map(r=>`<tr><td><b>${esc(r.indicator)}</b></td><td>${r.stop_ATR} ATR · ${esc(r.exit)}</td><td class="num">${r.n}</td><td class="num">${r.pf}</td><td class="num">${r.oosPF} <small>(${r.oosN})</small></td><td class="num">${r.randomPF}</td><td><span class="pkbt-v ${r.verdict==='EDGE'?'up':r.verdict==='maybe'?'gold':'down'}">${esc(r.verdict)}</span></td></tr>`).join('')}</tbody></table></div><p class="muted" style="font-size:11.5px;margin:6px 2px 0">Cash / futures model (no option decay), 0.1 % cost, stop = k × ATR(14), entry at the next open, 10 sessions at most. The first 70 % of an indicator's trades choose its stop and exit, the last 30 % judge it. EDGE needs a last-30 % PF of 1.2 or more and a clear lead over the coin flip.</p></details>`;
   const pg=App.pkBtPg||(App.pkBtPg={n:10,p:0}),total=all.length,per=Math.min(pg.n||10,100)/*pkbt-cap*/,pages=Math.max(1,Math.ceil(total/per));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const lo=pg.p*per,view=all.slice(lo,lo+per);
@@ -3744,8 +3748,10 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
   let lastMo='',body='';view.forEach((r,i)=>{if(r.mo!==lastMo){lastMo=r.mo;const x=new Date(r.mo+'-15T12:00:00Z'),mrows=all.filter(q=>q.mo===r.mo),w=mrows.filter(q=>pkOutcome(q)==='win').length,l=mrows.filter(q=>q.h.sl).length;
       body+=`<div class="pkg-h"><h4>${esc(x.toLocaleDateString('en-IN',{month:'long',year:'numeric',timeZone:'UTC'}))}</h4><div class="pkg-sum"><span>${mrows.length} trades</span><span class="up">✅ ${w} target</span><span class="down">🚫 ${l} stop</span></div></div>`}
     body+=pkRowHTML(r,lo+i,KIND)});
-  return head+aft+tbl+bar+pager+(view.length?`<section class="pkg">${body}</section>`:'<div class="empty">Nothing matches these filters.</div>')+pager}
-document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp],[data-pkbtreset]');if(!b)return;
+  const topbar=`<div class="pkbt-topbar"><button type="button" data-pkbtlab="1" class="pri">+ Add my own strategy</button><button type="button" data-pkbtreset="1">↺ Reset</button></div>`;
+  return topbar+head+aft+tbl+bar+pager+(view.length?`<section class="pkg">${body}</section>`:'<div class="empty">Nothing matches these filters.</div>')+pager}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp],[data-pkbtreset],[data-pkbtlab]');if(!b)return;
+  if(b.dataset.pkbtlab!==undefined){const t=document.querySelector('.jv-tabs button[data-k="btlab"]');if(t){t.click();setTimeout(()=>{window.BTLab&&window.BTLab.startNew&&window.BTLab.startNew()},450)}return}
   if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};pkLogRefresh();return}
   if(b.dataset.pklmode){App.pkLogMode=b.dataset.pklmode==='bt'?'bt':'live';if(b.dataset.retry&&App.pkBt)App.pkBt.err=null;pkLogRefresh();return}
   const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),pg=App.pkBtPg||(App.pkBtPg={n:10,p:0});
