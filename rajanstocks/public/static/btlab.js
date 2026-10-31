@@ -144,7 +144,7 @@
         if (!items.length) return 'No strategy found in that text. Use a heading, then "Buy when:" with bullet lines (see the help below).';
       }
     }
-    items.slice(0, 20).forEach(o => { const r = cleanSpec(o); if (r.spec) ok.push(r.spec); else bad.push(r.err); });
+    items.slice(0, 200).forEach(o => { const r = cleanSpec(o); if (r.spec) ok.push(r.spec); else bad.push(r.err); });
     ok.forEach(sp => { let nm = sp.name, k = 2; while (S.list.some(x => x.name === nm)) nm = sp.name + ' (' + (k++) + ')'; sp.name = nm; S.list.push(sp); S.run.sid = sp.id; });
     persist(); return (ok.length ? 'Imported ' + ok.length + ' strateg' + (ok.length > 1 ? 'ies' : 'y') + ': ' + ok.map(x => '"' + x.name + '"').join(', ') + '. They are STOPPED until you press Start. Check each one before you trust the result. ' : '') + notes.join(' ') + (bad.length ? ' Skipped (' + bad.length + '): ' + bad.join('; ') + '.' : '');
   }
@@ -445,7 +445,8 @@
   function builderHTML() {
     const e = S.edit; if (!e) return '';
     const both = e.side === 'both', exists = S.list.some(x => x.id === e.id), adv = e.side === 'short';
-    return `<div class="btl-sec" id="btlBuilder"><div class="btl-st"><i>✎</i>${exists ? 'Edit your strategy' : 'Make your own strategy'}</div>
+    const tplSel = `<label>Start from a ready-made strategy<select data-tpl><option value="">Choose one to copy…</option>${Object.keys(TEMPLATES).map(k => `<option value="${k}">${esc(TEMPLATES[k].name)}</option>`).join('')}</select></label><div style="height:10px"></div>`;
+    return `<div class="btl-sub" style="margin-top:0">${exists ? 'Editing your strategy' : 'Making your own strategy'}</div>${tplSel}
       <label>Name<input data-f="name" value="${esc(e.name)}" maxlength="60"></label>
       <div class="btl-sub">Buy when ALL of these are true</div>${chipsHTML('long', e.long)}${e.long.length ? '' : '<div class="muted" style="margin-bottom:6px">Nothing yet: add at least one condition.</div>'}${addSelect('long')}
       <label class="btl-chk" style="margin-top:10px"><label style="flex-direction:row"><input type="checkbox" data-alsosell ${both ? 'checked' : ''} ${adv ? 'disabled' : ''}>Also sell (buy puts / short) when the opposite happens</label></label>
@@ -462,20 +463,24 @@
           ${e.target.on ? `<label>Target × the risk<input data-f="target.r" type="number" inputmode="decimal" step="0.5" min="0.5" max="20" value="${esc(e.target.r)}"></label>` : ''}
           ${e.trail.on ? `<label>Trail starts after +R<input data-f="trail.start" type="number" inputmode="decimal" step="0.5" min="0.5" max="10" value="${esc(e.trail.start)}"></label><label>Trails behind by R<input data-f="trail.dist" type="number" inputmode="decimal" step="0.25" min="0.25" max="10" value="${esc(e.trail.dist)}"></label>` : ''}</div>
         <div style="height:10px"></div>${ruleBlock('Buy rules', 'long', e.long)}${e.side !== 'long' ? ruleBlock('Sell rules', 'short', e.short) : ''}${ruleBlock('Exit rules', 'exitIf', e.exitIf || [])}</div></details>
-      <div class="btl-row" style="margin-top:14px"><button type="button" class="btl-b pri" data-save>Save strategy</button><button type="button" class="btl-b" data-resetform>↺ Reset</button><button type="button" class="btl-b" data-cancel>Cancel</button></div></div>`;
+      <div class="btl-row" style="margin-top:14px"><button type="button" class="btl-b pri" data-save>Save strategy</button><button type="button" class="btl-b" data-resetform>↺ Reset</button><button type="button" class="btl-b" data-cancel>Cancel</button></div>`;
   }
 
   function chooseHTML() {
     const sel = S.run.sid;
-    const card = (id, title, desc, sp) => {
-      const on = sel === id;
-      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(id)}"><b>${esc(title)}${sp ? `<span class="btl-pill ${sp.follow ? 'on' : 'off'}">${sp.follow ? 'STARTED' : 'STOPPED'}</span>` : ''}</b><span>${esc(desc)}</span></button>
-        ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(id)}">Edit</button><button type="button" class="btl-b sm ${sp.follow ? 'stop' : 'go'}" data-toggle="${esc(id)}">${sp.follow ? '■ Stop' : '▶ Start'}</button><button type="button" class="btl-b sm" data-export="${esc(id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(id)}">Customize a copy</button>`}</div>` : ''}</div>`;
+    if (S.edit) return `<div class="btl-sec" id="btlBuilder"><div class="btl-st"><i>1</i>Your strategy</div>${builderHTML()}</div>`;
+    const mine = S.list.map(sp => ({ id: sp.id, title: sp.name, desc: short(sp), sp })), ready = Object.keys(TEMPLATES).slice(0, 2).map(k => ({ id: 'tpl:' + k, title: TEMPLATES[k].name, desc: TEMPLATES[k].desc || short(TEMPLATES[k]), sp: null }));
+    mine.sort((x, y) => (y.id === sel) - (x.id === sel));              // the selected strategy is always first
+    const per = [5, 10, 25, 50].includes(S.lper) ? S.lper : 5, pages = Math.max(1, Math.ceil(mine.length / per)), pgn = Math.min(S.lpg || 0, pages - 1);
+    const shown = mine.slice(pgn * per, pgn * per + per).concat(sel && sel.startsWith('tpl:') && !ready.some(r => r.id === sel) ? [] : [], ready);
+    const pager = mine.length > per || mine.length > 5 ? `<div class="btl-pg"><button type="button" class="btl-b sm" data-lpg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Prev</button><span class="muted">${pgn * per + 1}–${Math.min(mine.length, pgn * per + per)} of ${mine.length}</span><button type="button" class="btl-b sm" data-lpg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Next ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-lper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>` : '';
+    const card = it => {
+      const on = sel === it.id, sp = it.sp;
+      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill ${sp.follow ? 'on' : 'off'}">${sp.follow ? 'STARTED' : 'STOPPED'}</span>` : '<span class="btl-pill off">READY-MADE</span>'}</b><span>${esc(it.desc)}</span></button>
+        ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.follow ? 'stop' : 'go'}" data-toggle="${esc(it.id)}">${sp.follow ? '■ Stop' : '▶ Start'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
     };
-    return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose a strategy</div>
-      ${S.list.length ? `<div class="btl-sub" style="margin-top:0">My strategies</div><div class="btl-cards">${S.list.map(sp => card(sp.id, sp.name, short(sp), sp)).join('')}</div>` : ''}
-      <div class="btl-sub" ${S.list.length ? '' : 'style="margin-top:0"'}>Ready-made</div><div class="btl-cards">${Object.keys(TEMPLATES).map(k => card('tpl:' + k, TEMPLATES[k].name, TEMPLATES[k].desc || short(TEMPLATES[k]), null)).join('')}</div>
-      <div class="muted" style="font-size:13px;margin-top:12px">Want your own? Press <b>+ Add my own strategy</b> or <b>⬆ Upload a file</b> (.json or .md) at the top.</div></div>`;
+    return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose or build your strategy</div><div class="btl-cards">${shown.map(card).join('')}</div>${pager}
+      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button></div></div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
@@ -553,10 +558,10 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.6</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.9</span></div></div></div>
       <div class="btl-row btl-bar" style="margin:0 0 12px"><button type="button" class="btl-b pri" data-new>+ Add my own strategy</button><button type="button" class="btl-b" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b" data-resetall>↺ Reset strategy</button></div>
       <div class="btl-note">🛡️ Test only. Nothing here touches your live auto trader or your journal.${S.msg ? '<br>' + esc(S.msg) : ''}</div>
-      ${builderHTML()}${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : (S.res ? resultsHTML() : zeroHTML())}
+      ${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : (S.res ? resultsHTML() : zeroHTML())}
       <details class="btl-more" data-k="sig"><summary>Started strategies: tomorrow's signals</summary><div>${sigHTML()}</div></details>
       <details class="btl-more" data-k="imp"><summary>Upload or paste a strategy (.json or .md)</summary><div>${importHTML()}</div></details></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
@@ -574,6 +579,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (b.hasAttribute('data-upload')) { const f = S.el.querySelector('[data-file]'); f && f.click(); return; }
     if (b.hasAttribute('data-example')) { const ta = S.el.querySelector('[data-paste]'); if (ta) ta.value = JSON.stringify(EXAMPLE, null, 2); return; }
     if (b.hasAttribute('data-import-paste')) { const ta = S.el.querySelector('[data-paste]'); S.msg = importText(ta ? ta.value : '') || 'Nothing to import.'; paint(); return; }
+    if (b.hasAttribute('data-lpg')) { S.lpg = Math.max(0, (S.lpg || 0) + (+b.getAttribute('data-lpg'))); paint(); return; }
     if (d.pick) { S.cleared = false; S.run.sid = d.pick; persist(); paint(); return; }
     if (d.custom) { const t = specOf(d.custom); if (t) { const c = clone(t); c.id = uid(); c.name = t.name + ' (my copy)'; c.follow = false; startEdit(c); } return; }
     if (d.edit) { const sp = S.list.find(x => x.id === d.edit); if (sp) startEdit(clone(sp)); return; }
@@ -614,6 +620,8 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     const t = ev.target, e = S.edit;
     if (t.matches('[data-file]')) { const f = t.files && t.files[0]; if (!f) return; if (f.size > 300000) { S.msg = 'That file is too large for a strategy (max 300 KB).'; paint(); return; }
       f.text().then(txt => { S.msg = importText(txt); t.value = ''; paint(); const go = S.el.querySelector('[data-run-go]'); if (go && !go.disabled && /^Imported/.test(S.msg)) go.scrollIntoView({ behavior: 'smooth', block: 'center' }); else window.scrollTo({ top: S.el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' }); }).catch(() => { S.msg = 'Could not read that file.'; paint(); }); return; }
+    if (t.matches('[data-lper]')) { S.lper = +t.value; S.lpg = 0; paint(); return; }
+    if (t.matches('[data-tpl]') && e) { const tp = TEMPLATES[t.value]; if (tp) { S.edit = Object.assign(clone(tp), { id: e.id, follow: e.follow, created: e.created }); paint(); } return; }
     if (t.matches('[data-cadd]') && e) { const o = SIMPLE[+t.value]; if (o) { listFor(e, t.dataset.cadd).push(o.mk()); syncSell(e); paint(); } return; }
     if (t.matches('[data-alsosell]') && e) { e.side = t.checked ? 'both' : 'long'; if (t.checked) e.short = mirrorRules(e.long); else e.short = []; paint(); return; }
     if (t.matches('[data-sf]') && e) { const k = t.dataset.sf, v = parseFloat(t.value);
@@ -631,5 +639,5 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (!S.run.sid && !S.cleared) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
     paint();
   }
-  window.BTLab = { mount, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
+  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
 })();
