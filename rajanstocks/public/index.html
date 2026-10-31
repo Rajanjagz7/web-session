@@ -3723,7 +3723,7 @@ function pkBtPF(a){const w=a.filter(x=>x>0).reduce((p,c)=>p+c,0),l=-a.filter(x=>
 function pkBtHTML(){
   if(App.pkBtCleared===undefined){try{App.pkBtCleared=localStorage.getItem('pkbt-cleared')==='1'}catch(e){App.pkBtCleared=false}}
   if(App.pkBtCleared){const z=(l)=>`<div class="pkl-tile"><i class="pkl-ti">·</i><b>0</b><small>${l}</small></div>`;
-    return`<div class="pkbt-topbar"><button type="button" data-pkbtlab="1" class="pri">+ Add my own strategy</button><button type="button" data-pkbtshow="1">Show the 4-year backtest again</button></div><div class="pkl-stats">${z('Trades followed')}${z('Reached T1')}${z('Stop hit')}${z('Reached T3+')}</div><div class="empty">Cleared. Nothing to show: 0 trades. Press "+ Add my own strategy" to test your own, or "Show the 4-year backtest again".</div>`}
+    return`<div class="pkbt-topbar"><button type="button" data-pkbtlab="1" class="pri">+ Add my own strategy</button></div><div class="pkl-stats">${z('Trades followed')}${z('Reached T1')}${z('Stop hit')}${z('Reached T3+')}</div><div class="empty">Cleared. Nothing to show: 0 trades. Press "+ Add my own strategy" to test your own.</div>`}
   pkBtLoad();const B=App.pkBt;
   if(B.err)return`<div class="empty">The backtest data could not be loaded (${esc(B.err)}). <button class="btn-xs" data-pklmode="bt" data-retry="1">Retry</button></div>`;
   if(!B.d)return`<div class="pkl-skel"><i></i><i></i><i></i><p class="muted">Loading the 4-year backtest…</p></div>`;
