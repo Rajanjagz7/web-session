@@ -953,6 +953,49 @@ def shadow_record_premium(st, signals, now):
     del sh[:-SHADOW_MAX]
 
 
+_CUSTOM_DONE = {}
+
+
+def custom_record(st, now):
+    """The user's own strategies (Backtest lab -> 'Paper-trade daily'): once per day, after the open, each switched-on strategy is run on the daily
+    candles that closed yesterday; its signals go to the PAPER log only (shadow_record, key 'my:<id>') - no order is ever placed from here."""
+    specs = (st.get("cfg") or {}).get("customStrategies") or []
+    if not specs or _mins(now) < 9 * 60 + 20:
+        return
+    today = now.date().isoformat()
+    tag = (today, tuple(sorted(x["id"] for x in specs)))
+    if _CUSTOM_DONE.get("k") == tag:
+        return
+    _CUSTOM_DONE["k"] = tag
+    import backtest as bt
+    import bar_source
+    import custom_strategies as cs
+    from concurrent.futures import ThreadPoolExecutor
+    syms = bt.INDEX_SYMS + [x for x in bt.STOCK_SYMS if bar_source.supports(x)]
+
+    def load(sym):
+        try:
+            return sym, [b for b in bar_source.daily_bars(sym, 420) if str(b["date"])[:10] < today]
+        except Exception:
+            return sym, []
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        data = dict(ex.map(load, syms, timeout=60))
+    cands, names = [], {}
+    for sp in specs:
+        names["my:" + sp["id"]] = sp["name"]
+        for sym, bars in data.items():
+            sg = cs.signal(sp, bars)
+            if sg:
+                d = 1 if sg["side"] == "BUY" else -1
+                cands.append({"key": "my:" + sp["id"], "sym": sym, "side": sg["side"], "indStop": sg["close"] - d * sg["risk"]})
+    shadow_record(st, cands, now)
+    for x in st.get("shadow", []):
+        if x.get("key") in names:
+            x["name"] = names[x["key"]]
+    st["log"].append({"at": now.isoformat(), "msg": f"own strategies (paper only): {len(specs)} checked on {len(data)} symbols, {len(cands)} signal(s)"})
+    st["_dirty"] = True
+
+
 def shadow_resolve(st, now):
     """Close shadow signals on their stop / 1.5R target (live underlying price); anything still open is closed at the 15:25 mark at that day's last price."""
     opens = [x for x in st.get("shadow", []) if x["status"] == "OPEN"]
@@ -1964,6 +2007,10 @@ def _run_cycle(now, force, dry):
                 shadow_resolve(st, now)
             except Exception as e:
                 st["log"].append({"at": now.isoformat(), "msg": f"shadow check failed: {str(e)[:80]}"})
+            try:
+                custom_record(st, now)
+            except Exception as e:
+                st["log"].append({"at": now.isoformat(), "msg": f"own-strategy paper check failed: {str(e)[:80]}"})
         today = now.date().isoformat()
         in_window = _hm(cfg["windowStart"]) <= _mins(now) <= _hm(cfg["lastEntry"])
         todays = [t for t in st["trades"] if t["date"] == today]
@@ -2338,6 +2385,7 @@ class Cfg(BaseModel):
     stockOnly: bool | None = None
     stockTrader: bool | None = None
     entryGate: str | None = None
+    customStrategies: list | None = None                            # the lab strategies switched on for daily PAPER signals (whitelisted by custom_strategies.clean_all)
     rsi2Shorts: bool | None = None
     ibsShorts: bool | None = None
     capital: float | None = None
@@ -2663,6 +2711,9 @@ def config(c: Cfg):
             if c.entryGate not in ("off", "shadow", "on"):
                 raise HTTPException(400, "entryGate must be 'off', 'shadow' or 'on'")
             st["cfg"]["entryGate"] = c.entryGate
+        if c.customStrategies is not None:                              # paper only: these never place an order
+            import custom_strategies
+            st["cfg"]["customStrategies"] = custom_strategies.clean_all(c.customStrategies)
         if c.capital is not None:
             if c.capital < 100000:
                 raise HTTPException(400, "capital must be at least 1,00,000")

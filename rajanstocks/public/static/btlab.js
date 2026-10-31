@@ -315,6 +315,11 @@
     res: null, busy: false, prog: '', msg: '', pg: {}, flt: {}, tab: 'idx', sig: null, openId: null };
   const persist = () => { save(LS, S.list); save(LSUI, { years: S.run.years, markets: S.run.markets, capital: S.run.capital, riskPct: S.run.riskPct, maxOpen: S.run.maxOpen, extra: S.run.extra, sid: S.run.sid }); };
 
+  /* ---------------- daily PAPER trading on the server (never places an order) ---------------- */
+  const loadPaper = () => fetch('/api/auto/status', { cache: 'no-cache' }).then(r => r.json()).then(j => { const m = j && j.shadow && j.shadow.summary; S.paperSum = Array.isArray(m) ? Object.fromEntries(m.map(x => [x.key, x])) : (m || {}); if (S.el) paint(); }).catch(() => { });
+  const syncPaper = () => fetch('/api/auto/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customStrategies: S.list.filter(x => x.paper).map(x => ({ id: x.id, name: x.name, side: x.side, long: x.long, short: x.short, stop: x.stop })) }) })
+    .then(r => { if (!r.ok) throw new Error(r.status); S.paperErr = ''; return loadPaper(); }).catch(() => { S.paperErr = 'Could not reach the server, so the daily paper check was not updated. Press the button again.'; if (S.el) paint(); });
+
   /* ---------------- run ---------------- */
   async function runBacktest() {
     const sp = specOf(S.run.sid); if (!sp) { S.msg = 'Pick a strategy first.'; paint(); return; }
@@ -428,6 +433,7 @@
 .btl-tr .a{font-weight:700;overflow-wrap:anywhere}.btl-tr .b{font-weight:800;text-align:right;white-space:nowrap}.btl-tr .c{grid-column:1/-1;font-size:12.5px;color:var(--text-2);overflow-wrap:anywhere}
 .up{color:var(--up,#22c55e)}.down{color:var(--down,#ef4444)}.btl-pg{display:flex;gap:8px;align-items:center;justify-content:center;margin:8px 0;flex-wrap:wrap}
 .btl-sig{width:100%;border-collapse:collapse;font-size:13px}.btl-sig td,.btl-sig th{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+.btl-prow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}.btl-prow span{color:var(--text-2)}.btl-warn{margin-top:8px;color:#f59e0b;font-size:13px}
 .btl-skel{height:70px;border-radius:14px;background:linear-gradient(90deg,var(--panel-2) 25%,var(--panel) 50%,var(--panel-2) 75%);background-size:200% 100%;animation:btlsk 1.2s linear infinite;margin:8px 0}@keyframes btlsk{to{background-position:-200% 0}}
 .btl pre{white-space:pre-wrap;font-size:12px;margin:6px 0;padding:8px;border-radius:10px;background:var(--panel-2)}.btl code{font-size:11.5px;background:var(--panel-2);padding:1px 5px;border-radius:5px}
 @media (max-width:720px){.btl-cards{grid-template-columns:1fr}.btl-top .btl-row{width:100%}.btl-top .btl-b{flex:1 1 0}.btl-sec{padding:14px}.btl-verdict .vb b{font-size:27px}}`;
@@ -466,6 +472,12 @@
       <div class="btl-row" style="margin-top:14px"><button type="button" class="btl-b pri" data-save>Save strategy</button><button type="button" class="btl-b" data-resetform>↺ Reset</button><button type="button" class="btl-b" data-cancel>Cancel</button></div>`;
   }
 
+  function paperHTML() {
+    const on = S.list.filter(x => x.paper); if (!on.length && !S.paperErr) return '';
+    const row = sp => { const m = (S.paperSum || {})['my:' + sp.id]; return `<div class="btl-prow"><b>${esc(sp.name)}</b><span>${m ? `${m.n} signal${m.n === 1 ? '' : 's'} · ${m.open} open${m.n - m.open ? ` · won ${Math.round(100 * (m.winRate || 0))}% · avg ${m.avgR > 0 ? '+' : ''}${m.avgR}R` : ''}` : 'no signals yet'}</span></div>`; };
+    return `<div class="btl-paper"><div class="btl-sub" style="margin-top:14px">📅 Paper trading each day</div>${on.map(row).join('')}${S.paperErr ? `<div class="btl-warn">${esc(S.paperErr)}</div>` : ''}
+      <div class="muted" style="font-size:12.5px;margin-top:6px">Paper only: no order is ever placed. Each trading morning after 9:20 your strategy is checked on yesterday's closing candles, and any signal is logged as a pretend trade (stop from your rules, first target 1.5R) and tracked to its stop or 3:25 pm. Your real auto trade is not touched.</div></div>`;
+  }
   function chooseHTML() {
     const sel = S.run.sid;
     if (S.edit) return `<div class="btl-sec" id="btlBuilder"><div class="btl-st"><i>1</i>Your strategy</div>${builderHTML()}</div>`;
@@ -476,11 +488,11 @@
     const pager = mine.length > per || mine.length > 5 ? `<div class="btl-pg"><button type="button" class="btl-b sm" data-lpg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Prev</button><span class="muted">${pgn * per + 1}–${Math.min(mine.length, pgn * per + per)} of ${mine.length}</span><button type="button" class="btl-b sm" data-lpg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Next ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-lper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>` : '';
     const card = it => {
       const on = sel === it.id, sp = it.sp;
-      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill ${sp.follow ? 'on' : 'off'}">${sp.follow ? 'STARTED' : 'STOPPED'}</span>` : '<span class="btl-pill off">READY-MADE</span>'}</b><span>${esc(it.desc)}</span></button>
-        ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.follow ? 'stop' : 'go'}" data-toggle="${esc(it.id)}">${sp.follow ? '■ Stop' : '▶ Start'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
+      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill ${sp.follow ? 'on' : 'off'}">${sp.follow ? 'STARTED' : 'STOPPED'}</span>${sp.paper ? '<span class="btl-pill on">PAPER DAILY</span>' : ''}` : '<span class="btl-pill off">READY-MADE</span>'}</b><span>${esc(it.desc)}</span></button>
+        ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.follow ? 'stop' : 'go'}" data-toggle="${esc(it.id)}">${sp.follow ? '■ Stop' : '▶ Start'}</button><button type="button" class="btl-b sm ${sp.paper ? 'stop' : 'go'}" data-paper="${esc(it.id)}">${sp.paper ? '■ Stop paper trading' : '📅 Paper-trade daily'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
     };
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose or build your strategy</div><div class="btl-cards">${shown.map(card).join('')}</div>${pager}
-      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button></div></div>`;
+      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button></div>${paperHTML()}</div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
@@ -558,7 +570,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.10</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.11</span></div></div></div>
       <div class="btl-row btl-bar" style="margin:0 0 12px"><button type="button" class="btl-b pri" data-new>+ Add my own strategy</button><button type="button" class="btl-b" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b" data-resetall>↺ Reset strategy</button></div>
       <div class="btl-note">🛡️ Test only. Nothing here touches your live auto trader or your journal.${S.msg ? '<br>' + esc(S.msg) : ''}</div>
       ${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : (S.res ? resultsHTML() : zeroHTML())}
@@ -583,8 +595,9 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (d.pick) { S.cleared = false; S.run.sid = d.pick; persist(); paint(); return; }
     if (d.custom) { const t = specOf(d.custom); if (t) { const c = clone(t); c.id = uid(); c.name = t.name + ' (my copy)'; c.follow = false; startEdit(c); } return; }
     if (d.edit) { const sp = S.list.find(x => x.id === d.edit); if (sp) startEdit(clone(sp)); return; }
+    if (d.paper) { const sp = S.list.find(x => x.id === d.paper); if (sp) { sp.paper = !sp.paper; S.msg = sp.paper ? '"' + sp.name + '" will be paper-traded every trading day (no real orders). Results show below once it has signals.' : '"' + sp.name + '" paper trading stopped.'; persist(); paint(); syncPaper(); } return; }
     if (d.toggle) { const sp = S.list.find(x => x.id === d.toggle); if (sp) { sp.follow = !sp.follow; S.msg = sp.follow ? '"' + sp.name + '" started: it is included in the signal check.' : '"' + sp.name + '" stopped.'; persist(); paint(); } return; }
-    if (d.del) { const sp = S.list.find(x => x.id === d.del); if (sp && confirm('Remove "' + sp.name + '"? This cannot be undone.')) { S.list = S.list.filter(x => x.id !== sp.id); if (S.run.sid === sp.id) S.run.sid = null; if (S.res && S.res.sid === sp.id) S.res = null; persist(); S.msg = 'Removed.'; paint(); } return; }
+    if (d.del) { const sp = S.list.find(x => x.id === d.del); if (sp && confirm('Remove "' + sp.name + '"? This cannot be undone.')) { S.list = S.list.filter(x => x.id !== sp.id); if (S.run.sid === sp.id) S.run.sid = null; if (S.res && S.res.sid === sp.id) S.res = null; persist(); S.msg = 'Removed.'; paint(); if (sp.paper) syncPaper(); } return; }
     if (d.export) { const sp = S.list.find(x => x.id === d.export); if (!sp) return; const out = clone(sp); delete out.id; delete out.created; delete out.follow; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })); a.download = 'strategy_' + sp.name.replace(/\W+/g, '_') + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); return; }
     if (b.hasAttribute('data-new')) { startEdit(blank()); return; }
     if (b.hasAttribute('data-cancel')) { S.edit = null; paint(); return; }
@@ -597,7 +610,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
       e.maxHold = Math.min(120, Math.max(1, Math.round(+e.maxHold) || 10)); e.stop.k = Math.min(10, Math.max(0.25, +e.stop.k || 1.5)); e.stop.pct = Math.min(30, Math.max(0.25, +e.stop.pct || 2));
       e.target.r = Math.min(20, Math.max(0.5, +e.target.r || 2)); e.trail.start = Math.min(10, Math.max(0.5, +e.trail.start || 1)); e.trail.dist = Math.min(10, Math.max(0.25, +e.trail.dist || 1.5));
       const i = S.list.findIndex(x => x.id === e.id); if (i >= 0) S.list[i] = clone(e); else S.list.push(clone(e));
-      S.run.sid = e.id; S.edit = null; S.msg = 'Saved "' + e.name + '". It stays on this device for your next visit.'; persist(); paint(); return;
+      S.run.sid = e.id; S.edit = null; S.msg = 'Saved "' + e.name + '". It stays on this device for your next visit.'; persist(); paint(); if (e.paper) syncPaper(); return;
     }
     if (b.hasAttribute('data-radd') && e) { listFor(e, d.radd).push(newRule('ma_rel')); syncSell(e); paint(); return; }
     if (b.hasAttribute('data-rdel') && e) { const r = b.closest('[data-rs]'); listFor(e, r.dataset.rs).splice(+r.dataset.ri, 1); syncSell(e); paint(); return; }
@@ -637,7 +650,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function mount(el) {
     if (S.el !== el) { S.el = el; el.addEventListener('click', onClick); el.addEventListener('change', onChange); }
     if (!S.run.sid && !S.cleared) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
-    paint();
+    paint(); if (S.list.some(x => x.paper)) loadPaper();
   }
-  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
+  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); syncPaper(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
 })();
