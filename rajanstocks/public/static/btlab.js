@@ -496,7 +496,7 @@
         ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.paper ? 'stop' : 'go'}" data-paper="${esc(it.id)}">${sp.paper ? '■ Stop paper trading' : '📅 Paper-trade daily'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
     };
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose or build your strategy</div><div class="btl-cards">${shown.map(card).join('')}</div>${pager}
-      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button></div>${paperHTML()}</div>`;
+      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button><button type="button" class="btl-b sm" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b sm" data-resetall>↺ Reset</button></div>${paperHTML()}</div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
@@ -589,8 +589,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.12</span></div></div></div>
-      <div class="btl-row btl-bar" style="margin:0 0 12px"><button type="button" class="btl-b pri" data-new>+ Add my own strategy</button><button type="button" class="btl-b" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b" data-resetall>↺ Reset strategy</button></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.13</span></div></div></div>
       ${bannerHTML()}
       ${chooseHTML()}${runHTML()}${S.busy ? '' : (S.res ? resultsHTML() : notTestedHTML())}</div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
