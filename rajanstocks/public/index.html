@@ -934,9 +934,14 @@ button.pkc.act{box-shadow:0 0 0 2px var(--brand)}
 
 .pkc-det b{display:block;font-size:12.5px;margin-bottom:2px}
 .pkc-tr{margin-top:7px;padding-top:7px;border-top:1px dashed rgba(99,102,241,.45);color:var(--text-2);font-size:12px;line-height:1.55}
+
+button.pkr-pt{padding:0;font:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
+#jvPickLog button.pkr-pt::after{content:'';position:absolute;inset:-13px}
+button.pkr-pt:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.pk-lv>div{cursor:pointer;border-radius:10px;transition:background .15s}.pk-lv>div:hover{background:rgba(99,102,241,.14)}
 </style>
 <script id="scrJV" src="/static/journal.js?v=e87335c2"></script>
-<script src="/static/btlab.js?v=3bbec759"></script>
+<script src="/static/btlab.js?v=0bfac9a7"></script>
 <script src="/static/simmode.js?v=b6a81221"></script>
 <script src="/static/ipo.js?v=80226359"></script>
 <script src="/static/godseye.js?v=f79e1d58"></script>
@@ -1846,7 +1851,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=904110c5',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=76f19f92',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -3517,14 +3522,23 @@ function pkChipsHTML(m,h,hp,cap,x){hp=hp||{};const tmf=m.dm?pkDm:pkTm,dp=m.dp==n
     if(x&&x.best!=null)ln.push('Best price in the trade: '+f(x.best));
     if(m.r2!=null)ln.push(`With a 2R-target exit this trade made ${m.r2>=0?'+':''}${m.r2}R${m.rt!=null?' · with a trailing stop '+(m.rt>=0?'+':'')+m.rt+'R':''} (net of cost)`);
     return ln.join('\n')})();
-  const c=(k,lvl,ts,isSl,key,xx)=>`<button type="button" class="pkc ${ts?(isSl?'sl':'tg'):'off'}${xx?' pkc-x':''}" data-pkdet="${esc(det(k,lvl,ts,isSl,key))}" data-pktr="${esc(TR)}" aria-expanded="false">${k}${ts?' '+(isSl?'🚫':'✅')+(tmf(ts)?' <i>'+tmf(ts)+'</i>':'')+' <i>@ '+f(hp[key]!=null?hp[key]:lvl)+'</i>':' <i>'+f(lvl)+'</i>'}</button>`;
+  const c=(k,lvl,ts,isSl,key,xx)=>`<button type="button" class="pkc ${ts?(isSl?'sl':'tg'):'off'}${xx?' pkc-x':''}" data-lv="${key}" data-pkdet="${esc(det(k,lvl,ts,isSl,key))}" data-pktr="${esc(TR)}" aria-expanded="false">${k}${ts?' '+(isSl?'🚫':'✅')+(tmf(ts)?' <i>'+tmf(ts)+'</i>':'')+' <i>@ '+f(hp[key]!=null?hp[key]:lvl)+'</i>':' <i>'+f(lvl)+'</i>'}</button>`;
   const TT=m.t||[],k=cap&&TT.length>cap?cap:TT.length,more=k<TT.length?`+${TT.length-k} more · T${k+1}${TT.length>k+1?'–T'+TT.length:''}`:'';
   return c('SL',m.sl,h.sl,true,'sl')+TT.map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false,'t'+(i+1),i>=k)).join('')+(more?`<button type="button" class="pkc off pkc-more" data-pkmore="1" data-more="${more}" aria-expanded="false">${more}</button>`:'')}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.pkc[data-pkdet],.pkc[data-pkmore]');if(!b)return;const row=b.closest('.pkc-row');if(!row)return;
   if(b.dataset.pkmore){const o=row.classList.toggle('open');b.textContent=o?'Show fewer targets':b.dataset.more;b.setAttribute('aria-expanded',o);return}
   let d=row.nextElementSibling;if(!d||!d.classList.contains('pkc-det')){d=document.createElement('div');d.className='pkc-det';row.after(d)}
-  const same=b.classList.contains('act');row.querySelectorAll('.pkc.act').forEach(x=>{x.classList.remove('act');x.setAttribute('aria-expanded','false')});
+  delete d.dataset.k;const same=b.classList.contains('act');row.querySelectorAll('.pkc.act').forEach(x=>{x.classList.remove('act');x.setAttribute('aria-expanded','false')});
   if(same){d.remove();return}b.classList.add('act');b.setAttribute('aria-expanded','true');d.innerHTML='<b>'+esc(b.dataset.pkdet)+'</b>'+(b.dataset.pktr?'<div class="pkc-tr">'+esc(b.dataset.pktr).replace(/\n/g,'<br>')+'</div>':'')});
+/* the dots on the level track and the Entry / Stop / Target blocks of a pick card open the same detail as the chips */
+document.addEventListener('click',e=>{const m=e.target.closest&&e.target.closest('.pkr-pt[data-pkmk],.pk-lv>div');if(!m)return;const card=m.closest('.pkr,article.pk');if(!card)return;const row=card.querySelector('.pkc-row');if(!row)return;
+  let k=m.dataset.pkmk;if(!k){const lab=((m.querySelector('small')||{}).textContent||'').trim(),n=lab.match(/target\s*(\d)/i);k=/^entry/i.test(lab)?'in':/^stop/i.test(lab)?'sl':n?'t'+n[1]:''}
+  if(!k)return;
+  if(k!=='in'){const chip=row.querySelector('.pkc[data-lv="'+k+'"]');if(!chip)return;if(chip.classList.contains('pkc-x')&&!row.classList.contains('open')){row.classList.add('open');const mb=row.querySelector('.pkc-more');if(mb){mb.textContent='Show fewer targets';mb.setAttribute('aria-expanded','true')}}chip.click();return}
+  const any=row.querySelector('.pkc[data-pktr]');let d=row.nextElementSibling;if(!d||!d.classList.contains('pkc-det')){d=document.createElement('div');d.className='pkc-det';row.after(d)}
+  row.querySelectorAll('.pkc.act').forEach(x=>{x.classList.remove('act');x.setAttribute('aria-expanded','false')});
+  if(d.dataset.k==='in'){d.remove();return}d.dataset.k='in';const t=m.dataset.pkdet||('Entry '+((m.querySelector('b')||{}).textContent||''));
+  d.innerHTML='<b>'+esc(t)+'</b>'+(any&&any.dataset.pktr?'<div class="pkc-tr">'+esc(any.dataset.pktr).replace(/\n/g,'<br>')+'</div>':'')});
 /* what happened, in order: "SL 🚫 → T1 ✅" and a one-line story */
 function pkStory(m,h,best,hp,post){hp=hp||{};const ev=[];if(h.sl)ev.push(['SL',h.sl]);(m.t||[]).forEach((v,i)=>{if(h['t'+(i+1)])ev.push(['T'+(i+1),h['t'+(i+1)]])});
   if(!ev.length){const T1=(m.t||[])[0],L=m.d==='L',pr=best!=null&&T1&&m.e?((L?best-m.e:m.e-best)/Math.abs(T1-m.e))*100:0;
@@ -3569,7 +3583,7 @@ function pkLiveEval(o){const s=SYM(o.sym),px=s&&s.last>0?s.last:0,T=pkLadder(o);
     if(!L&&px>=lo+rg*0.5&&px>o.entry)rev=`Reversal watch: bounced ${pc(px,lo).toFixed(2)}% off the day low ${f(lo)} — this bearish pick is losing grip, buyers may be taking over`;
     if(L&&px<=hi-rg*0.5&&px<o.entry)rev=`Reversal watch: fell ${Math.abs(pc(px,hi)).toFixed(2)}% from the day high ${f(hi)} — this bullish pick is losing grip, sellers may be taking over`}
   else if(h.sl&&!doneT)rev=L?'The market went against this long idea.':'The market went against this short idea.';
-  return{chips:pkChipsHTML(rec.m,h,rec.hp,Math.max(2,doneT+2)),hint,rev,story:pkStory(rec.m,h,rec.best,rec.hp,rec.post)}}
+  return{chips:pkChipsHTML(rec.m,h,rec.hp,0),hint,rev,story:pkStory(rec.m,h,rec.best,rec.hp,rec.post)}}
 function pkLiveHTML(o){const r=pkLiveEval(o);if(!r)return'';
   return`<div class="pkc-row">${r.chips}</div><div class="pkl-t">${esc(r.hint)}</div>${r.rev?`<div class="pkl-r">${esc(r.rev)}</div>`:''}`}
 function pkMorning(){const a=App.picks&&App.picks.asOf;if(!a)return false;const d=new Date(new Date(a).getTime()+330*60000),m=d.getUTCHours()*60+d.getUTCMinutes();return m>=555&&m<=565}   /* list built in the first minutes of the session */
@@ -3622,7 +3636,7 @@ function pkTopBlock(){const P=App.picks;if(!P||P.error)return'';if(pkTopBlock._k
   const h=l.length?`<div class="pkfs-top"><div class="pkfs-h"><b>🏆 Top 10-15</b><small class="muted">${l.length} strongest with good risk/reward</small></div><div class="pk-grid">${l.map(p=>pickCard(p)).join('')}</div></div>`:`<p class="muted pkfs-e" style="margin:0 0 10px">🏆 Top 10-15: no stock passes the strength + risk/reward filter right now.</p>`;
   pkTopBlock._k=P;pkTopBlock._o=MKT.open;return pkTopBlock._h=h}
 function pkFreshHTML(){const all=pkfLoad().slice().sort((a,b)=>(b.trend-a.trend)||(b.at-a.at)),pg=pkfPg();
-  const n=pg.n||all.length||1,pages=Math.max(1,Math.ceil(all.length/n));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
+  const n=Math.min(pg.n||all.length||1,100),pages=Math.max(1,Math.ceil(all.length/n));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const list=all.slice(pg.p*n,pg.p*n+n);
   const pager=all.length>10?`<div class="pkfs-pg"><span class="pkfs-sz">${PKF_SIZES.map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pkfn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pkfp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${pg.p*n+1}–${Math.min(all.length,pg.p*n+n)} of ${all.length}</small><button data-pkfp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
   return`<section class="card pkfs">${pkTopBlock()}<div class="pkfs-h" style="margin-top:12px"><b>⚡ Fresh picks</b><small class="muted">${all.length?all.length+' reversal setup'+(all.length>1?'s':''):'reversals found live'}</small></div>
@@ -3649,7 +3663,7 @@ function pkTrackHTML(m,h,best,cap){const T=(m.t||[]).filter(v=>v>0).slice(0,cap|
   const vals=pts.map(p=>p[1]),lo=Math.min(...vals),hi=Math.max(...vals),span=(hi-lo)||1,fp=v=>fmtP(v,m.dp==null?2:m.dp);
   const pos=v=>{const x=(v-lo)/span*100;return Math.max(3,Math.min(97,L?x:100-x))};
   const ex=pos(m.e),bx=best!=null?pos(best):ex,fav=bx>=ex;
-  return`<div class="pkr-trk"><div class="pkr-rail"><i class="pkr-fill ${fav?'fav':'adv'}" style="left:${Math.min(ex,bx)}%;width:${Math.abs(bx-ex)}%"></i>${pts.map(([k,v,hk])=>`<span class="pkr-pt ${hk==='sl'?'sl':hk==='in'?'in':'tg'}${hk!=='in'&&h[hk]?' hit':''}" style="left:${pos(v)}%" title="${k} ${fp(v)}"><b>${k}</b><small>${fp(v)}</small></span>`).join('')}</div></div>`}
+  return`<div class="pkr-trk"><div class="pkr-rail"><i class="pkr-fill ${fav?'fav':'adv'}" style="left:${Math.min(ex,bx)}%;width:${Math.abs(bx-ex)}%"></i>${pts.map(([k,v,hk])=>`<button type="button" class="pkr-pt ${hk==='sl'?'sl':hk==='in'?'in':'tg'}${hk!=='in'&&h[hk]?' hit':''}" data-pkmk="${hk}" ${hk==='in'?'data-pkdet="'+esc('Entry '+fp(v)+(m.at>1?' · '+(m.dm?'entered '+pkDm(m.at):'tracked since '+pkTm(m.at)):''))+'"':''} style="left:${pos(v)}%" title="${k} ${fp(v)}: tap for the trade" aria-label="${k} ${fp(v)}"><b>${k}</b><small>${fp(v)}</small></button>`).join('')}</div></div>`}
 /* After the stop: did it try again and reach a target, bounce, or keep going against the trade? (the old logic's question, with numbers) */
 function pkAfterHTML(r){const m=r.m,h=r.h;if(!h.sl)return'';const L=m.d==='L',hp=r.hp||{},slAt=hp.sl!=null?hp.sl:m.sl,fp=v=>fmtP(v,m.dp==null?2:m.dp),T=(m.t||[]).filter(v=>v>0),t1=T[0];
   const risk=Math.abs(m.e-m.sl)||1,later=T.map((v,i)=>[i+1,h['t'+(i+1)]]).filter(x=>x[1]&&h.sl>1&&x[1]>h.sl),s=SYM(m.s),now=m.dm?(r.cl!=null?r.cl:null):(s&&s.last>0?s.last:null);
@@ -3670,7 +3684,7 @@ function pkRowHTML(r,i,KIND){const o=pkOutcome(r),m=r.m,L=m.d==='L',tk=Object.ke
   const badge={win:`✅ Target T${top}${(m.t||[]).length>2?' of '+(m.t||[]).length:''} hit`,loss:'🚫 Stopped out',mixed:`⚖ T${top}, then stop`,open:m.dm?'⌛ No level hit in 10 sessions':'◔ Running'}[o],sym=m.s||'',sub=String(m.l||'').replace(sym,'').trim();
   return`<div class="pkr o-${o}"><div class="pkr-top"><span class="pkr-n">${i+1}</span><div class="pkr-id"><b>${esc(sym||m.l)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>
     <span class="pkr-side ${L?'up':'down'}">${L?'▲ Long · Call':'▼ Short · Put'}</span><span class="pkr-kind">${esc(KIND[m.k]||m.k)}</span><span class="pkr-out ${o}">${badge}</span></div>
-    ${pkTrackHTML(m,r.h,r.best,Math.max(2,top+2))}<div class="pkc-row">${pkChipsHTML(m,r.h,r.hp,Math.max(2,top+2),r)}</div><div class="pkr-s">${esc(pkStory(m,r.h,r.best,r.hp,r.post))}</div>${pkAfterHTML(r)}</div>`}
+    ${pkTrackHTML(m,r.h,r.best,Math.max(2,top+2))}<div class="pkc-row">${pkChipsHTML(m,r.h,r.hp,0,r)}</div><div class="pkr-s">${esc(pkStory(m,r.h,r.best,r.hp,r.post))}</div>${pkAfterHTML(r)}</div>`}
 function pkLogLiveHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLogOK)})).filter(d=>d.rows.length);
   if(!days.length)return`<div class="pkl-empty"><div class="pkl-eh"><span class="pkl-ei">📒</span><b>Nothing tracked yet</b><small>No Reset button here - there is nothing to clear. It appears as soon as the first pick is tracked.</small></div>
    <div class="pkl-stats pkl-ghost"><div class="pkl-tile"><b>0</b><small>Tracked</small></div><div class="pkl-tile up"><b>0</b><small>Target hit</small></div><div class="pkl-tile down"><b>0</b><small>Stopped out</small></div><div class="pkl-tile"><b>0</b><small>No result yet</small></div><div class="pkl-tile gold"><b>–</b><small>Hit rate</small></div></div>
@@ -3683,9 +3697,9 @@ function pkLogLiveHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(p
   const head=`<div class="pkl-stats">${tile(all.length,'Tracked','','📊')}${tile(n.win,'Target hit','up','🎯')}${tile(n.loss,'Stopped out','down','🛑')}${tile(n.open+n.mixed,'No result yet','','⏳')}${tile(rate==null?'–':rate+'%','Hit rate','gold','🏆')}</div>
    <div class="pkl-bar"><div class="seg pkl-f">${chip('ALL','All',all.length)}${chip('WIN','Targets',n.win)}${chip('LOSS','Stops',n.loss)}${chip('OPEN','Open',n.open+n.mixed)}</div><button type="button" class="pkl-reset ${armed?'arm':''}" data-pklreset="1">${armed?'Tap again to confirm':'↺ Reset log'}</button></div>`;
   const keep=r=>{const o=pkOutcome(r);return F==='ALL'||(F==='WIN'&&o==='win')||(F==='LOSS'&&o==='loss')||(F==='OPEN'&&(o==='open'||o==='mixed'))};
-  const pg=App.pkLogPg||(App.pkLogPg={n:10,p:0}),totalShown=days.reduce((a,d)=>a+d.rows.filter(keep).length,0),n_=pg.n||totalShown||1,pages=Math.max(1,Math.ceil(totalShown/n_));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
+  const pg=App.pkLogPg||(App.pkLogPg={n:10,p:0}),totalShown=days.reduce((a,d)=>a+d.rows.filter(keep).length,0),n_=Math.min(pg.n||100,100),pages=Math.max(1,Math.ceil(totalShown/n_));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const lo_=pg.p*n_,hi_=lo_+n_;let gi=0;
-  const pager=totalShown>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,0].map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pklgn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pklgp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo_+1}–${Math.min(totalShown,hi_)} of ${totalShown}</small><button data-pklgp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
+  const pager=totalShown>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,100].map(z=>`<button class="${(pg.n||10)===z?'on':''}" data-pklgn="${z}">${z}</button>`).join('')}</span><span class="pkfs-nav"><button data-pklgp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo_+1}–${Math.min(totalShown,hi_)} of ${totalShown}</small><button data-pklgp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
   return head+pager+days.map((d,di)=>{const rows=d.rows.slice().sort((a,b)=>(Object.keys(b.h).length>0)-(Object.keys(a.h).length>0)||(b.m.at||0)-(a.m.at||0));
     const shown_all=rows.filter(keep),shown=shown_all.filter(()=>{const k=gi++;return k>=lo_&&k<hi_});if(!shown_all.length||!shown.length)return'';
     const tg=rows.filter(r=>pkOutcome(r)==='win').length,sl=rows.filter(r=>pkOutcome(r)==='loss').length;
@@ -3724,9 +3738,9 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
     <select class="inp" data-pkbtsel="ind" aria-label="Indicator"><option value="ALL">All indicators</option>${inds.map(k=>`<option value="${esc(k)}" ${F.ind===k?'selected':''}>${esc(D.names[k]||k)}</option>`).join('')}</select>
     <select class="inp" data-pkbtsel="yr" aria-label="Year"><option value="ALL">All years</option>${yrs.map(y=>`<option value="${y}" ${F.yr===y?'selected':''}>${y}</option>`).join('')}</select>${dirty?'<button type="button" class="pkl-reset" data-pkbtreset="1">↺ Reset filters</button>':''}</div>`;
   const tbl=`<details class="pkbt-tbl"><summary>Per indicator: best stop and exit, judged on the last 30 % and against a coin flip</summary><div class="tbl-wrap"><table class="pkbt-t"><thead><tr><th>Indicator</th><th>Stop · exit</th><th class="num">Trades</th><th class="num">PF</th><th class="num">Last 30 % PF</th><th class="num">Coin flip PF</th><th>Verdict</th></tr></thead><tbody>${(D.summary||[]).map(r=>`<tr><td><b>${esc(r.indicator)}</b></td><td>${r.stop_ATR} ATR · ${esc(r.exit)}</td><td class="num">${r.n}</td><td class="num">${r.pf}</td><td class="num">${r.oosPF} <small>(${r.oosN})</small></td><td class="num">${r.randomPF}</td><td><span class="pkbt-v ${r.verdict==='EDGE'?'up':r.verdict==='maybe'?'gold':'down'}">${esc(r.verdict)}</span></td></tr>`).join('')}</tbody></table></div><p class="muted" style="font-size:11.5px;margin:6px 2px 0">Cash / futures model (no option decay), 0.1 % cost, stop = k × ATR(14), entry at the next open, 10 sessions at most. The first 70 % of an indicator's trades choose its stop and exit, the last 30 % judge it. EDGE needs a last-30 % PF of 1.2 or more and a clear lead over the coin flip.</p></details>`;
-  const pg=App.pkBtPg||(App.pkBtPg={n:10,p:0}),total=all.length,per=pg.n||total||1,pages=Math.max(1,Math.ceil(total/per));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
+  const pg=App.pkBtPg||(App.pkBtPg={n:10,p:0}),total=all.length,per=Math.min(pg.n||10,100)/*pkbt-cap*/,pages=Math.max(1,Math.ceil(total/per));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const lo=pg.p*per,view=all.slice(lo,lo+per);
-  const pager=total>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,0].map(z=>`<button class="${(pg.n||0)===z?'on':''}" data-pkbtn="${z}">${z?z:'All'}</button>`).join('')}</span><span class="pkfs-nav"><button data-pkbtp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo+1}–${Math.min(total,lo+per)} of ${total}</small><button data-pkbtp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
+  const pager=total>10?`<div class="pkfs-pg"><span class="pkfs-sz">${[10,20,50,100].map(z=>`<button class="${(pg.n||10)===z?'on':''}" data-pkbtn="${z}">${z}</button>`).join('')}</span><span class="pkfs-nav"><button data-pkbtp="-1" ${pg.p<=0?'disabled':''} aria-label="Previous page">‹</button><small>${lo+1}–${Math.min(total,lo+per)} of ${total}</small><button data-pkbtp="1" ${pg.p>=pages-1?'disabled':''} aria-label="Next page">›</button></span></div>`:'';
   let lastMo='',body='';view.forEach((r,i)=>{if(r.mo!==lastMo){lastMo=r.mo;const x=new Date(r.mo+'-15T12:00:00Z'),mrows=all.filter(q=>q.mo===r.mo),w=mrows.filter(q=>pkOutcome(q)==='win').length,l=mrows.filter(q=>q.h.sl).length;
       body+=`<div class="pkg-h"><h4>${esc(x.toLocaleDateString('en-IN',{month:'long',year:'numeric',timeZone:'UTC'}))}</h4><div class="pkg-sum"><span>${mrows.length} trades</span><span class="up">✅ ${w} target</span><span class="down">🚫 ${l} stop</span></div></div>`}
     body+=pkRowHTML(r,lo+i,KIND)});
@@ -3735,11 +3749,11 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};pkLogRefresh();return}
   if(b.dataset.pklmode){App.pkLogMode=b.dataset.pklmode==='bt'?'bt':'live';if(b.dataset.retry&&App.pkBt)App.pkBt.err=null;pkLogRefresh();return}
   const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),pg=App.pkBtPg||(App.pkBtPg={n:10,p:0});
-  if(b.dataset.pkbt){const[k,v]=b.dataset.pkbt.split('|');F[k]=v;pg.p=0}else if(b.dataset.pkbtn!==undefined){pg.n=parseInt(b.dataset.pkbtn,10)||0;pg.p=0}else pg.p+=parseInt(b.dataset.pkbtp,10);pkLogRefresh()});
+  if(b.dataset.pkbt){const[k,v]=b.dataset.pkbt.split('|');F[k]=v;pg.p=0}else if(b.dataset.pkbtn!==undefined){pg.n=Math.min(parseInt(b.dataset.pkbtn,10)||10,100);pg.p=0}else pg.p+=parseInt(b.dataset.pkbtp,10);pkLogRefresh()});
 document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('[data-pkbtsel]');if(!s)return;const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'});F[s.dataset.pkbtsel]=s.value;(App.pkBtPg||(App.pkBtPg={n:10,p:0})).p=0;pkLogRefresh()});
 function pkLogRefresh(){const b=document.getElementById('jvPickLog');if(b){const h=pkLogHTML();b._h=h;b.innerHTML=h}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklgn],[data-pklgp]');if(!b)return;const pg=App.pkLogPg||(App.pkLogPg={n:10,p:0});
-  if(b.dataset.pklgn!==undefined){pg.n=parseInt(b.dataset.pklgn,10)||0;pg.p=0}else pg.p+=parseInt(b.dataset.pklgp,10);pkLogRefresh()});
+  if(b.dataset.pklgn!==undefined){pg.n=Math.min(parseInt(b.dataset.pklgn,10)||10,100);pg.p=0}else pg.p+=parseInt(b.dataset.pklgp,10);pkLogRefresh()});
 document.addEventListener('click',e=>{const f=e.target.closest&&e.target.closest('[data-pklf]'),r=e.target.closest&&e.target.closest('[data-pklreset]');
   if(f){App.pkLogF=f.dataset.pklf;if(App.pkLogPg)App.pkLogPg.p=0;pkLogRefresh();return}
   if(r){if(App.pkLogArm&&Date.now()-App.pkLogArm<6000){App.pkLogArm=0;try{const ks=[],hid=[];

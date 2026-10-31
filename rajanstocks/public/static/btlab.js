@@ -475,7 +475,7 @@
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose a strategy</div>
       ${S.list.length ? `<div class="btl-sub" style="margin-top:0">My strategies</div><div class="btl-cards">${S.list.map(sp => card(sp.id, sp.name, short(sp), sp)).join('')}</div>` : ''}
       <div class="btl-sub" ${S.list.length ? '' : 'style="margin-top:0"'}>Ready-made</div><div class="btl-cards">${Object.keys(TEMPLATES).map(k => card('tpl:' + k, TEMPLATES[k].name, TEMPLATES[k].desc || short(TEMPLATES[k]), null)).join('')}</div>
-      <div class="btl-row" style="margin-top:14px"><button type="button" class="btl-b pri" data-new>+ Make my own</button></div></div>`;
+      <div class="btl-row" style="margin-top:14px"><button type="button" class="btl-b pri" data-new>+ Make my own</button><button type="button" class="btl-b" data-upload>⬆ Upload a strategy file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden></div><div class="muted" style="font-size:12.5px;margin-top:8px">Have a strategy as a <b>.json</b> or <b>.md</b> file? Upload it, then press Test.</div></div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
@@ -494,7 +494,7 @@
   function resultsHTML() {
     const R = S.res; if (!R) return '';
     const tabs = Object.keys(MARKETS).filter(k => S.run.markets[k]), tab = R.st[S.tab] ? S.tab : tabs[0], st = R.st[tab], spn = tab === 'idx' ? R.span.idx : R.span.stk;
-    const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
+    const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="btl-row" style="margin:-4px 0 12px"><button type="button" class="btl-b sm" data-another>↺ Reset and test another strategy</button></div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
     if (!st || !st.n) return head + `<div class="btl-note warn">No trades in this market for this period. The rules never fired, or only while a trade was already open. Try another strategy or a longer period.</div></div>`;
     const end = R.cap + st.net, ok = st.net >= 0;
     const note = `Tested from ${R.cutoff === '0000-00-00' ? (spn ? spn.first : st.first) : R.cutoff} to ${R.lastDate}${R.years === 'max' ? ' (as far back as the data goes)' : ''}. Each trade risked ${inr(st.per)} (${R.riskPct}% of ${inr(R.cap)})${R.maxOpen > 0 ? ', up to ' + R.maxOpen + ' open at once' : ''}.`;
@@ -514,7 +514,7 @@
     const detail = `<details class="btl-more"><summary>Show details</summary><div>${tiles}<div style="margin:10px 0 4px;font-weight:700">Year by year</div><div style="overflow-x:auto">${yt}</div>
       <div style="margin:14px 0 6px;font-weight:700">Every trade</div><div class="btl-seg" style="margin-bottom:8px">${fchip('ALL', 'All ' + st.n)}${fchip('W', 'Wins ' + st.wins)}${fchip('L', 'Losses ' + st.losses)}${fchip('SL', 'Stop-loss')}${fchip('T', 'Target')}</div>${rows || '<div class="muted">No trades match.</div>'}
       <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div></div></details>`;
-    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
+    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p><button type="button" class="btl-b pri big" data-another style="margin-top:12px">↺ Reset and test another strategy</button>`;
     return head + verdict + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + detail + caveat + '</div>';
   }
   function sigHTML() {
@@ -526,7 +526,7 @@
   function importHTML() {
     const rules = Object.keys(RULES).map(k => `<li><b>${esc(RULES[k].label)}</b> <code>${k}</code> · ${RULES[k].p.map(p => p.k).join(', ')}</li>`).join('');
     return `<p class="muted" style="font-size:13.5px;margin:0 0 8px">Have a strategy as a file? Upload a <code>.json</code> or <code>.md</code> file, or paste it. Uploaded strategies start <b>stopped</b>, and a file can never run code: only the rule types below are read.</p>
-      <div class="btl-row" style="margin-bottom:8px"><button type="button" class="btl-b sm pri" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden></div>
+      <div class="btl-row" style="margin-bottom:8px"><button type="button" class="btl-b sm pri" data-upload>⬆ Upload a file</button></div>
       <textarea data-paste rows="6" spellcheck="false" placeholder='Paste a strategy here (JSON or Markdown)'></textarea>
       <div class="btl-row" style="margin-top:8px"><button type="button" class="btl-b sm" data-import-paste>Import pasted text</button><button type="button" class="btl-b sm" data-example>Show an example</button></div>
       <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">Write a strategy in Markdown</summary><pre># RSI(2) pullback
@@ -592,6 +592,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (d.cdel && e) { listFor(e, d.cdel).splice(+d.ci, 1); syncSell(e); paint(); return; }
     if (d.yrs) { S.run.years = d.yrs === 'max' ? 'max' : +d.yrs; persist(); paint(); return; }
     if (b.hasAttribute('data-run-go')) { runBacktest(); return; }
+    if (b.hasAttribute('data-another')) { S.res = null; S.edit = null; S.pg = {}; S.flt = {}; S.run.sid = null; S.msg = 'Cleared. Choose another strategy below, then press Test.'; persist(); paint(); const h = S.el.querySelector('.btl-sec'); h && h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (b.hasAttribute('data-resetall')) { S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: S.run.sid }; S.res = null; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.msg = 'Started over: settings and results cleared. Your saved strategies are kept.'; persist(); paint(); return; }
     if (d.tab) { S.tab = d.tab; paint(); return; }
     if (d.flt) { S.flt[S.tab] = d.flt; S.pg[S.tab] = 0; paint(); return; }
@@ -606,7 +607,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function onChange(ev) {
     const t = ev.target, e = S.edit;
     if (t.matches('[data-file]')) { const f = t.files && t.files[0]; if (!f) return; if (f.size > 300000) { S.msg = 'That file is too large for a strategy (max 300 KB).'; paint(); return; }
-      f.text().then(txt => { S.msg = importText(txt); t.value = ''; paint(); }).catch(() => { S.msg = 'Could not read that file.'; paint(); }); return; }
+      f.text().then(txt => { S.msg = importText(txt); t.value = ''; paint(); const go = S.el.querySelector('[data-run-go]'); if (go && !go.disabled && /^Imported/.test(S.msg)) go.scrollIntoView({ behavior: 'smooth', block: 'center' }); else window.scrollTo({ top: S.el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' }); }).catch(() => { S.msg = 'Could not read that file.'; paint(); }); return; }
     if (t.matches('[data-cadd]') && e) { const o = SIMPLE[+t.value]; if (o) { listFor(e, t.dataset.cadd).push(o.mk()); syncSell(e); paint(); } return; }
     if (t.matches('[data-alsosell]') && e) { e.side = t.checked ? 'both' : 'long'; if (t.checked) e.short = mirrorRules(e.long); else e.short = []; paint(); return; }
     if (t.matches('[data-sf]') && e) { const k = t.dataset.sf, v = parseFloat(t.value);
