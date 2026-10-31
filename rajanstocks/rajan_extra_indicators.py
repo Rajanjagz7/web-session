@@ -376,101 +376,6 @@ def _ema_series(values, length):
     return out
 
 
-def rj_best_scan(symbol, lookback=20, atr_period=14, sl_mult=1.5, tp1_mult=1.5, tp2_mult=2.0,
-                 reward_risk=2.0, ut_key=1.0, ut_atr=10, lookback_days=250):
-    """Daily-bar port of the 'RJ Best' script: 20-bar support/resistance with an ATR buffer and a
-    volume filter (entry zones), ATR-based SL / TP1 / TP2, UT Bot buy-sell flips and the 8/13/21/34 EMAs.
-    BUY = call side (stock call / index call), SELL = put side (index put)."""
-    from ut_bot import compute_signals
-    symbol = _validate_symbol(symbol)
-    lookback = _clampi(lookback, 5, 100, 20)
-    atr_period = _clampi(atr_period, 5, 50, 14)
-    sl_mult = _clamp(sl_mult, 0.5, 5, 1.5)
-    tp1_mult = _clamp(tp1_mult, 0.5, 5, 1.5)
-    tp2_mult = _clamp(tp2_mult, 0.5, 8, 2.0)
-    reward_risk = _clamp(reward_risk, 0.5, 5, 2.0)
-    ut_key = _clamp(ut_key, 0.1, 10, 1.0)
-    ut_atr = _clampi(ut_atr, 2, 50, 10)
-    lookback_days = _clampi(lookback_days, 30, 500, 250)
-
-    bars = fetch_index_history(symbol, lookback_days=lookback_days + lookback + 50)
-    n = len(bars)
-    if n <= max(lookback, atr_period, ut_atr, 34) + 2:
-        raise RuntimeError(f"Not enough historical sessions returned ({n}) for RJ Best")
-
-    closes = [b["close"] for b in bars]
-    atr = _rma(_true_range(bars), atr_period)
-    stops, positions, ut_sig = compute_signals(bars, key_value=ut_key, atr_period=ut_atr)
-    e8, e13, e21, e34 = (_ema_series(closes, k) for k in (8, 13, 21, 34))
-
-    rows = []
-    for i in range(n):
-        sig, note = "NONE", None
-        support = resistance = None
-        zone = None
-        levels = {}
-        if i >= lookback and atr[i] is not None:
-            win = bars[i - lookback:i]   # the PREVIOUS `lookback` bars - including today made today's low the support itself
-            support = min(b["low"] for b in win)
-            resistance = max(b["high"] for b in win)
-            a = atr[i]
-            vols = [b["volume"] for b in bars[max(0, i - atr_period + 1):i + 1]]
-            vol_ok = (sum(vols) / len(vols)) < bars[i]["volume"] if vols and sum(vols) > 0 else True
-            # key-level rejection: price pierces the prior 20-bar low/high intrabar and closes back inside it
-            bull = bars[i]["low"] <= support and closes[i] > support and vol_ok
-            bear = bars[i]["high"] >= resistance and closes[i] < resistance and vol_ok
-            levels = {
-                "bullSL": support - a * sl_mult,
-                "bullTP1": support + a * reward_risk * tp1_mult,
-                "bullTP2": support + a * reward_risk * tp2_mult,
-                "bearSL": resistance + a * sl_mult,
-                "bearTP1": resistance - a * reward_risk * tp1_mult,
-                "bearTP2": resistance - a * reward_risk * tp2_mult,
-            }
-            zone = "BULL" if bull else "BEAR" if bear else None
-            if ut_sig[i] == "BUY":
-                sig, note = "BUY", "UT"
-            elif ut_sig[i] == "SELL":
-                sig, note = "SELL", "UT"
-            elif bull and not bear:
-                sig, note = "BUY", "KEY LEVEL"
-            elif bear and not bull:
-                sig, note = "SELL", "KEY LEVEL"
-        rows.append({
-            "date": bars[i]["date"], "open": bars[i]["open"], "high": bars[i]["high"],
-            "low": bars[i]["low"], "close": closes[i],
-            "support": support, "resistance": resistance, "utStop": stops[i],
-            "ema8": e8[i], "ema13": e13[i], "ema21": e21[i], "ema34": e34[i],
-            "utPosition": {1: "LONG", -1: "SHORT", 0: "FLAT"}[positions[i]],
-            "zone": zone, "phase": note, "signal": sig, **levels,
-        })
-
-    rows = rows[-lookback_days:]
-    last = rows[-1]
-    side = "BUY" if last["utPosition"] == "LONG" else "SELL" if last["utPosition"] == "SHORT" else None
-    cur = {
-        "date": last["date"], "close": last["close"], "signal": last["signal"], "source": last["phase"],
-        "utPosition": last["utPosition"], "zone": last["zone"],
-        "support": last["support"], "resistance": last["resistance"], "utStop": last["utStop"],
-        "ema8": last["ema8"], "ema13": last["ema13"], "ema21": last["ema21"], "ema34": last["ema34"],
-        "emaAligned": ("BULL" if (last["ema8"] or 0) > (last["ema13"] or 0) > (last["ema21"] or 0) > (last["ema34"] or 0)
-                       else "BEAR" if (last["ema8"] or 0) < (last["ema13"] or 0) < (last["ema21"] or 0) < (last["ema34"] or 0) else "MIXED"),
-    }
-    if side == "BUY":
-        cur.update({"slLevel": last.get("bullSL"), "tp1": last.get("bullTP1"), "tp2": last.get("bullTP2")})
-    elif side == "SELL":
-        cur.update({"slLevel": last.get("bearSL"), "tp1": last.get("bearTP1"), "tp2": last.get("bearTP2")})
-    return {
-        "symbol": symbol,
-        "columns": [
-            {"key": "support", "label": "Support"}, {"key": "resistance", "label": "Resistance"},
-            {"key": "utStop", "label": "UT stop"}, {"key": "utPosition", "label": "UT position"},
-            {"key": "ema8", "label": "EMA 8"}, {"key": "ema21", "label": "EMA 21"},
-        ],
-        "current": cur, "bars": rows, "events": _events(rows),
-    }
-
-
 # ───────────────────────── Fake Breakout / Fake Breakdown (key: fake) ─────────────────────────
 
 def fake_scan(symbol, pivot_len=10, confirm_bars=3, use_volume=False, volume_mult=1.5, lookback_days=250):
@@ -566,7 +471,6 @@ def fake_scan(symbol, pivot_len=10, confirm_bars=3, use_volume=False, volume_mul
 KEYS = {
     "trend-target-ribbon": trend_target_ribbon_scan,
     "dual-phase-reversal": dual_phase_reversal_scan,
-    "rj-best": rj_best_scan,
     "fake": fake_scan,
 }
 
@@ -581,11 +485,6 @@ PARAM_MAP = {
     "dual-phase-reversal": {"lookbackDays": "lookback_days"},
     "fake": {"lookbackDays": "lookback_days", "pivotLen": "pivot_len", "confirmBars": "confirm_bars",
              "useVolume": "use_volume", "volumeMult": "volume_mult"},
-    "rj-best": {
-        "lookbackDays": "lookback_days", "lookback": "lookback", "atrPeriod": "atr_period",
-        "slMult": "sl_mult", "tp1Mult": "tp1_mult", "tp2Mult": "tp2_mult", "rewardRisk": "reward_risk",
-        "utKey": "ut_key", "utAtr": "ut_atr",
-    },
 }
 
 CATALOG = [
@@ -595,9 +494,6 @@ CATALOG = [
     ("dual-phase-reversal", "Dual-Phase Reversal (DGT)", "Reversal",
      "Momentum Exhaustion (9-sequence) then Terminal Exhaustion (13-count) with support/resistance, "
      "invalidation and range-pivot levels.", "rp"),
-    ("rj-best", "RJ Best (Key Levels + UT Bot + EMAs)", "Trend",
-     "20-bar support/resistance entry zones with ATR buffer and volume filter, ATR stop / TP1 / TP2, UT Bot flips "
-     "and 8/13/21/34 EMAs. BUY = stock / index call, SELL = index put.", "rp"),
     ("fake", "Fake Breakout / Breakdown", "Reversal",
      "Spots bull and bear traps at the latest swing high / low: price breaks the level but closes back inside it "
      "(same bar = wick, or within 3 bars = confirmed). Fake breakdown = BUY, fake breakout = SELL.", "rp"),
@@ -607,6 +503,4 @@ CHART_LINES = {
     "trend-target-ribbon": [("alma", "ALMA"), ("ribbonEdge", "Ribbon edge"), ("activeStop", "Stop")],
     "dual-phase-reversal": [("meResistance", "ME resistance"), ("meSupport", "ME support")],
     "fake": [("resistance", "Resistance"), ("support", "Support")],
-    "rj-best": [("support", "Support"), ("resistance", "Resistance"), ("utStop", "UT stop"),
-                ("ema8", "EMA 8"), ("ema13", "EMA 13"), ("ema21", "EMA 21"), ("ema34", "EMA 34")],
 }

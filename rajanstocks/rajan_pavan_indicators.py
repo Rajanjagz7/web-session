@@ -560,104 +560,7 @@ def tight_range_compression_scan(
 
 # ───────────────────────── #5 15-Min Breakout (daily-bar adaptation) ─────────────────────────
 
-def breakout_15m_scan(symbol, lookback=20, volume_length=20, volume_multiplier=1.0, use_ema=False, ema_length=50, lookback_days=150):
-    symbol = _validate_symbol(symbol)
-    lookback = _clampi(lookback, 2, 200, 20)
-    volume_length = _clampi(volume_length, 2, 100, 20)
-    ema_length = _clampi(ema_length, 2, 300, 50)
-    lookback_days = _clampi(lookback_days, 30, 500, 150)
-
-    fetch_days = lookback_days + max(lookback, ema_length, volume_length) + 40
-    bars = fetch_index_history(symbol, lookback_days=fetch_days)
-    if len(bars) <= max(lookback, ema_length) + 2:
-        raise RuntimeError(f"Not enough historical sessions returned ({len(bars)}) for this scan")
-
-    closes = [b["close"] for b in bars]
-    volumes = [b.get("volume") or 0 for b in bars]
-    n = len(bars)
-
-    previous_high = _shifted_rolling_max(closes, lookback)
-    avg_volume = _sma(volumes, volume_length)
-    has_volume = any(v for v in volumes)
-    ema = _ema(closes, ema_length) if use_ema else [None] * n
-
-    rows = []
-    for i in range(n):
-        breakout = previous_high[i] is not None and closes[i] > previous_high[i]
-        volume_confirmed = (not has_volume) or (avg_volume[i] is not None and volumes[i] > avg_volume[i] * volume_multiplier)
-        trend_ok = (not use_ema) or (ema[i] is not None and closes[i] > ema[i])
-        buy_signal = breakout and volume_confirmed and trend_ok
-        rows.append({
-            "date": bars[i]["date"], "open": bars[i]["open"], "high": bars[i]["high"], "low": bars[i]["low"], "close": closes[i],
-            "breakoutLevel": previous_high[i], "ema": ema[i],
-            "signal": "BUY" if buy_signal else "NONE",
-        })
-
-    rows = rows[-lookback_days:]
-    last = rows[-1]
-    return {
-        "symbol": symbol, "lookback": lookback, "volumeMultiplier": volume_multiplier, "useEma": use_ema,
-        "volumeAvailable": has_volume,
-        "columns": [{"key": "breakoutLevel", "label": f"{lookback}-Bar Level"}, {"key": "ema", "label": "Trend EMA"}],
-        "current": {"date": last["date"], "close": last["close"], "breakoutLevel": last["breakoutLevel"], "signal": last["signal"]},
-        "bars": rows,
-        "events": _events_from_bars(rows),
-    }
-
-
 # ───────────────────────── #6 15-Min Breakdown (daily-bar adaptation) ─────────────────────────
-
-def breakdown_15m_scan(
-    symbol, lookback=20, volume_length=20, volume_multiplier=1.0,
-    use_rsi=False, rsi_length=14, rsi_max=40.0, use_macd=False, use_sma50=False, lookback_days=150,
-):
-    symbol = _validate_symbol(symbol)
-    lookback = _clampi(lookback, 2, 200, 20)
-    volume_length = _clampi(volume_length, 2, 100, 20)
-    rsi_length = _clampi(rsi_length, 2, 100, 14)
-    lookback_days = _clampi(lookback_days, 30, 500, 150)
-
-    fetch_days = lookback_days + max(lookback, 50, volume_length, rsi_length, 26) + 40
-    bars = fetch_index_history(symbol, lookback_days=fetch_days)
-    if len(bars) <= max(lookback, 50) + 2:
-        raise RuntimeError(f"Not enough historical sessions returned ({len(bars)}) for this scan")
-
-    closes = [b["close"] for b in bars]
-    volumes = [b.get("volume") or 0 for b in bars]
-    n = len(bars)
-
-    previous_low = _shifted_rolling_min(closes, lookback)
-    avg_volume = _sma(volumes, volume_length)
-    has_volume = any(v for v in volumes)
-    rsi = _rsi(closes, rsi_length)
-    macd_line, signal_line = _macd(closes)
-    sma50 = _sma(closes, 50)
-
-    rows = []
-    for i in range(n):
-        breakdown_level = previous_low[i]
-        volume_confirmed = (not has_volume) or (avg_volume[i] is not None and volumes[i] > avg_volume[i] * volume_multiplier)
-        rsi_ok = (not use_rsi) or (rsi[i] is not None and rsi[i] <= rsi_max)
-        macd_ok = (not use_macd) or (macd_line[i] < signal_line[i])
-        sma_ok = (not use_sma50) or (sma50[i] is not None and closes[i] < sma50[i])
-        breakdown = breakdown_level is not None and closes[i] < breakdown_level and volume_confirmed and rsi_ok and macd_ok and sma_ok
-        rows.append({
-            "date": bars[i]["date"], "open": bars[i]["open"], "high": bars[i]["high"], "low": bars[i]["low"], "close": closes[i],
-            "breakdownLevel": breakdown_level, "rsi": rsi[i],
-            "signal": "SELL" if breakdown else "NONE",
-        })
-
-    rows = rows[-lookback_days:]
-    last = rows[-1]
-    return {
-        "symbol": symbol, "lookback": lookback, "volumeMultiplier": volume_multiplier,
-        "useRsi": use_rsi, "useMacd": use_macd, "useSma50": use_sma50, "volumeAvailable": has_volume,
-        "columns": [{"key": "breakdownLevel", "label": f"{lookback}-Bar Level"}, {"key": "rsi", "label": "RSI"}],
-        "current": {"date": last["date"], "close": last["close"], "breakdownLevel": last["breakdownLevel"], "signal": last["signal"]},
-        "bars": rows,
-        "events": _events_from_bars(rows),
-    }
-
 
 # ───────────────────────── #7 15-Min Volume Buzzer (daily-bar adaptation) ─────────────────────────
 
@@ -1104,89 +1007,6 @@ def india_vix_range_scan(symbol, vix_divisor=1600.0, lookback_days=90):
 
 # ───────────────────────── #15 9/15 + Hammer + W Confluence ─────────────────────────
 
-def confluence_scan(
-    symbol, support_lookback=20, support_tolerance_pct=1.0, volume_length=20,
-    use_volume=True, volume_multiplier=1.0, pivot_left=3, pivot_right=3, lookback_days=150,
-):
-    symbol = _validate_symbol(symbol)
-    support_lookback = _clampi(support_lookback, 2, 120, 20)
-    volume_length = _clampi(volume_length, 2, 100, 20)
-    pivot_left = _clampi(pivot_left, 1, 20, 3)
-    pivot_right = _clampi(pivot_right, 1, 20, 3)
-    lookback_days = _clampi(lookback_days, 30, 500, 150)
-
-    fetch_days = lookback_days + max(support_lookback, volume_length) + 40
-    bars = fetch_index_history(symbol, lookback_days=fetch_days)
-    if len(bars) <= support_lookback + pivot_left + pivot_right + 5:
-        raise RuntimeError(f"Not enough historical sessions returned ({len(bars)}) for this scan")
-
-    opens = [b["open"] for b in bars]
-    highs = [b["high"] for b in bars]
-    lows = [b["low"] for b in bars]
-    closes = [b["close"] for b in bars]
-    volumes = [b.get("volume") or 0 for b in bars]
-    has_volume = any(v for v in volumes)
-    n = len(bars)
-
-    ema9 = _ema(closes, 9)
-    ema15 = _ema(closes, 15)
-    support_series = _shifted_rolling_min(lows, support_lookback)
-    avg_volume = _sma(volumes, volume_length)
-    ph = _pivot_high(highs, pivot_left, pivot_right)
-    pl = _pivot_low(lows, pivot_left, pivot_right)
-
-    wb = _w_breakouts(highs, lows, closes, pl, pivot_left, pivot_right, support_tolerance_pct)
-    rows = []
-    for i in range(n):
-        support = support_series[i]
-        near_support = support is not None and abs(closes[i] - support) / closes[i] * 100 <= support_tolerance_pct
-
-        # Trend leg: price above rising 9/15 EMAs. The old version ALSO needed the close within 1% of the 20-day low, which
-        # contradicts "above rising EMAs" almost always, so it never fired.
-        trend = (
-            i > 0 and closes[i] > ema9[i] and ema9[i] > ema15[i]
-            and ema9[i] > ema9[i - 1] and ema15[i] > ema15[i - 1]
-        )
-
-        o, h, l, c = opens[i], highs[i], lows[i], closes[i]
-        body = abs(c - o)
-        r = h - l
-        upper_wick = h - max(o, c)
-        lower_wick = min(o, c) - l
-        hammer = r > 0 and body > 0 and body / r <= 0.35 and lower_wick / body >= 2.0 and upper_wick / body <= 0.5
-
-        w_breakout = wb[i]['breakout']
-
-        volume_ok = (not use_volume) or (not has_volume) or (avg_volume[i] is not None and volumes[i] > avg_volume[i] * volume_multiplier)
-
-        hammer_setup = trend and near_support and hammer           # hammer sitting on the 20-day low
-        w_setup = trend and w_breakout                             # W neckline break (the W itself is the support)
-        long_signal = (hammer_setup or w_setup) and volume_ok
-
-        rows.append({
-            "date": bars[i]["date"], "open": o, "high": h, "low": l, "close": c,
-            "ema9": ema9[i], "ema15": ema15[i], "support": support,
-            "hammerSetup": hammer_setup, "wSetup": w_setup,
-            "signal": "LONG" if long_signal else "NONE",
-        })
-
-    rows = rows[-lookback_days:]
-    last = rows[-1]
-    return {
-        "symbol": symbol, "supportLookback": support_lookback, "supportTolerancePct": support_tolerance_pct,
-        "useVolume": use_volume, "pivotLeft": pivot_left, "pivotRight": pivot_right, "volumeAvailable": has_volume,
-        "columns": [
-            {"key": "ema9", "label": "EMA 9"}, {"key": "ema15", "label": "EMA 15"}, {"key": "support", "label": "Support"},
-        ],
-        "current": {
-            "date": last["date"], "close": last["close"], "ema9": last["ema9"], "ema15": last["ema15"],
-            "support": last["support"], "signal": last["signal"],
-        },
-        "bars": rows,
-        "events": _events_from_bars(rows),
-    }
-
-
 # ───────────────────────── dispatch table ─────────────────────────
 
 RAJAN_PAVAN_KEYS = {
@@ -1194,8 +1014,6 @@ RAJAN_PAVAN_KEYS = {
     "w-pattern": w_pattern_scan,
     "ema-9-15": ema_9_15_setup_scan,
     "tight-range": tight_range_compression_scan,
-    "breakout-15m": breakout_15m_scan,
-    "breakdown-15m": breakdown_15m_scan,
     "volume-buzzer-15m": volume_buzzer_15m_scan,
     "volume-buzzer-daily": daily_volume_buzzer_scan,
     "rsi-divergence": rsi_divergence_scan,
@@ -1204,7 +1022,6 @@ RAJAN_PAVAN_KEYS = {
     "darvas-supertrend": darvas_supertrend_scan,
     "bottom-reversal": bottom_reversal_scan,
     "vix-range": india_vix_range_scan,
-    "confluence": confluence_scan,
 }
 
 # Maps the single endpoint's generic camelCase query params to each function's
@@ -1231,15 +1048,6 @@ PARAM_MAP = {
         "lookbackDays": "lookback_days", "rangeLength": "range_length", "fastLength": "ema_fast_length",
         "slowLength": "ema_slow_length", "volumeLength": "volume_length", "volumeFactor": "volume_factor",
         "emaDistancePct": "ema_distance_pct",
-    },
-    "breakout-15m": {
-        "lookbackDays": "lookback_days", "lookback": "lookback", "volumeLength": "volume_length",
-        "volumeMultiplier": "volume_multiplier", "useEMA": "use_ema", "emaLength": "ema_length",
-    },
-    "breakdown-15m": {
-        "lookbackDays": "lookback_days", "lookback": "lookback", "volumeLength": "volume_length",
-        "volumeMultiplier": "volume_multiplier", "useRSI": "use_rsi", "rsiLength": "rsi_length",
-        "rsiMax": "rsi_max", "useMACD": "use_macd", "useSMA50": "use_sma50",
     },
     "volume-buzzer-15m": {
         "lookbackDays": "lookback_days", "volumeMultiplier": "volume_multiplier", "useEMA": "use_ema",
@@ -1271,12 +1079,6 @@ PARAM_MAP = {
     },
     "vix-range": {
         "lookbackDays": "lookback_days", "vixDivisor": "vix_divisor",
-    },
-    "confluence": {
-        "lookbackDays": "lookback_days", "supportLookback": "support_lookback",
-        "supportTolerancePct": "support_tolerance_pct", "volumeLength": "volume_length",
-        "useVolume": "use_volume", "volumeMultiplier": "volume_multiplier",
-        "pivotLeft": "pivot_left", "pivotRight": "pivot_right",
     },
 }
 

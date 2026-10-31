@@ -36,8 +36,6 @@ NEW_CATALOG = [
      "Heikin Ashi EMA channel cross + EMA9/21 trend + ADX filter, ATR stop, 1R-3R targets (daily-bar adaptation of the 3m/5m intraday Pine script).", "new"),
     ("rajan-breakout-trap", "Rajan Breakout & Trap", "Breakout",
      "Donchian(20) breakout plus fake-breakout/breakdown traps at swing pivots, ADX filter, ATR-clamped stop. Pine: Rajan_Breakout_Trap.pine.", "new"),
-    ("rajan-ohol-options", "Rajan OH-OL Options", "Options",
-     "Open=Low (bullish) / Open=High (bearish) with India VIX tiering for stop/target width. Works on any F&O stock or index - use Scan stocks for the full-universe view with ATM CE/PE legs. Pine: Rajan_OHOL_Options.pine.", "new"),
     ("rajan-gann-sq9", "Rajan Gann Square of 9", "Trend",
      "Gann Square of 9 levels from previous close, Gann HiLo trend filter (daily-bar adaptation of the intraday day-open Pine script).", "new"),
 ]
@@ -51,7 +49,7 @@ NEW_CHART_LINES = {
     "rajan-rsi2-pullback": [("sma200", "SMA 200"), ("sma5", "SMA 5")],
     "rajan-ibs-reversion": [],
 }
-NO_CHART_NEW = {"rajan-ohol-options"}
+NO_CHART_NEW = set()
 
 
 def _alma(values, length=34, offset=0.85, sigma=6):
@@ -372,37 +370,6 @@ def rajan_breakout_trap_scan(symbol, don_len=20, piv_len=10, conf_bars=3, lookba
 # Works on any F&O underlying, not just indices - the Open=High/Open=Low
 # read and the India-VIX-tiered stop/target % apply the same way to a stock's
 # own options as to an index's.
-def rajan_ohol_options_scan(symbol, lookback_days=120):
-    symbol = symbol.upper()
-    bars = ut_bot.fetch_index_history(symbol, lookback_days=lookback_days)
-    if len(bars) < 5:
-        raise RuntimeError("Not enough daily history for the OH/OL setup")
-    vix = get_india_vix()
-    tier = vix_tier(vix)
-    rows = []
-    for b in bars:
-        tol = max(0.05, b["close"] * 0.0005)
-        is_ol = b["high"] > b["low"] and abs(b["open"] - b["low"]) <= tol
-        is_oh = b["high"] > b["low"] and abs(b["open"] - b["high"]) <= tol
-        # BULL_CALL = buy a call; BEAR_PUT = buy a put. (The old SELL_PUT_BIAS name was read as "sell a put" = bullish by the
-        # Strategies screen's direction reader, while the trader read it as SELL. These names make both readers agree.)
-        rows.append({"date": b["date"], "signal": "BULL_CALL" if is_ol and not is_oh else "BEAR_PUT" if is_oh and not is_ol else "NONE",
-                     "openEqLow": is_ol, "openEqHigh": is_oh})
-    last_bar = bars[-1]
-    cur_row = rows[-1]
-    slpct = {1: 5.0, 2: 9.0, 3: 18.0}.get(tier or 2, 9.0)
-    t1pct = {1: 9.0, 2: 18.0, 3: 18.0}.get(tier or 2, 18.0)
-    current = {
-        "date": last_bar["date"], "close": last_bar["close"], "signal": cur_row["signal"],
-        "openEqLow": cur_row["openEqLow"], "openEqHigh": cur_row["openEqHigh"],
-        "vix": vix, "vixTier": tier, "slPct": slpct, "t1Pct": t1pct,
-        "note": "Options-side setup: a BULL_CALL (buy call) / BEAR_PUT (buy put) day means buy the underlying's ATM option on that "
-                "side; size the option's own stop/target from slPct/t1Pct off its own entry premium, not the "
-                "underlying's points.",
-    }
-    return {"symbol": symbol, "columns": [], "current": current, "bars": rows[-120:], "events": rp._events_from_bars(rows)}
-
-
 # ───────────────────────── Rajan Gann Square of 9 ─────────────────────────
 def rajan_gann_sq9_scan(symbol, angle_step=0.25, lookback_days=250):
     """Daily-bar adaptation: levels built off each day's PREVIOUS close (the
@@ -606,7 +573,6 @@ NEW_KEYS = {
     "rajan-trend-rider": rajan_trend_rider_scan,
     "rajan-ha-momentum": rajan_ha_momentum_scan,
     "rajan-breakout-trap": rajan_breakout_trap_scan,
-    "rajan-ohol-options": rajan_ohol_options_scan,
     "rajan-gann-sq9": rajan_gann_sq9_scan,
     "rajan-rsi2-pullback": rajan_rsi2_pullback_scan,
     "rajan-ibs-reversion": rajan_ibs_reversion_scan,

@@ -904,8 +904,39 @@ button.gl{text-align:left;cursor:pointer;border:1px solid transparent}button.gl:
 .pk-gate.skip{color:#fff;background:linear-gradient(135deg,#f87171,#ef4444)}
 .pk-gate.ok{color:var(--up);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
 .pk-gate.idle{color:var(--text-3);border:1px dashed var(--line)}
+
+/* tappable SL / target chips + phone layout (31 Oct) */
+button.pkc{border:0;font-family:inherit;line-height:1.2;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:left}
+button.pkc:hover{filter:brightness(1.18)}button.pkc:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+button.pkc.act{box-shadow:0 0 0 2px var(--brand)}
+.pkc-row:not(.open) .pkc-x{display:none}
+.pkc-det{margin:2px 0 8px;padding:9px 12px;border-radius:10px;font-size:12px;line-height:1.45;color:var(--text);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.35);overflow-wrap:anywhere}
+#jvPickLog .pkc{min-height:34px}
+@media (max-width:720px){
+  .page.jv .jv-tabs:not(.jv-subtabs){flex-wrap:wrap;overflow:visible;border-bottom:0;gap:4px;margin-bottom:12px}
+  .page.jv .jv-tabs:not(.jv-subtabs) button{flex:1 1 auto;border:1px solid var(--line);border-radius:999px;margin:0;padding:8px 12px;text-align:center}
+  .page.jv .jv-tabs:not(.jv-subtabs) button.on{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 16%,transparent)}
+  #jvPickLog .pkl-f.seg{display:flex;flex-wrap:wrap;overflow:visible;border-radius:16px;width:100%}
+  #jvPickLog .pkl-f button{flex:1 1 auto;text-align:center;white-space:normal;line-height:1.2}
+  #jvPickLog .pkl-mode button{white-space:normal}
+  #jvPickLog .pkr-top{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+  #jvPickLog .pkr-top .pkr-n{order:0;justify-self:auto;grid-column:auto}
+  #jvPickLog .pkr-top .pkr-id{order:1;flex:1 1 150px;min-width:0;margin:0;overflow-wrap:anywhere}
+  #jvPickLog .pkr-top .pkr-side{order:2;grid-column:auto}
+  #jvPickLog .pkr-top .pkr-out{order:3;grid-column:auto;justify-self:auto;margin-left:auto;white-space:normal;text-align:center;line-height:1.25}
+  #jvPickLog .pkl-tile small,#jvPickLog .pkl-sub{white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+  #jvPickLog .pkl-tile b{font-size:21px}
+  #jvPickLog .pkg-sum span{white-space:normal}
+  #jvPickLog .pka-h span{overflow-wrap:anywhere}
+  #jvPickLog .pkl-reset{width:100%;min-height:42px}
+  .pkc-det{font-size:12.5px}
+}
+
+.pkc-det b{display:block;font-size:12.5px;margin-bottom:2px}
+.pkc-tr{margin-top:7px;padding-top:7px;border-top:1px dashed rgba(99,102,241,.45);color:var(--text-2);font-size:12px;line-height:1.55}
 </style>
-<script id="scrJV" src="/static/journal.js?v=a22f0f35"></script>
+<script id="scrJV" src="/static/journal.js?v=e87335c2"></script>
+<script src="/static/btlab.js?v=3bbec759"></script>
 <script src="/static/simmode.js?v=b6a81221"></script>
 <script src="/static/ipo.js?v=80226359"></script>
 <script src="/static/godseye.js?v=f79e1d58"></script>
@@ -1815,7 +1846,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=9ec59b7f',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=904110c5',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
@@ -3475,9 +3506,25 @@ function pkHidAdd(keys){const s=pkHidKeys();keys.forEach(x=>s.add(x));try{localS
 const pkTm=t=>t>1?new Date(t+330*60000).toISOString().slice(11,16):'';
 const pkDm=t=>t>1?new Date(t).toLocaleDateString('en-IN',{day:'numeric',month:'short',timeZone:'UTC'}):'';
 /* SL 🚫 / T1 ✅ marks: a hit shows the mark (and the time if known), a level not reached yet shows its price */
-function pkChipsHTML(m,h,hp,cap){hp=hp||{};const tmf=m.dm?pkDm:pkTm,f=v=>fmtP(v,m.dp==null?2:m.dp),c=(k,lvl,ts,isSl,key)=>ts?`<span class="pkc ${isSl?'sl':'tg'}">${k} ${isSl?'🚫':'✅'}${tmf(ts)?' <i>'+tmf(ts)+'</i>':''} <i>@ ${f(hp[key]!=null?hp[key]:lvl)}</i></span>`:`<span class="pkc off">${k} <i>${f(lvl)}</i></span>`;
-  const TT=m.t||[],show=cap&&TT.length>cap?TT.slice(0,cap):TT;
-  return c('SL',m.sl,h.sl,true,'sl')+show.map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false,'t'+(i+1))).join('')+(show.length<TT.length?`<span class="pkc off">+${TT.length-show.length} more · T${show.length+1}${TT.length>show.length+1?'–T'+TT.length:''}</span>`:'')}
+function pkChipsHTML(m,h,hp,cap,x){hp=hp||{};const tmf=m.dm?pkDm:pkTm,dp=m.dp==null?2:m.dp,f=v=>fmtP(v,dp),risk=Math.abs((m.e||0)-(m.sl||0));
+  const det=(k,lvl,ts,isSl,key)=>{const pr=hp[key]!=null?hp[key]:lvl,away=m.e>0?(lvl-m.e)/m.e*100:null,rm=risk>0?Math.abs(lvl-m.e)/risk:null,
+      when=ts?(m.dm?'hit on '+pkDm(ts):'hit'+(tmf(ts)?' at '+tmf(ts):' earlier')):'not reached yet';
+    return`${isSl?'Stop-loss':'Target '+k} ${f(lvl)}${away!=null?' · '+(away>=0?'+':'')+away.toFixed(2)+'% from the entry'+(rm!=null?' · '+rm.toFixed(1)+'R':''):''} · ${when}${ts&&pr!==lvl?' (filled near '+f(pr)+')':''} · ${isSl?(ts?'the trade lost about 1R':'if the price gets here the trade loses about 1R'):(ts?'reached: the stop moves up behind it':'if the price gets here the stop moves up')}`};
+  const TR=(()=>{const L=m.d==='L',TT=m.t||[],tops=TT.map((_,i)=>h['t'+(i+1)]?i+1:0),top=Math.max(0,...tops),pc=v=>m.e>0?(v-m.e)/m.e*100:0,sg=v=>(v>=0?'+':'')+v.toFixed(2)+'%',w=ts=>ts&&tmf(ts)?' '+tmf(ts):'';
+    const lv=TT.map((v,i)=>'T'+(i+1)+' '+f(v)+(h['t'+(i+1)]?' ✅'+w(h['t'+(i+1)]):'')).join(' · ');
+    const res=h.sl?(top?'Reached T'+top+', then the stop was hit'+(h.sl>1&&tmf(h.sl)?' ('+tmf(h.sl)+')':''):'Stopped out'+(h.sl>1&&tmf(h.sl)?' on '+tmf(h.sl):'')):(top?'Reached T'+top+' of '+TT.length+', stop not hit':'No stop or target touched');
+    const ln=[`${m.s||''} · ${L?'Long · Call':'Short · Put'}${m.at>1?' · '+(m.dm?'entered '+pkDm(m.at):'tracked since '+pkTm(m.at)):''}`,`Entry ${f(m.e)} · Stop ${f(m.sl)} (${sg(pc(m.sl))} from the entry)`,`Levels: SL ${f(m.sl)}${h.sl?' 🚫':''} · ${lv}`,`Result: ${res}`];
+    if(x&&x.best!=null)ln.push('Best price in the trade: '+f(x.best));
+    if(m.r2!=null)ln.push(`With a 2R-target exit this trade made ${m.r2>=0?'+':''}${m.r2}R${m.rt!=null?' · with a trailing stop '+(m.rt>=0?'+':'')+m.rt+'R':''} (net of cost)`);
+    return ln.join('\n')})();
+  const c=(k,lvl,ts,isSl,key,xx)=>`<button type="button" class="pkc ${ts?(isSl?'sl':'tg'):'off'}${xx?' pkc-x':''}" data-pkdet="${esc(det(k,lvl,ts,isSl,key))}" data-pktr="${esc(TR)}" aria-expanded="false">${k}${ts?' '+(isSl?'🚫':'✅')+(tmf(ts)?' <i>'+tmf(ts)+'</i>':'')+' <i>@ '+f(hp[key]!=null?hp[key]:lvl)+'</i>':' <i>'+f(lvl)+'</i>'}</button>`;
+  const TT=m.t||[],k=cap&&TT.length>cap?cap:TT.length,more=k<TT.length?`+${TT.length-k} more · T${k+1}${TT.length>k+1?'–T'+TT.length:''}`:'';
+  return c('SL',m.sl,h.sl,true,'sl')+TT.map((v,i)=>c('T'+(i+1),v,h['t'+(i+1)],false,'t'+(i+1),i>=k)).join('')+(more?`<button type="button" class="pkc off pkc-more" data-pkmore="1" data-more="${more}" aria-expanded="false">${more}</button>`:'')}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.pkc[data-pkdet],.pkc[data-pkmore]');if(!b)return;const row=b.closest('.pkc-row');if(!row)return;
+  if(b.dataset.pkmore){const o=row.classList.toggle('open');b.textContent=o?'Show fewer targets':b.dataset.more;b.setAttribute('aria-expanded',o);return}
+  let d=row.nextElementSibling;if(!d||!d.classList.contains('pkc-det')){d=document.createElement('div');d.className='pkc-det';row.after(d)}
+  const same=b.classList.contains('act');row.querySelectorAll('.pkc.act').forEach(x=>{x.classList.remove('act');x.setAttribute('aria-expanded','false')});
+  if(same){d.remove();return}b.classList.add('act');b.setAttribute('aria-expanded','true');d.innerHTML='<b>'+esc(b.dataset.pkdet)+'</b>'+(b.dataset.pktr?'<div class="pkc-tr">'+esc(b.dataset.pktr).replace(/\n/g,'<br>')+'</div>':'')});
 /* what happened, in order: "SL 🚫 → T1 ✅" and a one-line story */
 function pkStory(m,h,best,hp,post){hp=hp||{};const ev=[];if(h.sl)ev.push(['SL',h.sl]);(m.t||[]).forEach((v,i)=>{if(h['t'+(i+1)])ev.push(['T'+(i+1),h['t'+(i+1)]])});
   if(!ev.length){const T1=(m.t||[])[0],L=m.d==='L',pr=best!=null&&T1&&m.e?((L?best-m.e:m.e-best)/Math.abs(T1-m.e))*100:0;
@@ -3623,7 +3670,7 @@ function pkRowHTML(r,i,KIND){const o=pkOutcome(r),m=r.m,L=m.d==='L',tk=Object.ke
   const badge={win:`✅ Target T${top}${(m.t||[]).length>2?' of '+(m.t||[]).length:''} hit`,loss:'🚫 Stopped out',mixed:`⚖ T${top}, then stop`,open:m.dm?'⌛ No level hit in 10 sessions':'◔ Running'}[o],sym=m.s||'',sub=String(m.l||'').replace(sym,'').trim();
   return`<div class="pkr o-${o}"><div class="pkr-top"><span class="pkr-n">${i+1}</span><div class="pkr-id"><b>${esc(sym||m.l)}</b>${sub?`<small>${esc(sub)}</small>`:''}</div>
     <span class="pkr-side ${L?'up':'down'}">${L?'▲ Long · Call':'▼ Short · Put'}</span><span class="pkr-kind">${esc(KIND[m.k]||m.k)}</span><span class="pkr-out ${o}">${badge}</span></div>
-    ${pkTrackHTML(m,r.h,r.best,Math.max(2,top+2))}<div class="pkc-row">${pkChipsHTML(m,r.h,r.hp,Math.max(2,top+2))}</div><div class="pkr-s">${esc(pkStory(m,r.h,r.best,r.hp,r.post))}</div>${pkAfterHTML(r)}</div>`}
+    ${pkTrackHTML(m,r.h,r.best,Math.max(2,top+2))}<div class="pkc-row">${pkChipsHTML(m,r.h,r.hp,Math.max(2,top+2),r)}</div><div class="pkr-s">${esc(pkStory(m,r.h,r.best,r.hp,r.post))}</div>${pkAfterHTML(r)}</div>`}
 function pkLogLiveHTML(){let days=pkLogDays().map(d=>({...d,rows:d.rows.filter(pkLogOK)})).filter(d=>d.rows.length);
   if(!days.length)return`<div class="pkl-empty"><div class="pkl-eh"><span class="pkl-ei">📒</span><b>Nothing tracked yet</b><small>No Reset button here - there is nothing to clear. It appears as soon as the first pick is tracked.</small></div>
    <div class="pkl-stats pkl-ghost"><div class="pkl-tile"><b>0</b><small>Tracked</small></div><div class="pkl-tile up"><b>0</b><small>Target hit</small></div><div class="pkl-tile down"><b>0</b><small>Stopped out</small></div><div class="pkl-tile"><b>0</b><small>No result yet</small></div><div class="pkl-tile gold"><b>–</b><small>Hit rate</small></div></div>
@@ -3671,10 +3718,11 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
   const aft=st.length?`<div class="pkbt-note">🔎 After a stop (next 5 sessions, ${st.length} trades): <b class="up">${Math.round(100*back/st.length)}%</b> closed back past the entry · <b class="down">${Math.round(100*beyond/st.length)}%</b> were still beyond the stop. Prices touch T1 and the stop in both directions, so a tight stop is mostly noise, but most stopped trades did not come back.</div>`:'';
   const inds=[...new Set(D.trades.map(t=>t.key))],yrs=[...new Set(D.trades.map(t=>t.ent.slice(0,4)))].sort().reverse();
   const chip=(k,v,l,cnt)=>`<button type="button" class="${F[k]===v?'on':''}" data-pkbt="${k}|${v}">${l}${cnt!=null?` <i>${cnt}</i>`:''}</button>`;
+  const pg0=App.pkBtPg||(App.pkBtPg={n:10,p:0}),dirty=F.ind!=='ALL'||F.kind!=='ALL'||F.out!=='ALL'||F.yr!=='ALL'||pg0.p>0||pg0.n!==10;
   const bar=`<div class="pkl-bar pkbt-bar"><div class="seg pkl-f">${chip('out','ALL','All',base.length)}${chip('out','WIN','Targets',c.win)}${chip('out','LOSS','Stops',c.loss)}${chip('out','MIXED','Target then stop',c.mixed)}${chip('out','NONE','No level',c.open)}</div>
     <div class="seg pkl-f">${chip('kind','ALL','All markets')}${chip('kind','index','Index')}${chip('kind','stock','Stock')}</div>
     <select class="inp" data-pkbtsel="ind" aria-label="Indicator"><option value="ALL">All indicators</option>${inds.map(k=>`<option value="${esc(k)}" ${F.ind===k?'selected':''}>${esc(D.names[k]||k)}</option>`).join('')}</select>
-    <select class="inp" data-pkbtsel="yr" aria-label="Year"><option value="ALL">All years</option>${yrs.map(y=>`<option value="${y}" ${F.yr===y?'selected':''}>${y}</option>`).join('')}</select></div>`;
+    <select class="inp" data-pkbtsel="yr" aria-label="Year"><option value="ALL">All years</option>${yrs.map(y=>`<option value="${y}" ${F.yr===y?'selected':''}>${y}</option>`).join('')}</select>${dirty?'<button type="button" class="pkl-reset" data-pkbtreset="1">↺ Reset filters</button>':''}</div>`;
   const tbl=`<details class="pkbt-tbl"><summary>Per indicator: best stop and exit, judged on the last 30 % and against a coin flip</summary><div class="tbl-wrap"><table class="pkbt-t"><thead><tr><th>Indicator</th><th>Stop · exit</th><th class="num">Trades</th><th class="num">PF</th><th class="num">Last 30 % PF</th><th class="num">Coin flip PF</th><th>Verdict</th></tr></thead><tbody>${(D.summary||[]).map(r=>`<tr><td><b>${esc(r.indicator)}</b></td><td>${r.stop_ATR} ATR · ${esc(r.exit)}</td><td class="num">${r.n}</td><td class="num">${r.pf}</td><td class="num">${r.oosPF} <small>(${r.oosN})</small></td><td class="num">${r.randomPF}</td><td><span class="pkbt-v ${r.verdict==='EDGE'?'up':r.verdict==='maybe'?'gold':'down'}">${esc(r.verdict)}</span></td></tr>`).join('')}</tbody></table></div><p class="muted" style="font-size:11.5px;margin:6px 2px 0">Cash / futures model (no option decay), 0.1 % cost, stop = k × ATR(14), entry at the next open, 10 sessions at most. The first 70 % of an indicator's trades choose its stop and exit, the last 30 % judge it. EDGE needs a last-30 % PF of 1.2 or more and a clear lead over the coin flip.</p></details>`;
   const pg=App.pkBtPg||(App.pkBtPg={n:10,p:0}),total=all.length,per=pg.n||total||1,pages=Math.max(1,Math.ceil(total/per));if(pg.p>=pages)pg.p=pages-1;if(pg.p<0)pg.p=0;
   const lo=pg.p*per,view=all.slice(lo,lo+per);
@@ -3683,7 +3731,8 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
       body+=`<div class="pkg-h"><h4>${esc(x.toLocaleDateString('en-IN',{month:'long',year:'numeric',timeZone:'UTC'}))}</h4><div class="pkg-sum"><span>${mrows.length} trades</span><span class="up">✅ ${w} target</span><span class="down">🚫 ${l} stop</span></div></div>`}
     body+=pkRowHTML(r,lo+i,KIND)});
   return head+aft+tbl+bar+pager+(view.length?`<section class="pkg">${body}</section>`:'<div class="empty">Nothing matches these filters.</div>')+pager}
-document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp]');if(!b)return;
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp],[data-pkbtreset]');if(!b)return;
+  if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};pkLogRefresh();return}
   if(b.dataset.pklmode){App.pkLogMode=b.dataset.pklmode==='bt'?'bt':'live';if(b.dataset.retry&&App.pkBt)App.pkBt.err=null;pkLogRefresh();return}
   const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),pg=App.pkBtPg||(App.pkBtPg={n:10,p:0});
   if(b.dataset.pkbt){const[k,v]=b.dataset.pkbt.split('|');F[k]=v;pg.p=0}else if(b.dataset.pkbtn!==undefined){pg.n=parseInt(b.dataset.pkbtn,10)||0;pg.p=0}else pg.p+=parseInt(b.dataset.pkbtp,10);pkLogRefresh()});
@@ -4074,7 +4123,7 @@ document.addEventListener('click',e=>{const g=e.target.closest('[data-stg]');if(
 
   const sp=e.target.closest('[data-stp]');if(sp){ST.page=+sp.dataset.stp;renderIndicators();return}
   const t=e.target.closest('[data-st]');if(!t||!ST.meta)return;const [a,key,arg]=t.dataset.st.split(':'),m=ST.meta.strategies.find(x=>x.key===key);if(!m)return;
-  if(a==='oscan')optScan(m,arg);else if(a==='scan'){if(key==='rajan-ohol-options')go('daily');else stScan(m)}else if(a==='detail')stDetail(m);else if(a==='chart')stGo(key,ST.sym)});
+  if(a==='oscan')optScan(m,arg);else if(a==='scan'){stScan(m)}else if(a==='detail')stDetail(m);else if(a==='chart')stGo(key,ST.sym)});
 document.addEventListener('change',e=>{if(e.target.id==='stSym'){ST.sym=e.target.value;renderIndicators()}});
 
 async function optScan(m,scope){modal(m.name,`<div id="scanBody"><div class="empty">Scanning live option chains…</div></div>`,{wide:true});
@@ -5179,7 +5228,7 @@ function jStats(trips,fills){const w=trips.filter(t=>t.net>0),l=trips.filter(t=>
 const hold=ms=>{const m=Math.round(ms/60000);return m<1?'<1 min':m<60?m+' min':m<1440?(m/60).toFixed(1)+' h':(m/1440).toFixed(1)+' d'};
 const tAt=(t)=>new Date(t).toLocaleTimeString('en-IN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const dLbl=d=>new Date(d+'T12:00:00+05:30').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
-function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=a22f0f35';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
+function renderJournal(){const el=$('#v-journal');if(!el)return;if(window.JV){JV.render();return}if(!document.getElementById('scrJV')){const s=document.createElement('script');s.id='scrJV';s.src='/static/journal.js?v=e87335c2';s.onload=()=>{if(window.JV&&App.view==='journal')JV.render()};document.head.appendChild(s)}setTimeout(()=>{if(window.JV&&App.view==='journal')JV.render()},150);loadStratMetaSafe();
   const fills=jFilter(App.trades),{closed,open}=buildTrips(),[a,b]=jBounds(),trips=closed.filter(t=>{const d=istDay(t.close);return d>=a&&d<=b&&(JR.kind==='ALL'||t.kind===JR.kind)&&(!JR.q||(t.sym+' '+t.name).toLowerCase().includes(JR.q.toLowerCase()))}),S=jStats(trips,fills);
   const chip=(k,v,l,cur)=>`<button class="chip ${cur===v?'on':''}" data-jr="${k}:${v}">${l}</button>`;
   const kpi=(l,v,sub,c)=>`<div class="card kpi"><small>${l}</small><b class="${c||''}">${v}</b><span class="muted">${sub||''}</span></div>`;

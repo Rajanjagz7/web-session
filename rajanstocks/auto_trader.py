@@ -54,7 +54,7 @@ SL_V = 1                                 # one-time: premium stop 12.5% + risk p
 DEFAULT_CFG = {"enabled": True, "capital": 1000000.0, "buyOnly": True, "stockOnly": False, "idxV": IDX_V, "stockTrader": True, "sleeves": dict(SLEEVES), "planV": PLAN_V, "riskPct": 1.0, "maxOutlay": dict(MAX_OUTLAY), "premSlPct": PREM_SL_PCT, "slV": SL_V, "maxPerDay": 0, "indexSlots": 0, "stockSlots": 0, "limitRemoved": True,
                "windowStart": "09:16", "lastEntry": "14:30", "squareOff": "15:15", "minDaysToExpiry": 3,
                "maxHoldSessions": 10, "openBurstCap": 12, "costPct": 0.1, "researchMode": True, "dayPnlLimit": 45000.0, "zTrendHedge": False, "pairSell": False,
-               "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1, "entryGate": "shadow"}
+               "lockMode": "old", "eagleOn": True, "eagleV": 1, "classicOnly": True, "classicV": 1, "entryGate": "shadow", "rsi2Shorts": False, "ibsShorts": False}
 MIN_AGREE_STOCK = 2                      # user 29 Oct: a STOCK option trade needs at least 2 indicators pointing the same way ...
 INDEX_MIN_AGREE = 2                      # 30 Oct (user): an index option trade needs 2+ indicators pointing the same way (the call/put screen + its backing points + other strategies on that index)
 INDEX_BACK_STRENGTH = 50.0               # 30 Oct (user): an index's own strength counts as one agreeing indicator from 50% (was 75%)
@@ -398,11 +398,22 @@ def _trend_ok(sym, side, today):
     return (side == "BUY") == (bars[-1]["close"] > e)
 
 
+def _sync_short_flags(cfg):
+    """RSI(2) Pullback and IBS Reversion are long-only unless their short side is switched on (Journal > Algo). Both default to OFF, so nothing changes until you tap them."""
+    try:
+        import rajan_new_indicators as rni
+        rni.RSI2_SHORTS = bool((cfg or {}).get("rsi2Shorts", False))
+        rni.IBS_SHORTS = bool((cfg or {}).get("ibsShorts", False))
+    except Exception:
+        pass
+
+
 def candidates(today):
     """Fresh signals on the last completed daily bar from the active strategies (same logic the backtest used)."""
     import backtest
     import bar_source
     st0 = _load()
+    _sync_short_flags(st0["cfg"])
     scores, chosen, label = active_set(st0["cfg"])
     if not scores:
         return [], label
@@ -2327,6 +2338,8 @@ class Cfg(BaseModel):
     stockOnly: bool | None = None
     stockTrader: bool | None = None
     entryGate: str | None = None
+    rsi2Shorts: bool | None = None
+    ibsShorts: bool | None = None
     capital: float | None = None
     sleeves: dict | None = None
 
@@ -2642,6 +2655,10 @@ def config(c: Cfg):
             st["cfg"]["stockOnly"] = c.stockOnly
         if c.stockTrader is not None:                                   # false: the separate share paper trader opens nothing new (open trades are still managed)
             st["cfg"]["stockTrader"] = c.stockTrader
+        if c.rsi2Shorts is not None:                                    # RSI(2) Pullback also sells (puts) when true; default false = the published long-only rule
+            st["cfg"]["rsi2Shorts"] = bool(c.rsi2Shorts)
+        if c.ibsShorts is not None:                                     # IBS Reversion also sells (puts) when true; default false
+            st["cfg"]["ibsShorts"] = bool(c.ibsShorts)
         if c.entryGate is not None:                                     # off / shadow (default: only records what the gate would have done) / on (blocks the trades it rejects)
             if c.entryGate not in ("off", "shadow", "on"):
                 raise HTTPException(400, "entryGate must be 'off', 'shadow' or 'on'")

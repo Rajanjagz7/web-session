@@ -39,8 +39,6 @@ CATALOG = [
     ("w-pattern", "W Pattern Support Entry", "Reversal", "Double-bottom (W) forming at support inside an uptrend.", "rp"),
     ("ema-9-15", "9 / 15 EMA Setup", "Trend", "9 EMA crossing the 15 EMA with trend confirmation (daily-bar adaptation of the intraday rule).", "rp"),
     ("tight-range", "Tight Range + EMA Compression", "Breakout", "Narrow-range days with EMAs compressed together, ahead of an expansion move.", "rp"),
-    ("breakout-15m", "Stock Breakout", "Breakout", "Close above the previous N-bar high on above-average volume (daily-bar adaptation of the 15-minute rule).", "rp"),
-    ("breakdown-15m", "Stock Breakdown", "Breakout", "Close below the previous N-bar low on above-average volume (daily-bar adaptation).", "rp"),
     ("volume-buzzer-15m", "Volume Buzzer (short-term)", "Volume", "Volume spike versus its recent average with a short EMA trend filter.", "rp"),
     ("volume-buzzer-daily", "Daily Volume Buzzer", "Volume", "Daily volume well above its average together with a large price move.", "rp"),
     ("rsi-divergence", "RSI Divergence", "Reversal", "Bullish / bearish divergence between price pivots and RSI pivots.", "rp"),
@@ -48,7 +46,6 @@ CATALOG = [
     ("potential-breakout", "Potential Breakout (200D High)", "Breakout", "Price near its 200-day high after a 30-day consolidation.", "rp"),
     ("darvas-supertrend", "Darvas + Supertrend Momentum", "Trend", "Darvas box breakout confirmed by Supertrend, RSI and volume.", "rp"),
     ("bottom-reversal", "Bottom Reversal Confluence", "Reversal", "Multi-condition bottoming setup: EMA, RSI, MACD and 50-SMA confirmation.", "rp"),
-    ("confluence", "9/15 + Hammer + W Confluence", "Reversal", "Fires when the 9/15 EMA setup coincides with a hammer or W pattern at support.", "rp"),
     ("vix-range", "India VIX Next-Day Range", "Volatility", "Indicative next-day range = close ± (India VIX ÷ 1600) × close.", "rp"),
     ("supertrend-mtf", "Supertrend Multi-Timeframe", "Trend", "Supertrend (10, 3) with higher-timeframe confirmation. Buy / Sell on a direction flip; shows whether the weekly trend agrees (daily-bar adaptation of the 15-minute rule).", "core"),
     ("candle-oh-ol", "Open = High / Open = Low", "Reversal", "Stocks and indices: Open = Low (low within 10 points of the open, price back at / above it) -> BUY; Open = High (high within 10 points, price at / below the open) -> SELL. SL 3 points, targets 6 / 9 points. Exact O=L / O=H marked. Same rule as the Daily scan.", "core"),
@@ -67,11 +64,9 @@ CHART_LINES = {
     "w-pattern": [("emaTrend", "EMA trend"), ("support", "Support"), ("neckline", "Neckline")],
     "ema-9-15": [("ema9", "EMA 9"), ("ema15", "EMA 15"), ("trendEma", "Trend EMA")],
     "tight-range": [("emaFast", "EMA fast"), ("emaSlow", "EMA slow")],
-    "breakout-15m": [("breakoutLevel", "Breakout level")], "breakdown-15m": [("breakdownLevel", "Breakdown level")],
     "volume-buzzer-15m": [("ema", "EMA")], "nr7-breakout": [("nrHigh", "NR7 high"), ("nrLow", "NR7 low")],
     "potential-breakout": [("high200", "200D high")], "darvas-supertrend": [("supertrend", "Supertrend")],
     "bottom-reversal": [("support", "Support")],
-    "confluence": [("ema9", "EMA 9"), ("ema15", "EMA 15"), ("support", "Support")],
     "vix-range": [("upperRange", "Upper range"), ("lowerRange", "Lower range")],
     "volume-buzzer-daily": [], "rsi-divergence": [],
     "supertrend-mtf": [("supertrend", "Supertrend")], "candle-oh-ol": [], "volume-spurt": [],
@@ -347,11 +342,6 @@ def summarize(key, symbol, raw):
                 bits = [f"entry {cur.get('entry'):,.2f}" if cur.get("entry") else "", f"stop {cur.get('stopLoss'):,.2f}" if cur.get("stopLoss") else "",
                         f"T1 {cur.get('target1'):,.2f}" if cur.get("target1") else ""]
                 out["headline"] = f"{side.title()} position open since {cur.get('entryDate')} · " + " · ".join(b for b in bits if b)
-            elif key == "rj-best" and cur.get("utPosition") in ("LONG", "SHORT"):
-                side = cur["utPosition"]
-                bits = [f"UT stop {cur.get('utStop'):,.2f}" if cur.get("utStop") else "", f"SL {cur.get('slLevel'):,.2f}" if cur.get("slLevel") else "",
-                        f"TP1 {cur.get('tp1'):,.2f}" if cur.get("tp1") else ""]
-                out["headline"] = f"UT Bot is {side} · " + " · ".join(b for b in bits if b)
             if side:
                 out["signal"], out["stale"] = side, False
                 out["bias"] = "bull" if side == "LONG" else "bear"
@@ -937,14 +927,13 @@ HIDDEN = {
     # Code is kept - remove a key from this set to bring a strategy back.
     # -- no edge (lost in the futures test and did not beat normal drift) --
     "nr7-breakout", "potential-breakout", "supertrend-mtf", "dual-phase-reversal", "rajan-breakout-trap",
-    "rajan-gann-sq9", "rajan-ohol-options", "rsi-divergence", "breakout-15m", "breakdown-15m",
-    "darvas-supertrend", "donchian", "fake", "trend-target-ribbon",
+    "rajan-gann-sq9", "rsi-divergence", "darvas-supertrend", "donchian", "fake", "trend-target-ribbon",
     # -- never fired in 4 years --
-    "confluence", "w-pattern",
+    "w-pattern",
     # -- alert tools whose alerts were not followed by bigger moves --
     "tight-range", "volume-buzzer-15m", "volume-buzzer-daily",
     # -- duplicates: 92% of UT Bot's signals are also Quantum Matrix / RJ Best / Trade Predictor signals --
-    "quantum-matrix", "rj-best", "trade-predictor",
+    "quantum-matrix", "trade-predictor",
     # -- inconclusive and not positive enough to show --
     "vwap-rsi", "heikin-ashi-channel", "ema-9-15", "bottom-reversal", "hammer-support",
     # -- older option scans, replaced by the Expiry / Daily Divisor and Open = Low (10 pt) scans --
