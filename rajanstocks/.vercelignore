@@ -26,3 +26,5 @@ index_lab.py
 filter_test.py
 indicator_audit.py
 short_side_test.py
+duplicate_audit.py
+strategies/

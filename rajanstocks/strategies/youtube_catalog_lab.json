@@ -1,0 +1,72 @@
+{
+  "source": "C:\\Users\\Baps\\trading-strategies\\strategies.json (video catalogue) - only the entries that can be expressed on DAILY candles",
+  "note": "Upload this file in Journal > Backtest lab > Upload strategy. Each entry is a daily-candle approximation of what the video describes, NOT the creator's exact minute / hourly version, so the results will not match the creator's claimed numbers. Imported strategies start stopped.",
+  "strategies": [
+    {
+      "name": "Neeraj Joshi 20-candle swing (daily)",
+      "side": "both",
+      "long": [ { "t": "breakout", "n": 20, "dir": "high" }, { "t": "ma_rel", "type": "sma", "n": 200, "rel": "above" } ],
+      "short": [ { "t": "breakout", "n": 20, "dir": "low" }, { "t": "ma_rel", "type": "sma", "n": 200, "rel": "below" } ],
+      "exitIf": [],
+      "stop": { "type": "atr", "k": 2 },
+      "target": { "on": false, "r": 2 },
+      "trail": { "on": true, "start": 1, "dist": 2 },
+      "maxHold": 60
+    },
+    {
+      "name": "Milind Upasani MUST: Supertrend + SMA10 (daily, buy side)",
+      "side": "long",
+      "long": [ { "t": "supertrend", "n": 10, "mult": 3, "dir": "is up" }, { "t": "ma_cross", "type": "sma", "fast": 1, "slow": 10, "dir": "up" } ],
+      "short": [],
+      "exitIf": [ { "t": "ma_rel", "type": "sma", "n": 10, "rel": "below" } ],
+      "stop": { "type": "atr", "k": 2 },
+      "target": { "on": false, "r": 2 },
+      "trail": { "on": false, "start": 1, "dist": 1.5 },
+      "maxHold": 30
+    },
+    {
+      "name": "Supertrend + EMA200 (daily, buy side; video used 15m)",
+      "side": "long",
+      "long": [ { "t": "supertrend", "n": 10, "mult": 3, "dir": "up" }, { "t": "ma_rel", "type": "ema", "n": 200, "rel": "above" } ],
+      "short": [],
+      "exitIf": [ { "t": "supertrend", "n": 10, "mult": 3, "dir": "down" } ],
+      "stop": { "type": "atr", "k": 2 },
+      "target": { "on": false, "r": 2 },
+      "trail": { "on": false, "start": 1, "dist": 1.5 },
+      "maxHold": 60
+    },
+    {
+      "name": "Supertrend + EMA200 (daily, sell side; video used 15m)",
+      "side": "short",
+      "long": [],
+      "short": [ { "t": "supertrend", "n": 10, "mult": 3, "dir": "down" }, { "t": "ma_rel", "type": "ema", "n": 200, "rel": "below" } ],
+      "exitIf": [ { "t": "supertrend", "n": 10, "mult": 3, "dir": "up" } ],
+      "stop": { "type": "atr", "k": 2 },
+      "target": { "on": false, "r": 2 },
+      "trail": { "on": false, "start": 1, "dist": 1.5 },
+      "maxHold": 60
+    },
+    {
+      "name": "Larry Connors RSI-2 (standard rules assumed: the video gave none)",
+      "side": "long",
+      "long": [ { "t": "ma_rel", "type": "sma", "n": 200, "rel": "above" }, { "t": "rsi", "n": 2, "op": "<", "v": 10 }, { "t": "ma_rel", "type": "sma", "n": 5, "rel": "below" } ],
+      "short": [],
+      "exitIf": [ { "t": "ma_rel", "type": "sma", "n": 5, "rel": "above" } ],
+      "stop": { "type": "atr", "k": 2.5 },
+      "target": { "on": false, "r": 2 },
+      "trail": { "on": false, "start": 1, "dist": 1.5 },
+      "maxHold": 10
+    },
+    {
+      "name": "Shakuni trap, breakout part only (daily range, 1-day hold)",
+      "side": "both",
+      "long": [ { "t": "breakout", "n": 1, "dir": "high" } ],
+      "short": [ { "t": "breakout", "n": 1, "dir": "low" } ],
+      "exitIf": [],
+      "stop": { "type": "atr", "k": 1.5 },
+      "target": { "on": false, "r": 2 },
+      "trail": { "on": false, "start": 1, "dist": 1.5 },
+      "maxHold": 1
+    }
+  ]
+}
