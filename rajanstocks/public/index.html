@@ -3752,9 +3752,7 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
   return topbar+head+aft+tbl+bar+pager+(view.length?`<section class="pkg">${body}</section>`:'<div class="empty">Nothing matches these filters.</div>')+pager}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp],[data-pkbtreset],[data-pkbtlab]');if(!b)return;
   if(b.dataset.pkbtlab!==undefined){const t=document.querySelector('.jv-tabs button[data-k="btlab"]');if(t){t.click();setTimeout(()=>{window.BTLab&&window.BTLab.startNew&&window.BTLab.startNew()},450)}return}
-  if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};if(window.BTLab&&window.BTLab.clearAll){if(!confirm('Clear everything you added here?
-
-This removes your added strategies, the selected strategy, the test result and all filters. It does not touch live trading.'))return;window.BTLab.clearAll()}pkLogRefresh();return}
+  if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};if(window.BTLab&&window.BTLab.clearAll){if(!confirm('Clear everything you added here? This removes your added strategies, the selected strategy, the test result and all filters. It does not touch live trading.'))return;window.BTLab.clearAll()}pkLogRefresh();return}
   if(b.dataset.pklmode){App.pkLogMode=b.dataset.pklmode==='bt'?'bt':'live';if(b.dataset.retry&&App.pkBt)App.pkBt.err=null;pkLogRefresh();return}
   const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),pg=App.pkBtPg||(App.pkBtPg={n:10,p:0});
   if(b.dataset.pkbt){const[k,v]=b.dataset.pkbt.split('|');F[k]=v;pg.p=0}else if(b.dataset.pkbtn!==undefined){pg.n=Math.min(parseInt(b.dataset.pkbtn,10)||10,100);pg.p=0}else pg.p+=parseInt(b.dataset.pkbtp,10);pkLogRefresh()});
