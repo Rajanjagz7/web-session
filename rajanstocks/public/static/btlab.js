@@ -277,7 +277,7 @@
       const list = out[mode] = []; let busy = -1;
       for (let i = Math.max(1, from); i < n - 1; i++) {
         if (i <= busy) continue;
-        const L = sigL && sigL[i], S = sigS && sigS[i]; if (L === S) continue;       // none, or both = no view
+        const L = !!(sigL && sigL[i]), S = !!(sigS && sigS[i]); if (L === S) continue;       // none, or both = no view
         const t = trade(X, sp, i, L ? 'long' : 'short', mode, kind); if (!t) continue;
         t.sym = sym; busy = t.j; list.push(t);
       }
@@ -558,7 +558,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.9</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.10</span></div></div></div>
       <div class="btl-row btl-bar" style="margin:0 0 12px"><button type="button" class="btl-b pri" data-new>+ Add my own strategy</button><button type="button" class="btl-b" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b" data-resetall>↺ Reset strategy</button></div>
       <div class="btl-note">🛡️ Test only. Nothing here touches your live auto trader or your journal.${S.msg ? '<br>' + esc(S.msg) : ''}</div>
       ${chooseHTML()}${runHTML()}${S.busy && !S.res ? '' : (S.res ? resultsHTML() : zeroHTML())}

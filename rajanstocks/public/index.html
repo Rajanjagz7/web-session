@@ -945,7 +945,7 @@ button.pkr-pt:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 #jvPickLog .pkbt-topbar button.pri{background:linear-gradient(135deg,var(--brand),var(--brand-2));border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.4)}
 </style>
 <script id="scrJV" src="/static/journal.js?v=e87335c2"></script>
-<script src="/static/btlab.js?v=ed28a2be"></script>
+<script src="/static/btlab.js?v=ff882b8d"></script>
 <script src="/static/simmode.js?v=b6a81221"></script>
 <script src="/static/ipo.js?v=80226359"></script>
 <script src="/static/godseye.js?v=f79e1d58"></script>
@@ -1855,7 +1855,7 @@ function routePush(n,ev,opt){const crit=ev.pri==='critical';
   if(!crit){S.pushTimes=S.pushTimes.filter(t=>Date.now()-t<36e5);if(S.pushTimes.length>=PUSH_HOURLY){S.throttled++;addDeliv(n,'push','suppressed','Throttled');return}}
   sendPush(n,opt.forcePush)}
 function swReg(){if(!('serviceWorker' in navigator))return Promise.resolve(null);
-  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=46795dc8',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
+  if(!swReg._p)swReg._p=navigator.serviceWorker.register('/sw.js?v=7499ab51',{scope:'/'}).then(()=>navigator.serviceWorker.ready).catch(()=>null);return swReg._p}
 
 /* ---------- Install app (PWA): Android/desktop Chrome get the native prompt, iOS gets the
    Add-to-Home-Screen guide (Safari has no programmatic install). Hidden once installed or
