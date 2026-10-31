@@ -1,0 +1,7 @@
+indicator,key,stop_ATR,exit,n,winPct,avgR,pf,isPF,oosN,oosPF,randomPF,indexN,indexPF,stockN,stockPF,splitDate,verdict
+HA Momentum,rajan-ha-momentum,0.75,TRAIL,344,40,0.153,1.26,1.33,97,1.1,0.94,66,0.89,278,1.38,2025-09-03,maybe
+IBS Reversion,rajan-ibs-reversion,2.0,T3,486,50,0.053,1.13,1.23,123,0.89,0.89,122,1.08,364,1.15,2025-08-22,no edge
+RSI2 Pullback,rajan-rsi2-pullback,1.0,TRAIL,214,39,0.263,1.56,1.9,53,0.85,0.94,54,1.53,160,1.57,2025-08-13,no edge
+Trend Rider,rajan-trend-rider,1.0,T2,214,38,-0.121,0.83,0.96,75,0.62,0.78,58,0.78,156,0.85,2025-05-13,no edge
+Z Trend,rzt,1.0,TRAIL,665,37,0.049,1.09,1.11,187,1.05,1.0,153,1.23,512,1.06,2025-09-24,maybe
+UT Bot,ut-bot,1.0,TRAIL,2076,34,-0.064,0.89,0.93,609,0.79,0.95,456,0.85,1620,0.9,2025-08-22,no edge

@@ -14,3 +14,15 @@ run_backtest_ci.py
 day_power_backtest.py
 hedge_backtest.py
 accuracy_report.py
+# research / analysis scripts and their outputs (31 Oct) - not needed by the live app
+mock_round/
+month_replay.py
+mock_round.py
+exit_lab.py
+atr_lab.py
+cash_lab.py
+sl_lab.py
+index_lab.py
+filter_test.py
+indicator_audit.py
+short_side_test.py

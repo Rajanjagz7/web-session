@@ -1,0 +1,25 @@
+exit,filter,n,net,per,win,pf,worstDay,dd,beatsRandomPct
+2R+LOCK1500,baseline (no filter),110,-154332,-1403,15,0.24,-21225,154332,
+2R+LOCK1500,"1 skip 1-lot stop loss > Rs2,500",95,-107614,-1133,18,0.31,-21225,107614,100%
+2R+LOCK1500,"1 skip 1-lot stop loss > Rs1,800",61,-60934,-999,18,0.31,-16375,60934,99%
+2R+LOCK1500,2 need 2+ indicators agreeing,27,-36532,-1353,15,0.24,-9466,36532,57%
+2R+LOCK1500,3a max 4 same-side trades a day,86,-119523,-1390,15,0.24,-14799,119523,53%
+2R+LOCK1500,3b stock must not fight the index bias,101,-134957,-1336,17,0.26,-21225,134957,89%
+2R+LOCK1500,3c stock needs index bias to agree,63,-84520,-1342,16,0.23,-21225,84520,65%
+2R+LOCK1500,"4a open-risk cap Rs10,000 a day",90,-118893,-1321,16,0.24,-12775,118893,82%
+2R+LOCK1500,"4b open-risk cap Rs15,000 a day",106,-142283,-1342,16,0.25,-16375,142283,99%
+2R+LOCK1500,"5 skip premium outlay > Rs20,000",95,-107614,-1133,18,0.31,-21225,107614,100%
+2R+LOCK1500,COMBO 1+3a+4b,73,-80622,-1104,18,0.32,-13542,80622,99%
+2R+LOCK1500,COMBO 1+2+3b+4b,21,-19534,-930,19,0.37,-8884,19534,88%
+LADDER,baseline (no filter),108,-139400,-1291,12,0.33,-17826,139400,
+LADDER,"1 skip 1-lot stop loss > Rs2,500",94,-93252,-992,14,0.42,-16777,93252,100%
+LADDER,"1 skip 1-lot stop loss > Rs1,800",60,-53619,-894,12,0.42,-11566,53619,95%
+LADDER,2 need 2+ indicators agreeing,27,-41022,-1519,7,0.2,-11924,48978,34%
+LADDER,3a max 4 same-side trades a day,85,-93574,-1101,14,0.42,-14799,93574,92%
+LADDER,3b stock must not fight the index bias,99,-119412,-1206,13,0.36,-17826,119412,87%
+LADDER,3c stock needs index bias to agree,62,-86092,-1389,10,0.25,-17826,86092,35%
+LADDER,"4a open-risk cap Rs10,000 a day",89,-100904,-1134,13,0.37,-14246,100904,90%
+LADDER,"4b open-risk cap Rs15,000 a day",104,-127351,-1225,12,0.35,-16777,127351,98%
+LADDER,"5 skip premium outlay > Rs20,000",94,-93252,-992,14,0.42,-16777,93252,100%
+LADDER,COMBO 1+3a+4b,73,-55243,-757,16,0.55,-10058,55243,100%
+LADDER,COMBO 1+2+3b+4b,21,-24024,-1144,10,0.3,-11924,31980,64%

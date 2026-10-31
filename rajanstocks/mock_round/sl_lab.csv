@@ -1,0 +1,3 @@
+rule,isN,isStop,isT1,oosN,oosStop,oosT1,oosPF,sd_vs_random
+ATR>2.5%,513,49,34,298,49,39,1.15,2.3
+Wed,672,49,40,321,57,35,0.82,-0.8

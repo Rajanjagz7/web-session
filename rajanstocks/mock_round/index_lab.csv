@@ -1,0 +1,28 @@
+indicator,exit,n,winPct,avgR,pf,isPF,oosN,oosPF,randomPF,stopPct,splitDate,verdict
+bottom-reversal,,14,,,,,,,,,,too few signals
+breakdown-15m,trail/none,268,13,-0.595,0.49,0.5,82,0.48,0.44,100,2026-02-02,no edge
+breakout-15m,trail/none,393,15,-0.694,0.4,0.48,118,0.2,0.45,100,2025-03-24,no edge
+confluence,trail/trend200,71,17,-0.724,0.38,0.49,23,0.16,0.48,100,2025-10-17,no edge
+darvas-supertrend,fixed/none,75,23,-0.71,0.34,0.4,24,0.23,0.42,77,2025-05-06,no edge
+donchian,trail/none,467,13,-0.701,0.4,0.49,143,0.21,0.48,100,2025-06-27,no edge
+dual-phase-reversal,fixed/none,194,32,-0.431,0.55,0.65,59,0.34,0.42,68,2025-05-13,no edge
+ema-9-15,trail/trend200,132,18,-0.583,0.49,0.42,47,0.61,0.44,99,2025-09-10,no edge
+fake,trail/none,310,15,-0.747,0.36,0.38,92,0.31,0.46,100,2025-08-12,no edge
+hammer-support,,1,,,,,,,,,,too few signals
+nr7-breakout,trail/none,995,14,-0.755,0.39,0.42,303,0.31,0.48,100,2025-06-11,no edge
+rajan-breakout-trap,trail/trend200,119,13,-0.703,0.41,0.5,47,0.27,0.38,100,2025-08-29,no edge
+rajan-gann-sq9,trail/trend200,530,17,-0.599,0.48,0.5,226,0.46,0.55,99,2025-07-18,no edge
+rajan-ha-momentum,trail/none,67,22,-0.21,0.8,0.96,21,0.39,0.55,100,2025-08-25,no edge
+rajan-ibs-reversion,trail/trend200,151,17,-0.566,0.53,0.55,32,0.49,0.4,100,2025-09-05,no edge
+rajan-ohol-options,fixed/none,369,27,-0.585,0.43,0.37,112,0.57,0.38,73,2025-09-10,no edge
+rajan-rsi2-pullback,trail/none,61,15,-0.742,0.43,0.65,19,0.0,0.22,100,2025-08-11,no edge
+rajan-trend-rider,fixed/trend200,50,22,-0.678,0.35,0.44,19,0.23,0.35,78,2025-11-27,no edge
+rj-best,trail/none,1029,18,-0.601,0.49,0.52,311,0.42,0.53,100,2025-07-30,no edge
+rsi-divergence,trail/none,81,20,-0.467,0.57,0.51,25,0.72,0.45,100,2025-05-12,no edge
+rzt,trail/trend200,153,16,-0.683,0.38,0.39,45,0.37,0.67,99,2025-09-15,no edge
+supertrend-mtf,fixed/trend200,87,20,-0.829,0.27,0.29,32,0.25,0.4,80,2025-07-28,no edge
+tight-range,,0,,,,,,,,,,too few signals
+trade-predictor,fixed/none,272,23,-0.682,0.35,0.3,82,0.49,0.43,77,2025-09-04,no edge
+trend-target-ribbon,trail/trend200,112,11,-0.889,0.33,0.34,39,0.31,0.32,100,2025-09-11,no edge
+ut-bot,trail/none,672,13,-0.857,0.34,0.37,197,0.26,0.5,100,2025-10-06,no edge
+w-pattern,trail/none,85,15,-0.788,0.35,0.36,27,0.32,0.44,100,2025-09-17,no edge
