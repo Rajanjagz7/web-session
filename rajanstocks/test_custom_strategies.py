@@ -58,3 +58,21 @@ def test_nothing_runs_when_none_are_switched_on():
     st = {"cfg": {}, "trades": [], "log": []}
     at.custom_record(st, at._now())
     assert "shadow" not in st
+
+
+def test_your_indicators_match_the_originals():
+    """The new rule types (UT Bot, ADX, ALMA, Heikin-Ashi) must give the same numbers as the live indicator code."""
+    import ha_dancing_trend as hd
+    import heikin_ashi
+    import rajan_new_indicators as rn
+    import ut_bot
+    b = bars(300)
+    X = cs.Ctx(b)
+    _, _, sig = ut_bot.compute_signals(b, key_value=1.5, atr_period=10)
+    assert [1 if s == "BUY" else -1 if s == "SELL" else 0 for s in sig] == X.utb(1.5, 10)
+    _, _, adx = hd._dmi(b, 14)
+    assert all(abs(a - v) < 1e-9 for a, v in zip(adx, X.adx(14)) if a is not None and v == v)
+    al = rn._alma([x["close"] for x in b], 34)
+    assert all(abs(a - v) < 1e-9 for a, v in zip(al, X.alma(34)) if a is not None)
+    ha = heikin_ashi.to_heikin_ashi([dict(x, dt=x["date"]) for x in b])
+    assert all(abs(a["haClose"] - v) < 1e-9 for a, v in zip(ha, X.ha()["hc"]))

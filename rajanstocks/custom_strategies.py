@@ -12,6 +12,10 @@ SIDES = ("long", "short", "both")
 # rule type -> [(param, choices | (min, max), default)]
 RULES = {
     "ma_rel": [("type", ("sma", "ema"), "sma"), ("n", (2, 400), 50), ("rel", ("above", "below"), "above")],
+    "utbot": [("key", (0.3, 6), 1.0), ("atr", (2, 50), 10), ("dir", ("buy", "sell"), "buy")],
+    "adx": [("n", (2, 50), 14), ("op", (">", "<"), ">"), ("v", (5, 60), 20)],
+    "alma_slope": [("n", (5, 100), 34), ("dir", ("up", "down"), "up")],
+    "ha_mom": [("dir", ("up", "down"), "up")],
     "ma_vs": [("type", ("sma", "ema"), "ema"), ("fast", (1, 200), 8), ("slow", (2, 400), 33), ("rel", ("above", "below"), "above")],
     "ma_cross": [("type", ("sma", "ema"), "ema"), ("fast", (1, 200), 9), ("slow", (2, 400), 21), ("dir", ("up", "down"), "up")],
     "rsi": [("n", (2, 50), 14), ("op", ("<", ">"), "<"), ("v", (1, 99), 30)],
@@ -121,6 +125,18 @@ def _rma(a, k):
     return o
 
 
+def _rma_a(a, k):
+    o, s = [NAN] * len(a), 0.0
+    for i in range(len(a)):
+        if i < k:
+            s += a[i]
+            if i == k - 1:
+                o[i] = s / k
+        else:
+            o[i] = (o[i - 1] * (k - 1) + a[i]) / k
+    return o
+
+
 class Ctx:
     def __init__(self, bars):
         self.n = len(bars)
@@ -178,6 +194,80 @@ class Ctx:
             return o
         return self.get(f"v{k}", f)
 
+    def _tr(self):
+        return [self.h[0] - self.l[0]] + [max(self.h[i] - self.l[i], abs(self.h[i] - self.c[i - 1]), abs(self.l[i] - self.c[i - 1])) for i in range(1, self.n)]
+
+    def adx(self, k):
+        def f():
+            n = self.n
+            pd, md = [0.0] * n, [0.0] * n
+            for i in range(1, n):
+                up, dn = self.h[i] - self.h[i - 1], self.l[i - 1] - self.l[i]
+                pd[i] = up if (up > dn and up > 0) else 0.0
+                md[i] = dn if (dn > up and dn > 0) else 0.0
+            ts, ps, ms = _rma_a(self._tr(), k), _rma_a(pd, k), _rma_a(md, k)
+            dx, fv = [NAN] * n, -1
+            for i in range(n):
+                if ts[i] != ts[i]:
+                    continue
+                p = 100 * ps[i] / ts[i] if ts[i] else 0.0
+                m = 100 * ms[i] / ts[i] if ts[i] else 0.0
+                d = p + m
+                dx[i] = 100 * abs(p - m) / d if d else 0.0
+                if fv < 0:
+                    fv = i
+            out = [NAN] * n
+            if fv >= 0:
+                for j, v in enumerate(_rma_a(dx[fv:], k)):
+                    out[fv + j] = v
+            return out
+        return self.get(f"adx{k}", f)
+
+    def alma(self, L):
+        def f():
+            o, m, s = [NAN] * self.n, 0.85 * (L - 1), L / 6
+            w = [math.exp(-((j - m) ** 2) / (2 * s * s)) for j in range(L)]
+            ws = sum(w)
+            for i in range(L - 1, self.n):
+                o[i] = sum(w[j] * self.c[i - L + 1 + j] for j in range(L)) / ws
+            return o
+        return self.get(f"alma{L}", f)
+
+    def ha(self):
+        def f():
+            hc = [(self.o[i] + self.h[i] + self.l[i] + self.c[i]) / 4 for i in range(self.n)]
+            ho = [0.0] * self.n
+            for i in range(self.n):
+                ho[i] = (self.o[0] + self.c[0]) / 2 if i == 0 else (ho[i - 1] + hc[i - 1]) / 2
+            return {"hc": hc, "ho": ho, "e9": _ema_raw(hc, 9), "e21": _ema_raw(hc, 21), "bs": _ema_raw(hc, 20)}
+        return self.get("ha", f)
+
+    def utb(self, key, p):
+        def f():
+            n, at, st, sg = self.n, _rma_a(self._tr(), p), [NAN] * self.n, [0] * self.n
+            for i in range(n):
+                if at[i] != at[i]:
+                    continue
+                nl, src = key * at[i], self.c[i]
+                ps = st[i - 1] if i > 0 and st[i - 1] == st[i - 1] else 0.0
+                pv = self.c[i - 1] if i > 0 else src
+                if src > ps and pv > ps:
+                    s_ = max(ps, src - nl)
+                elif src < ps and pv < ps:
+                    s_ = min(ps, src + nl)
+                elif src > ps:
+                    s_ = src - nl
+                else:
+                    s_ = src + nl
+                st[i] = s_
+                if i > 0 and st[i - 1] == st[i - 1]:
+                    if src > s_ and self.c[i - 1] <= st[i - 1]:
+                        sg[i] = 1
+                    elif src < s_ and self.c[i - 1] >= st[i - 1]:
+                        sg[i] = -1
+            return sg
+        return self.get(f"utb{key}_{p}", f)
+
     def supertrend(self, k, m):
         def f():
             atr, dirs, fu, fl, d = self.atr(k), [0] * self.n, NAN, NAN, 1
@@ -208,6 +298,25 @@ def test(c, X, i):
     if t == "ma_rel":
         m = X.ma(c["type"], int(c["n"]))[i]
         return _ok(m) and (C[i] > m if c["rel"] == "above" else C[i] < m)
+    if t == "utbot":
+        g = X.utb(c["key"], int(c["atr"]))[i]
+        return g == 1 if c["dir"] == "buy" else g == -1
+    if t == "adx":
+        a = X.adx(int(c["n"]))[i]
+        return _ok(a) and (a > c["v"] if c["op"] == ">" else a < c["v"])
+    if t == "alma_slope":
+        m, a = X.alma(int(c["n"])), X.atr(14)[i]
+        if i < 3 or not _ok(m[i], m[i - 3]) or not a > 0:
+            return False
+        v = (m[i] - m[i - 3]) / a
+        return v > 0 if c["dir"] == "up" else v < 0
+    if t == "ha_mom":
+        h, ad = X.ha(), X.adx(14)[i]
+        if i < 1 or not _ok(ad) or ad < 18:
+            return False
+        if c["dir"] == "up":
+            return h["e9"][i] > h["e21"][i] and h["hc"][i] > h["ho"][i] and h["hc"][i] > h["hc"][i - 1] and h["hc"][i] > h["bs"][i] and h["hc"][i - 1] <= h["bs"][i - 1]
+        return h["e9"][i] < h["e21"][i] and h["hc"][i] < h["ho"][i] and h["hc"][i] < h["hc"][i - 1] and h["hc"][i] < h["bs"][i] and h["hc"][i - 1] >= h["bs"][i - 1]
     if t == "ma_vs":
         a, b = X.ma(c["type"], int(c["fast"]))[i], X.ma(c["type"], int(c["slow"]))[i]
         return _ok(a, b) and (a > b if c["rel"] == "above" else a < b)

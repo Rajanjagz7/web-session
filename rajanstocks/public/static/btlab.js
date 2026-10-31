@@ -20,6 +20,10 @@
   /* ---------------- rules ---------------- */
   const RULES = {
     ma_rel: { label: 'Price vs moving average', p: [{ k: 'type', s: ['sma', 'ema'], d: 'sma' }, { k: 'n', d: 50, min: 2, max: 400 }, { k: 'rel', s: ['above', 'below'], d: 'above' }], txt: c => `close ${c.rel} ${c.type.toUpperCase()}(${c.n})` },
+    utbot: { label: 'UT Bot signal', p: [{ k: 'key', d: 1, min: 0.3, max: 6, step: 0.1 }, { k: 'atr', d: 10, min: 2, max: 50 }, { k: 'dir', s: ['buy', 'sell'], d: 'buy' }], txt: c => `UT Bot(${c.key}, ${c.atr}) gives a ${c.dir} signal` },
+    adx: { label: 'Trend strength (ADX)', p: [{ k: 'n', d: 14, min: 2, max: 50 }, { k: 'op', s: ['>', '<'], d: '>' }, { k: 'v', d: 20, min: 5, max: 60 }], txt: c => `ADX(${c.n}) ${c.op} ${c.v}` },
+    alma_slope: { label: 'ALMA slope', p: [{ k: 'n', d: 34, min: 5, max: 100 }, { k: 'dir', s: ['up', 'down'], d: 'up' }], txt: c => `ALMA(${c.n}) is ${c.dir === 'up' ? 'rising' : 'falling'} over 3 days` },
+    ha_mom: { label: 'Heikin-Ashi momentum', p: [{ k: 'dir', s: ['up', 'down'], d: 'up' }], txt: c => `Heikin-Ashi momentum ${c.dir} (EMA 9 ${c.dir === 'up' ? 'above' : 'below'} 21, HA candle with the trend, ADX 18+, crosses its channel middle)` },
     ma_vs: { label: 'One average above another', p: [{ k: 'type', s: ['ema', 'sma'], d: 'ema' }, { k: 'fast', d: 8, min: 1, max: 200 }, { k: 'slow', d: 33, min: 2, max: 400 }, { k: 'rel', s: ['above', 'below'], d: 'above' }], txt: c => `${c.type.toUpperCase()}(${c.fast}) is ${c.rel} ${c.type.toUpperCase()}(${c.slow})` },
     ma_cross: { label: 'Moving average cross', p: [{ k: 'type', s: ['ema', 'sma'], d: 'ema' }, { k: 'fast', d: 9, min: 1, max: 200 }, { k: 'slow', d: 21, min: 3, max: 400 }, { k: 'dir', s: ['up', 'down'], d: 'up' }], txt: c => `${c.type.toUpperCase()}(${c.fast}) crosses ${c.dir === 'up' ? 'above' : 'below'} ${c.type.toUpperCase()}(${c.slow})` },
     rsi: { label: 'RSI level', p: [{ k: 'n', d: 14, min: 2, max: 50 }, { k: 'op', s: ['<', '>'], d: '<' }, { k: 'v', d: 30, min: 1, max: 99 }], txt: c => `RSI(${c.n}) ${c.op} ${c.v}` },
@@ -38,6 +42,11 @@
   const newRule = t => { const c = { t }; RULES[t].p.forEach(p => c[p.k] = p.d); return c; };
   const R_ = (t, o) => Object.assign(newRule(t), o || {});
   const TEMPLATES = {
+    mine_ut: { grp: 'mine', desc: 'Your indicator on daily candles: buy when the UT Bot ATR trailing stop flips up, sell when it flips down.', name: 'UT Bot Alerts (your indicator)', side: 'both', long: [R_('utbot', { key: 1, atr: 10, dir: 'buy' })], short: [R_('utbot', { key: 1, atr: 10, dir: 'sell' })], exitIf: [], stop: { type: 'atr', k: 1.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 20 },
+    mine_ibs: { grp: 'mine', desc: 'Your indicator: buys a share that closed near the bottom of its day range and sells when it closes near the top.', name: 'IBS Reversion (your indicator)', side: 'long', long: [R_('ibs', { op: '<', v: 0.1 })], short: [], exitIf: [R_('ibs', { op: '>', v: 0.9 })], stop: { type: 'atr', k: 2.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 6 },
+    mine_rsi2: { grp: 'mine', desc: 'Your indicator: buys a sharp 2-day dip inside a strong uptrend (above the 200-day average) and sells when it bounces above the 5-day average.', name: 'RSI(2) Pullback, Connors (your indicator)', side: 'long', long: [R_('ma_rel', { type: 'sma', n: 200, rel: 'above' }), R_('rsi', { n: 2, op: '<', v: 10 }), R_('ma_rel', { type: 'sma', n: 5, rel: 'below' })], short: [], exitIf: [R_('ma_rel', { type: 'sma', n: 5, rel: 'above' })], stop: { type: 'atr', k: 2.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 10 },
+    mine_tr: { grp: 'mine', desc: 'Your indicator: a UT Bot flip (1.5, 10) in the direction of the 200-day trend, with ADX 20+ and the ALMA(34) line sloping the same way.', name: 'Trend Rider (your indicator)', side: 'both', long: [R_('utbot', { key: 1.5, atr: 10, dir: 'buy' }), R_('ma_rel', { type: 'ema', n: 200, rel: 'above' }), R_('adx', { n: 14, op: '>', v: 20 }), R_('alma_slope', { n: 34, dir: 'up' })], short: [R_('utbot', { key: 1.5, atr: 10, dir: 'sell' }), R_('ma_rel', { type: 'ema', n: 200, rel: 'below' }), R_('adx', { n: 14, op: '>', v: 20 }), R_('alma_slope', { n: 34, dir: 'down' })], exitIf: [], stop: { type: 'atr', k: 1.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 40 },
+    mine_ha: { grp: 'mine', desc: 'Your indicator: Heikin-Ashi candles with EMA 9 above 21, strength (ADX 18+), and a cross of the HA channel middle.', name: 'HA Momentum (your indicator)', side: 'both', long: [R_('ha_mom', { dir: 'up' })], short: [R_('ha_mom', { dir: 'down' })], exitIf: [], stop: { type: 'atr', k: 1.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 30 },
     ema_cross: { desc: 'Rides trends: buys when a fast average crosses above a slow one, sells when it crosses below.', name: 'Trend follower (EMA 9/21 cross)', side: 'both', long: [R_('ma_cross', { dir: 'up' })], short: [R_('ma_cross', { dir: 'down' })], exitIf: [], stop: { type: 'atr', k: 1.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 20 },
     donchian: { desc: 'Buys when the price breaks its 20-day high, sells when it breaks the 20-day low, and trails the stop.', name: '20-day breakout', side: 'both', long: [R_('breakout', { n: 20, dir: 'high' })], short: [R_('breakout', { n: 20, dir: 'low' })], exitIf: [], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 3 }, trail: { on: true, start: 1, dist: 2 }, maxHold: 30 },
     ibs: { desc: 'Buys shares that closed near the bottom of the day and sells when they recover.', name: 'Bounce from weak closes (IBS)', side: 'long', long: [R_('ibs', { op: '<', v: 0.1 })], short: [], exitIf: [R_('ibs', { op: '>', v: 0.9 })], stop: { type: 'atr', k: 2.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 6 },
@@ -209,6 +218,7 @@
     }
     return dir;
   }
+  const rmaA = (a, k) => { const o = new Array(a.length).fill(NaN); let s = 0; for (let i = 0; i < a.length; i++) { if (i < k) { s += a[i]; if (i === k - 1) o[i] = s / k; } else o[i] = (o[i - 1] * (k - 1) + a[i]) / k; } return o; };
   const emaRaw = (a, k) => { const o = new Array(a.length).fill(NaN), m = 2 / (k + 1); let e = NaN; for (let i = 0; i < a.length; i++) { if (!(a[i] === a[i])) continue; e = e === e ? a[i] * m + e * (1 - m) : a[i]; o[i] = e; } return o; };
   /* ---------------- indicators (memoised per symbol) ---------------- */
   function ctxOf(B) {
@@ -224,6 +234,17 @@
       atr: k => get('atr' + k, () => { const tr = B.c.map((c, i) => i === 0 ? B.h[0] - B.l[0] : Math.max(B.h[i] - B.l[i], Math.abs(B.h[i] - B.c[i - 1]), Math.abs(B.l[i] - B.c[i - 1]))); return rma(tr, k); }),
       hh: k => get('hh' + k, () => { const o = new Array(n).fill(NaN); for (let i = k; i < n; i++) { let m = -Infinity; for (let j = i - k; j < i; j++) m = Math.max(m, B.h[j]); o[i] = m; } return o; }),
       ll: k => get('ll' + k, () => { const o = new Array(n).fill(NaN); for (let i = k; i < n; i++) { let m = Infinity; for (let j = i - k; j < i; j++) m = Math.min(m, B.l[j]); o[i] = m; } return o; }),
+      adx: k => get('adx' + k, () => { const pd = new Array(n).fill(0), md = new Array(n).fill(0); for (let i = 1; i < n; i++) { const up = B.h[i] - B.h[i - 1], dn = B.l[i - 1] - B.l[i]; pd[i] = (up > dn && up > 0) ? up : 0; md[i] = (dn > up && dn > 0) ? dn : 0; }
+        const tr = B.c.map((c, i) => i === 0 ? B.h[0] - B.l[0] : Math.max(B.h[i] - B.l[i], Math.abs(B.h[i] - B.c[i - 1]), Math.abs(B.l[i] - B.c[i - 1]))), ts = rmaA(tr, k), ps = rmaA(pd, k), ms = rmaA(md, k), dx = new Array(n).fill(NaN); let fv = -1;
+        for (let i = 0; i < n; i++) { if (!(ts[i] === ts[i])) continue; const p = ts[i] ? 100 * ps[i] / ts[i] : 0, m = ts[i] ? 100 * ms[i] / ts[i] : 0, d = p + m; dx[i] = d ? 100 * Math.abs(p - m) / d : 0; if (fv < 0) fv = i; }
+        const out = new Array(n).fill(NaN); if (fv >= 0) { const r = rmaA(dx.slice(fv), k); for (let i = 0; i < r.length; i++) out[fv + i] = r[i]; } return out; }),
+      alma: L => get('alma' + L, () => { const o = new Array(n).fill(NaN), m = 0.85 * (L - 1), s = L / 6, w = Array.from({ length: L }, (_, j) => Math.exp(-((j - m) ** 2) / (2 * s * s))), ws = w.reduce((p, x) => p + x, 0); for (let i = L - 1; i < n; i++) { let t = 0; for (let j = 0; j < L; j++) t += w[j] * B.c[i - L + 1 + j]; o[i] = t / ws; } return o; }),
+      ha: () => get('ha', () => { const hc = B.c.map((c, i) => (B.o[i] + B.h[i] + B.l[i] + c) / 4), ho = new Array(n); for (let i = 0; i < n; i++) ho[i] = i === 0 ? (B.o[0] + B.c[0]) / 2 : (ho[i - 1] + hc[i - 1]) / 2; return { hc, ho, e9: emaRaw(hc, 9), e21: emaRaw(hc, 21), bs: emaRaw(hc, 20) }; }),
+      utb: (key, p) => get('utb' + key + '_' + p, () => { const tr = B.c.map((c, i) => i === 0 ? B.h[0] - B.l[0] : Math.max(B.h[i] - B.l[i], Math.abs(B.h[i] - B.c[i - 1]), Math.abs(B.l[i] - B.c[i - 1]))), at = rmaA(tr, p), st = new Array(n).fill(NaN), sg = new Array(n).fill(0);
+        for (let i = 0; i < n; i++) { if (!(at[i] === at[i])) continue; const nl = key * at[i], src = B.c[i], ps = i > 0 && st[i - 1] === st[i - 1] ? st[i - 1] : 0, pv = i > 0 ? B.c[i - 1] : src; let s;
+          if (src > ps && pv > ps) s = Math.max(ps, src - nl); else if (src < ps && pv < ps) s = Math.min(ps, src + nl); else if (src > ps) s = src - nl; else s = src + nl; st[i] = s;
+          if (i > 0 && st[i - 1] === st[i - 1]) { if (src > s && B.c[i - 1] <= st[i - 1]) sg[i] = 1; else if (src < s && B.c[i - 1] >= st[i - 1]) sg[i] = -1; } }
+        return sg; }),
       hv: k => get('hv' + k, () => { const o = new Array(n).fill(NaN), r = B.c.map((c, i) => i ? Math.log(c / B.c[i - 1]) : 0); for (let i = k; i < n; i++) { let m = 0, q = 0; for (let j = i - k + 1; j <= i; j++) m += r[j]; m /= k; for (let j = i - k + 1; j <= i; j++) q += (r[j] - m) * (r[j] - m); o[i] = Math.sqrt(q / (k - 1)) * Math.sqrt(252); } return o; }),
       vavg: k => get('v' + k, () => { const o = new Array(n).fill(NaN); let s = 0; for (let i = 0; i < n; i++) { s += B.v[i]; if (i >= k) s -= B.v[i - k]; if (i >= k) o[i] = s / k; } return o; })
     };
@@ -233,6 +254,11 @@
     switch (c.t) {
       case 'ma_rel': { const m = X.ma(c.type, c.n)[i]; return m === m && (c.rel === 'above' ? B.c[i] > m : B.c[i] < m); }
       case 'ma_cross': { const a = X.ma(c.type, c.fast), b = X.ma(c.type, c.slow); if (i < 1 || !(a[i] === a[i]) || !(b[i] === b[i]) || !(a[i - 1] === a[i - 1]) || !(b[i - 1] === b[i - 1])) return false; return c.dir === 'up' ? (a[i - 1] <= b[i - 1] && a[i] > b[i]) : (a[i - 1] >= b[i - 1] && a[i] < b[i]); }
+      case 'utbot': { const g = X.utb(c.key, c.atr)[i]; return c.dir === 'buy' ? g === 1 : g === -1; }
+      case 'adx': { const a = X.adx(c.n)[i]; return a === a && (c.op === '>' ? a > c.v : a < c.v); }
+      case 'alma_slope': { const m = X.alma(c.n), a = X.atr(14)[i]; if (i < 3 || !(m[i] === m[i]) || !(m[i - 3] === m[i - 3]) || !(a > 0)) return false; const v = (m[i] - m[i - 3]) / a; return c.dir === 'up' ? v > 0 : v < 0; }
+      case 'ha_mom': { const h = X.ha(), ad = X.adx(14)[i]; if (i < 1 || !(ad === ad) || ad < 18) return false;
+        return c.dir === 'up' ? (h.e9[i] > h.e21[i] && h.hc[i] > h.ho[i] && h.hc[i] > h.hc[i - 1] && h.hc[i] > h.bs[i] && h.hc[i - 1] <= h.bs[i - 1]) : (h.e9[i] < h.e21[i] && h.hc[i] < h.ho[i] && h.hc[i] < h.hc[i - 1] && h.hc[i] < h.bs[i] && h.hc[i - 1] >= h.bs[i - 1]); }
       case 'ma_vs': { const a = X.ma(c.type, c.fast)[i], b = X.ma(c.type, c.slow)[i]; return a === a && b === b && (c.rel === 'above' ? a > b : a < b); }
       case 'rsi': { const r = X.rsi(c.n)[i]; return r === r && (c.op === '<' ? r < c.v : r > c.v); }
       case 'breakout': { if (c.dir === 'high') { const h = X.hh(c.n)[i]; return h === h && B.c[i] > h; } const l = X.ll(c.n)[i]; return l === l && B.c[i] < l; }
@@ -532,21 +558,33 @@
     return `<div class="btl-paper"><div class="btl-sub" style="margin-top:14px">📅 Paper trading each day</div>${on.map(row).join('')}${S.paperErr ? `<div class="btl-warn">${esc(S.paperErr)}</div>` : ''}
       <div class="muted" style="font-size:12.5px;margin-top:6px">Paper only: no order is ever placed. Each trading morning after 9:20 your strategy is checked on yesterday's closing candles, and any signal is logged as a pretend trade (stop from your rules, first target 1.5R) and tracked to its stop or 3:25 pm. Your real auto trade is not touched.</div></div>`;
   }
+  const OTHER_IND = [["HA Dancing Trend Channel", "needs 1-minute candles"], ["India VIX Next-Day Range", "uses the VIX range, not a buy / sell rule"], ["Open = High / Open = Low", "decided in the first minutes of the day (needs 1-minute candles)"], ["Volume Spurt", "needs 1-minute candles"], ["15-Min Opening Range Breakout", "needs 1-minute candles"], ["Bearish Open = High (contracts)", "needs the option contract's own prices"], ["Expiry Divisor /4 /6.5 /8 /10", "needs option premium prices"], ["Daily Divisor /2 /4", "needs option premium prices"], ["Open = Low (within 10 pts) buy", "needs option premium prices"], ["Hedged Seller (credit spread)", "a two-option position, not a single trade"], ["Meta Bounce", "needs option contract prices"]];
+  let LIB = null;
+  fetch('/static/lab_library.json').then(r => r.json()).then(j => { LIB = j.items || []; if (S.el) paint(); }).catch(() => { });
+  function libHTML() {
+    const ok = (LIB || []).filter(x => x.tpl), no = (LIB || []).filter(x => !x.tpl);
+    return `<details class="btl-more" data-k="lib"><summary>Your indicators and video strategies that cannot be tested here (${OTHER_IND.length + no.length})</summary><div>
+      <div class="muted" style="font-size:13px;margin-bottom:6px">The lab tests daily candles and the option price model. These need minute or hourly candles, or real option prices, so they would give wrong answers here.</div>
+      <div class="btl-sub">Your other indicators</div>${OTHER_IND.map(o => `<div class="btl-prow"><b>${esc(o[0])}</b><span>${esc(o[1])}</span></div>`).join('')}
+      <div class="btl-sub">Video strategies (${no.length})</div>${no.map(x => `<div class="btl-prow"><b>${x.n}. ${esc(x.title)}</b><span>${esc(x.why || '')}</span></div>`).join('') || '<div class="muted">Loading…</div>'}
+      <div class="btl-sub">Video strategies you can test (${ok.length}): press to select</div>${ok.map(x => `<div class="btl-prow"><button type="button" class="btl-lk" data-pick="tpl:${esc(x.tpl)}">${x.n}. ${esc(x.title)}</button><span>${x.ret != null ? 'claims ' + x.ret + '%' : ''}${x.win != null ? ' · win ' + x.win + '%' : ''}</span></div>`).join('')}
+    </div></details>`;
+  }
   function chooseHTML() {
     const sel = S.run.sid;
     if (S.edit) return `<div class="btl-sec" id="btlBuilder"><div class="btl-st"><i>1</i>Your strategy</div>${builderHTML()}</div>`;
-    const mine = S.list.map(sp => ({ id: sp.id, title: sp.name, desc: short(sp), sp })), nReady = Object.keys(TEMPLATES).length, ready = Object.keys(TEMPLATES).filter(k => S.moreReady || !TEMPLATES[k].list).slice(0, S.moreReady ? 99 : 2).map(k => ({ id: 'tpl:' + k, title: TEMPLATES[k].name, desc: TEMPLATES[k].desc || short(TEMPLATES[k]), sp: null }));
+    const mine = S.list.map(sp => ({ id: sp.id, title: sp.name, desc: short(sp), sp })), nReady = Object.keys(TEMPLATES).length, ready = Object.keys(TEMPLATES).filter(k => S.moreReady || TEMPLATES[k].grp === 'mine').map(k => ({ id: 'tpl:' + k, title: TEMPLATES[k].name, desc: TEMPLATES[k].desc || short(TEMPLATES[k]), sp: null }));
     mine.sort((x, y) => (y.id === sel) - (x.id === sel));              // the selected strategy is always first
     const per = [5, 10, 25, 50].includes(S.lper) ? S.lper : 5, pages = Math.max(1, Math.ceil(mine.length / per)), pgn = Math.min(S.lpg || 0, pages - 1);
     const shown = mine.slice(pgn * per, pgn * per + per).concat(sel && sel.startsWith('tpl:') && !ready.some(r => r.id === sel) ? [] : [], ready);
     const pager = mine.length > per || mine.length > 5 ? `<div class="btl-pg"><button type="button" class="btl-b sm" data-lpg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Prev</button><span class="muted">${pgn * per + 1}–${Math.min(mine.length, pgn * per + per)} of ${mine.length}</span><button type="button" class="btl-b sm" data-lpg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Next ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-lper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>` : '';
     const card = it => {
       const on = sel === it.id, sp = it.sp;
-      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill off">MINE</span>${sp.paper ? '<span class="btl-pill on">PAPER DAILY</span>' : ''}` : '<span class="btl-pill off">READY-MADE</span>'}</b><span>${esc(it.desc)}</span></button>
+      return `<div class="btl-pick ${on ? 'chosen' : ''}"><button type="button" class="btl-pk" data-pick="${esc(it.id)}"><b>${esc(it.title)}${sp ? `<span class="btl-pill off">MINE</span>${sp.paper ? '<span class="btl-pill on">PAPER DAILY</span>' : ''}` : `<span class="btl-pill off">${(it.id.startsWith('tpl:') && (TEMPLATES[it.id.slice(4)] || {}).grp === 'mine') ? 'YOUR INDICATOR' : 'READY-MADE'}</span>`}</b><span>${esc(it.desc)}</span></button>
         ${on ? `<div class="btl-act">${sp ? `<button type="button" class="btl-b sm" data-edit="${esc(it.id)}">Edit</button><button type="button" class="btl-b sm ${sp.paper ? 'stop' : 'go'}" data-paper="${esc(it.id)}">${sp.paper ? '■ Stop paper trading' : '📅 Paper-trade daily'}</button><button type="button" class="btl-b sm" data-export="${esc(it.id)}">Export</button><button type="button" class="btl-b sm del" data-del="${esc(it.id)}">Remove</button>` : `<button type="button" class="btl-b sm" data-custom="${esc(it.id)}">Make a copy to edit</button>`}</div>` : ''}</div>`;
     };
     return `<div class="btl-sec"><div class="btl-st"><i>1</i>Choose or build your strategy</div><div class="btl-cards">${shown.map(card).join('')}</div>${pager}
-      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button><button type="button" class="btl-b sm" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b sm" data-resetall>↺ Reset</button><button type="button" class="btl-b sm" data-moreready>${S.moreReady ? 'Fewer ready-made' : 'More ready-made (' + (nReady - 2) + ')'}</button></div>${paperHTML()}</div>`;
+      <div class="btl-row" style="margin-top:12px"><button type="button" class="btl-b pri sm" data-new>+ Make my own</button><button type="button" class="btl-b sm" data-upload>⬆ Upload a file</button><input type="file" data-file accept=".json,.md,.markdown,.txt,application/json,text/markdown,text/plain" hidden><button type="button" class="btl-b sm" data-resetall>↺ Reset</button><button type="button" class="btl-b sm" data-moreready>${S.moreReady ? 'Fewer ready-made' : 'More ready-made (' + (nReady - Object.keys(TEMPLATES).filter(k => TEMPLATES[k].grp === 'mine').length) + ')'}</button></div>${paperHTML()}${libHTML()}</div>`;
   }
   function runHTML() {
     const r = S.run, sp = specOf(r.sid);
@@ -651,7 +689,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.21</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.22</span></div></div></div>
       ${bannerHTML()}
       <div class="btl-grid"><div class="btl-left">${chooseHTML()}${runHTML()}</div><div class="btl-right">${S.busy ? busyHTML() : (S.res ? resultsHTML() : notTestedHTML())}</div></div></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
