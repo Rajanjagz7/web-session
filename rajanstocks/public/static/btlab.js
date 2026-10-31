@@ -38,7 +38,6 @@
   const R_ = (t, o) => Object.assign(newRule(t), o || {});
   const TEMPLATES = {
     ema_cross: { desc: 'Rides trends: buys when a fast average crosses above a slow one, sells when it crosses below.', name: 'Trend follower (EMA 9/21 cross)', side: 'both', long: [R_('ma_cross', { dir: 'up' })], short: [R_('ma_cross', { dir: 'down' })], exitIf: [], stop: { type: 'atr', k: 1.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 20 },
-    rsi2: { desc: 'Buys a sharp short dip inside a strong uptrend and sells when it bounces (the Larry Connors idea).', name: 'Buy the dip (RSI(2) pullback)', side: 'long', long: [R_('ma_rel', { type: 'sma', n: 200, rel: 'above' }), R_('rsi', { n: 2, op: '<', v: 10 }), R_('ma_rel', { type: 'sma', n: 5, rel: 'below' })], short: [], exitIf: [R_('ma_rel', { type: 'sma', n: 5, rel: 'above' })], stop: { type: 'atr', k: 2.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 10 },
     donchian: { desc: 'Buys when the price breaks its 20-day high, sells when it breaks the 20-day low, and trails the stop.', name: '20-day breakout', side: 'both', long: [R_('breakout', { n: 20, dir: 'high' })], short: [R_('breakout', { n: 20, dir: 'low' })], exitIf: [], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 3 }, trail: { on: true, start: 1, dist: 2 }, maxHold: 30 },
     ibs: { desc: 'Buys shares that closed near the bottom of the day and sells when they recover.', name: 'Bounce from weak closes (IBS)', side: 'long', long: [R_('ibs', { op: '<', v: 0.1 })], short: [], exitIf: [R_('ibs', { op: '>', v: 0.9 })], stop: { type: 'atr', k: 2.5, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 6 },
     supertrend: { desc: 'From a video, daily version: buys when Supertrend turns green above the 200-day average, exits when it turns red.', name: 'Supertrend + 200-day average', side: 'long', long: [R_('supertrend', { n: 10, mult: 3, dir: 'up' }), R_('ma_rel', { type: 'ema', n: 200, rel: 'above' })], short: [], exitIf: [R_('supertrend', { n: 10, mult: 3, dir: 'down' })], stop: { type: 'atr', k: 2, pct: 2 }, target: { on: false, r: 2 }, trail: { on: false, start: 1, dist: 1.5 }, maxHold: 60 },
@@ -630,7 +629,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.16</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.17</span></div></div></div>
       ${bannerHTML()}
       <div class="btl-grid"><div class="btl-left">${chooseHTML()}${runHTML()}</div><div class="btl-right">${S.busy ? busyHTML() : (S.res ? resultsHTML() : notTestedHTML())}</div></div></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
@@ -721,6 +720,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   }
   function mount(el) {
     if (S.el !== el) { S.el = el; el.addEventListener('click', onClick); el.addEventListener('change', onChange); }
+    if (S.run.sid && !specOf(S.run.sid)) { S.run.sid = null; S.res = null; }                   // a removed ready-made strategy that was selected last time
     if (!S.run.sid && !S.cleared) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
     paint(); if (S.list.some(x => x.paper)) loadPaper();
     setTimeout(prefetch, 600);
