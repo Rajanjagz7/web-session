@@ -55,8 +55,7 @@ def test_the_same_reason_is_not_repeated_every_cycle(screen):
 def test_a_weak_reward_to_risk_and_a_held_index_are_explained(screen):
     screen["calls"] = [idx("NIFTY", "BUY CALL", target1=104.0), idx("BANKNIFTY", "BUY CALL")]
     st = book()
-    st["trades"] = [{"id": "A-1", "sym": "BANKNIFTY", "status": "OPEN", "date": TODAY, "kind": "index", "side": "BUY"}]
-    at.fill_slots(st, TODAY, [])
+    at.fill_slots(st, TODAY, [{"sym": "BANKNIFTY", "kind": "index"}])          # chosen / held earlier in this cycle; a held trade of the same side is refused later by open_trade
     L = lines(st)
     assert any("NIFTY: BUY CALL skipped - reward to target 1" in m for m in L)
     assert any("BANKNIFTY: not looked at - a trade in it is still open" in m for m in L)

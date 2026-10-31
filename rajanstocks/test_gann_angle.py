@@ -106,7 +106,9 @@ def test_index_backing_points(monkeypatch):
     pts, bits = a._index_backing({"instrument": "NIFTY", "strength": 80, "callPct": 78, "putPct": 22}, "BUY")
     assert pts == 3 and len(bits) == 3
     pts, _ = a._index_backing({"instrument": "NIFTY", "strength": 60, "callPct": 55}, "BUY")
-    assert pts == 1
+    assert pts == 2                                 # strength counts from 50% (user, 30 Oct) + 3 index stocks >= 75% agree
+    pts, _ = a._index_backing({"instrument": "NIFTY", "strength": 40, "callPct": 55}, "BUY")
+    assert pts == 1                                 # only the 3 index stocks
 
 
 # ---- premium rider ----
