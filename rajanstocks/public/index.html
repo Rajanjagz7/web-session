@@ -3720,7 +3720,11 @@ function pkBtRow(t,D){const L=t.side==='BUY',h={},hp={};if(t.h.sl){h.sl=pkUtc(t.
   for(let n=1;n<=7;n++)if(t.h['t'+n]){h['t'+n]=pkUtc(t.h['t'+n]);hp['t'+n]=t.t[n-1]}
   return{ind:t.key,yr:t.ent.slice(0,4),mo:t.ent.slice(0,7),m:{s:t.s,l:t.s+' · '+(D.names[t.key]||t.key),d:L?'L':'S',k:t.kind==='index'?'index':'stock',e:t.e,sl:t.sl,t:t.t,dp:t.dp,at:pkUtc(t.ent),dm:1,r2:t.r2,rt:t.rt},h,best:t.b,hp,post:t.po,pa:t.pa,cl:t.cl,ad:t.ad}}
 function pkBtPF(a){const w=a.filter(x=>x>0).reduce((p,c)=>p+c,0),l=-a.filter(x=>x<0).reduce((p,c)=>p+c,0);return l>0?(w/l).toFixed(2):(w>0?'∞':'–')}
-function pkBtHTML(){pkBtLoad();const B=App.pkBt;
+function pkBtHTML(){
+  if(App.pkBtCleared===undefined){try{App.pkBtCleared=localStorage.getItem('pkbt-cleared')==='1'}catch(e){App.pkBtCleared=false}}
+  if(App.pkBtCleared){const z=(l)=>`<div class="pkl-tile"><i class="pkl-ti">·</i><b>0</b><small>${l}</small></div>`;
+    return`<div class="pkbt-topbar"><button type="button" data-pkbtlab="1" class="pri">+ Add my own strategy</button><button type="button" data-pkbtshow="1">Show the 4-year backtest again</button></div><div class="pkl-stats">${z('Trades followed')}${z('Reached T1')}${z('Stop hit')}${z('Reached T3+')}</div><div class="empty">Cleared. Nothing to show: 0 trades. Press "+ Add my own strategy" to test your own, or "Show the 4-year backtest again".</div>`}
+  pkBtLoad();const B=App.pkBt;
   if(B.err)return`<div class="empty">The backtest data could not be loaded (${esc(B.err)}). <button class="btn-xs" data-pklmode="bt" data-retry="1">Retry</button></div>`;
   if(!B.d)return`<div class="pkl-skel"><i></i><i></i><i></i><p class="muted">Loading the 4-year backtest…</p></div>`;
   const D=B.d,F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),KIND={index:'Index option',stock:'Stock / stock option'};
@@ -3750,9 +3754,10 @@ function pkBtHTML(){pkBtLoad();const B=App.pkBt;
     body+=pkRowHTML(r,lo+i,KIND)});
   const topbar=`<div class="pkbt-topbar"><button type="button" data-pkbtlab="1" class="pri">+ Add my own strategy</button><button type="button" data-pkbtreset="1">↺ Clear all</button></div>`;
   return topbar+head+aft+tbl+bar+pager+(view.length?`<section class="pkg">${body}</section>`:'<div class="empty">Nothing matches these filters.</div>')+pager}
-document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp],[data-pkbtreset],[data-pkbtlab]');if(!b)return;
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pklmode],[data-pkbt],[data-pkbtn],[data-pkbtp],[data-pkbtreset],[data-pkbtlab],[data-pkbtshow]');if(!b)return;
+  if(b.dataset.pkbtshow!==undefined){App.pkBtCleared=false;try{localStorage.removeItem('pkbt-cleared')}catch(e){}pkLogRefresh();return}
   if(b.dataset.pkbtlab!==undefined){const t=document.querySelector('.jv-tabs button[data-k="btlab"]');if(t){t.click();setTimeout(()=>{window.BTLab&&window.BTLab.startNew&&window.BTLab.startNew()},450)}return}
-  if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};if(window.BTLab&&window.BTLab.clearAll){if(!confirm('Clear everything you added here? This removes your added strategies, the selected strategy, the test result and all filters. It does not touch live trading.'))return;window.BTLab.clearAll()}pkLogRefresh();return}
+  if(b.dataset.pkbtreset!==undefined){App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'};App.pkBtPg={n:10,p:0};if(window.BTLab&&window.BTLab.clearAll){if(!confirm('Clear everything you added here? This removes your added strategies, the selected strategy, the test result and all filters. It does not touch live trading.'))return;window.BTLab.clearAll();App.pkBtCleared=true;try{localStorage.setItem('pkbt-cleared','1')}catch(e){}}pkLogRefresh();return}
   if(b.dataset.pklmode){App.pkLogMode=b.dataset.pklmode==='bt'?'bt':'live';if(b.dataset.retry&&App.pkBt)App.pkBt.err=null;pkLogRefresh();return}
   const F=App.pkBtF||(App.pkBtF={ind:'ALL',kind:'ALL',out:'ALL',yr:'ALL'}),pg=App.pkBtPg||(App.pkBtPg={n:10,p:0});
   if(b.dataset.pkbt){const[k,v]=b.dataset.pkbt.split('|');F[k]=v;pg.p=0}else if(b.dataset.pkbtn!==undefined){pg.n=Math.min(parseInt(b.dataset.pkbtn,10)||10,100);pg.p=0}else pg.p+=parseInt(b.dataset.pkbtp,10);pkLogRefresh()});
