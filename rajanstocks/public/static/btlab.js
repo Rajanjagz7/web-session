@@ -145,6 +145,10 @@
     }
     items.slice(0, 200).forEach(o => { const r = cleanSpec(o); if (r.spec) ok.push(r.spec); else bad.push(r.err); });
     ok.forEach(sp => { let nm = sp.name, k = 2; while (S.list.some(x => x.name === nm)) nm = sp.name + ' (' + (k++) + ')'; sp.name = nm; S.list.push(sp); S.run.sid = sp.id; });
+    const rs = x => JSON.stringify([x.side, x.long, x.short, x.exitIf, x.stop, x.target, x.trail, x.maxHold]), grp = {};
+    S.list.forEach(x => { (grp[rs(x)] = grp[rs(x)] || []).push(x.name); });
+    const dups = Object.values(grp).filter(a => a.length > 1);
+    if (dups.length) notes.push('Some strategies have exactly the same rules, so they will give the same result: ' + dups.slice(0, 5).map(a => a.slice(0, 4).join(' = ') + (a.length > 4 ? ' …' : '')).join('; ') + '.');
     persist(); return (ok.length ? 'Imported ' + ok.length + ' strateg' + (ok.length > 1 ? 'ies' : 'y') + ': ' + ok.map(x => '"' + x.name + '"').join(', ') + '. They are STOPPED until you press Start. Check each one before you trust the result. ' : '') + notes.join(' ') + (bad.length ? ' Skipped (' + bad.length + '): ' + bad.join('; ') + '.' : '');
   }
   const EXAMPLE = { name: 'Example: EMA cross with trailing stop', side: 'both', long: [{ t: 'ma_cross', type: 'ema', fast: 9, slow: 21, dir: 'up' }], short: [{ t: 'ma_cross', type: 'ema', fast: 9, slow: 21, dir: 'down' }], exitIf: [], stop: { type: 'atr', k: 1.5 }, target: { on: false, r: 2 }, trail: { on: true, start: 1, dist: 1.5 }, maxHold: 20 };
@@ -368,7 +372,7 @@
     Object.keys(T).forEach(k => { T[k] = limitOpen(T[k], S.run.maxOpen); });
     S.res = { raw, maxOpen: S.run.maxOpen, sid: sp.id, name: sp.name, years: S.run.years, cutoff, lastDate, span, failed, secs: (performance.now() - t0) / 1000, T, cap: S.run.capital, riskPct: S.run.riskPct,
       st: Object.fromEntries(Object.keys(T).map(k => [k, stats(T[k], S.run.capital, S.run.riskPct)])) };
-    S.res.nStk = stkSyms.filter(x => BARS[x]).length; S.res.uni = S.run.universe === 'top20' ? 'top20' : 'all'; S.resBy[sp.id] = S.res; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = mk.idx ? 'idx' : mk.sopt ? 'sopt' : 'cash'; S.busy = false; S.prog = ''; if (!all.some(x => BARS[x])) { S.res = null; delete S.resBy[sp.id]; S.err = 'No price history could be loaded (' + failed.slice(0, 3).join(', ') + '). Check your internet and press Test again.'; } persist(); paint();
+    S.res.desc = short(sp); S.res.nStk = stkSyms.filter(x => BARS[x]).length; S.res.uni = S.run.universe === 'top20' ? 'top20' : 'all'; S.resBy[sp.id] = S.res; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = mk.idx ? 'idx' : mk.sopt ? 'sopt' : 'cash'; S.busy = false; S.prog = ''; if (!all.some(x => BARS[x])) { S.res = null; delete S.resBy[sp.id]; S.err = 'No price history could be loaded (' + failed.slice(0, 3).join(', ') + '). Check your internet and press Test again.'; } persist(); paint();
   }
 
   async function checkSignals() {
@@ -544,8 +548,8 @@
   function resultsHTML() {
     const R = S.res; if (!R) return '';
     const tabs = Object.keys(MARKETS).filter(k => S.run.markets[k]), tab = R.st[S.tab] ? S.tab : tabs[0], st = R.st[tab], spn = tab === 'idx' ? R.span.idx : R.span.stk;
-    const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
-    if (!st || !st.n) return head + `<div class="btl-note warn">No trades in this market for this period. The rules never fired, or only while a trade was already open. Try another strategy or a longer period.</div></div>`;
+    const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="muted" style="font-size:13px;margin:-6px 0 12px"><b style="color:var(--text)">Rules tested:</b> ${esc(R.desc || '')}</div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
+    if (!st || !st.n) return head + `<div class="btl-note warn">No trades in this market for this period. The rules never fired, or only while a trade was already open.${tab === 'sopt' ? ' (Stock options also skip shares that trade under ₹5 crore a day.)' : ''} Try another strategy or a longer period.</div></div>`;
     const end = R.cap + st.net, ok = st.net >= 0;
     const note = `${R.uni === 'top20' ? 'Top 20 F&O stocks' : (R.nStk || 0) + ' F&O stocks'} and the 5 indices. Tested from ${R.cutoff === '0000-00-00' ? (spn ? spn.first : st.first) : R.cutoff} to ${R.lastDate}${R.years === 'max' ? ' (as far back as the data goes)' : ''}. Each trade risked ${inr(st.per)} (${R.riskPct}% of ${inr(R.cap)})${R.maxOpen > 0 ? ', up to ' + R.maxOpen + ' open at once' : ''}.`;
     const verdict = `<div class="btl-verdict ${ok ? 'ok' : 'bad'}"><div class="vt">${ok ? '✅ This strategy made money' : '❌ This strategy lost money'}</div><div class="vb">${inr(R.cap)} → <b>${inr(Math.max(0, end))}</b></div><div class="vs">${end <= 0 ? 'The whole account would have been lost (the strategy lost ' + inr(Math.abs(st.net)) + ' on paper; in real life trading would have stopped long before). Lower the risk per trade or try another strategy.' : (ok ? '+' : '−') + Math.abs(st.ret).toFixed(0) + '% in ' + st.yrs.toFixed(1) + ' years (about ' + (st.perYear >= 0 ? '+' : '−') + Math.abs(st.perYear).toFixed(1) + '% a year)'}</div></div>`;
@@ -581,7 +585,9 @@
     const ids = Object.keys(S.resBy).filter(id => S.resBy[id]); if (ids.length < 2) return '';
     const row = id => { const R = S.resBy[id], ks = Object.keys(R.st).filter(k => R.st[k] && R.st[k].n), n = ks.reduce((p, k) => p + R.st[k].n, 0), net = ks.reduce((p, k) => p + R.st[k].net, 0), w = ks.reduce((p, k) => p + R.st[k].wins, 0);
       return `<tr class="${id === S.run.sid ? 'cur' : ''}"><td><button type="button" class="btl-lk" data-pick="${esc(id)}">${esc(R.name)}</button></td><td>${n}</td><td>${n ? Math.round(100 * w / n) : 0}%</td><td class="${net >= 0 ? 'up' : 'down'}">${sinr(net)}</td></tr>`; };
-    return `<div class="btl-sub">All strategies you tested</div><div style="overflow-x:auto"><table class="btl-yr"><thead><tr><th>Strategy</th><th>Trades</th><th>Win %</th><th>Net (all markets)</th></tr></thead><tbody>${ids.map(row).join('')}</tbody></table></div>`;
+    const sig = {}; ids.forEach(id => { const R = S.resBy[id], k = Object.keys(R.st).map(m => R.st[m] ? R.st[m].n + ':' + Math.round(R.st[m].net) : '-').join('|'); (sig[k] = sig[k] || []).push(R.name); });
+    const same = Object.values(sig).filter(a => a.length > 1).map(a => a.join(' = ')).join('; ');
+    return `<div class="btl-sub">All strategies you tested</div>${same ? `<div class="btl-note warn">Same result, so same rules: ${esc(same)}. A strategy only differs from another if its rules differ (see "Rules tested" above).</div>` : ''}<div style="overflow-x:auto"><table class="btl-yr"><thead><tr><th>Strategy</th><th>Trades</th><th>Win %</th><th>Net (all markets)</th></tr></thead><tbody>${ids.map(row).join('')}</tbody></table></div>`;
   }
   function busyHTML() { return `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>…</i>Testing</div><div class="muted">${esc(S.prog || 'Starting…')}</div><div class="btl-skel"></div><div class="btl-skel"></div></div>`; }
   function notTestedHTML() {
@@ -629,7 +635,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.17</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.18</span></div></div></div>
       ${bannerHTML()}
       <div class="btl-grid"><div class="btl-left">${chooseHTML()}${runHTML()}</div><div class="btl-right">${S.busy ? busyHTML() : (S.res ? resultsHTML() : notTestedHTML())}</div></div></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
