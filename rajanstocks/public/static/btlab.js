@@ -162,13 +162,30 @@
   const BARS = {};                                   // symbol -> {d:[iso], o,h,l,c,v}
   const iso = t => new Date(t + 19800000).toISOString().slice(0, 10);
   const dnum = s => Math.floor(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5);
-  async function fetchBars(sym) {
-    if (BARS[sym]) return BARS[sym];
-    const to = iso(Date.now()), r = await fetch(`/api/m/candles?symbol=${encodeURIComponent(sym)}&tf=1D&from=2005-01-01&to=${to}`, { cache: 'no-cache' });
+  /* price history is kept on this device for the day (IndexedDB), so the second test of any strategy starts at once */
+  let DB = null;
+  const getDB = () => DB || (DB = new Promise(res => { try { const q = indexedDB.open('btlab', 1); q.onupgradeneeded = () => q.result.createObjectStore('bars'); q.onsuccess = () => res(q.result); q.onerror = () => res(null); } catch (e) { res(null); } }));
+  const idbGet = async k => { const db = await getDB(); return db ? new Promise(r => { try { const q = db.transaction('bars').objectStore('bars').get(k); q.onsuccess = () => r(q.result || null); q.onerror = () => r(null); } catch (e) { r(null); } }) : null; };
+  const idbPut = async (k, v) => { const db = await getDB(); if (db) try { db.transaction('bars', 'readwrite').objectStore('bars').put(v, k); } catch (e) { } };
+  let UNIV = null;                                   // every F&O stock (the app's own list), not a hand-picked 20
+  async function fnoList() {
+    if (UNIV) return UNIV;
+    try { const r = await fetch('/api/m/universe', { cache: 'no-cache' }), j = await r.json(); UNIV = (j.stocks || []).map(x => x.s).filter(x => x && !INDEX.includes(x)); } catch (e) { UNIV = []; }
+    if (UNIV.length < 20) UNIV = STOCKS.slice();
+    return UNIV;
+  }
+  async function fetchBars(sym, from) {
+    from = from || '2005-01-01';
+    if (BARS[sym] && BARS[sym].req <= from) return BARS[sym];
+    const today = iso(Date.now()), hit = await idbGet(sym);
+    if (hit && hit.day === today && hit.b && hit.b.req <= from) return BARS[sym] = hit.b;
+    const to = today, r = await fetch(`/api/m/candles?symbol=${encodeURIComponent(sym)}&tf=1D&from=${from}&to=${to}`, { cache: 'no-cache' });
     if (!r.ok) throw new Error(sym + ' ' + r.status);
     const j = await r.json(), b = (j.bars || []).filter(x => x && x.c > 0 && x.h >= x.l);
     if (b.length < 60) throw new Error(sym + ': only ' + b.length + ' candles');
-    return BARS[sym] = { d: b.map(x => iso(x.t)), o: b.map(x => x.o), h: b.map(x => x.h), l: b.map(x => x.l), c: b.map(x => x.c), v: b.map(x => x.v || 0) };
+    BARS[sym] = { req: from, d: b.map(x => iso(x.t)), o: b.map(x => x.o), h: b.map(x => x.h), l: b.map(x => x.l), c: b.map(x => x.c), v: b.map(x => x.v || 0) };
+    idbPut(sym, { day: today, b: BARS[sym] });
+    return BARS[sym];
   }
 
   function supertrend(B, atr, m) {
@@ -225,24 +242,28 @@
   const estPrem = (atr, kind, days) => 0.32 * atr * Math.sqrt(Math.max(0, days == null ? (kind === 'index' ? 5 : 15) : days) * 5 / 7);
   const thetaR = (atr, kind, risk, dFrom, dTo) => (estPrem(atr, kind, dFrom) - estPrem(atr, kind, dTo)) / DELTA / risk;
   function lastWd(y, m, w) { const d = new Date(Date.UTC(y, m + 1, 0)); while (d.getUTCDay() !== w) d.setUTCDate(d.getUTCDate() - 1); return Math.floor(d / 864e5); }
-  function expiryDay(isoDay, kind) {                // the contract the live trader would buy: nearest expiry at least 3 days away
+  function expiryDay(isoDay, kind, sym) {           // the contract the live trader would buy: nearest expiry at least 3 days away
     const d0 = dnum(isoDay);
-    if (kind === 'index' && isoDay >= '2019-02-11') { const w = isoDay < '2025-09-01' ? 4 : 2; let e = d0 + ((w - new Date(d0 * 864e5).getUTCDay() + 7) % 7); while (e - d0 < MIN_DTE) e += 7; return e; }
+    const weekly = isoDay < '2024-11-20' || !sym || sym === 'NIFTY' || sym === 'SENSEX';        // from 20 Nov 2024 only one weekly index per exchange is left; the others expire monthly
+    if (kind === 'index' && isoDay >= '2019-02-11' && weekly) { const w = isoDay < '2025-09-01' ? 4 : 2; let e = d0 + ((w - new Date(d0 * 864e5).getUTCDay() + 7) % 7); while (e - d0 < MIN_DTE) e += 7; return e; }
     let y = +isoDay.slice(0, 4), m = +isoDay.slice(5, 7) - 1;
     for (let k = 0; k < 6; k++) { const end = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10), e = lastWd(y, m, end < '2025-09-01' ? 4 : 2); if (e - d0 >= MIN_DTE) return e; m++; if (m > 11) { m = 0; y++; } }
     return d0 + 30;
   }
 
   /* ---------------- one trade ---------------- */
-  function trade(X, sp, i, side, mode, kind) {
+  /* round-trip cost as a share of the option PREMIUM: STT 0.15% on the sale (from 1 Apr 2026) + exchange / SEBI / GST ~0.08% + slippage (index ~0.5%, stock options ~1.5%: their spreads are wider) */
+  const OPT_FRAC = { index: 0.0073, stock: 0.0173 }, MIN_TURNOVER = 5e7;                       // stock options need at least ₹5 crore traded a day (a thin stock has no tradable option)
+  function trade(X, sp, i, side, mode, kind, sym) {
     const B = X.B, n = X.n, atrA = X.atr(14), a = atrA[i];
     if (i + 1 >= n || !(a > 0)) return null;
     const d = side === 'long' ? 1 : -1, entry = B.o[i + 1], opt = mode !== 'cash';
     const risk = sp.stop.type === 'atr' ? sp.stop.k * a : entry * sp.stop.pct / 100;
     if (!(risk > 0) || !(entry > 0)) return null;
-    const exp = opt ? expiryDay(B.d[i + 1], kind) : 0, dte = (j, fr) => exp - dnum(B.d[j]) + fr, dEntry = opt ? dte(i + 1, 0.26) : 0;
+    if (opt && kind === 'stock') { const tv = X.vavg(20)[i] * B.c[i]; if (!(tv >= MIN_TURNOVER)) return null; }
+    const exp = opt ? expiryDay(B.d[i + 1], kind, sym) : 0, dte = (j, fr) => exp - dnum(B.d[j]) + fr, dEntry = opt ? dte(i + 1, 0.26) : 0;
     const prem0 = opt ? estPrem(a, kind, dEntry) : 0, maxLossR = opt ? prem0 / (DELTA * risk) : Infinity;
-    const costR = (opt ? OPT_COST : (sp.costPct == null ? 0.1 : sp.costPct) / 100) * entry / risk;
+    const costR = opt ? OPT_FRAC[kind] * prem0 / (DELTA * risk) : (sp.costPct == null ? 0.1 : sp.costPct) / 100 * entry / risk;
     let stop = entry - d * risk, best = entry, trailed = false;
     const tgt = sp.target.on ? entry + d * sp.target.r * risk : null, last = Math.min(n - 1, i + sp.maxHold);
     const fin = (px, j, why, when) => {
@@ -278,7 +299,7 @@
       for (let i = Math.max(1, from); i < n - 1; i++) {
         if (i <= busy) continue;
         const L = !!(sigL && sigL[i]), S = !!(sigS && sigS[i]); if (L === S) continue;       // none, or both = no view
-        const t = trade(X, sp, i, L ? 'long' : 'short', mode, kind); if (!t) continue;
+        const t = trade(X, sp, i, L ? 'long' : 'short', mode, kind, sym); if (!t) continue;
         t.sym = sym; busy = t.j; list.push(t);
       }
     });
@@ -303,17 +324,18 @@
     const yr = {}; sorted.forEach(t => { const y = t.exitDate.slice(0, 4), o = yr[y] || (yr[y] = { n: 0, w: 0, net: 0 }); o.n++; o.w += t.R > 0 ? 1 : 0; o.net += t.R * per; });
     const ev = []; sorted.forEach(t => { ev.push([dnum(t.entryDate), 1]); ev.push([dnum(t.exitDate), -1]); }); ev.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
     let open = 0, peakOpen = 0; ev.forEach(e => { open += e[1]; peakOpen = Math.max(peakOpen, open); });
+    const cut = Math.max(1, Math.floor(n * 0.7)), avg = a => a.length ? a.reduce((p, t) => p + t.R, 0) / a.length : 0, early = sorted.slice(0, cut), late = sorted.slice(cut);
     const cnt = k => ts.filter(t => t.why === k).length;
     return { n, per, wins: w.length, losses: l.length, winPct: 100 * w.length / n, stopPct: 100 * (cnt('SL')) / n, tgtPct: 100 * cnt('T') / n, trailPct: 100 * cnt('TSL') / n, timePct: 100 * (cnt('TIME') + cnt('EXP') + cnt('RULE')) / n,
       avgWin: w.length ? sw / w.length : 0, avgLoss: l.length ? -sl / l.length : 0, exp: sumR / n, pf: sl > 0 ? sw / sl : (sw > 0 ? Infinity : 0), sumR, net: sumR * per, ret: sumR * per / cap * 100, dd, ddPct: dd / cap * 100, yrs, perYear: sumR * per / cap * 100 / yrs,
-      first, last: lastD, yr, curve, peakOpen, sorted, medPrem: (() => { const a = ts.map(t => t.premPct).filter(x => x != null).sort((p, q) => p - q); return a.length ? a[a.length >> 1] : null; })() };
+      first, last: lastD, yr, curve, peakOpen, sorted, early: { n: early.length, exp: avg(early) }, late: { n: late.length, exp: avg(late) }, medPrem: (() => { const a = ts.map(t => t.premPct).filter(x => x != null).sort((p, q) => p - q); return a.length ? a[a.length >> 1] : null; })() };
   }
 
   /* ---------------- state + persistence ---------------- */
   const D = load(LSUI) || {};
-  const S = { el: null, list: load(LS) || [], edit: null, run: Object.assign({ years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }, D),
+  const S = { el: null, list: load(LS) || [], edit: null, run: Object.assign({ universe: 'all', years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }, D),
     res: null, resBy: {}, err: '', busy: false, prog: '', msg: '', pg: {}, flt: {}, tab: 'idx', sig: null, openId: null };
-  const persist = () => { save(LS, S.list); save(LSUI, { years: S.run.years, markets: S.run.markets, capital: S.run.capital, riskPct: S.run.riskPct, maxOpen: S.run.maxOpen, extra: S.run.extra, sid: S.run.sid }); };
+  const persist = () => { save(LS, S.list); save(LSUI, { universe: S.run.universe, years: S.run.years, markets: S.run.markets, capital: S.run.capital, riskPct: S.run.riskPct, maxOpen: S.run.maxOpen, extra: S.run.extra, sid: S.run.sid }); };
 
   /* ---------------- daily PAPER trading on the server (never places an order) ---------------- */
   const loadPaper = () => fetch('/api/auto/status', { cache: 'no-cache' }).then(r => r.json()).then(j => { const m = j && j.shadow && j.shadow.summary; S.paperSum = Array.isArray(m) ? Object.fromEntries(m.map(x => [x.key, x])) : (m || {}); if (S.el) paint(); }).catch(() => { });
@@ -328,12 +350,14 @@
     const sp = specOf(S.run.sid); if (!sp) { S.msg = 'Pick a strategy first.'; paint(); return; }
     const mk = S.run.markets; if (!mk.idx && !mk.sopt && !mk.cash) { S.msg = 'Tick at least one market.'; paint(); return; }
     const extra = String(S.run.extra || '').split(/[,\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
-    const idxSyms = mk.idx ? INDEX : [], stkSyms = (mk.sopt || mk.cash) ? STOCKS.concat(extra.filter(x => !STOCKS.includes(x) && !INDEX.includes(x))) : [];
+    const base = (mk.sopt || mk.cash) ? (S.run.universe === 'top20' ? STOCKS : await fnoList()) : [];
+    const idxSyms = mk.idx ? INDEX : [], stkSyms = base.concat(extra.filter(x => !base.includes(x) && !INDEX.includes(x)));
+    const fromReq = S.run.years === 'max' ? '2005-01-01' : iso(Date.now() - (S.run.years * 365 + 480) * 864e5);
     const all = idxSyms.concat(stkSyms), t0 = performance.now(), failed = [];
     S.busy = true; S.msg = ''; S.err = ''; S.res = null; paint();
     let done = 0; const queue = all.slice();
-    const worker = async () => { while (queue.length) { const s = queue.shift(); try { await fetchBars(s); } catch (e) { failed.push(s); } done++; S.prog = `Loading price history… ${done} / ${all.length}`; paintProg(); } };
-    await Promise.all([worker(), worker(), worker(), worker()]);
+    const worker = async () => { while (queue.length) { const s = queue.shift(); try { await fetchBars(s, fromReq); } catch (e) { failed.push(s); } done++; S.prog = `Loading price history… ${done} / ${all.length}`; paintProg(); } };
+    await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map(worker));
     S.prog = 'Running the strategy…'; paintProg(); await new Promise(r => setTimeout(r, 30));
     const lastDate = BARS.NIFTY ? BARS.NIFTY.d[BARS.NIFTY.d.length - 1] : iso(Date.now());
     const cutoff = S.run.years === 'max' ? '0000-00-00' : iso(Date.UTC(+lastDate.slice(0, 4) - S.run.years, +lastDate.slice(5, 7) - 1, +lastDate.slice(8, 10)));
@@ -345,7 +369,7 @@
     Object.keys(T).forEach(k => { T[k] = limitOpen(T[k], S.run.maxOpen); });
     S.res = { raw, maxOpen: S.run.maxOpen, sid: sp.id, name: sp.name, years: S.run.years, cutoff, lastDate, span, failed, secs: (performance.now() - t0) / 1000, T, cap: S.run.capital, riskPct: S.run.riskPct,
       st: Object.fromEntries(Object.keys(T).map(k => [k, stats(T[k], S.run.capital, S.run.riskPct)])) };
-    S.resBy[sp.id] = S.res; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = mk.idx ? 'idx' : mk.sopt ? 'sopt' : 'cash'; S.busy = false; S.prog = ''; if (!all.some(x => BARS[x])) { S.res = null; delete S.resBy[sp.id]; S.err = 'No price history could be loaded (' + failed.slice(0, 3).join(', ') + '). Check your internet and press Test again.'; } persist(); paint();
+    S.res.nStk = stkSyms.filter(x => BARS[x]).length; S.res.uni = S.run.universe === 'top20' ? 'top20' : 'all'; S.resBy[sp.id] = S.res; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = mk.idx ? 'idx' : mk.sopt ? 'sopt' : 'cash'; S.busy = false; S.prog = ''; if (!all.some(x => BARS[x])) { S.res = null; delete S.resBy[sp.id]; S.err = 'No price history could be loaded (' + failed.slice(0, 3).join(', ') + '). Check your internet and press Test again.'; } persist(); paint();
   }
 
   async function checkSignals() {
@@ -509,13 +533,13 @@
     const r = S.run, sp = specOf(r.sid);
     return `<div class="btl-sec"><div class="btl-st"><i>2</i>How far back, and where?</div>
       <div class="btl-sub" style="margin-top:0">How far back</div><div class="btl-seg">${[4, 8, 'max'].map(y => `<button type="button" data-yrs="${y}" class="${r.years === y ? 'on' : ''}">${y === 'max' ? 'As far back as possible' : y + ' years'}</button>`).join('')}</div>
-      <div class="btl-sub">Which markets</div><div class="btl-chk">${Object.keys(MARKETS).map(k => `<label><input type="checkbox" data-mk="${k}" ${r.markets[k] ? 'checked' : ''}>${k === 'cash' ? 'Shares' : MARKETS[k]}</label>`).join('')}</div>
+      <div class="btl-sub">Which shares</div><div class="btl-seg">${[['all', 'All F&O stocks (about 220)'], ['top20', 'Top 20 only (quick)']].map(o => `<button type="button" data-uni="${o[0]}" class="${(r.universe || 'all') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div><div class="btl-sub">Which markets</div><div class="btl-chk">${Object.keys(MARKETS).map(k => `<label><input type="checkbox" data-mk="${k}" ${r.markets[k] ? 'checked' : ''}>${k === 'cash' ? 'Shares' : MARKETS[k]}</label>`).join('')}</div>
       <details class="btl-more" data-k="acct"><summary>Account settings</summary><div><div class="btl-g2"><label>Account size (₹)<input data-run="capital" type="number" inputmode="numeric" min="10000" step="10000" value="${esc(r.capital)}"></label><label>Risk per trade (% of account)<input data-run="riskPct" type="number" inputmode="decimal" min="0.1" max="10" step="0.1" value="${esc(r.riskPct)}"></label><label>Most trades open at once<input data-run="maxOpen" type="number" inputmode="numeric" min="0" max="50" step="1" value="${esc(r.maxOpen)}"></label></div>
         <label style="margin-top:10px">Extra share symbols (optional, e.g. WIPRO, DLF)<input data-run="extra" placeholder="WIPRO, DLF" value="${esc(r.extra)}"></label></div></details></div>
       <div class="btl-sec"><div class="btl-st"><i>3</i>Test it</div>
       ${sp ? `<div class="muted" style="font-size:13.5px;margin-bottom:10px"><b style="color:var(--text)">${esc(sp.name)}</b>: ${esc(short(sp))}</div>` : '<div class="muted" style="margin-bottom:10px">Choose a strategy in step 1.</div>'}
       <button type="button" class="btl-b pri big" data-run-go ${S.busy || !sp ? 'disabled' : ''}>${S.busy ? 'Testing…' : '▶ Test this strategy'}</button>
-      <div id="btlProg" class="muted" style="margin-top:8px;font-size:13px">${esc(S.prog)}</div>${S.busy && S.prog ? '<div class="btl-skel"></div>' : ''}</div>`;
+      <div id="btlProg" class="muted" style="margin-top:8px;font-size:13px">${esc(S.prog)}</div><div id="btlPre" class="muted" style="margin-top:6px;font-size:12.5px">${PRE.total && PRE.done >= PRE.total ? 'Price data is ready: the test will start at once.' : ''}</div>${S.busy && S.prog ? '<div class="btl-skel"></div>' : ''}</div>`;
   }
 
   function resultsHTML() {
@@ -524,7 +548,7 @@
     const head = `<div class="btl-sec" id="btlResult"><div class="btl-st"><i>✓</i>Result: ${esc(R.name)}</div><div class="btl-tabs">${tabs.map(k => `<button type="button" data-tab="${k}" class="${tab === k ? 'on' : ''}">${k === 'cash' ? 'Shares' : MARKETS[k]}</button>`).join('')}</div>`;
     if (!st || !st.n) return head + `<div class="btl-note warn">No trades in this market for this period. The rules never fired, or only while a trade was already open. Try another strategy or a longer period.</div></div>`;
     const end = R.cap + st.net, ok = st.net >= 0;
-    const note = `Tested from ${R.cutoff === '0000-00-00' ? (spn ? spn.first : st.first) : R.cutoff} to ${R.lastDate}${R.years === 'max' ? ' (as far back as the data goes)' : ''}. Each trade risked ${inr(st.per)} (${R.riskPct}% of ${inr(R.cap)})${R.maxOpen > 0 ? ', up to ' + R.maxOpen + ' open at once' : ''}.`;
+    const note = `${R.uni === 'top20' ? 'Top 20 F&O stocks' : (R.nStk || 0) + ' F&O stocks'} and the 5 indices. Tested from ${R.cutoff === '0000-00-00' ? (spn ? spn.first : st.first) : R.cutoff} to ${R.lastDate}${R.years === 'max' ? ' (as far back as the data goes)' : ''}. Each trade risked ${inr(st.per)} (${R.riskPct}% of ${inr(R.cap)})${R.maxOpen > 0 ? ', up to ' + R.maxOpen + ' open at once' : ''}.`;
     const verdict = `<div class="btl-verdict ${ok ? 'ok' : 'bad'}"><div class="vt">${ok ? '✅ This strategy made money' : '❌ This strategy lost money'}</div><div class="vb">${inr(R.cap)} → <b>${inr(Math.max(0, end))}</b></div><div class="vs">${end <= 0 ? 'The whole account would have been lost (the strategy lost ' + inr(Math.abs(st.net)) + ' on paper; in real life trading would have stopped long before). Lower the risk per trade or try another strategy.' : (ok ? '+' : '−') + Math.abs(st.ret).toFixed(0) + '% in ' + st.yrs.toFixed(1) + ' years (about ' + (st.perYear >= 0 ? '+' : '−') + Math.abs(st.perYear).toFixed(1) + '% a year)'}</div></div>`;
     const four = `<div class="btl-four"><div><b>${st.winPct.toFixed(0)}%</b><small>of ${st.n} trades made money</small></div><div><b>${st.stopPct.toFixed(0)}%</b><small>hit the stop-loss</small></div><div><b>${st.tgtPct.toFixed(0)}%</b><small>hit the profit target</small></div><div><b class="down">${inr(st.dd)}</b><small>worst drop from a peak (${Math.min(100, st.ddPct).toFixed(0)}% of the account)</small></div></div>`;
     const cv = st.curve, W = 600, H = 180, pad = 8, ys = cv.map(c => c[1]), mn = Math.min(0, ...ys), mx = Math.max(0, ...ys), rg = (mx - mn) || 1;
@@ -542,8 +566,17 @@
       <label class="btl-fl">Share / index<select data-symf><option value="ALL">All (${syms.length})</option>${syms.map(x => `<option value="${esc(x)}" ${x === SYM ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><div class="btl-trl">${rows || '<div class="muted" style="margin-top:8px">No trades match.</div>'}</div>
       <div class="btl-pg"><button type="button" class="btl-b sm" data-pg="-1" ${pgn <= 0 ? 'disabled' : ''}>‹ Newer</button><span class="muted">${list.length ? pgn * per + 1 : 0}–${Math.min(list.length, pgn * per + per)} of ${list.length}</span><button type="button" class="btl-b sm" data-pg="1" ${pgn >= pages - 1 ? 'disabled' : ''}>Older ›</button><label class="muted" style="display:inline-flex;gap:6px;align-items:center">Show<select data-rper>${[5, 10, 25, 50].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n}</option>`).join('')}</select></label><button type="button" class="btl-b sm" data-csv>Save as CSV</button></div>`;
     const detail = `<details class="btl-more" data-k="more"><summary>More numbers</summary><div>${tiles}<div style="margin:10px 0 4px;font-weight:700">Year by year</div><div style="overflow-x:auto">${yt}</div></div></details>`;
-    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, 0.05% cost, out a day before expiry. Index options use weekly expiries from Feb 2019, monthly before.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
-    return head + verdict + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + trades + detail + compareHTML() + caveat + '</div>';
+    const caveat = `<p class="muted" style="font-size:12px;margin:12px 2px 0">${tab === 'cash' ? 'Shares: no time decay, 0.1% cost per round trip.' : 'Option prices are ESTIMATED (no real history exists): premium from the price range, time decay to the real expiry dates, charges and slippage on the premium (STT 0.15%, about 0.5% slippage for index options and 1.5% for stock options), out a day before expiry. Index options use weekly expiries from Feb 2019 (only Nifty and Sensex keep weeklies after Nov 2024); stock options need at least ₹5 crore traded a day.'} ${R.failed.length ? 'Could not load: ' + esc(R.failed.join(', ')) + '. ' : ''}The stock list is today's F&O list (stocks that left it earlier are missing), so results can look a little better than real life. Past results do not predict future ones, and real fills, costs and lot sizes will differ.</p>`;
+    return head + verdict + reliabilityHTML(st, R) + four + `<div class="btl-note" style="font-size:12.5px">${esc(note)}${R.raw && R.raw[tab] > st.n ? ' ' + (R.raw[tab] - st.n) + ' extra signals were skipped because the account was already full.' : ''}</div>` + chart + trades + detail + compareHTML() + caveat + '</div>';
+  }
+  function reliabilityHTML(st, R) {
+    const f = v => (v >= 0 ? '+' : '') + v.toFixed(2) + 'R', bits = [];
+    if (st.n < 30) bits.push(`<div class="btl-note warn">Only ${st.n} trades: too few to trust this result (aim for 30 or more). Try a longer period or all F&O stocks.</div>`);
+    if (st.early && st.late && st.late.n >= 5) {
+      const a = st.early.exp, b = st.late.exp, t = a > 0 && b > 0 ? ['ok', 'Held up: it made money in the earlier and the later part.'] : a > 0 ? ['bad', 'Warning: it worked early but not in the latest part. It may have stopped working.'] : b > 0 ? ['', 'Weak early, better lately.'] : ['bad', 'It lost in both parts of the period.'];
+      bits.push(`<div class="btl-note ${t[0] === 'bad' ? 'warn' : ''}"><b>Held-up check:</b> first 70% of trades ${f(a)} each · last 30% ${f(b)} each. ${t[1]}</div>`);
+    }
+    return bits.join('');
   }
   function compareHTML() {
     const ids = Object.keys(S.resBy).filter(id => S.resBy[id]); if (ids.length < 2) return '';
@@ -597,7 +630,7 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
   function paint() {
     if (!S.el) return; css();
     const keep = window.scrollY, openD = [...S.el.querySelectorAll('details.btl-more[open]')].map(d => d.dataset.k).filter(Boolean);
-    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.14</span></div></div></div>
+    S.el.innerHTML = `<div class="btl"><div class="btl-top"><div><h3>🧪 Backtest lab</h3><div class="muted" style="font-size:13.5px">See what ₹1,00,000 would have become with a strategy, over the past 4 or 8 years or as far back as the data goes. <span style="font-size:11px">build 2026-10-31.16</span></div></div></div>
       ${bannerHTML()}
       <div class="btl-grid"><div class="btl-left">${chooseHTML()}${runHTML()}</div><div class="btl-right">${S.busy ? busyHTML() : (S.res ? resultsHTML() : notTestedHTML())}</div></div></div>`;
     S.el.querySelectorAll('details.btl-more[data-k]').forEach(d => { if (openD.includes(d.dataset.k)) d.open = true; });
@@ -640,10 +673,11 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (b.hasAttribute('data-radd') && e) { listFor(e, d.radd).push(newRule('ma_rel')); syncSell(e); paint(); return; }
     if (b.hasAttribute('data-rdel') && e) { const r = b.closest('[data-rs]'); listFor(e, r.dataset.rs).splice(+r.dataset.ri, 1); syncSell(e); paint(); return; }
     if (d.cdel && e) { listFor(e, d.cdel).splice(+d.ci, 1); syncSell(e); paint(); return; }
+    if (d.uni) { S.run.universe = d.uni; persist(); paint(); return; }
     if (d.yrs) { S.run.years = d.yrs === 'max' ? 'max' : +d.yrs; persist(); paint(); return; }
     if (b.hasAttribute('data-run-go')) { runBacktest(); return; }
     if (b.hasAttribute('data-another')) { S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.pg = {}; S.flt = {}; S.run.sid = null; S.cleared = true; S.msg = 'Cleared. Choose another strategy below, then press Test.'; persist(); paint(); const h = S.el.querySelector('.btl-sec'); h && h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-    if (b.hasAttribute('data-resetall')) { S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = 'idx'; S.msg = 'Reset to zero: no strategy selected and no result. Your saved strategies are kept. Pick another one and press Test.'; persist(); paint(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (b.hasAttribute('data-resetall')) { S.run = { universe: 'all', years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = 'idx'; S.msg = 'Reset to zero: no strategy selected and no result. Your saved strategies are kept. Pick another one and press Test.'; persist(); paint(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if (d.tab) { S.tab = d.tab; paint(); return; }
     if (d.flt) { S.flt[S.tab] = d.flt; S.pg[S.tab] = 0; paint(); return; }
     if (d.pg) { S.pg[S.tab] = Math.max(0, (S.pg[S.tab] || 0) + +d.pg); paint(); return; }
@@ -674,10 +708,22 @@ Max days: 10</pre><p class="muted" style="font-size:12.5px;margin:4px 0 0">Lines
     if (t.matches('[data-run]')) { const k = t.dataset.run; S.run[k] = k === 'maxOpen' ? Math.min(50, Math.max(0, Math.round(parseFloat(t.value)) || 0)) : (k === 'capital' || k === 'riskPct') ? Math.max(k === 'capital' ? 10000 : 0.1, parseFloat(t.value) || (k === 'capital' ? 100000 : 1)) : t.value; persist(); return; }
     if (t.matches('[data-mk]')) { S.run.markets[t.dataset.mk] = t.checked; persist(); return; }
   }
+  /* the price history is fetched quietly as soon as the lab opens, so pressing Test does not wait for it */
+  const PRE = { on: false, done: 0, total: 0 };
+  async function prefetch() {
+    if (PRE.on || S.busy) return; PRE.on = true;
+    try {
+      const list = INDEX.concat(S.run.universe === 'top20' ? STOCKS : await fnoList()), from = S.run.years === 'max' ? '2005-01-01' : iso(Date.now() - (S.run.years * 365 + 480) * 864e5), queue = list.slice();
+      PRE.total = list.length; PRE.done = 0;
+      const worker = async () => { while (queue.length && !S.busy) { const x = queue.shift(); try { await fetchBars(x, from); } catch (e) { } PRE.done++; const el = S.el && S.el.querySelector('#btlPre'); if (el) el.textContent = PRE.done < PRE.total ? `Getting price data in the background… ${PRE.done} / ${PRE.total}` : 'Price data is ready: the test will start at once.'; } };
+      await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+    } catch (e) { } PRE.on = false;
+  }
   function mount(el) {
     if (S.el !== el) { S.el = el; el.addEventListener('click', onClick); el.addEventListener('change', onChange); }
     if (!S.run.sid && !S.cleared) S.run.sid = S.list.length ? S.list[0].id : 'tpl:ema_cross';
     paint(); if (S.list.some(x => x.paper)) loadPaper();
+    setTimeout(prefetch, 600);
   }
-  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); syncPaper(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
+  window.BTLab = { mount, clearAll: () => { S.list = []; S.run = { universe: 'all', years: 4, markets: { idx: true, sopt: true, cash: true }, capital: 100000, riskPct: 1, maxOpen: 5, extra: '', sid: null }; S.cleared = true; S.res = null; S.resBy = {}; S.err = ''; S.edit = null; S.sig = null; S.pg = {}; S.flt = {}; S.sym = {}; S.tab = 'idx'; S.lpg = 0; S.msg = 'Everything cleared.'; persist(); if (S.el) paint(); syncPaper(); }, startNew: () => { if (S.el) startEdit(blank()); }, state: S, _test: { parseLine, parseMd, cleanSpec, importText, ctxOf, test, trade, expiryDay, estPrem, thetaR, stats, RULES, TEMPLATES, BARS, runSymbol, INDEX, STOCKS } };
 })();
